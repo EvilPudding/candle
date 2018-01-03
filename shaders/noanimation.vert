@@ -1,0 +1,90 @@
+
+#ifdef MESH4
+layout (location = 0) in vec4 P;
+#else
+layout (location = 0) in vec3 P;
+#endif
+layout (location = 1) in vec3 N;
+layout (location = 2) in vec2 UV;
+layout (location = 3) in vec3 TG;
+layout (location = 4) in vec3 BT;
+layout (location = 5) in vec4 COL;
+
+uniform mat4 MVP;
+uniform mat4 M;
+uniform mat4 V;
+uniform mat4 projection;
+/* uniform mat3 MV3x3; */
+
+out mat4 inv_projection;
+
+out vec3 tgspace_light_dir;
+out vec3 tgspace_eye_dir;
+out vec3 worldspace_position;
+out vec3 cameraspace_vertex_pos;
+out vec3 cameraspace_light_dir;
+
+out vec3 cam_normal;
+out vec3 cam_tangent;
+out vec3 cam_bitangent;
+
+out vec3 vertex_normal;
+out vec3 vertex_tangent;
+out vec3 vertex_bitangent;
+
+out vec2 texcoord;
+out vec4 vertex_color;
+
+#ifdef MESH4
+uniform float angle4;
+#endif
+
+out mat3 TM;
+/* out vec3 lightDir; */
+
+uniform float ratio;
+uniform float started;
+uniform float has_tex;
+uniform vec3 light_pos;
+
+void main()
+{
+	/* mat3 MV3x3 = mat3(MV); */
+#ifdef MESH4
+	float Y = cos(angle4);
+	float W = sin(angle4);
+	vec4 pos = vec4(vec3(P.x, P.y * Y + P.w * W, P.z), 1.0);
+#else
+	vec4 pos = vec4(P, 1.0);
+#endif
+
+
+	vec4 mpos = M * pos;
+	worldspace_position = mpos.xyz;
+
+	cameraspace_vertex_pos = ( V * mpos).xyz;
+
+	/* vec3 cameraspace_light_pos = ( V * vec4(light_pos, 1.0)).xyz; */
+	/* cameraspace_light_dir = cameraspace_light_pos - cameraspace_vertex_pos; */
+
+	vertex_color = COL;
+	texcoord = vec2(-UV.y, UV.x);
+	vertex_tangent = TG;
+	vertex_bitangent = BT;
+	vertex_normal = N;
+
+	TM = mat3(TG, BT, N);
+
+	{
+		cam_normal = (M * vec4(N, 0.0)).xyz;
+		/* cam_tangent = (M * vec4(TG, 0.0)).xyz; */
+		/* cam_bitangent = (M * vec4(BT, 0.0)).xyz; */
+	}
+
+	/* inv_projection = inverse(projection); */
+
+	gl_Position = MVP * pos;
+	/* gl_Position = projection * vec4(cameraspace_vertex_pos, 1.0); */
+}
+
+// vim: set ft=c:
