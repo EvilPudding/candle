@@ -13,7 +13,7 @@ OBJS_REL = $(patsubst %.c, $(DIR)/%.o, $(SRCS))
 OBJS_DEB = $(patsubst %.c, $(DIR)/%.debug.o, $(SRCS))
 
 CFLAGS = $(shell sdl2-config --cflags) -DUSE_VAO -Wall -I. -pedantic \
-		 -Wuninitialized -Wstrict-prototypes -std=gnu11 -DMESH4
+		 -Wuninitialized -Wstrict-prototypes -std=gnu11 $(PARENTCFLAGS)
 
 CFLAGS_REL = $(CFLAGS) -O3
 
