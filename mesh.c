@@ -17,7 +17,9 @@ int mesh_get_face_from_verts(mesh_t *self, int v0, int v1, int v2);
 static void mesh_update_cell_pairs(mesh_t *self);
 static void mesh_udpate_selection_list(mesh_t *self);
 
+#ifdef MESH4
 void mesh_cells_prealloc(mesh_t *self, int size);
+#endif
 
 #define CHUNK_CELLS 20
 #define CHUNK_VERTS 30
@@ -48,7 +50,9 @@ mesh_t *mesh_new()
 
 	self->support = (support_cb)mesh_support;
 
+#ifdef MESH4
 	mesh_cells_prealloc(self, 10);
+#endif
 	mesh_edges_prealloc(self, 100);
 	mesh_faces_prealloc(self, 100);
 	mesh_verts_prealloc(self, 100);
@@ -352,6 +356,7 @@ void mesh_invert_normals(mesh_t *self)
 }
 
 /* removes faces that don't belong to a cell*/
+#ifdef MESH4
 int mesh_remove_lone_faces(mesh_t *self)
 {
 	int i;
@@ -370,6 +375,7 @@ int mesh_remove_lone_faces(mesh_t *self)
 
 	return count;
 }
+#endif
 /* removes edges that don't belong to a face */
 int mesh_remove_lone_edges(mesh_t *self)
 {
@@ -389,6 +395,7 @@ int mesh_remove_lone_edges(mesh_t *self)
 	return count;
 }
 
+#ifdef MESH4
 int mesh_edge_cell_pair(mesh_t *self, edge_t *e)
 {
 	int v0 = e->v;
@@ -410,6 +417,7 @@ int mesh_edge_cell_pair(mesh_t *self, edge_t *e)
 	}
 	return -1;
 }
+#endif
 
 int mesh_update_flips(mesh_t *self)
 {
@@ -1808,14 +1816,14 @@ int mesh_add_tetrahedral_prism(mesh_t *self,
 int mesh_check_duplicate_verts(mesh_t *self, int edge_id)
 {
 	int j;
-	vec4_t pos = m_vert(self, edge_id)->pos;
+	vecN_t pos = m_vert(self, edge_id)->pos;
 	for(j = 0; j < self->verts_size; j++)
 	{
 		if(j == edge_id) continue;
-		if(vec4_dist(m_vert(self, j)->pos, pos) == 0.0f)
+		if(vecN_(dist)(m_vert(self, j)->pos, pos) == 0.0f)
 		{
 			printf("duplicated verts! %d %d ", edge_id, j);
-			vec4_print(pos);
+			vecN_(print)(pos);
 			return 1;
 		}
 	}

@@ -24,7 +24,8 @@ typedef struct vec3_t(*support_cb)(mesh_t *self, const vec3_t dir);
 #	define dN_t d4_t
 #	define D3(...) d4(__VA_ARGS__, 0.0f)
 #else
-#	define vecN vec3_t
+#	define vecN vec3
+#	define vecN_t vec3_t
 #	define VEC3(...) vec3(__VA_ARGS__)
 #	define XYZ(v) v
 #	define _vecN(a) _vec(a)

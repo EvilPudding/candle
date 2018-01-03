@@ -486,7 +486,9 @@ void shader_bind_camera(shader_t *self, const vec3_t pos, mat4 *view,
 
 	glUniformMatrix4fv(self->u_v, 1, GL_FALSE, (void*)*view);
 	glUniform3f(self->u_camera_pos, pos.x, pos.y, pos.z);
+#ifdef MESH4
 	glUniform1f(self->u_angle4, angle4);
+#endif
 	glUniform1f(self->u_exposure, exposure);
 
 	/* TODO unnecessary? */

@@ -24,7 +24,9 @@ c_camera_t *c_camera_new(int active, float fov, float near, float far,
 	self->fov = fov * (M_PI / 180.0f);
 	self->view_cached = 0;
 	self->exposure = 0.25f;
+#ifdef MESH4
 	self->angle4 = 0.0f;
+#endif
 
 	c_camera_update(self, &(window_resize_data){width, height});
 
