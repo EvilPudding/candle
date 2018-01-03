@@ -58,6 +58,14 @@ int c_model_draw(c_model_t *self)
 	return c_mesh_gl_draw(c_mesh_gl(c_entity(self)));
 }
 
+void c_model_set_mesh(c_model_t *self, mesh_t *mesh)
+{
+	mesh_t *old_mesh = self->mesh;
+	self->mesh = mesh;
+	entity_signal_same(c_entity(self), mesh_changed, NULL);
+	if(old_mesh) mesh_destroy(old_mesh);
+}
+
 int c_model_created(c_model_t *self)
 {
 	if(self->mesh)

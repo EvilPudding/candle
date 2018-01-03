@@ -354,12 +354,13 @@ c_renderer_t *c_renderer_new(float resolution, int auto_exposure, int roughness,
 		float percent_of_screen)
 {
 	c_renderer_t *self = calloc(1, sizeof *self);
-	c_renderer_init(self);
 
 	self->resolution = resolution;
 	self->auto_exposure = auto_exposure;
 	self->roughness = roughness;
 	self->percent_of_screen = percent_of_screen;
+
+	c_renderer_init(self);
 
 	return self;
 }

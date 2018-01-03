@@ -484,11 +484,17 @@ int c_mesh_gl_draw(c_mesh_gl_t *self)
 {
 
 	mesh_t *mesh = self->mesh;
-	if(!mesh) return 0;
+	if(!mesh)
+	{
+		return 0;
+	}
 
 	c_mesh_gl_update(self);
 
-	if(!self->ready) return 0;
+	if(!self->ready)
+	{
+		return 0;
+	}
 
 	if(!self->cull_face)
 	{

@@ -9,10 +9,10 @@
 #include "../components/rigid_body.h"
 #include "../components/light.h"
 
-unsigned long st_physics;
+unsigned long ct_physics;
 unsigned long collider_callback;
 
-static vec3_t sys_physics_handle_forces(c_t *self, vec3_t vel, float *dt)
+static vec3_t c_physics_handle_forces(c_physics_t *self, vec3_t vel, float *dt)
 {
 	unsigned long i;
 
@@ -98,7 +98,7 @@ static float handle_cols_for_offset(c_t *c, c_t *projectile, collider_cb cb,
 	return 0.0;
 }
 
-static void sys_physics_handle_collisions(c_rigid_body_t *c1,
+static void c_physics_handle_collisions(c_rigid_body_t *c1,
 		c_rigid_body_t *c2)
 {
 	collider_cb cb1 = (collider_cb)c1->costum;
@@ -173,7 +173,7 @@ static void sys_physics_handle_collisions(c_rigid_body_t *c1,
 	}
 }
 
-static int sys_physics_update(c_t *self, float *dt)
+static int c_physics_update(c_physics_t *self, float *dt)
 {
 	unsigned long i, j;
 
@@ -188,7 +188,7 @@ static int sys_physics_update(c_t *self, float *dt)
 		c_spacial_t *sc = c_spacial(projectile);
 
 		vc->pre_movement_pos = sc->position;
-		vc->velocity = sys_physics_handle_forces(self, vc->velocity, dt);
+		vc->velocity = c_physics_handle_forces(self, vc->velocity, dt);
 
 		vc->pre_collision_pos = vc->computed_pos =
 			vec3_add(sc->position, vec3_scale(vc->velocity, *dt));
@@ -206,7 +206,7 @@ static int sys_physics_update(c_t *self, float *dt)
 
 			if(!v1 && !v2) continue;
 
-			sys_physics_handle_collisions(c1, c2);
+			c_physics_handle_collisions(c1, c2);
 		}
 	}
 
@@ -225,10 +225,26 @@ static int sys_physics_update(c_t *self, float *dt)
 	return 1;
 }
 
-void physics_register(ecm_t *ecm)
+static void c_physics_init(c_physics_t *self)
 {
-	ct_register_listener(ecm_get(ecm, ecm->global), WORLD, world_update,
-			(signal_cb)sys_physics_update);
+	self->super = component_new(ct_physics);
+}
+
+c_physics_t *c_physics_new()
+{
+	c_physics_t *self = calloc(1, sizeof *self);
+	c_physics_init(self);
+
+	return self;
+}
+
+void c_physics_register(ecm_t *ecm)
+{
+	ct_t *ct = ecm_register(ecm, &ct_physics, sizeof(c_physics_t),
+			(init_cb)c_physics_init, 1, ct_window);
+
+	ct_register_listener(ct, WORLD, world_update,
+			(signal_cb)c_physics_update);
 
 	collider_callback = ecm_register_signal(ecm, 0);
 }

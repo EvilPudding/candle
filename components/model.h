@@ -27,5 +27,6 @@ void c_model_wireframe(c_model_t *self, int wireframe);
 void c_model_cull_face(c_model_t *self, int cull_face);
 int c_model_draw(c_model_t *self);
 void c_model_register(ecm_t *ecm);
+void c_model_set_mesh(c_model_t *self, mesh_t *mesh);
 
 #endif /* !MODEL_H */

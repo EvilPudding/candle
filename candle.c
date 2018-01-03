@@ -362,8 +362,8 @@ candle_t *candle_new(int comps_size, ...)
 
 	keyboard_register(self->ecm);
 	mouse_register(self->ecm);
-	physics_register(self->ecm);
 
+	c_physics_register(self->ecm);
 	c_window_register(self->ecm);
 	c_renderer_register(self->ecm);
 	c_camera_register(self->ecm);
@@ -375,7 +375,7 @@ candle_t *candle_new(int comps_size, ...)
 	while(comps_size--) (va_arg(comps, c_reg_cb))(self->ecm);
 	va_end(comps);
 
-	self->systems = entity_new(self->ecm, 1, c_window_new(0, 0));
+	self->systems = entity_new(self->ecm, 2, c_window_new(0, 0), c_physics_new());
 
 	/* candle_import_dir(self, self->ecm->none, "./"); */
 
