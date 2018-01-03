@@ -659,7 +659,7 @@ int c_renderer_draw(c_renderer_t *self)
 
 	/* UPDATE SCREEN */
 
-	c_window_rect(c_window(c_entity(self)), self->width, 0, self->width, self->height,
+	c_window_rect(c_window(c_entity(self)), 0, 0, self->width, self->height,
 			output);
 
 	/* ------------- */
