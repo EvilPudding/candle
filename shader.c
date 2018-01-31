@@ -409,7 +409,7 @@ shader_t *shader_new(const char *filename)
 	return self;
 }
 
-void shader_bind_projection(shader_t *self, mat4 *projection_matrix)
+void shader_bind_projection(shader_t *self, mat4_t *projection_matrix)
 {
 	glUniformMatrix4fv(self->u_projection, 1, GL_FALSE,
 			(void*)projection_matrix);
@@ -475,16 +475,16 @@ void shader_bind_light(shader_t *self, entity_t light)
 }
 
 #ifdef MESH4
-void shader_bind_camera(shader_t *self, const vec3_t pos, mat4 *view,
-		mat4 *projection, float exposure, float angle4)
+void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
+		mat4_t *projection, float exposure, float angle4)
 #else
-void shader_bind_camera(shader_t *self, const vec3_t pos, mat4 *view,
-		mat4 *projection, float exposure)
+void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
+		mat4_t *projection, float exposure)
 #endif
 {
-	mat4_mul(self->vp, *projection, *view);
+	self->vp = mat4_mul(*projection, *view);
 
-	glUniformMatrix4fv(self->u_v, 1, GL_FALSE, (void*)*view);
+	glUniformMatrix4fv(self->u_v, 1, GL_FALSE, (void*)view->_);
 	glUniform3f(self->u_camera_pos, pos.x, pos.y, pos.z);
 #ifdef MESH4
 	glUniform1f(self->u_angle4, angle4);
@@ -497,14 +497,12 @@ void shader_bind_camera(shader_t *self, const vec3_t pos, mat4 *view,
 	glerr();
 }
 
-void shader_update(shader_t *self, mat4 *model_matrix, texture_t *perlin)
+void shader_update(shader_t *self, mat4_t *model_matrix, texture_t *perlin)
 {
-	mat4 mvp;
+	mat4_t mvp = mat4_mul(self->vp, *model_matrix);
 
-	mat4_mul(mvp, self->vp, *model_matrix);
-
-	glUniformMatrix4fv(self->u_mvp, 1, GL_FALSE, (void*)mvp);
-	glUniformMatrix4fv(self->u_m, 1, GL_FALSE, (void*)*model_matrix);
+	glUniformMatrix4fv(self->u_mvp, 1, GL_FALSE, (void*)mvp._);
+	glUniformMatrix4fv(self->u_m, 1, GL_FALSE, (void*)model_matrix->_);
 	glerr();
 
 	if(perlin)

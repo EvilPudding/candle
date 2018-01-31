@@ -8,7 +8,7 @@ typedef struct
 {
 	c_t super; /* extends c_t */
 
-	mat4 model;
+	mat4_t model;
 	int cached;
 
 	entity_t *children;

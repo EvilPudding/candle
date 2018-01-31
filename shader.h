@@ -62,20 +62,20 @@ typedef struct shader_t
 
 	GLuint u_ambient_light;
 
-	mat4 vp;
+	mat4_t vp;
 
 	char *filename;
 } shader_t;
 
 shader_t *shader_new(const char *filename);
-void shader_update(shader_t *self, mat4 *model_matrix, texture_t *perlin);
+void shader_update(shader_t *self, mat4_t *model_matrix, texture_t *perlin);
 void shader_bind(shader_t *self);
 #ifdef MESH4
-void shader_bind_camera(shader_t *self, const vec3_t pos, mat4 *view,
-		mat4 *projection, float exposure, float angle4);
+void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
+		mat4_t *projection, float exposure, float angle4);
 #else
-void shader_bind_camera(shader_t *self, const vec3_t pos, mat4 *view,
-		mat4 *projection, float exposure);
+void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
+		mat4_t *projection, float exposure);
 #endif
 void shader_bind_light(shader_t *self, entity_t light);
 void shader_bind_mesh(shader_t *self, mesh_t *mesh);
@@ -84,7 +84,7 @@ void shader_bind_screen(shader_t *self, texture_t *buffer, float sx, float sy);
 void shader_destroy(shader_t *self);
 void shader_bind_ambient(shader_t *self, texture_t *ambient);
 void shader_bind_probe(shader_t *self, entity_t probe);
-void shader_bind_projection(shader_t *self, mat4 *projection_matrix);
+void shader_bind_projection(shader_t *self, mat4_t *projection_matrix);
 void shader_add_source(const char *name, unsigned char data[],
 		unsigned int len);
 void shaders_reg(void);

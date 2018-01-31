@@ -28,24 +28,24 @@ static int c_probe_update_position(c_probe_t *self)
 {
 	vec3_t pos = c_spacial(self->super.entity)->position;
 
-	mat4_perspective(self->projection, M_PI / 2.0f, 1.0f, 0.5f, 100.5f); 
+	self->projection = mat4_perspective(M_PI / 2.0f, 1.0f, 0.5f, 100.5f); 
 
-	mat4_look_at(self->views[0], pos, vec3_add(pos, vec3(1.0, 0.0, 0.0)),
+	self->views[0] = mat4_look_at(pos, vec3_add(pos, vec3(1.0, 0.0, 0.0)),
 			vec3(0.0,-1.0,0.0));
 
-	mat4_look_at(self->views[1], pos, vec3_add(pos, vec3(-1.0, 0.0, 0.0)),
+	self->views[1] = mat4_look_at(pos, vec3_add(pos, vec3(-1.0, 0.0, 0.0)),
 			vec3(0.0, -1.0, 0.0));
 
-	mat4_look_at(self->views[2], pos, vec3_add(pos, vec3(0.0, 1.0, 0.0)),
+	self->views[2] = mat4_look_at(pos, vec3_add(pos, vec3(0.0, 1.0, 0.0)),
 			vec3(0.0, 0.0, 1.0));
 
-	mat4_look_at(self->views[3], pos, vec3_add(pos, vec3(0.0, -1.0, 0.0)),
+	self->views[3] = mat4_look_at(pos, vec3_add(pos, vec3(0.0, -1.0, 0.0)),
 			vec3(0.0, 0.0, -1.0));
 
-	mat4_look_at(self->views[4], pos, vec3_add(pos, vec3(0.0, 0.0, 1.0)),
+	self->views[4] = mat4_look_at(pos, vec3_add(pos, vec3(0.0, 0.0, 1.0)),
 			vec3(0.0, -1.0, 0.0));
 
-	mat4_look_at(self->views[5], pos, vec3_add(pos, vec3(0.0, 0.0, -1.0)),
+	self->views[5] = mat4_look_at(pos, vec3_add(pos, vec3(0.0, 0.0, -1.0)),
 			vec3(0.0, -1.0, 0.0));
 
 	self->last_update++;

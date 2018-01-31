@@ -12,8 +12,8 @@ typedef struct
 	vec3_t rotation;
 	vec3_t scale;
 	vec3_t up;
-	mat4 rotation_matrix;
-	mat4 model_matrix;
+	mat4_t rotation_matrix;
+	mat4_t model_matrix;
 } c_spacial_t;
 
 extern unsigned long ct_spacial;

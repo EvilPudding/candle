@@ -53,7 +53,7 @@ void c_camera_update_view(c_camera_t *self)
 	c_node_t *n = c_node(c_entity(self));
 	c_node_update_model(n);
 	self->pos = mat4_mul_vec4(n->model, vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-	mat4_invert(self->view_matrix, n->model);
+	self->view_matrix = mat4_invert(n->model);
 }
 
 #include<candle.h>
@@ -63,7 +63,7 @@ static int c_camera_update(c_camera_t *self, window_resize_data *event)
 {
 	/* TODO: remove renderer reference, camera should update on render resize,
 	 * not window */
-	mat4_perspective(self->projection_matrix,
+	self->projection_matrix = mat4_perspective(
 		self->fov,
 		((float)c_renderer(candle->systems)->width) /
 		c_renderer(candle->systems)->height,

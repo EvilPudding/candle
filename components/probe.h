@@ -9,8 +9,8 @@
 typedef struct c_probe_t
 {
 	c_t super;
-	mat4 projection;
-	mat4 views[6];
+	mat4_t projection;
+	mat4_t views[6];
 	texture_t *map;
 	int last_update;
 	before_draw_cb before_draw;

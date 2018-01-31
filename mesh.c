@@ -35,8 +35,8 @@ mesh_t *mesh_new()
 {
 	mesh_t *self = calloc(1, sizeof *self);
 
-	mat4_identity(self->transformation);
-	mat4_identity(self->backup);
+	self->transformation = mat4();
+	self->backup = mat4();
 	self->has_texcoords = 1;
 	self->triangulated = 1;
 	self->current_cell = -1;
@@ -1515,19 +1515,18 @@ void mesh_translate(mesh_t *self, float x, float y, float z)
 
 void mesh_rotate(mesh_t *self, float angle, int x, int y, int z)
 {
-	mat4 new;
-	mat4_rotate(new, self->transformation, x, y, z, to_radians(angle));
-	mat4_dup(self->transformation, new);
+	mat4_t new = mat4_rotate(self->transformation, x, y, z, to_radians(angle));
+	self->transformation = new;
 }
 
 void mesh_restore(mesh_t *self)
 {
-	mat4_dup(self->transformation, self->backup);
+	self->transformation = self->backup;
 }
 
 void mesh_save(mesh_t *self)
 {
-	mat4_dup(self->backup, self->transformation);
+	self->backup = self->transformation;
 }
 
 void mesh_translate_uv(mesh_t *self, vec2_t p)
@@ -2069,9 +2068,7 @@ mesh_t *mesh_lathe(mesh_t *mesh, float angle, int segments,
 {
 	int ei;
 	float a;
-	mat4  rot;
-
-	mat4_identity( rot);
+	mat4_t  rot = mat4();
 
 	mesh_t *self = mesh_new();
 
@@ -2084,7 +2081,7 @@ mesh_t *mesh_lathe(mesh_t *mesh, float angle, int segments,
 
 	for(ai = 0, a = inc; ai < segments; a += inc, ai++)
 	{
-		mat4_rotate(rot, rot, x, y, z, inc);
+		rot = mat4_rotate(rot, x, y, z, inc);
 		for(ei = 0; ei < mesh->edges_size; ei++)
 		{
 			edge_t *e = m_edge(mesh, ei);

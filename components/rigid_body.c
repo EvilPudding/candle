@@ -315,7 +315,7 @@ int gjk_contains_origin(struct simplex *simp, vec3_t *dir)
 }
 
 static inline vec3_t gjk_support(mesh_t *self, mesh_t *other,
-		mat4 other_to_self, mat4 rotate_to_other, const vec3_t dir)
+		mat4_t other_to_self, mat4_t rotate_to_other, const vec3_t dir)
 {
 	vec3_t dir2 = mat4_mul_vec4(rotate_to_other, vec4(_vec3(dir), 0.0)).xyz;
 
@@ -337,14 +337,14 @@ int gjk_intersects_bak(c_rigid_body_t *self, c_rigid_body_t *other)
 	c_spacial_t *sc1 = c_spacial(c_entity(self));
 	c_spacial_t *sc2 = c_spacial(c_entity(other));
 
-	mat4 other_to_self;
-	mat4 rotate_to_other;
+	mat4_t other_to_self;
+	mat4_t rotate_to_other;
 
-	mat4_invert(other_to_self, sc1->model_matrix);
-	mat4_mul(other_to_self, other_to_self, sc2->model_matrix);
+	other_to_self = mat4_invert(sc1->model_matrix);
+	other_to_self = mat4_mul(other_to_self, sc2->model_matrix);
 
-	mat4_transpose(rotate_to_other, sc2->rotation_matrix);
-	mat4_mul(rotate_to_other, rotate_to_other, sc1->rotation_matrix);
+	rotate_to_other = mat4_transpose(sc2->rotation_matrix);
+	rotate_to_other = mat4_mul(rotate_to_other, sc1->rotation_matrix);
 
 	vec3_t dir = vec3_sub(sc2->position, sc1->position);
 	if(vec3_null(dir)) dir = vec3(1.0);
@@ -748,20 +748,20 @@ int gjk_intersects(c_rigid_body_t *self, c_rigid_body_t *other,
 	c_spacial_t *sc1 = c_spacial(c_entity(self));
 	c_spacial_t *sc2 = c_spacial(c_entity(other));
 
-	mat4 other_to_self;
-	mat4 rotate_to_other;
-	mat4 inv_rotate_to_other;
+	mat4_t other_to_self;
+	mat4_t rotate_to_other;
+	mat4_t inv_rotate_to_other;
 
 	// Transform a point from local space of body 2 to local
 	// space of body 1 (the GJK algorithm is done in local space of body 1)
-	mat4_invert(other_to_self, sc1->model_matrix);
-	mat4_mul(other_to_self, other_to_self, sc2->model_matrix);
+	other_to_self = mat4_invert(sc1->model_matrix);
+	other_to_self = mat4_mul(other_to_self, sc2->model_matrix);
 
 	// Matrix that transform a direction from local
 	// space of body 1 into local space of body 2
-	mat4_transpose(rotate_to_other, sc2->rotation_matrix);
-	mat4_mul(rotate_to_other, rotate_to_other, sc1->rotation_matrix);
-	mat4_invert(inv_rotate_to_other, rotate_to_other);
+	rotate_to_other = mat4_transpose(sc2->rotation_matrix);
+	rotate_to_other = mat4_mul(rotate_to_other, sc1->rotation_matrix);
+	inv_rotate_to_other = mat4_invert(rotate_to_other);
 
 	vec3_t v = vec3_sub(sc2->position, sc1->position);
 

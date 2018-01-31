@@ -25,7 +25,7 @@ c_aabb_t *c_aabb_new()
 
 void c_aabb_update(c_aabb_t *self)
 {
-	mat4 inv;
+	mat4_t inv;
 
 	c_model_t *mc = c_model(c_entity(self));
 
@@ -38,7 +38,7 @@ void c_aabb_update(c_aabb_t *self)
 
 	if(!mesh) return;
 
-	mat4_invert(inv, sc->rotation_matrix);
+	inv = mat4_invert(sc->rotation_matrix);
 
 	vec3_t dir_x = mat4_mul_vec4(inv, vec4(1.0, 0.0, 0.0, 0.0)).xyz;
 	vec3_t dir_y = mat4_mul_vec4(inv, vec4(0.0, 1.0, 0.0, 0.0)).xyz;

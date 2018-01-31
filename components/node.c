@@ -10,7 +10,7 @@ static void c_node_init(c_node_t *self)
 	self->super = component_new(ct_node);
 	self->children = NULL;
 	self->children_size = 0;
-	mat4_identity(self->model);
+	self->model = mat4();
 	self->cached = 0;
 	self->parent = (entity_t){.id = -1, .ecm = NULL};
 }
@@ -111,20 +111,20 @@ void c_node_update_model(c_node_t *self)
 		c_node_t *parent_node = c_node(parent);
 		c_node_update_model(parent_node);
 
-		mat4_mul(self->model, parent_node->model,
+		self->model = mat4_mul(parent_node->model,
 				c_spacial(self->super.entity)->model_matrix);
 	}
 	else
 	{
-		/* mat4_identity(self->model); */
-		mat4_dup(self->model, c_spacial(self->super.entity)->model_matrix);
+		/* self->model = mat4(); */
+		self->model = c_spacial(self->super.entity)->model_matrix;
 	}
 }
 
 vec3_t c_node_global_to_local(c_node_t *self, vec3_t vec)
 {
-	mat4 inv;
+	mat4_t inv;
 	c_node_update_model(self);
-	mat4_invert(inv, self->model);
+	inv = mat4_invert(self->model);
 	return mat4_mul_vec4(inv, vec4(vec.x, vec.y, vec.z, 1.0)).xyz;
 }

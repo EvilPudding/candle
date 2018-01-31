@@ -2,7 +2,7 @@
 #define MATERIAL_H
 
 #include "texture.h"
-#include "linmath.h"
+#include "mafs.h"
 
 typedef struct candle_t candle_t;
 typedef struct shader_t shader_t;

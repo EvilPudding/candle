@@ -12,8 +12,8 @@ void c_spacial_init(c_spacial_t *self)
 	self->rotation = vec3(0.0, 0.0, 0.0);
 	self->position = vec3(0.0, 0.0, 0.0);
 
-	mat4_identity(self->model_matrix);
-	mat4_identity(self->rotation_matrix);
+	self->model_matrix = mat4();
+	self->rotation_matrix = mat4();
 }
 
 c_spacial_t *c_spacial_new()
@@ -38,7 +38,7 @@ vec3_t c_spacial_up(c_spacial_t *self)
 void c_spacial_look_at(c_spacial_t *self, vec3_t eye, vec3_t center, vec3_t up)
 {
 	self->up = up;
-	mat4_look_at(self->model_matrix, eye, center, up);
+	self->model_matrix = mat4_look_at(eye, center, up);
 	entity_signal(self->super.entity, spacial_changed,
 			&self->super.entity);
 }
@@ -58,11 +58,11 @@ void c_spacial_set_rot(c_spacial_t *self, float x, float y, float z, float angle
 	float new_y = y * angle;
 	float new_z = z * angle;
 
-	mat4_rotate(self->rotation_matrix, self->rotation_matrix, x, 0, 0,
+	self->rotation_matrix = mat4_rotate(self->rotation_matrix, x, 0, 0,
 			new_x - self->rotation.x);
-	mat4_rotate(self->rotation_matrix, self->rotation_matrix, 0, 0, z,
+	self->rotation_matrix = mat4_rotate(self->rotation_matrix, 0, 0, z,
 			new_z - self->rotation.z);
-	mat4_rotate(self->rotation_matrix, self->rotation_matrix, 0, y, 0,
+	self->rotation_matrix = mat4_rotate(self->rotation_matrix, 0, y, 0,
 			new_y - self->rotation.y);
 
 	if(x) self->rotation.x = new_x;
@@ -87,9 +87,9 @@ void c_spacial_set_pos(c_spacial_t *self, vec3_t pos)
 
 void c_spacial_update_model_matrix(c_spacial_t *self)
 {
-	mat4_translate(self->model_matrix, self->position.x, self->position.y,
+	self->model_matrix = mat4_translate(self->position.x, self->position.y,
 			self->position.z);
-	mat4_scale_aniso(self->model_matrix, self->model_matrix, self->scale.x,
+	self->model_matrix = mat4_scale_aniso(self->model_matrix, self->scale.x,
 			self->scale.y, self->scale.z);
-	mat4_mul(self->model_matrix, self->model_matrix, self->rotation_matrix);
+	self->model_matrix = mat4_mul(self->model_matrix, self->rotation_matrix);
 }

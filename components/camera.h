@@ -9,8 +9,8 @@ typedef struct
 	c_t super; /* extends c_t */
 
 	int active;
-	mat4 projection_matrix;
-	mat4 view_matrix;
+	mat4_t projection_matrix;
+	mat4_t view_matrix;
 	vec3_t pos;
 #ifdef MESH4
 	float angle4;

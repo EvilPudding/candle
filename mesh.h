@@ -2,7 +2,7 @@
 #define MESH_H
 
 #include "glutil.h"
-#include "linmath.h"
+#include "mafs.h"
 #include "material.h"
 #include "vector.h"
 #include "klist.h"
@@ -183,8 +183,8 @@ typedef struct mesh_t
 	int current_surface;
 	int first_edge;
 
-	mat4 transformation;
-	mat4 backup;
+	mat4_t transformation;
+	mat4_t backup;
 
 	support_cb support;
 
