@@ -764,7 +764,7 @@ static inline mat4_t mat4_look_at(vec3_t eye, vec3_t center, vec3_t up)
 	return mat4_translate_in_place(M, -eye.x, -eye.y, -eye.z);
 }
 
-static inline vec4_t quat_identity(void)
+static inline vec4_t quat(void)
 {
 	return vec4(0.0f, 0.0f, 0.0f, 1.0f);
 }
@@ -885,19 +885,22 @@ static inline mat4_t mat4_from_quat(vec4_t q)
 	return M;
 }
 
-static inline void mat4o_mul_quat(mat4_t R, mat4_t M, vec4_t q)
+static inline mat4_t mat4_mul_quat(mat4_t M, vec4_t q)
 {
 /*  XXX: The way this is written only works for othogonal matrices. */
 /* TODO: Take care of non-orthogonal case. */
+	mat4_t R;
 	R._[0].xyz = quat_mul_vec3(q, M._[0].xyz);
 	R._[1].xyz = quat_mul_vec3(q, M._[1].xyz);
 	R._[2].xyz = quat_mul_vec3(q, M._[2].xyz);
 
 	R._[3]._[0] = R._[3]._[1] = R._[3]._[2] = 0.f;
 	R._[3]._[3] = 1.f;
+	return R;
 }
-static inline void quat_from_mat4(vec4_t q, mat4_t M)
+static inline vec4_t quat_from_mat4(mat4_t M)
 {
+	vec4_t q;
 	n_t r=0.f;
 	int i;
 
@@ -917,13 +920,14 @@ static inline void quat_from_mat4(vec4_t q, mat4_t M)
 	if(r < 1e-6) {
 		q._[0] = 1.f;
 		q._[1] = q._[2] = q._[3] = 0.f;
-		return;
+		return q;
 	}
 
 	q.x = r/2.f;
 	q.y = (M._[p[0]]._[p[1]] - M._[p[1]]._[p[0]])/(2.f*r);
 	q.z = (M._[p[2]]._[p[0]] - M._[p[0]]._[p[2]])/(2.f*r);
 	q.w = (M._[p[2]]._[p[1]] - M._[p[1]]._[p[2]])/(2.f*r);
+	return q;
 }
 
 typedef struct mat3_t { union {
@@ -942,12 +946,14 @@ static inline mat3_t mat3(void)
 	return M;
 }
 
-static inline void mat3_of_mat4(mat3_t M, mat4_t N)
+static inline mat3_t mat3_of_mat4(mat4_t N)
 {
+	mat3_t M;
 	int i, j;
 	for(i=0; i<3; ++i)
 		for(j=0; j<3; ++j)
 			M._[i]._[j] = N._[i]._[j];
+	return M;
 }
 
 static inline void float_clamp(float *n, float a, float b)
