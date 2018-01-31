@@ -112,12 +112,12 @@ void c_node_update_model(c_node_t *self)
 		c_node_update_model(parent_node);
 
 		self->model = mat4_mul(parent_node->model,
-				c_spacial(self->super.entity)->model_matrix);
+				c_spacial(c_entity(self))->model_matrix);
 	}
 	else
 	{
 		/* self->model = mat4(); */
-		self->model = c_spacial(self->super.entity)->model_matrix;
+		self->model = c_spacial(c_entity(self))->model_matrix;
 	}
 }
 
