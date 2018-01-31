@@ -485,7 +485,7 @@ vec4 ssr(sampler2D screen)
 	float oppositeLength = isoscelesTriangleOpposite(adjacentLength, coneTheta);
 	float incircleSize = isoscelesTriangleInRadius(oppositeLength, adjacentLength);
 	float mipChannel = clamp(log2(incircleSize * 60), 0.0f, 7.0f);
-	/* mipChannel = 3; */
+	/* return vec4(vec3(log2(incircleSize * 60)), 1.0f); */
 	/* return vec4(vec3(incircleSize * 50), 1.0f); */
 	/* return vec4(vec3(mipChannel / 7.0f), 1.0f); */
 	/* mipChannel = 0; */
@@ -493,8 +493,8 @@ vec4 ssr(sampler2D screen)
 
 	vec3 reflect_color = textureLod(screen, coords.xy, mipChannel).rgb;
 
-	/* vec3 fallback_color = texture(ambient_map, reflect(eye_dir, nor)).rgb / 2; */
-	vec3 fallback_color = vec3(0.0f);
+	vec3 fallback_color = texture(ambient_map, reflect(eye_dir, nor)).rgb / 2;
+	/* vec3 fallback_color = vec3(0.0f); */
 
 
 	float col = screenEdgefactor * clamp((searchDist - adjacentLength) * searchDistInv,

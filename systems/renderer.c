@@ -306,10 +306,11 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 			texture_update_brightness(pass->output);
 
 			float brightness = pass->output->brightness;
-			/* float targetExposure = 0.4 / brightness; */
-			float targetExposure = fmax(0.4 - brightness, 0.0f);
+			if(!brightness) brightness = 1.0f;
+			float targetExposure = 0.3 + 0.4 / brightness;
+			/* float targetExposure = fmax(0.4 - brightness, 0.0f); */
+
 			cam->exposure += (targetExposure - cam->exposure) / 100;
-			glerr();
 		}
 	}
 
