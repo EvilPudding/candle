@@ -414,6 +414,7 @@ static inline vec4_t mat4_row(mat4_t M, int i)
 {
 	vec4_t r;
 	int k;
+	/* return M._[i]; TODO? */
 	for(k=0; k<4; ++k)
 		r._[k] = M._[k]._[i];
 	return r;
@@ -480,14 +481,14 @@ static inline void mat4_print(mat4_t M)
 }
 static inline mat4_t mat4_mul(mat4_t a, mat4_t b)
 {
-	mat4_t temp;
+	mat4_t M;
 	int k, r, c;
 	for(c=0; c<4; ++c) for(r=0; r<4; ++r) {
-		temp._[c]._[r] = 0.f;
+		M._[c]._[r] = 0.f;
 		for(k=0; k<4; ++k)
-			temp._[c]._[r] += a._[k]._[r] * b._[c]._[k];
+			M._[c]._[r] += a._[k]._[r] * b._[c]._[k];
 	}
-	return temp;
+	return M;
 }
 static inline vec4_t mat4_mul_vec4(mat4_t M, vec4_t v)
 {
@@ -553,7 +554,7 @@ static inline mat4_t mat4_rotate(mat4_t M, n_t x, n_t y, n_t z, n_t angle)
 		T = mat4_add(T, C);
 		T = mat4_add(T, S);
 
-		T._[3]._[3] = 1.;		
+		T._[3]._[3] = 1.0f;		
 		return mat4_mul(M, T);
 	} else {
 		return M;
@@ -641,7 +642,7 @@ static inline mat4_t mat4_invert(mat4_t M)
 static inline mat4_t mat4_orthonormalize(mat4_t M)
 {
 	mat4_t R = M;
-	n_t s = 1.;
+	n_t s = 1.0f;
 
 	R._[2].xyz = vec3_norm(R._[2].xyz);
 	
@@ -666,7 +667,9 @@ static inline mat4_t mat4_frustum(n_t l, n_t r, n_t b, n_t t, n_t n, n_t f)
 	M._[0]._[1] = M._[0]._[2] = M._[0]._[3] = 0.f;
 	
 	M._[1]._[1] = 2.*n/(t-b);
-	M._[1]._[0] = M._[1]._[2] = M._[1]._[3] = 0.f;
+	M._[1]._[0] =
+		M._[1]._[2] =
+		M._[1]._[3] = 0.0f;
 
 	M._[2]._[0] = (r+l)/(r-l);
 	M._[2]._[1] = (t+b)/(t-b);
@@ -674,20 +677,28 @@ static inline mat4_t mat4_frustum(n_t l, n_t r, n_t b, n_t t, n_t n, n_t f)
 	M._[2]._[3] = -1.f;
 	
 	M._[3]._[2] = -2.f*(f*n)/(f-n);
-	M._[3]._[0] = M._[3]._[1] = M._[3]._[3] = 0.f;
+	M._[3]._[0] =
+		M._[3]._[1] =
+		M._[3]._[3] = 0.0f;
 	return M;
 }
 static inline mat4_t mat4_ortho(n_t l, n_t r, n_t b, n_t t, n_t n, n_t f)
 {
 	mat4_t M;
 	M._[0]._[0] = 2.f/(r-l);
-	M._[0]._[1] = M._[0]._[2] = M._[0]._[3] = 0.f;
+	M._[0]._[1] =
+		M._[0]._[2] =
+		M._[0]._[3] = 0.0f;
 
 	M._[1]._[1] = 2.f/(t-b);
-	M._[1]._[0] = M._[1]._[2] = M._[1]._[3] = 0.f;
+	M._[1]._[0] =
+		M._[1]._[2] =
+		M._[1]._[3] = 0.0f;
 
 	M._[2]._[2] = -2.f/(f-n);
-	M._[2]._[0] = M._[2]._[1] = M._[2]._[3] = 0.f;
+	M._[2]._[0] =
+		M._[2]._[1] =
+		M._[2]._[3] = 0.0f;
 	
 	M._[3]._[0] = -(r+l)/(r-l);
 	M._[3]._[1] = -(t+b)/(t-b);
