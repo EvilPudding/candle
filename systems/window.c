@@ -13,8 +13,9 @@ extern SDL_Window *mainWindow;
 
 static void init_context_b(c_window_t *self)
 {
-	mainWindow = self->window = SDL_CreateWindow("Shift", 0, 0,
-			self->width, self->height, SDL_WINDOW_OPENGL);
+	mainWindow = self->window = SDL_CreateWindow("clidian", 0, 0,
+			self->width, self->height, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN
+			| SDL_WINDOW_ALLOW_HIGHDPI);
 
 	context = self->context = SDL_GL_CreateContext(self->window);
 
@@ -50,13 +51,18 @@ static void init_context_b(c_window_t *self)
 void c_window_init(c_window_t *self)
 {
 	self->super = component_new(ct_window);
-	SDL_Init(SDL_INIT_VIDEO);
+	SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
+	SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER|SDL_INIT_EVENTS);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS,
+			SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
 
 	self->width = window_width;
 	self->height = window_height;
 
+	/* SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1); */
+
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
 			SDL_GL_CONTEXT_PROFILE_CORE);
 
@@ -66,13 +72,10 @@ void c_window_init(c_window_t *self)
 
 	self->key_state = SDL_GetKeyboardState(NULL);
 
-	SDL_SetWindowGrab(self->window, SDL_TRUE);
-	SDL_SetRelativeMouseMode(SDL_TRUE);
-
 	self->quad_shader = shader_new("quad");
 	self->quad = entity_new(candle->ecm, 2,
 			c_name_new("renderer_quad"),
-			c_model_new(mesh_quad(), NULL, 0));
+			c_model_new(mesh_quad(), 0));
 	c_model(self->quad)->visible = 0;
 }
 
@@ -114,7 +117,7 @@ void c_window_rect(c_window_t *self, int x, int y, int width, int height,
 
 	shader_bind_screen(self->quad_shader, texture, 1, 1);
 
-	c_mesh_gl_draw(c_mesh_gl(self->quad));
+	c_mesh_gl_draw(c_mesh_gl(self->quad), NULL, 0);
 
 }
 

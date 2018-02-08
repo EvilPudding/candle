@@ -24,8 +24,6 @@ unsigned long world_changed;
 static void c_renderer_add_gbuffer(c_renderer_t *self, const char *name,
 		unsigned int draw_filter);
 
-static int c_renderer_draw_entity(c_renderer_t *self, c_model_t *model,
-		shader_t *shader);
 static int c_renderer_probe_update_map(c_renderer_t *self, ecm_t *ecm,
 		entity_t probe, shader_t *shader);
 static void c_renderer_update_probes(c_renderer_t *self, ecm_t *ecm);
@@ -128,7 +126,7 @@ static void c_renderer_init(c_renderer_t *self)
 
 	self->quad = entity_new(candle->ecm, 2,
 			c_name_new("renderer_quad"),
-			c_model_new(mesh_quad(), NULL, 0));
+			c_model_new(mesh_quad(), 0));
 	c_model(self->quad)->visible = 0;
 
 
@@ -287,13 +285,13 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 
 			shader_bind_light(pass->shader, c_entity(light));
 
-			c_mesh_gl_draw(quad);
+			c_mesh_gl_draw(quad, NULL, 0);
 		}
 		glDisable(GL_BLEND);
 	}
 	else
 	{
-		c_mesh_gl_draw(quad);
+		c_mesh_gl_draw(quad, NULL, 0);
 	}
 
 	if(pass->mipmaped || pass->record_brightness)
@@ -383,26 +381,6 @@ void c_renderer_register(ecm_t *ecm)
 }
 
 
-/* #include "components/name.h" */
-static int c_renderer_draw_entity(c_renderer_t *self, c_model_t *model,
-		shader_t *shader)
-{
-	if(model->before_draw) if(!model->before_draw((c_t*)model)) return 0;
-	if(model->visible && model->mat && model->mesh)
-	{
-		material_bind(model->mat, shader);
-
-		c_node_update_model(c_node(c_entity(model)));
-
-		shader_update(shader, &c_node(c_entity(model))->model, self->perlin);
-
-		shader_bind_mesh(shader, model->mesh);
-		/* if(c_name(c_entity(model))) printf("%s\n", c_name(c_entity(model))->name); */
-		c_model_draw(model);
-	}
-
-	return 1;
-}
 
 static int c_renderer_probe_update_map(c_renderer_t *self, ecm_t *ecm,
 		entity_t probe, shader_t *shader)
@@ -430,33 +408,15 @@ static int c_renderer_probe_update_map(c_renderer_t *self, ecm_t *ecm,
 #endif
 
 		ct_t *models = ecm_get(ecm, ct_model);
+		int res = 1;
 
 		for(i = 0; i < models->components_size; i++)
 		{
 			c_model_t *model = (c_model_t*)ct_get_at(models, i);
 
-			/* if(model->cast_shadow && model->visible */
-					/* && model->mat && model->mesh) */
-			if(model->visible && model->mat && model->mesh)
-			{
-				if(model->before_draw && !model->before_draw((c_t*)model)) continue;
-				/* printf("shader: %s ", shader->filename); if(c_name(c_entity(model))) */
-					/* printf("%s", c_name(c_entity(model))->name); printf("\n"); */
-
-				c_node_t *node = c_node(c_entity(model));
-				c_node_update_model(node);
-
-				/* shader_bind_light(self->shadow_shader, probe); */
-				material_bind(model->mat, shader);
-
-				shader_update(shader, &node->model, self->perlin);
-
-				if(!c_model_draw(model))
-				{
-					return 0;
-				}
-			}
+			res |= c_model_render(model, 0, shader);
 		}
+		if(!res) return 0;
 	}
 	return 1;
 }
@@ -561,9 +521,10 @@ void c_renderer_clear_shaders(c_renderer_t *self, shader_t *shader)
 	self->passes_size = 0;
 }
 
-void c_renderer_update_gbuffers(c_renderer_t *self, entity_t camera)
+int c_renderer_update_gbuffers(c_renderer_t *self, entity_t camera)
 {
 	int i;
+	int res = 1;
 	for(i = 0; i < self->gbuffers_size; i++)
 	{
 		gbuffer_t *gb = &self->gbuffers[i];
@@ -588,15 +549,19 @@ void c_renderer_update_gbuffers(c_renderer_t *self, entity_t camera)
 		glEnable(GL_CULL_FACE); glerr();
 		glEnable(GL_DEPTH_TEST); glerr();
 
-		entity_filter(c_entity(self), render_filter, &gb->draw_filter,
-				(filter_cb)c_renderer_draw_entity, (c_t*)self,
-				self->gbuffer_shader);
+		ct_t *models = ecm_get(c_ecm(self), ct_model);
+		for(i = 0; i < models->components_size; i++)
+		{
+			c_model_t *model = (c_model_t*)ct_get_at(models, i);
+			res |= c_model_render(model, gb->draw_filter, self->gbuffer_shader);
+		}
 
 		glDisable(GL_CULL_FACE); glerr();
 		glDisable(GL_DEPTH_TEST); glerr();
 
 	}
 
+	return res;
 }
 
 void c_renderer_draw_to_texture(c_renderer_t *self, shader_t *shader,
@@ -609,7 +574,7 @@ void c_renderer_draw_to_texture(c_renderer_t *self, shader_t *shader,
 
 	shader_bind_screen(shader, buffer, 1, 1);
 
-	c_mesh_gl_draw(c_mesh_gl(self->quad));
+	c_mesh_gl_draw(c_mesh_gl(self->quad), NULL, 0);
 }
 
 int c_renderer_draw(c_renderer_t *self)

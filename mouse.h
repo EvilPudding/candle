@@ -10,13 +10,14 @@ typedef struct
 
 typedef struct
 {
-	float x, y, direction;
-} mouse_wheel_data;
+	float x, y;
+} mouse_position_data;
 
 typedef struct
 {
-	float x, y;
-} mouse_position_data;
+	float x, y, direction;
+	int button;
+} mouse_button_data;
 
 typedef struct
 {

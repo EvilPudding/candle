@@ -497,7 +497,7 @@ void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
 	glerr();
 }
 
-void shader_update(shader_t *self, mat4_t *model_matrix, texture_t *perlin)
+void shader_update(shader_t *self, mat4_t *model_matrix)
 {
 	mat4_t mvp = mat4_mul(self->vp, *model_matrix);
 
@@ -505,12 +505,12 @@ void shader_update(shader_t *self, mat4_t *model_matrix, texture_t *perlin)
 	glUniformMatrix4fv(self->u_m, 1, GL_FALSE, (void*)model_matrix->_);
 	glerr();
 
-	if(perlin)
-	{
-		glUniform1i(self->u_perlin_map, 12); glerr();
-		glActiveTexture(GL_TEXTURE8 + 4); glerr();
-		texture_bind(perlin, COLOR_TEX);
-	}
+	/* if(perlin) */
+	/* { */
+	/* 	glUniform1i(self->u_perlin_map, 12); glerr(); */
+	/* 	glActiveTexture(GL_TEXTURE8 + 4); glerr(); */
+	/* 	texture_bind(perlin, COLOR_TEX); */
+	/* } */
 	glerr();
 }
 

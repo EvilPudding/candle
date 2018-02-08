@@ -8,6 +8,7 @@
 #else
 #define nextafterf nextafter
 #define sqrtf sqrt
+#define cbrtf cbrt
 #define powf pow
 #define sinf sin
 #define cosf cos

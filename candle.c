@@ -1,5 +1,18 @@
 #include "candle.h"
 #include "file.h"
+
+#define NK_INCLUDE_FIXED_TYPES
+#define NK_INCLUDE_STANDARD_IO
+#define NK_INCLUDE_STANDARD_VARARGS
+#define NK_INCLUDE_DEFAULT_ALLOCATOR
+#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#define NK_INCLUDE_FONT_BAKING
+#define NK_INCLUDE_DEFAULT_FONT
+#define NK_IMPLEMENTATION
+#define NK_SDL_GL3_IMPLEMENTATION
+#include "nuklear/nuklear.h"
+#include "nuklear/demo/sdl_opengl3/nuklear_sdl_gl3.h"
+
 #ifndef WIN32
 #include <unistd.h>
 #endif
@@ -7,6 +20,9 @@
 
 unsigned long world_update;
 unsigned long world_draw;
+
+#define MAX_VERTEX_MEMORY 512 * 1024
+#define MAX_ELEMENT_MEMORY 128 * 1024
 
 void candle_reset_dir(candle_t *self)
 {
@@ -17,50 +33,67 @@ void candle_reset_dir(candle_t *self)
 #endif
 }
 
-static void handleEvents(candle_t *candle)
+static void candle_handle_events(candle_t *self)
 {
 	SDL_Event event;
 	/* SDL_WaitEvent(&event); */
 	/* keySpec(state->key_state, state); */
 	char key;
+	if(self->nkctx) nk_input_begin(self->nkctx);
 	while(SDL_PollEvent(&event))
 	{
+		if(!self->pressing)
+		{
+			if(self->nkctx)
+			{
+				if(nk_sdl_handle_event(&event) && nk_item_is_any_active(self->nkctx))
+				{
+					continue;
+				}
+			}
+		}
 		switch(event.type)
 		{
 			case SDL_MOUSEWHEEL:
-				entity_signal(candle->ecm->none, mouse_wheel,
-						&(mouse_wheel_data){event.wheel.x, event.wheel.y,
-						event.wheel.direction});
+				entity_signal(self->ecm->none, mouse_wheel,
+						&(mouse_button_data){event.wheel.x, event.wheel.y,
+						event.wheel.direction, SDL_BUTTON_MIDDLE});
 				break;
 			case SDL_MOUSEBUTTONUP:
-				entity_signal(candle->ecm->none, mouse_release,
-						&(mouse_position_data){event.button.x, event.button.y});
+				self->pressing = 0;
+				entity_signal(self->ecm->none, mouse_release,
+						&(mouse_button_data){event.button.x, event.button.y,
+						0, event.button.button});
 				break;
 			case SDL_MOUSEBUTTONDOWN:
-				entity_signal(candle->ecm->none, mouse_press,
-						&(mouse_position_data){event.button.x, event.button.y});
+				self->pressing = 1;
+				entity_signal(self->ecm->none, mouse_press,
+						&(mouse_button_data){event.button.x, event.button.y,
+						0, event.button.button});
 				break;
 			case SDL_MOUSEMOTION:
-				entity_signal(candle->ecm->none, mouse_move,
+				entity_signal(self->ecm->none, mouse_move,
 						&(mouse_move_data){event.motion.xrel, event.motion.yrel});
 				break;
 			case SDL_QUIT:
-				candle->exit = 1;
+				self->exit = 1;
 				break;
 			case SDL_KEYUP:
 				key = event.key.keysym.sym;
-				entity_signal(candle->ecm->none, key_up, &key);
+				entity_signal(self->ecm->none, key_up, &key);
 				break;
 			case SDL_KEYDOWN:
 				key = event.key.keysym.sym;
-				entity_signal(candle->ecm->none, key_down, &key);
+				entity_signal(self->ecm->none, key_down, &key);
 				break;
 			case SDL_WINDOWEVENT:
 				switch(event.window.event)
 				{
 					case SDL_WINDOWEVENT_RESIZED:
 
-						entity_signal(candle->ecm->none, window_resize,
+						printf("window resize: %dx%d\n", event.window.data1,
+								event.window.data2);
+						entity_signal(self->ecm->none, window_resize,
 								&(window_resize_data){
 								.width = event.window.data1,
 								.height = event.window.data2});
@@ -68,29 +101,124 @@ static void handleEvents(candle_t *candle)
 				}
 				break;
 		}
-		break;
+		/* break; */
+	}
+	if(self->nkctx) nk_input_end(self->nkctx);
+}
+
+void node_node(candle_t *self, c_node_t *node)
+{
+	char buffer[64];
+	char *final_name = buffer;
+	const entity_t entity = c_entity(node);
+	c_name_t *name = c_name(entity);
+	if(name)
+	{
+		final_name = name->name;
+	}
+	else
+	{
+		sprintf(buffer, "%ld", entity.id);
+	}
+	if(nk_tree_push_id(self->nkctx, NK_TREE_NODE, final_name,
+				NK_MINIMIZED, entity.id))
+	{
+		int i;
+		for(i = 0; i < node->children_size; i++)
+		{
+			node_node(self, c_node(node->children[i]));
+		}
+		nk_tree_pop(self->nkctx);
 	}
 }
 
-static int render_loop(candle_t *candle)
+void node_tree(candle_t *self)
+{
+	int i;
+	ct_t *nodes = ecm_get(self->ecm, ct_node);
+
+	if(nk_tree_push(self->nkctx, NK_TREE_TAB, "nodes",
+				NK_MINIMIZED))
+	{
+		for(i = 0; i < nodes->components_size; i++)
+		{
+			c_node_t *node = (c_node_t*)ct_get_at(nodes, i);
+			if(node->parent.id != -1) continue;
+			node_node(self, node);
+		}
+		nk_tree_pop(self->nkctx);
+	}
+
+}
+
+
+
+static int render_loop(candle_t *self)
 {
 	int last = SDL_GetTicks();
 	int fps = 0;
 
 	//SDL_GL_MakeCurrent(state->renderer->window, state->renderer->context); 
 
-	while(!candle->exit)
+
+	while(!self->exit)
 	{
-		handleEvents(candle);
-		loader_update(candle->loader);
+		if(!self->nkctx)
+		{
+			self->nkctx = nk_sdl_init(c_window(self->systems)->window); 
+
+			{ 
+				struct nk_font_atlas *atlas; 
+				nk_sdl_font_stash_begin(&atlas); 
+				/* struct nk_font *droid = nk_font_atlas_add_from_file(atlas, "../../../extra_font/DroidSans.ttf", 14, 0); */
+				/* struct nk_font *roboto = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Roboto-Regular.ttf", 16, 0); */
+				/* struct nk_font *future = nk_font_atlas_add_from_file(atlas, "../../../extra_font/kenvector_future_thin.ttf", 13, 0); */
+				/* struct nk_font *clean = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyClean.ttf", 12, 0); */
+				/* struct nk_font *tiny = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyTiny.ttf", 10, 0); */
+				/* struct nk_font *cousine = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Cousine-Regular.ttf", 13, 0); */
+				nk_sdl_font_stash_end(); 
+				/* nk_style_load_all_cursors(self->nkctx, atlas->cursors); */
+				/* nk_style_set_font(self->nkctx, &roboto->handle); */
+			} 
+		}
+
+		candle_handle_events(self);
+		loader_update(self->loader);
 
 		/* if(state->gameStarted) */
 		{
-			handleEvents(candle);
-			entity_signal(candle->ecm->none, world_draw, NULL);
-			c_window_draw(c_window(candle->systems));
+			/* candle_handle_events(self); */
+			entity_signal(self->ecm->none, world_draw, NULL);
+
+
+			/* GUI */
+			if(self->nkctx)
+			{
+				if (nk_begin(self->nkctx, "clidian", nk_rect(50, 50, 230, 180),
+							NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
+							NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
+				{
+					static int property = 20;
+
+					nk_layout_row_static(self->nkctx, 30, 80, 1);
+					if (nk_button_label(self->nkctx, "redraw probes"))
+					{
+						c_renderer_scene_changed(c_renderer(self->systems), NULL);
+					}
+					nk_layout_row_dynamic(self->nkctx, 22, 1);
+					nk_property_int(self->nkctx, "Compression:", 0, &property, 100, 10, 1);
+
+					node_tree(self);
+				}
+				nk_end(self->nkctx);
+				nk_sdl_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_MEMORY, MAX_ELEMENT_MEMORY);
+
+			}
+			c_window_draw(c_window(self->systems));
+
 			fps++;
-			handleEvents(candle);
+			/* candle_handle_events(self); */
+
 		}
 
 		int current = SDL_GetTicks();
@@ -125,7 +253,7 @@ static int candle_loop(candle_t *candle)
 {
 	do
 	{
-		handleEvents(candle);
+		/* candle_handle_events(candle); */
 		updateWorld(candle);
 		SDL_Delay(16);
 	}

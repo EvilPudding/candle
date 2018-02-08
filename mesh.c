@@ -259,6 +259,54 @@ static vec3_t get_normal(vec3_t p1, vec3_t p2, vec3_t p3)
 	return vec3_norm(res);
 }
 
+void mesh_update_smooth_normals(mesh_t *self)
+{
+	int i;
+	for(i = 0; i < self->verts_size; i++)
+	{
+		vertex_t *v = m_vert(self, i);
+		if(!v) continue;
+
+		int start = mesh_vert_get_half(self, v);
+
+		edge_t *hedge = m_edge(self, start);
+		if(!hedge) continue;
+
+		vec3_t smooth_normal = hedge->n;
+
+		edge_t *E;
+		int e, n;
+		int limit = 16;
+		for(e = hedge->pair; e >= 0; e = E->pair)
+		{
+			E = m_edge(self, e); if(!E) break;
+			n = E->next;
+			if(n == start || n < 0) break;
+			if(!limit--) break;
+			E = m_edge(self, n);
+			if(fabs(vec3_dot(E->n, hedge->n)) >= self->smooth_max)
+			{
+				smooth_normal = vec3_add(smooth_normal, E->n);
+			}
+		}
+		hedge->n = smooth_normal = vec3_norm(smooth_normal);
+		limit = 16;
+		for(e = hedge->pair; e >= 0; e = E->pair)
+		{
+			E = m_edge(self, e); if(!E) break;
+			n = m_edge(self, e)->next;
+			if(!limit--) break;
+			if(n == start || n < 0) break;
+			E = m_edge(self, n);
+			if(fabs(vec3_dot(E->n, hedge->n)) > self->smooth_max)
+			{
+				E->n = smooth_normal;
+			}
+		}
+	}
+}
+
+
 void mesh_face_calc_flat_normals(mesh_t *self, face_t *f)
 {
 	vec3_t p0 = XYZ(f_vert(f, 0, self)->pos);

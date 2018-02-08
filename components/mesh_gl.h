@@ -4,28 +4,26 @@
 #include <ecm.h>
 #include <glutil.h>
 
+typedef struct c_mesh_gl_t c_mesh_gl_t;
+
 typedef struct
 {
-	c_t super; /* extends c_t */
-
-	mesh_t *mesh;
-
 	/* VERTEX DATA */
-    vec2_t *tex;
-    vec3_t *nor;
-    vec3_t *tan;
-    vec3_t *bit;
+	vec2_t *tex;
+	vec3_t *nor;
+	vec3_t *tan;
+	vec3_t *bit;
 #ifdef MESH4
-    vec4_t *pos;
+	vec4_t *pos;
 #else
-    vec3_t *pos;
+	vec3_t *pos;
 #endif
-    vec4_t *col;
+	vec4_t *col;
 
 	int vert_num; int vert_alloc;
 	/* ----------- */
 
-    unsigned int *ind;
+	unsigned int *ind;
 	int ind_num; int ind_alloc;
 
 	GLuint vao;
@@ -35,12 +33,24 @@ typedef struct
 
 	int ready;
 
-	int cull_face;
-	int wireframe;
+	entity_t entity;
+	int layer_id;
+
+	int updated;
+	int update_id;
+} glg_t;
+
+typedef struct c_mesh_gl_t
+{
+	c_t super; /* extends c_t */
+
+	mesh_t *mesh;
+
+	glg_t groups[8];
+	int groups_num;
+
 
 	int ram_update_id;
-	int gl_updated;
-	int update_id;
 } c_mesh_gl_t;
 
 
@@ -52,7 +62,7 @@ c_mesh_gl_t *c_mesh_gl_new(void);
 
 void c_mesh_gl_register(ecm_t *ecm);
 
-int c_mesh_gl_draw(c_mesh_gl_t *self);
+int c_mesh_gl_draw(c_mesh_gl_t *self, shader_t *shader, int transparent);
 
 int c_mesh_gl_updated(c_mesh_gl_t *self);
 void c_mesh_gl_update(c_mesh_gl_t *self);

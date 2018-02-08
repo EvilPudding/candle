@@ -8,7 +8,7 @@ unsigned long mouse_wheel;
 void mouse_register(ecm_t *ecm)
 {
 	mouse_move = ecm_register_signal(ecm, sizeof(mouse_move_data));
-	mouse_press = ecm_register_signal(ecm, sizeof(mouse_position_data));
-	mouse_release = ecm_register_signal(ecm, sizeof(mouse_position_data));
-	mouse_wheel = ecm_register_signal(ecm, sizeof(mouse_wheel_data));
+	mouse_press = ecm_register_signal(ecm, sizeof(mouse_button_data));
+	mouse_release = ecm_register_signal(ecm, sizeof(mouse_button_data));
+	mouse_wheel = ecm_register_signal(ecm, sizeof(mouse_button_data));
 }

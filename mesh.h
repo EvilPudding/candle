@@ -253,6 +253,8 @@ void mesh_modified(mesh_t *self);
 
 void mesh_get_tg_bt(mesh_t *self);
 
+void mesh_update_smooth_normals(mesh_t *self);
+
 int mesh_dup_vert(mesh_t *self, int i);
 int mesh_add_vert(mesh_t *self, vecN_t p);
 int mesh_append_edge(mesh_t *self, vecN_t p);

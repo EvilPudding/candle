@@ -68,7 +68,7 @@ typedef struct shader_t
 } shader_t;
 
 shader_t *shader_new(const char *filename);
-void shader_update(shader_t *self, mat4_t *model_matrix, texture_t *perlin);
+void shader_update(shader_t *self, mat4_t *model_matrix);
 void shader_bind(shader_t *self);
 #ifdef MESH4
 void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,

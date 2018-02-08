@@ -68,7 +68,6 @@ typedef struct c_renderer_t
 	shader_t *gbuffer_shader;
 
 	int probe_update_id;
-	int ambient_update_id;
 
 	int passes_size;
 	pass_t passes[16];
