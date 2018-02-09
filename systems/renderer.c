@@ -99,6 +99,12 @@ static int c_renderer_bind_passes(c_renderer_t *self)
 	return 1;
 }
 
+void c_renderer_get_pixel(c_renderer_t *self, int gbuffer, int buffer,
+		int x, int y)
+{
+	texture_get_pixel(self->gbuffers[gbuffer].buffer, buffer, x, y);
+}
+
 static void c_renderer_init(c_renderer_t *self)
 {
 	self->super = component_new(ct_renderer);
@@ -176,12 +182,13 @@ static int c_renderer_gl_update_textures(c_renderer_t *self)
 		}
 		gb->buffer = texture_new_2D(w, h, 32, GL_RGBA16F, 1, 0);
 										   /* COLOR_TEX + 0 DIFFUSE	*/
-		texture_add_buffer(gb->buffer, 1); /* COLOR_TEX + 1 SPECULAR */
-		texture_add_buffer(gb->buffer, 1); /* COLOR_TEX + 2 REFLECTION */
-		texture_add_buffer(gb->buffer, 0); /* COLOR_TEX + 3 NORMAL	*/
-		texture_add_buffer(gb->buffer, 1); /* COLOR_TEX + 4 TRANSPARENCY	*/
-		texture_add_buffer(gb->buffer, 0); /* COLOR_TEX + 5 c_POSITION */
-		texture_add_buffer(gb->buffer, 0); /* COLOR_TEX + 6 w_POSITION */
+		texture_add_buffer(gb->buffer, 1, 1, 0); /* COLOR_TEX + 1 SPECULAR */
+		texture_add_buffer(gb->buffer, 1, 1, 0); /* COLOR_TEX + 2 REFLECTION */
+		texture_add_buffer(gb->buffer, 1, 0, 0); /* COLOR_TEX + 3 NORMAL	*/
+		texture_add_buffer(gb->buffer, 1, 1, 0); /* COLOR_TEX + 4 TRANSPARENCY	*/
+		texture_add_buffer(gb->buffer, 1, 0, 0); /* COLOR_TEX + 5 c_POSITION */
+		texture_add_buffer(gb->buffer, 1, 0, 0); /* COLOR_TEX + 6 w_POSITION */
+		texture_add_buffer(gb->buffer, 1, 0, 0); /* COLOR_TEX + 7 ID */
 
 		texture_draw_id(gb->buffer, COLOR_TEX); /* DRAW DIFFUSE */
 
@@ -364,6 +371,39 @@ c_renderer_t *c_renderer_new(float resolution, int auto_exposure, int roughness,
 	return self;
 }
 
+entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y)
+{
+	entity_t result;
+	result.id = texture_get_pixel(self->gbuffers[0].buffer, 7, x, y);
+
+	result.ecm = c_ecm(self);
+
+	return result;
+}
+
+int c_renderer_mouse_release(c_renderer_t *self, mouse_button_data *event)
+{
+	if(event->button == SDL_BUTTON_LEFT)
+	{
+		entity_t result = c_renderer_entity_at_pixel(self, event->x, event->y);
+		/* TODO entity 0 should be valid */
+		if(result.id != 0)
+		{
+			if(c_name(result))
+			{
+				printf("released entity %s\n", c_name(result)->name);
+			}
+			else
+			{
+				printf("released entity %ld\n", result.id);
+			}
+			/* c_spacial(result)-> */
+			/* entity_signal_same(result, model_release, NULL); */
+		}
+	}
+	return 1;
+}
+
 
 void c_renderer_register(ecm_t *ecm)
 {
@@ -378,6 +418,13 @@ void c_renderer_register(ecm_t *ecm)
 
 	ct_register_listener(ct, WORLD, world_draw,
 			(signal_cb)c_renderer_draw);
+
+	/* ct_register_listener(ct, WORLD, mouse_press, */
+			/* (signal_cb)c_renderer_mouse_press); */
+
+	ct_register_listener(ct, WORLD, mouse_release,
+			(signal_cb)c_renderer_mouse_release);
+
 }
 
 

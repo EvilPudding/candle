@@ -15,6 +15,7 @@ uniform mat4 M;
 uniform mat4 V;
 uniform mat4 projection;
 /* uniform mat3 MV3x3; */
+uniform vec3 id;
 
 out mat4 inv_projection;
 
@@ -27,6 +28,8 @@ out vec3 cameraspace_light_dir;
 out vec3 cam_normal;
 out vec3 cam_tangent;
 out vec3 cam_bitangent;
+
+out vec3 selection_id;
 
 out vec3 vertex_normal;
 out vec3 vertex_tangent;
@@ -72,6 +75,8 @@ void main()
 	vertex_tangent = TG;
 	vertex_bitangent = BT;
 	vertex_normal = N;
+
+	selection_id = id;
 
 	TM = mat3(TG, BT, N);
 

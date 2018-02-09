@@ -105,7 +105,7 @@ int c_model_render(c_model_t *self, int transparent, shader_t *shader)
 		c_node_update_model(node);
 		shader_update(shader, &node->model);
 	}
-	shader_bind_mesh(shader, self->mesh);
+	shader_bind_mesh(shader, self->mesh, c_entity(self).id);
 	/* if(c_name(c_entity(model))) printf("%s\n", c_name(c_entity(model))->name); */
 
 	return c_mesh_gl_draw(c_mesh_gl(c_entity(self)), shader, transparent);

@@ -37,6 +37,7 @@ struct gbuffer_t
 	sampler2D transparency;
 	sampler2D wposition;
 	sampler2D cposition;
+	sampler2D id;
 };
 
 uniform gbuffer_t gbuffer;
@@ -67,6 +68,8 @@ in vec3 cameraspace_light_dir;
 in vec3 cam_normal;
 in vec3 cam_tangent;
 in vec3 cam_bitangent;
+
+in vec3 selection_id;
 
 in vec3 vertex_normal;
 in vec3 vertex_tangent;

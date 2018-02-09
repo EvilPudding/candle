@@ -94,5 +94,7 @@ void c_renderer_add_pass(c_renderer_t *self, int for_each_light,
 		const char *feed_name, const char *shader_name, const char *gbuffer_name);
 void c_renderer_clear_shader(c_renderer_t *self, shader_t *shader);
 int c_renderer_scene_changed(c_renderer_t *self, entity_t *entity);
+void c_renderer_get_pixel(c_renderer_t *self, int gbuffer, int buffer,
+		int x, int y);
 
 #endif /* !RENDERER_H */

@@ -6,6 +6,7 @@ layout (location = 3) out vec3 NormalColor;
 layout (location = 4) out vec4 Transparency;
 layout (location = 5) out vec3 CPositionColor;
 layout (location = 6) out vec3 WPositionColor;
+layout (location = 7) out vec3 ID;
 
 #include "common.frag"
 
@@ -27,6 +28,8 @@ void main()
 	NormalColor = n;
 	WPositionColor = worldspace_position;
 	CPositionColor = cameraspace_vertex_pos;
+
+	ID = vec3(selection_id);
 
 	/* float up = max(n.y, 0.0); */
 	/* DiffuseColor = vec4(vec3(up), 1.0); */

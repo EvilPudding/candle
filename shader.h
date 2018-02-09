@@ -38,7 +38,9 @@ typedef struct shader_t
 	GLuint u_camera_pos;
 	GLuint u_exposure;
 	GLuint u_light_intensity;
+
 	GLuint u_has_tex;
+	GLuint u_id;
 
 	GLuint u_screen_scale_x;
 	GLuint u_screen_scale_y;
@@ -49,6 +51,7 @@ typedef struct shader_t
 	u_prop_t u_normal;
 	u_prop_t u_transparency;
 
+
 	GLuint u_g_diffuse;
 	GLuint u_g_specular;
 	GLuint u_g_reflection;
@@ -56,6 +59,7 @@ typedef struct shader_t
 	GLuint u_g_transparency;
 	GLuint u_g_wposition;
 	GLuint u_g_cposition;
+	GLuint u_g_id;
 
 	GLuint u_horizontal_blur; /* TODO: make this dynamic */
 	GLuint u_output_size;
@@ -78,7 +82,7 @@ void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
 		mat4_t *projection, float exposure);
 #endif
 void shader_bind_light(shader_t *self, entity_t light);
-void shader_bind_mesh(shader_t *self, mesh_t *mesh);
+void shader_bind_mesh(shader_t *self, mesh_t *mesh, unsigned int id);
 void shader_bind_gbuffer(shader_t *self, texture_t *buffer);
 void shader_bind_screen(shader_t *self, texture_t *buffer, float sx, float sy);
 void shader_destroy(shader_t *self);

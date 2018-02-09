@@ -367,17 +367,18 @@ static int shader_new_loader(shader_t *self)
 	self->u_exposure = glGetUniformLocation(self->program, "exposure"); glerr();
 	self->u_light_intensity = glGetUniformLocation(self->program, "light_intensity"); glerr();
 
-	self->u_has_tex = glGetUniformLocation(self->program, "has_tex");
+	self->u_has_tex = glGetUniformLocation(self->program, "has_tex"); glerr();
 
-	self->u_screen_scale_x = glGetUniformLocation(self->program, "screen_scale_x");
-	self->u_screen_scale_y = glGetUniformLocation(self->program, "screen_scale_y");
+	self->u_id = glGetUniformLocation(self->program, "id"); glerr();
+
+	self->u_screen_scale_x = glGetUniformLocation(self->program, "screen_scale_x"); glerr();
+	self->u_screen_scale_y = glGetUniformLocation(self->program, "screen_scale_y"); glerr();
 
 	self->u_ambient_light = glGetUniformLocation(self->program, "ambient_light"); glerr();
 
-	self->u_horizontal_blur = glGetUniformLocation(self->program, "horizontal");
+	self->u_horizontal_blur = glGetUniformLocation(self->program, "horizontal"); glerr();
 
-	self->u_output_size = glGetUniformLocation(self->program, "output_size");
-	glerr();
+	self->u_output_size = glGetUniformLocation(self->program, "output_size"); glerr();
 
 	/* MATERIALS */
 	shader_get_prop_uniforms(self, &self->u_diffuse, "diffuse");
@@ -386,15 +387,16 @@ static int shader_new_loader(shader_t *self)
 	shader_get_prop_uniforms(self, &self->u_normal, "normal");
 	shader_get_prop_uniforms(self, &self->u_transparency, "transparency");
 
+
 	/* GBUFFER TEXTURES */
-	self->u_g_diffuse = glGetUniformLocation(self->program, "gbuffer.diffuse");
-	self->u_g_specular = glGetUniformLocation(self->program, "gbuffer.specular");
-	self->u_g_reflection = glGetUniformLocation(self->program, "gbuffer.reflection");
-	self->u_g_normal = glGetUniformLocation(self->program, "gbuffer.normal");
-	self->u_g_transparency = glGetUniformLocation(self->program, "gbuffer.transparency");
-	self->u_g_cposition = glGetUniformLocation(self->program, "gbuffer.cposition");
-	self->u_g_wposition = glGetUniformLocation(self->program, "gbuffer.wposition");
-	glerr();
+	self->u_g_diffuse = glGetUniformLocation(self->program, "gbuffer.diffuse"); glerr();
+	self->u_g_specular = glGetUniformLocation(self->program, "gbuffer.specular"); glerr();
+	self->u_g_reflection = glGetUniformLocation(self->program, "gbuffer.reflection"); glerr();
+	self->u_g_normal = glGetUniformLocation(self->program, "gbuffer.normal"); glerr();
+	self->u_g_transparency = glGetUniformLocation(self->program, "gbuffer.transparency"); glerr();
+	self->u_g_cposition = glGetUniformLocation(self->program, "gbuffer.cposition"); glerr();
+	self->u_g_wposition = glGetUniformLocation(self->program, "gbuffer.wposition"); glerr();
+	self->u_g_id = glGetUniformLocation(self->program, "gbuffer.id"); glerr();
 
 	return 1;
 }
@@ -558,6 +560,10 @@ void shader_bind_gbuffer(shader_t *self, texture_t *buffer)
 	glActiveTexture(GL_TEXTURE0 + 7); glerr();
 	texture_bind(buffer, 7);
 
+	glUniform1i(self->u_g_id, 8); glerr();
+	glActiveTexture(GL_TEXTURE0 + 8); glerr();
+	texture_bind(buffer, 8);
+
 }
 
 void shader_bind(shader_t *self)
@@ -565,10 +571,18 @@ void shader_bind(shader_t *self)
 	glUseProgram(self->program);
 }
 
-void shader_bind_mesh(shader_t *self, mesh_t *mesh)
+void shader_bind_mesh(shader_t *self, mesh_t *mesh, unsigned int id)
 {
 	glUniform1f(self->u_has_tex, (float)mesh->has_texcoords);
-	/* glUniform1f(self->u_has_tex, 1.0f); */
+	union {
+		unsigned int i;
+		struct{
+			char r, g, b, a;
+		};
+	} convert = {.i = id};
+
+	glUniform3f(self->u_id, (float)convert.r / 255,
+			(float)convert.g / 255, (float)convert.b / 255);
 }
 
 void shader_destroy(shader_t *self)

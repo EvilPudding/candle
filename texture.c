@@ -44,6 +44,30 @@ void texture_update_gl(texture_t *self)
 			NULL);
 }
 
+int texture_get_pixel(texture_t *self, int buffer, int x, int y)
+{
+	y = self->height-y;
+	printf("%d %d\n", x, y);
+	glFlush();
+	glFinish();
+	texture_bind(self, COLOR_TEX + buffer);
+
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, self->frame_buffer[0]); glerr();
+	/* glGetTexImage(self->target, 0, self->type, GL_UNSIGNED_BYTE, */
+			/* self->imageData); */
+	glReadBuffer(self->attachments[buffer]);
+
+	/* texture_2D_frame_buffer(self); */
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+
+	int data = 0;
+	glReadPixels(x, y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &data);
+
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+	return data;
+}
+
 void texture_update_brightness(texture_t *self)
 {
 	texture_bind(self, COLOR_TEX);
@@ -56,7 +80,7 @@ void texture_update_brightness(texture_t *self)
 
 static int texture_from_file_loader(texture_t *self)
 {
-	glActiveTexture(GL_TEXTURE7);
+	glActiveTexture(GL_TEXTURE15);
 
 	glGenTextures(1, &self->texId[COLOR_TEX]); glerr();
 	glBindTexture(self->target, self->texId[COLOR_TEX]); glerr();
@@ -99,7 +123,7 @@ static int texture_from_file_loader(texture_t *self)
 
 static void texture_new_2D_loader(texture_t *self)
 {
-	glActiveTexture(GL_TEXTURE7);
+	glActiveTexture(GL_TEXTURE15);
 
 	if(self->depth_buffer)
 	{
@@ -151,10 +175,10 @@ static void texture_new_2D_loader(texture_t *self)
 	self->ready = 1;
 }
 
-int texture_add_buffer(texture_t *self, int alpha)
+int texture_add_buffer(texture_t *self, int is_float, int alpha, int mipmaped)
 {
 	GLuint targ = self->target;
-	glActiveTexture(GL_TEXTURE7);
+	glActiveTexture(GL_TEXTURE15);
 
 	int i = self->color_buffers_size++;
 
@@ -166,14 +190,30 @@ int texture_add_buffer(texture_t *self, int alpha)
 	glTexParameterf(targ, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameterf(targ, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-	glTexImage2D(targ, 0, GL_RGBA16F, self->width, self->height, 0,
-			alpha ? GL_RGBA : GL_RGB, GL_FLOAT, NULL); glerr();
+	GLuint internal;
+	GLuint format;
+	if(alpha)
+	{
+		internal = GL_RGBA16F;
+		format = GL_RGBA;
+	}
+	else
+	{
+		internal = GL_RGBA16F;
+		format = GL_RGB;
+	}
 
-	glGenerateMipmap(targ); glerr();
-	glTexParameteri(targ, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(targ, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(targ, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(targ, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexImage2D(targ, 0, internal, self->width, self->height, 0, format,
+			GL_UNSIGNED_BYTE, NULL); glerr();
+
+	if(mipmaped)
+	{
+		glGenerateMipmap(targ); glerr();
+		glTexParameteri(targ, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(targ, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(targ, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(targ, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	}
 
 
 	glBindTexture(targ, 0);
@@ -387,7 +427,7 @@ void texture_destroy(texture_t *self)
 
 	if(self->imageData) free(self->imageData);
 
-	for(i = 0; i < 16; i++)
+	for(i = 0; i < (sizeof(self->texId)/sizeof(*self->texId)); i++)
 	{
 		if(self->texId[i]) glDeleteTextures(1, &self->texId[i]);
 	}

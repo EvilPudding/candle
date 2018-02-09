@@ -1,17 +1,6 @@
 #include "candle.h"
 #include "file.h"
-
-#define NK_INCLUDE_FIXED_TYPES
-#define NK_INCLUDE_STANDARD_IO
-#define NK_INCLUDE_STANDARD_VARARGS
-#define NK_INCLUDE_DEFAULT_ALLOCATOR
-#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
-#define NK_INCLUDE_FONT_BAKING
-#define NK_INCLUDE_DEFAULT_FONT
-#define NK_IMPLEMENTATION
-#define NK_SDL_GL3_IMPLEMENTATION
-#include "nuklear/nuklear.h"
-#include "nuklear/demo/sdl_opengl3/nuklear_sdl_gl3.h"
+#include <nk.h>
 
 #ifndef WIN32
 #include <unistd.h>
@@ -20,6 +9,7 @@
 
 unsigned long world_update;
 unsigned long world_draw;
+unsigned long global_menu;
 
 #define MAX_VERTEX_MEMORY 512 * 1024
 #define MAX_ELEMENT_MEMORY 128 * 1024
@@ -44,12 +34,10 @@ static void candle_handle_events(candle_t *self)
 	{
 		if(!self->pressing)
 		{
-			if(self->nkctx)
+			if(self->nkctx && nk_sdl_handle_event(&event) &&
+					nk_item_is_any_active(self->nkctx))
 			{
-				if(nk_sdl_handle_event(&event) && nk_item_is_any_active(self->nkctx))
-				{
-					continue;
-				}
+				continue;
 			}
 		}
 		switch(event.type)
@@ -120,8 +108,8 @@ void node_node(candle_t *self, c_node_t *node)
 	{
 		sprintf(buffer, "%ld", entity.id);
 	}
-	if(nk_tree_push_id(self->nkctx, NK_TREE_NODE, final_name,
-				NK_MINIMIZED, entity.id))
+	if(nk_tree_push_id(self->nkctx, NK_TREE_NODE, final_name, NK_MINIMIZED,
+				entity.id))
 	{
 		int i;
 		for(i = 0; i < node->children_size; i++)
@@ -137,8 +125,7 @@ void node_tree(candle_t *self)
 	int i;
 	ct_t *nodes = ecm_get(self->ecm, ct_node);
 
-	if(nk_tree_push(self->nkctx, NK_TREE_TAB, "nodes",
-				NK_MINIMIZED))
+	if(nk_tree_push(self->nkctx, NK_TREE_TAB, "nodes", NK_MINIMIZED))
 	{
 		for(i = 0; i < nodes->components_size; i++)
 		{
@@ -148,10 +135,7 @@ void node_tree(candle_t *self)
 		}
 		nk_tree_pop(self->nkctx);
 	}
-
 }
-
-
 
 static int render_loop(candle_t *self)
 {
@@ -198,15 +182,19 @@ static int render_loop(candle_t *self)
 							NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
 							NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
 				{
-					static int property = 20;
 
-					nk_layout_row_static(self->nkctx, 30, 80, 1);
+					nk_layout_row_static(self->nkctx, 30, 110, 1);
 					if (nk_button_label(self->nkctx, "redraw probes"))
 					{
 						c_renderer_scene_changed(c_renderer(self->systems), NULL);
 					}
-					nk_layout_row_dynamic(self->nkctx, 22, 1);
-					nk_property_int(self->nkctx, "Compression:", 0, &property, 100, 10, 1);
+					nk_layout_row_static(self->nkctx, 30, 110, 1);
+					if (nk_button_label(self->nkctx, "pick"))
+					{
+						c_renderer_get_pixel(c_renderer(self->systems), 0, 7,
+								window_width / 2, window_height / 2);
+					}
+					entity_signal(self->ecm->none, global_menu, self->nkctx);
 
 					node_tree(self);
 				}
@@ -238,7 +226,8 @@ static int render_loop(candle_t *self)
 void candle_register(ecm_t *ecm)
 {
 	world_update = ecm_register_signal(ecm, sizeof(float));
-	world_draw = ecm_register_signal(ecm, sizeof(float));
+	world_draw = ecm_register_signal(ecm, sizeof(void*));
+	global_menu = ecm_register_signal(ecm, 0);
 }
 
 static void updateWorld(candle_t *self)
