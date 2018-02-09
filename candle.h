@@ -66,6 +66,7 @@ typedef struct candle_t
 	int last_update;
 	int pressing;
 	void *nkctx;
+	entity_t selected;
 
 	template_t *templates;
 	unsigned long templates_size;

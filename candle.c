@@ -10,6 +10,7 @@
 unsigned long world_update;
 unsigned long world_draw;
 unsigned long global_menu;
+unsigned long component_menu;
 
 #define MAX_VERTEX_MEMORY 512 * 1024
 #define MAX_ELEMENT_MEMORY 128 * 1024
@@ -202,6 +203,27 @@ static int render_loop(candle_t *self)
 				nk_sdl_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_MEMORY, MAX_ELEMENT_MEMORY);
 
 			}
+			if(!entity_is_null(self->selected))
+			{
+				char buffer[64];
+				char *final_name = buffer;
+				c_name_t *name = c_name(self->selected);
+				if(name)
+				{
+					final_name = name->name;
+				}
+				else
+				{
+					sprintf(buffer, "%ld", self->selected.id);
+				}
+				if (nk_begin(self->nkctx, final_name, nk_rect(300, 50, 230, 180),
+							NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
+							NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
+				{
+					entity_signal_same(self->selected, component_menu, self->nkctx);
+				}
+				nk_end(self->nkctx);
+			}
 			c_window_draw(c_window(self->systems));
 
 			fps++;
@@ -228,6 +250,7 @@ void candle_register(ecm_t *ecm)
 	world_update = ecm_register_signal(ecm, sizeof(float));
 	world_draw = ecm_register_signal(ecm, sizeof(void*));
 	global_menu = ecm_register_signal(ecm, 0);
+	component_menu = ecm_register_signal(ecm, 0);
 }
 
 static void updateWorld(candle_t *self)
@@ -452,6 +475,7 @@ candle_t *candle_new(int comps_size, ...)
 	candle_t *self = calloc(1, sizeof *self);
 	candle = self;
 
+	self->selected = entity_null();
 	self->ecm = ecm_new();
 
 	self->firstDir = SDL_GetBasePath();

@@ -398,7 +398,11 @@ int c_renderer_mouse_release(c_renderer_t *self, mouse_button_data *event)
 				printf("released entity %ld\n", result.id);
 			}
 			/* c_spacial(result)-> */
-			/* entity_signal_same(result, model_release, NULL); */
+			candle->selected = result;
+		}
+		else
+		{
+			candle->selected = entity_null();
 		}
 	}
 	return 1;
