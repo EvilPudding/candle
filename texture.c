@@ -47,7 +47,6 @@ void texture_update_gl(texture_t *self)
 int texture_get_pixel(texture_t *self, int buffer, int x, int y)
 {
 	y = self->height-y;
-	printf("%d %d\n", x, y);
 	glFlush();
 	glFinish();
 	texture_bind(self, COLOR_TEX + buffer);

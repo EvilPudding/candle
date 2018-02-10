@@ -172,9 +172,9 @@ void glg_edges_to_gl(glg_t *self)
 	int i;
 	mesh_t *mesh = c_model(self->entity)->mesh;
 
-	glg_ind_prealloc(self, mesh->edges_size * 2);
+	glg_ind_prealloc(self, vector_count(mesh->edges) * 2);
 
-	for(i = 0; i < mesh->edges_size; i++)
+	for(i = 0; i < vector_count(mesh->edges); i++)
 	{
 		edge_t *curr_edge = m_edge(mesh, i);
 		if(!curr_edge) continue;
@@ -350,16 +350,16 @@ int glg_update_ram(glg_t *self)
 	mesh_t *mesh = model->mesh;
 	glg_clear(self);
 
-	glg_vert_prealloc(self, mesh->verts_size);
+	glg_vert_prealloc(self, vector_count(mesh->verts));
 
 	int selection = model->layers[self->layer_id].selection;
 
 	int i;
-	if(mesh->faces_size)
+	if(vector_count(mesh->faces))
 	{
 		mesh_update_smooth_normals(mesh);
 		int triangle_count = 0;
-		for(i = 0; i < mesh->faces_size; i++)
+		for(i = 0; i < vector_count(mesh->faces); i++)
 		{
 			face_t *face = m_face(mesh, i); if(!face) continue;
 			if(selection != -1 && selection != face->selected) continue;
@@ -369,7 +369,7 @@ int glg_update_ram(glg_t *self)
 		}
 		glg_ind_prealloc(self, triangle_count * 3);
 
-		for(i = 0; i < mesh->faces_size; i++)
+		for(i = 0; i < vector_count(mesh->faces); i++)
 		{
 			face_t *face = m_face(mesh, i); if(!face) continue;
 			if(selection != -1 && selection != face->selected) continue;
@@ -503,6 +503,9 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 		material_bind(mat, shader);
 	}
 
+	glPolygonOffset(0.0f, model->layers[self->layer_id].offset);
+
+
 	glCullFace(cull_face); glerr();
 
 #ifdef USE_VAO
@@ -525,7 +528,7 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 	else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glerr();
 
-	if(mesh->faces_size)
+	if(vector_count(mesh->faces))
 	{
 		glDrawElements(GL_TRIANGLES, self->gl_ind_num,
 				GL_UNSIGNED_INT, 0); glerr();

@@ -29,7 +29,7 @@ static void c_model_init(c_model_t *self)
 	self->before_draw = NULL;
 }
 
-void c_model_add_layer(c_model_t *self, int selection)
+void c_model_add_layer(c_model_t *self, int selection, float offset)
 {
 	int i = self->layers_num++;
 	self->layers[i].mat = NULL;
@@ -37,6 +37,7 @@ void c_model_add_layer(c_model_t *self, int selection)
 	self->layers[i].cull_face = 0;
 	self->layers[i].wireframe = 0;
 	self->layers[i].update_id = 0;
+	self->layers[i].offset = 0;
 }
 
 c_model_t *c_model_new(mesh_t *mesh, int cast_shadow)
@@ -48,7 +49,7 @@ c_model_t *c_model_new(mesh_t *mesh, int cast_shadow)
 	self->mesh = mesh;
 	self->cast_shadow = cast_shadow;
 
-	c_model_add_layer(self, -1);
+	c_model_add_layer(self, -1, 0);
 
 	return self;
 }

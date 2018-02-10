@@ -6,20 +6,10 @@
 #include <stdio.h>
 
 static vec3_t mesh_support(mesh_t *self, const vec3_t dir);
-#ifdef MESH4
-static void mesh_cells_grow(mesh_t *self);
-#endif
-static void mesh_verts_grow(mesh_t *self);
-static void mesh_edges_grow(mesh_t *self);
-static void mesh_faces_grow(mesh_t *self);
 static int mesh_get_pair_edge(mesh_t *self, int e);
 int mesh_get_face_from_verts(mesh_t *self, int v0, int v1, int v2);
 static void mesh_update_cell_pairs(mesh_t *self);
 static void mesh_udpate_selection_list(mesh_t *self);
-
-#ifdef MESH4
-void mesh_cells_prealloc(mesh_t *self, int size);
-#endif
 
 #define CHUNK_CELLS 20
 #define CHUNK_VERTS 30
@@ -50,21 +40,24 @@ mesh_t *mesh_new()
 
 	self->support = (support_cb)mesh_support;
 
+	self->verts = vector_new(sizeof(vertex_t));
+	self->faces = vector_new(sizeof(face_t));
+	self->edges = vector_new(sizeof(edge_t));
+
 #ifdef MESH4
-	mesh_cells_prealloc(self, 10);
+	self->cells = vector_new(sizeof(cell_t));
+
+	vector_alloc(self->cells, 10);
 #endif
-	mesh_edges_prealloc(self, 100);
-	mesh_faces_prealloc(self, 100);
-	mesh_verts_prealloc(self, 100);
+	vector_alloc(self->verts, 100);
+	vector_alloc(self->faces, 100);
+	vector_alloc(self->edges, 100);
 
 	return self;
 }
 
-/* TODO: split this to a vector */
-
 static void vert_init(vertex_t *self)
 {
-	self->removed = 0;
 	self->selected = 0;
 	self->color = vec4(0.0f);
 	self->tmp = -1;
@@ -72,37 +65,9 @@ static void vert_init(vertex_t *self)
 	for(i = 0; i < 16; i++) self->halves[i] = -1;
 }
 
-static int mesh_get_free_vert(mesh_t *self)
-{
-	int i;
-
-	if(!self->free_verts)
-	{
-		i = self->verts_size++;
-		mesh_verts_grow(self);
-
-		vert_init(&self->verts[i]);
-		return i;
-	}
-	else
-	{
-		for(i = 0; i < self->verts_size; i++)
-		{
-			if(self->verts[i].removed)
-			{
-				self->free_verts--;
-				vert_init(&self->verts[i]);
-
-				return i;
-			}
-		}
-	}
-	return -1;
-}
 
 static void edge_init(edge_t *self)
 {
-	self->removed = 0;
 	self->selected = 0;
 	self->pair = -1;
 	self->next = -1;
@@ -118,37 +83,10 @@ static void edge_init(edge_t *self)
 	self->face = -1;
 }
 
-static int mesh_get_free_edge(mesh_t *self)
-{
-	int i;
-
-	if(!self->free_edges)
-	{
-		i = self->edges_size++;
-		mesh_edges_grow(self);
-		edge_init(&self->edges[i]);
-		return i;
-	}
-	else
-	{
-		for(i = 0; i < self->edges_size; i++)
-		{
-			if(self->edges[i].removed)
-			{
-				self->free_edges--;
-
-				edge_init(&self->edges[i]);
-				return i;
-			}
-		}
-	}
-	return -1;
-}
 
 #ifdef MESH4
 static void cell_init(cell_t *self)
 {
-	self->removed = 0;
 	self->selected = 0;
 	self->f_size = 0;
 	self->f[0] = self->f[1] = self->f[2] = self->f[3] = -1;
@@ -157,7 +95,6 @@ static void cell_init(cell_t *self)
 
 static void face_init(face_t *self)
 {
-	self->removed = 0;
 	self->selected = 0;
 	self->n = vec3(0.0f);
 	self->e_size = 0;
@@ -171,62 +108,6 @@ static void face_init(face_t *self)
 #endif
 }
 
-#ifdef MESH4
-static int mesh_get_free_cell(mesh_t *self)
-{
-	int i;
-
-	if(!self->free_cells)
-	{
-		i = self->cells_size++;
-		mesh_cells_grow(self);
-		cell_init(&self->cells[i]);
-		return i;
-	}
-	else
-	{
-		for(i = 0; i < self->cells_size; i++)
-		{
-			if(self->cells[i].removed)
-			{
-				self->free_cells--;
-				cell_init(&self->cells[i]);
-
-				return i;
-			}
-		}
-	}
-	return -1;
-}
-#endif
-
-static int mesh_get_free_face(mesh_t *self)
-{
-	int i;
-
-	if(!self->free_faces)
-	{
-		i = self->faces_size++;
-		mesh_faces_grow(self);
-		face_init(&self->faces[i]);
-		return i;
-	}
-	else
-	{
-		for(i = 0; i < self->faces_size; i++)
-		{
-			if(self->faces[i].removed)
-			{
-				self->free_faces--;
-				face_init(&self->faces[i]);
-
-				return i;
-			}
-		}
-	}
-	return -1;
-}
-/* /TODO */
 
 
 void mesh_destroy(mesh_t *self)
@@ -262,9 +143,9 @@ static vec3_t get_normal(vec3_t p1, vec3_t p2, vec3_t p3)
 void mesh_update_smooth_normals(mesh_t *self)
 {
 	int i;
-	for(i = 0; i < self->verts_size; i++)
+	for(i = 0; i < vector_count(self->verts); i++)
 	{
-		vertex_t *v = m_vert(self, i);
+		vertex_t *v = vector_get(self->verts, i);
 		if(!v) continue;
 
 		int start = mesh_vert_get_half(self, v);
@@ -338,9 +219,10 @@ void mesh_face_calc_flat_normals(mesh_t *self, face_t *f)
 static int mesh_get_vert(mesh_t *self, vecN_t p)
 {
 	int i;
-	for(i = 0; i < self->verts_size; i++)
+	for(i = 0; i < vector_count(self->verts); i++)
 	{
-		if(vecN_(equals)(self->verts[i].pos, p)) return i;
+		vertex_t *v = m_vert(self, i);
+		if(vecN_(equals)(v->pos, p)) return i;
 	}
 	return -1;
 }
@@ -410,7 +292,7 @@ int mesh_remove_lone_faces(mesh_t *self)
 	int i;
 	int count = 0;
 	mesh_lock(self);
-	for(i = 0; i < self->faces_size; i++)
+	for(i = 0; i < vector_count(self->faces); i++)
 	{
 		face_t *f = m_face(self, i); if(!f) continue;
 		if(!f_cell(f, self))
@@ -430,7 +312,7 @@ int mesh_remove_lone_edges(mesh_t *self)
 	int i;
 	int count = 0;
 	mesh_lock(self);
-	for(i = 0; i < self->edges_size; i++)
+	for(i = 0; i < vector_count(self->edges); i++)
 	{
 		edge_t *e = m_edge(self, i); if(!e) continue;
 		if(!e_face(e, self))
@@ -629,7 +511,7 @@ void mesh_face_set_selection(mesh_t *self, int face_id, int selection)
 void mesh_unselect_faces(mesh_t *self)
 {
 	int i;
-	for(i = 0; i < self->faces_size; i++)
+	for(i = 0; i < vector_count(self->faces); i++)
 	{
 		mesh_face_set_selection(self, i, 0);
 	}
@@ -639,7 +521,7 @@ void mesh_unselect_faces(mesh_t *self)
 void mesh_select_faces(mesh_t *self)
 {
 	int i;
-	for(i = 0; i < self->faces_size; i++)
+	for(i = 0; i < vector_count(self->faces); i++)
 	{
 		mesh_face_set_selection(self, i, 1);
 	}
@@ -648,7 +530,7 @@ void mesh_select_faces(mesh_t *self)
 void mesh_select_edges(mesh_t *self)
 {
 	int i;
-	for(i = 0; i < self->edges_size; i++)
+	for(i = 0; i < vector_count(self->edges); i++)
 	{
 		mesh_edge_set_selection(self, i, 1);
 	}
@@ -657,7 +539,7 @@ void mesh_select_edges(mesh_t *self)
 void mesh_unselect_edges(mesh_t *self)
 {
 	int i;
-	for(i = 0; i < self->edges_size; i++)
+	for(i = 0; i < vector_count(self->edges); i++)
 	{
 		mesh_edge_set_selection(self, i, 0);
 	}
@@ -822,10 +704,12 @@ void mesh_clear(mesh_t *self)
 {
 	mesh_lock(self);
 
-	self->verts_size = 0;
-	self->free_verts = 0;
-	self->edges_size = 0;
-	self->free_edges = 0;
+	vector_clear(self->verts);
+	vector_clear(self->edges);
+	vector_clear(self->faces);
+#ifdef MESH4
+	vector_clear(self->cells);
+#endif
 
 	mesh_modified(self);
 	mesh_unlock(self);
@@ -890,10 +774,10 @@ int mesh_update_unpaired_faces(mesh_t *self)
 	int i;
 	int count = 0;
 
-	for(i = 0; i < self->faces_size; i++)
+	for(i = 0; i < vector_count(self->faces); i++)
 	{
-		face_t *e = m_face(self, i);
-		if(e && e->pair == -1)
+		face_t *f = m_face(self, i);
+		if(f && f->pair == -1)
 		{
 			count++;
 			/* mesh_get_pair_face(self, i); */
@@ -908,7 +792,7 @@ int mesh_update_unpaired_edges(mesh_t *self)
 	int i;
 	int count = 0;
 
-	for(i = 0; i < self->edges_size; i++)
+	for(i = 0; i < vector_count(self->edges); i++)
 	{
 		edge_t *e = m_edge(self, i);
 		if(e && e->pair == -1)
@@ -926,7 +810,7 @@ void mesh_update(mesh_t *self)
 	if(!self->changes) return;
 
 	int i;
-	for(i = 0; i < self->faces_size; i++)
+	for(i = 0; i < vector_count(self->faces); i++)
 	{
 		face_t *f = m_face(self, i);
 		if(!f) continue;
@@ -951,10 +835,11 @@ void mesh_update(mesh_t *self)
 
 int mesh_add_vert(mesh_t *self, vecN_t pos)
 {
+	int i = vector_add(self->verts);
 
-	int i = mesh_get_free_vert(self);
+	vertex_t *vert = vector_get(self->verts, i);
+	vert_init(vert);
 
-	vertex_t *vert = &self->verts[i];
 	vert->color = vec4(0.0f);
 
 #ifdef MESH4
@@ -975,7 +860,7 @@ int mesh_append_edge(mesh_t *self, vecN_t p)
 {
 	mesh_lock(self);
 	int e = mesh_add_vert(self, p);
-	mesh_add_edge_s(self, self->edges_size, self->edges_size - 1);
+	mesh_add_edge_s(self, vector_count(self->edges), vector_count(self->edges) - 1);
 	mesh_unlock(self);
 	return e;
 }
@@ -1024,9 +909,10 @@ static void vert_add_half(mesh_t *self, vertex_t *vert, int half)
 
 int mesh_add_edge(mesh_t *self, int v, int next, int prev, vec3_t vn, vec2_t vt)
 {
-	int i = mesh_get_free_edge(self);
+	int i = vector_add(self->edges);
 
-	edge_t *edge = m_edge(self, i);
+	edge_t *edge = vector_get(self->edges, i);
+	edge_init(edge);
 
 	edge->v = v;
 	edge->n = vn;
@@ -1110,11 +996,12 @@ void mesh_edge_pair(mesh_t *self, int e1, int e2)
 #ifdef MESH4
 static int mesh_get_pair_face(mesh_t *self, int f)
 {
-	face_t *face = &self->faces[f];
+	face_t *face = vector_get(self->faces, f);
+	if(!face) return 0;
 
-	int f0 = self->edges[face->e[0]].v;
-	int f1 = self->edges[face->e[1]].v;
-	int f2 = self->edges[face->e[2]].v;
+	int f0 = f_edge(face, 0, self)->v;
+	int f1 = f_edge(face, 1, self)->v;
+	int f2 = f_edge(face, 2, self)->v;
 
 	int i;
 	kliter_t(int) **uf;
@@ -1127,9 +1014,9 @@ static int mesh_get_pair_face(mesh_t *self, int f)
 		face_t *try = m_face(self, i);
 		if(!try) continue;
 
-		int v0 = self->edges[try->e[0]].v;
-		int v1 = self->edges[try->e[1]].v;
-		int v2 = self->edges[try->e[2]].v;
+		int v0 = f_edge(try, 0, self)->v;
+		int v1 = f_edge(try, 1, self)->v;
+		int v2 = f_edge(try, 2, self)->v;
 
 		if(f0 == v0 && f1 == v2 && f2 == v1 )
 		{
@@ -1173,7 +1060,7 @@ static int mesh_get_pair_face(mesh_t *self, int f)
 static int mesh_get_cell_pair(mesh_t *self, int e)
 {
 	int i;
-	edge_t *edge = &self->edges[e];
+	edge_t *edge = vector_get(self->edges, e);
 	int v1 = edge->v;
 	if(edge->next < 0 || edge->cell_pair >= 0) return -1;
 	int v2 = e_next(edge, self)->v;
@@ -1263,77 +1150,6 @@ end:
 	return 0;
 }
 
-#ifdef MESH4
-static void mesh_cells_grow(mesh_t *self)
-{
-	if(self->cells_alloc < self->cells_size)
-	{
-		self->cells_alloc = self->cells_size + CHUNK_CELLS;
-		self->cells = realloc(self->cells, self->cells_alloc *
-				sizeof(*self->cells));
-	}
-}
-#endif
-
-static void mesh_edges_grow(mesh_t *self)
-{
-	if(self->edges_alloc < self->edges_size)
-	{
-		self->edges_alloc = self->edges_size + CHUNK_EDGES;
-		self->edges = realloc(self->edges, self->edges_alloc *
-				sizeof(*self->edges));
-	}
-}
-
-static void mesh_verts_grow(mesh_t *self)
-{
-	if(self->verts_alloc < self->verts_size)
-	{
-		self->verts_alloc = self->verts_size + CHUNK_VERTS;
-		self->verts = realloc(self->verts, self->verts_alloc *
-				sizeof(*self->verts));
-	}
-}
-
-static void mesh_faces_grow(mesh_t *self)
-{
-	if(self->faces_alloc < self->faces_size)
-	{
-		self->faces_alloc = self->faces_size + CHUNK_FACES;
-		self->faces = realloc(self->faces, self->faces_alloc * sizeof(*self->faces));
-	}
-}
-
-void mesh_verts_prealloc(mesh_t *self, int size)
-{
-	self->verts_alloc += size;
-	self->verts = realloc(self->verts, self->verts_alloc * sizeof(*self->verts));
-
-	/* draw_mesh_vert_prealloc(&self->d, size); */
-}
-
-#ifdef MESH4
-void mesh_cells_prealloc(mesh_t *self, int size)
-{
-	self->cells_alloc += size;
-	self->cells = realloc(self->cells, self->cells_alloc * sizeof(*self->cells));
-
-	/* draw_mesh_ind_prealloc(&self->d, 3 * size); */
-}
-#endif
-
-void mesh_faces_prealloc(mesh_t *self, int size)
-{
-	self->faces_alloc += size;
-	self->faces = realloc(self->faces, self->faces_alloc * sizeof(*self->faces));
-}
-
-void mesh_edges_prealloc(mesh_t *self, int size)
-{
-	self->edges_alloc += size;
-	self->edges = realloc(self->edges, self->edges_alloc * sizeof(*self->edges));
-}
-
 void mesh_add_quad(mesh_t *self,
 		int v1, vec3_t v1n, vec2_t v1t,
 		int v2, vec3_t v2n, vec2_t v2t,
@@ -1345,8 +1161,9 @@ void mesh_add_quad(mesh_t *self,
 
 	self->triangulated = 0;
 
-	int face_id = mesh_get_free_face(self);
-	face_t *face = m_face(self, face_id);
+	int face_id = vector_add(self->faces);
+	face_t *face = vector_get(self->faces, face_id);
+	face_init(face);
 
 #ifdef MESH4
 	face->surface = self->current_surface;
@@ -1354,10 +1171,15 @@ void mesh_add_quad(mesh_t *self,
 #endif
 	face->e_size = 4;
 	
-	int ie0 = mesh_get_free_edge(self);
-	int ie1 = mesh_get_free_edge(self);
-	int ie2 = mesh_get_free_edge(self);
-	int ie3 = mesh_get_free_edge(self);
+	int ie0 = vector_add(self->edges);
+	int ie1 = vector_add(self->edges);
+	int ie2 = vector_add(self->edges);
+	int ie3 = vector_add(self->edges);
+
+	edge_t *e0 = vector_get(self->edges, ie0); edge_init(e0);
+	edge_t *e1 = vector_get(self->edges, ie1); edge_init(e1);
+	edge_t *e2 = vector_get(self->edges, ie2); edge_init(e2);
+	edge_t *e3 = vector_get(self->edges, ie3); edge_init(e3);
 
 	v1n = mat4_mul_vec4(self->transformation, vec4(_vec3(v1n), 0.0)).xyz;
 	v2n = mat4_mul_vec4(self->transformation, vec4(_vec3(v2n), 0.0)).xyz;
@@ -1370,13 +1192,13 @@ void mesh_add_quad(mesh_t *self,
 	face->e[3] = ie3;
 
 
-	self->edges[ie0] = (edge_t){ .v = v1, .n = v1n, .t = v1t, .face = face_id,
+	*e0 = (edge_t){ .v = v1, .n = v1n, .t = v1t, .face = face_id,
 		.next = ie1, .prev = ie3, .pair = -1, .cell_pair = -1};
-	self->edges[ie1] = (edge_t){ .v = v2, .n = v2n, .t = v2t, .face = face_id,
+	*e1 = (edge_t){ .v = v2, .n = v2n, .t = v2t, .face = face_id,
 		.next = ie2, .prev = ie0, .pair = -1, .cell_pair = -1};
-	self->edges[ie2] = (edge_t){ .v = v3, .n = v3n, .t = v3t, .face = face_id,
+	*e2 = (edge_t){ .v = v3, .n = v3n, .t = v3t, .face = face_id,
 		.next = ie3, .prev = ie1, .pair = -1, .cell_pair = -1};
-	self->edges[ie3] = (edge_t){ .v = v4, .n = v4n, .t = v4t, .face = face_id,
+	*e3 = (edge_t){ .v = v4, .n = v4n, .t = v4t, .face = face_id,
 		.next = ie0, .prev = ie2, .pair = -1, .cell_pair = -1};
 
 	if(!mesh_get_pair_edge(self, ie0))
@@ -1399,11 +1221,7 @@ void mesh_add_quad(mesh_t *self,
 
 void mesh_remove_vert(mesh_t *self, int vert_i)
 {
-	vertex_t *vert = m_vert(self, vert_i);
-	if(!vert) return;
-
-	vert->removed = 1;
-	self->free_verts++;
+	vector_remove(self->verts, vert_i);
 	mesh_modified(self);
 }
 
@@ -1442,8 +1260,7 @@ void mesh_remove_edge(mesh_t *self, int edge_i)
 
 	if(edge_i == self->first_edge) self->first_edge++;
 
-	edge->removed = 1;
-	self->free_edges++;
+	vector_remove(self->edges, edge_i);
 	mesh_modified(self);
 }
 
@@ -1476,8 +1293,7 @@ void mesh_remove_face(mesh_t *self, int face_i)
 		}
 	}
 #endif
-	face->removed = 1;
-	self->free_faces++;
+	vector_remove(self->faces, face_i);
 	mesh_modified(self);
 }
 
@@ -1493,8 +1309,10 @@ int mesh_add_triangle(mesh_t *self,
 		int v2, vec3_t v2n, vec2_t v2t,
 		int v3, vec3_t v3n, vec2_t v3t, int pair_up)
 {
-	int face_id = mesh_get_free_face(self);
-	face_t *face = &self->faces[face_id];
+	int face_id = vector_add(self->faces);
+	face_t *face = vector_get(self->faces, face_id);
+	face_init(face);
+
 #ifdef MESH4
 	face->cell = self->current_cell;
 	face->surface = self->current_surface;
@@ -1502,9 +1320,13 @@ int mesh_add_triangle(mesh_t *self,
 
 	face->e_size = 3;
 
-	int ie0 = mesh_get_free_edge(self);
-	int ie1 = mesh_get_free_edge(self);
-	int ie2 = mesh_get_free_edge(self);
+	int ie0 = vector_add(self->edges);
+	int ie1 = vector_add(self->edges);
+	int ie2 = vector_add(self->edges);
+
+	edge_t *e0 = vector_get(self->edges, ie0); edge_init(e0);
+	edge_t *e1 = vector_get(self->edges, ie1); edge_init(e1);
+	edge_t *e2 = vector_get(self->edges, ie2); edge_init(e2);
 
 	v1n = mat4_mul_vec4(self->transformation, vec4(_vec3(v1n), 0.0)).xyz;
 	v2n = mat4_mul_vec4(self->transformation, vec4(_vec3(v2n), 0.0)).xyz;
@@ -1514,11 +1336,11 @@ int mesh_add_triangle(mesh_t *self,
 	face->e[1] = ie1;
 	face->e[2] = ie2;
 
-	self->edges[ie0] = (edge_t){ .v = v1, .n = v1n, .t = v1t, .face = face_id,
+	*e0 = (edge_t){ .v = v1, .n = v1n, .t = v1t, .face = face_id,
 		.next = ie1, .prev = ie2, .pair = -1, .cell_pair = -1};
-	self->edges[ie1] = (edge_t){ .v = v2, .n = v2n, .t = v2t, .face = face_id,
+	*e1 = (edge_t){ .v = v2, .n = v2n, .t = v2t, .face = face_id,
 		.next = ie2, .prev = ie0, .pair = -1, .cell_pair = -1};
-	self->edges[ie2] = (edge_t){ .v = v3, .n = v3n, .t = v3t, .face = face_id,
+	*e2 = (edge_t){ .v = v3, .n = v3n, .t = v3t, .face = face_id,
 		.next = ie0, .prev = ie1, .pair = -1, .cell_pair = -1};
 
 	/* if(vec3_null(v1n) || vec3_null(v2n) || vec3_null(v3n)) */
@@ -1581,9 +1403,10 @@ void mesh_translate_uv(mesh_t *self, vec2_t p)
 {
 	int i;
 	mesh_lock(self);
-	for(i = 0; i < self->edges_size; i++)
+	for(i = 0; i < vector_count(self->edges); i++)
 	{
-		self->edges[i].t = vec2_add(self->edges[i].t, p);
+		edge_t *edge = m_edge(self, i); if(!edge) continue;
+		edge->t = vec2_add(edge->t, p);
 	}
 	mesh_modified(self);
 	mesh_unlock(self);
@@ -1593,9 +1416,10 @@ void mesh_scale_uv(mesh_t *self, float scale)
 {
 	int i;
 	mesh_lock(self);
-	for(i = 0; i < self->edges_size; i++)
+	for(i = 0; i < vector_count(self->edges); i++)
 	{
-		self->edges[i].t = vec2_scale(self->edges[i].t, scale);
+		edge_t *edge = m_edge(self, i); if(!edge) continue;
+		edge->t = vec2_scale(edge->t, scale);
 	}
 	mesh_modified(self);
 	mesh_unlock(self);
@@ -1621,7 +1445,7 @@ struct int_int_int {int a, b;};
 
 struct int_int mesh_face_triangulate(mesh_t *self, int i, int flip)
 {
-	face_t *face = &self->faces[i];
+	face_t *face = vector_get(self->faces, i);;
 
 	edge_t *e0 = f_edge(face, 0, self);
 	edge_t *e1 = f_edge(face, 1, self);
@@ -1666,7 +1490,7 @@ void mesh_triangulate(mesh_t *self)
 {
 	int i;
 	if(self->triangulated) return;
-	for(i = 0; i < self->faces_size; i++)
+	for(i = 0; i < vector_count(self->faces); i++)
 	{
 		face_t *face = m_face(self, i); if(!face) continue;
 		if(face->e_size != 4) continue;
@@ -1754,8 +1578,9 @@ int mesh_add_tetrahedron(mesh_t *self, int v0, int v1, int v2, int v3)
 
 	self->has_texcoords = 0;
 
-	int cell_id = mesh_get_free_cell(self);
-	cell_t *cell = m_cell(self, cell_id);
+	int cell_id = vector_add(self->cells);
+	cell_t *cell = vector_get(self->cells, cell_id);
+	cell_init(cell);
 
 	self->current_cell = cell_id;
 
@@ -1790,7 +1615,7 @@ int mesh_add_tetrahedron(mesh_t *self, int v0, int v1, int v2, int v3)
 void mesh_check_pairs(mesh_t *self)
 {
 	int e;
-	for(e = 0; e < self->edges_size; e++)
+	for(e = 0; e < vector_count(self->edges); e++)
 	{
 		edge_t *edge = m_edge(self, e);
 		if(edge && edge->pair == -1)
@@ -1864,7 +1689,7 @@ int mesh_check_duplicate_verts(mesh_t *self, int edge_id)
 {
 	int j;
 	vecN_t pos = m_vert(self, edge_id)->pos;
-	for(j = 0; j < self->verts_size; j++)
+	for(j = 0; j < vector_count(self->verts); j++)
 	{
 		if(j == edge_id) continue;
 		if(vecN_(dist)(m_vert(self, j)->pos, pos) == 0.0f)
@@ -2124,13 +1949,13 @@ mesh_t *mesh_lathe(mesh_t *mesh, float angle, int segments,
 
 	int ai;
 
-	int verts[mesh->edges_size * segments];
+	int verts[vector_count(mesh->edges) * segments];
  
 
 	for(ai = 0, a = inc; ai < segments; a += inc, ai++)
 	{
 		rot = mat4_rotate(rot, x, y, z, inc);
-		for(ei = 0; ei < mesh->edges_size; ei++)
+		for(ei = 0; ei < vector_count(mesh->edges); ei++)
 		{
 			edge_t *e = m_edge(mesh, ei);
 			if(!e) continue;
@@ -2144,7 +1969,7 @@ mesh_t *mesh_lathe(mesh_t *mesh, float angle, int segments,
 	float pa = 0.0;
 	for(ai = 0, a = inc; ai < segments; a += inc, ai++)
 	{
-		for(ei = 0; ei < mesh->edges_size; ei++)
+		for(ei = 0; ei < vector_count(mesh->edges); ei++)
 		{
 			edge_t *e = m_edge(mesh, ei);
 			if(!e) continue;
@@ -2152,7 +1977,7 @@ mesh_t *mesh_lathe(mesh_t *mesh, float angle, int segments,
 			edge_t *ne = m_edge(mesh, e->next);
 			if(!ne) continue;
 
-			int next_ei = ((ei + 1) == mesh->edges_size) ? 0 : ei + 1;
+			int next_ei = ((ei + 1) == vector_count(mesh->edges)) ? 0 : ei + 1;
 			/* ei = edge index */
 			int next_ai = ((ai + 1) == segments)		 ? 0 : ai + 1;
 			/* ai = angle index */
@@ -2267,14 +2092,16 @@ mesh_t *mesh_from_file(const char *filename)
 
 vertex_t *mesh_farthest(mesh_t *self, const vec3_t dir)
 {
-	/* NEEDS OPTIMIZATION */
-	vertex_t *v = &self->verts[0];
+	/* TODO NEEDS OPTIMIZATION */
+	vertex_t *v = vector_get_set(self->verts, 0);
+	if(!v) return NULL;
+
 	float last_dist = vec3_dot(dir, XYZ(v->pos));
 
 	int i;
-	for(i = 1; i < self->verts_size; i++)
+	for(i = 1; i < vector_count(self->verts); i++)
 	{
-		vertex_t *vi = &self->verts[i];
+		vertex_t *vi = m_vert(self, i);
 		float temp = vec3_dot(dir, XYZ(vi->pos));
 		if(temp > last_dist)
 		{

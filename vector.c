@@ -21,12 +21,14 @@ typedef struct vector_t
 
 vector_t *vector_new(int size)
 {
-	vector_t *self = malloc(sizeof(self));
+	vector_t *self = malloc(sizeof(*self));
 
 	self->data_size = size;
 	self->elem_size = size + sizeof(struct element);
 	self->free_count = 0;
 	self->count = 0;
+	self->alloc = 0;
+	self->elements = NULL;
 
 	return self;
 }
@@ -34,14 +36,21 @@ vector_t *vector_new(int size)
 static struct element *_vector_get(vector_t *self, int i)
 {
 	if(i < 0 || i >= self->count) return NULL;
-	return self->elements + i * self->elem_size;
+	return (struct element *)(((unsigned long)self->elements) + i * self->elem_size);
 }
 
 void *vector_get(vector_t *self, int i)
 {
 	struct element *element = _vector_get(self, i);
-	if(element->set) return &element->data;
+	if(element && element->set) return &element->data;
 	return NULL;
+}
+
+void vector_remove(vector_t *self, int i)
+{
+	struct element *element = _vector_get(self, i);
+	element->set = 0;
+	self->free_count++;
 }
 
 void vector_alloc(vector_t *self, int num)
@@ -66,7 +75,12 @@ void _vector_grow(vector_t *self)
 	}
 }
 
-void *vector_add(vector_t *self)
+int vector_count(vector_t *self)
+{
+	return self->count;
+}
+
+int vector_add(vector_t *self)
 {
 	int i;
 	if(!self->free_count)
@@ -75,7 +89,7 @@ void *vector_add(vector_t *self)
 		_vector_grow(self);
 		struct element *element = _vector_get(self, i);
 		element->set = 1;
-		return &element->data;
+		return i;
 	}
 	for(i = 0; i < self->count; i++)
 	{
@@ -84,10 +98,10 @@ void *vector_add(vector_t *self)
 		{
 			self->free_count--;
 			element->set = 1;
-			return &element->data;
+			return i;
 		}
 	}
-	return NULL;
+	return -1;
 }
 
 void *vector_get_set(vector_t *self, int i)
@@ -101,8 +115,15 @@ void *vector_get_set(vector_t *self, int i)
 	return NULL;
 }
 
+void vector_clear(vector_t *self)
+{
+	self->count = 0;
+	self->free_count = 0;
+}
+
 void vector_destroy(vector_t *self)
 {
 	free(self->elements);
 	free(self);
 }
+

@@ -56,7 +56,6 @@ typedef struct vertex_t
 	int halves[16]; /* for pair creation */
 
 	int selected;
-	int removed;
 	int tmp;
 	
 } vertex_t;
@@ -78,7 +77,6 @@ typedef struct edge_t /* Half edge */
 	int extrude_flip;
 
 	int selected;
-	int removed;
 
 } edge_t;
 
@@ -116,7 +114,6 @@ typedef struct face_t /* Half face */
 #endif
 
 	int selected;
-	int removed;
 } face_t;
 
 #define f_edge(f, i, m) (m_edge(m, f->e[i]))
@@ -139,7 +136,6 @@ typedef struct cell_t /* Cell */
 	int f[5]; /* face_t[f_size] id */
 
 	int selected;
-	int removed;
 } cell_t;
 
 #define c_face(c, i, m)		(m_face(m, c->f[i]))
@@ -159,18 +155,11 @@ KLIST_INIT(int, int, Freer)
 
 typedef struct mesh_t
 {
-	/* vector_t *faces; */
-	/* vector_t *verts; */
-	/* vector_t *edges; */
+	vector_t *faces;
+	vector_t *verts;
+	vector_t *edges;
 #ifdef MESH4
-	/* vector_t *cells; */
-#endif
-
-	face_t		*faces;	int faces_size; int faces_alloc; int free_faces;
-	vertex_t	*verts; int verts_size; int verts_alloc; int free_verts;
-	edge_t		*edges; int edges_size; int edges_alloc; int free_edges;
-#ifdef MESH4
-	cell_t		*cells; int cells_size; int cells_alloc; int free_cells;
+	vector_t *cells;
 #endif
 
 	klist_t(int) *unpaired_faces;
@@ -196,31 +185,12 @@ typedef struct mesh_t
 } mesh_t;
 
 #ifdef MESH4
-static inline cell_t *m_cell(mesh_t *self, int i)
-{
-	if(i < 0) return NULL;
-	cell_t *p = &self->cells[i];
-	return (!p->removed) ? p : NULL;
-}
+#define m_cell(m, i) ((cell_t*)vector_get(m->cells, i))
 #endif
-static inline face_t *m_face(mesh_t *self, int i)
-{
-	if(i < 0) return NULL;
-	face_t *p = &self->faces[i];
-	return (!p->removed) ? p : NULL;
-}
-static inline edge_t *m_edge(mesh_t *self, int i)
-{
-	if(i < 0) return NULL;
-	edge_t *p = &self->edges[i];
-	return (!p->removed) ? p : NULL;
-}
-static inline vertex_t *m_vert(mesh_t *self, int i)
-{
-	if(i < 0) return NULL;
-	vertex_t *p = &self->verts[i];
-	return (!p->removed) ? p : NULL;
-}
+
+#define m_face(m, i) ((face_t*)vector_get(m->faces, i))
+#define m_edge(m, i) ((edge_t*)vector_get(m->edges, i))
+#define m_vert(m, i) ((vertex_t*)vector_get(m->verts, i))
 
 mesh_t *mesh_new(void);
 void mesh_destroy(mesh_t *self);

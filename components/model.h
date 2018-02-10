@@ -10,6 +10,7 @@ typedef struct
 	int wireframe;
 	int cull_face;
 	int update_id;
+	float offset;
 } mat_layer_t;
 
 typedef struct
