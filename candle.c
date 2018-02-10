@@ -239,7 +239,7 @@ static int render_loop(candle_t *self)
 			last = current;
 		}
 		glerr();
-		SDL_Delay(16);
+		/* SDL_Delay(16); */
 		/* SDL_Delay(1); */
 	}
 	return 1;

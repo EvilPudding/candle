@@ -357,8 +357,10 @@ int init_perlin(c_renderer_t *self)
 }
 
 c_renderer_t *c_renderer_new(float resolution, int auto_exposure, int roughness,
-		float percent_of_screen)
+		float percent_of_screen, int lock_fps)
 {
+	SDL_GL_SetSwapInterval(lock_fps);
+
 	c_renderer_t *self = calloc(1, sizeof *self);
 
 	self->resolution = resolution;

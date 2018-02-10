@@ -30,8 +30,6 @@ static void init_context_b(c_window_t *self)
 
 	glDepthFunc(GL_LESS); glerr();
 
-	SDL_GL_SetSwapInterval(0);
-
 	const GLubyte *renderer = glGetString( GL_RENDERER );
 	const GLubyte *vendor = glGetString( GL_VENDOR );
 	const GLubyte *version = glGetString( GL_VERSION );
