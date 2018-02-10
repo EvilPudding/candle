@@ -26,7 +26,7 @@ c_probe_t *c_probe_new(int map_size, shader_t *shader)
 
 static int c_probe_update_position(c_probe_t *self)
 {
-	vec3_t pos = c_spacial(self->super.entity)->position;
+	vec3_t pos = c_spacial(self->super.entity)->pos;
 
 	self->projection = mat4_perspective(M_PI / 2.0f, 1.0f, 0.5f, 100.5f); 
 

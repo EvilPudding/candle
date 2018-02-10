@@ -343,10 +343,10 @@ int gjk_intersects_bak(c_rigid_body_t *self, c_rigid_body_t *other)
 	other_to_self = mat4_invert(sc1->model_matrix);
 	other_to_self = mat4_mul(other_to_self, sc2->model_matrix);
 
-	rotate_to_other = mat4_transpose(sc2->rotation_matrix);
-	rotate_to_other = mat4_mul(rotate_to_other, sc1->rotation_matrix);
+	rotate_to_other = mat4_transpose(sc2->rot_matrix);
+	rotate_to_other = mat4_mul(rotate_to_other, sc1->rot_matrix);
 
-	vec3_t dir = vec3_sub(sc2->position, sc1->position);
+	vec3_t dir = vec3_sub(sc2->pos, sc1->pos);
 	if(vec3_null(dir)) dir = vec3(1.0);
 
 	struct simplex simp;
@@ -759,11 +759,11 @@ int gjk_intersects(c_rigid_body_t *self, c_rigid_body_t *other,
 
 	// Matrix that transform a direction from local
 	// space of body 1 into local space of body 2
-	rotate_to_other = mat4_transpose(sc2->rotation_matrix);
-	rotate_to_other = mat4_mul(rotate_to_other, sc1->rotation_matrix);
+	rotate_to_other = mat4_transpose(sc2->rot_matrix);
+	rotate_to_other = mat4_mul(rotate_to_other, sc1->rot_matrix);
 	inv_rotate_to_other = mat4_invert(rotate_to_other);
 
-	vec3_t v = vec3_sub(sc2->position, sc1->position);
+	vec3_t v = vec3_sub(sc2->pos, sc1->pos);
 
 	/* assert(shape1Info.collisionShape->isConvex()); */
 	/* assert(shape2Info.collisionShape->isConvex()); */
@@ -852,7 +852,7 @@ contact_info:
 		pB = mat4_mul_vec4(inv_rotate_to_other, vec4(_vec3(pB), 0.0)).xyz;
 
 		// Compute the contact info
-		contact->normal = mat4_mul_vec4(sc1->rotation_matrix,
+		contact->normal = mat4_mul_vec4(sc1->rot_matrix,
 				(vec4(_vec3(vec3_inv(vec3_get_unit(v))), 0.0))).xyz;
 		contact->depth = margin - dist;
 	}

@@ -8,11 +8,11 @@ typedef struct
 {
 	c_t super; /* extends c_t */
 
-	vec3_t position;
-	vec3_t rotation;
+	vec3_t pos;
+	vec3_t rot;
 	vec3_t scale;
 	vec3_t up;
-	mat4_t rotation_matrix;
+	mat4_t rot_matrix;
 	mat4_t model_matrix;
 } c_spacial_t;
 

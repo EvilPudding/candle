@@ -264,6 +264,15 @@ static inline type##n##_t type##n##_min(type##n##_t a, type##n##_t b) \
 				a._[i] : b._[i]; \
 	return r; \
 } \
+static inline type##n##_t type##n##_clamp(type##n##_t a, n_t min, n_t max) \
+{ \
+	type##n##_t r; \
+	int i; \
+	for(i=0; i<n; ++i) \
+		r._[i] = a._[i]>min ? \
+				(a._[i]<max?a._[i]:max) : min; \
+	return r; \
+} \
 static inline type##n##_t type##n##_max(type##n##_t a, type##n##_t b) \
 { \
 	type##n##_t r; \

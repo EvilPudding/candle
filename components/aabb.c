@@ -30,7 +30,7 @@ void c_aabb_update(c_aabb_t *self)
 	c_model_t *mc = c_model(c_entity(self));
 
 	c_spacial_t *sc = c_spacial(c_entity(self));
-	if(vec3_equals(sc->rotation, self->rot) &&
+	if(vec3_equals(sc->rot, self->rot) &&
 			vec3_equals(sc->scale, self->sca)) return;
 	/* c_node_update_model(nc); */
 
@@ -38,7 +38,7 @@ void c_aabb_update(c_aabb_t *self)
 
 	if(!mesh) return;
 
-	inv = mat4_invert(sc->rotation_matrix);
+	inv = mat4_invert(sc->rot_matrix);
 
 	vec3_t dir_x = mat4_mul_vec4(inv, vec4(1.0, 0.0, 0.0, 0.0)).xyz;
 	vec3_t dir_y = mat4_mul_vec4(inv, vec4(0.0, 1.0, 0.0, 0.0)).xyz;
@@ -63,7 +63,7 @@ void c_aabb_update(c_aabb_t *self)
 	self->max = vec3_add_number(self->max, mesh_get_margin(mesh));
 	self->min = vec3_sub_number(self->min, mesh_get_margin(mesh));
 
-	self->rot = sc->rotation;
+	self->rot = sc->rot;
 	self->sca = sc->scale;
 }
 
@@ -84,10 +84,10 @@ int c_aabb_intersects(c_aabb_t *self, c_aabb_t *other)
 	c_spacial_t *sc1 = c_spacial(c_entity(self));
 	c_spacial_t *sc2 = c_spacial(c_entity(other));
 
-	vec3_t min1 = vec3_add(self->min, sc1->position);
-	vec3_t max1 = vec3_add(self->max, sc1->position);
-	vec3_t min2 = vec3_add(other->min, sc2->position);
-	vec3_t max2 = vec3_add(other->max, sc2->position);
+	vec3_t min1 = vec3_add(self->min, sc1->pos);
+	vec3_t max1 = vec3_add(self->max, sc1->pos);
+	vec3_t min2 = vec3_add(other->min, sc2->pos);
+	vec3_t max2 = vec3_add(other->max, sc2->pos);
 	return
 		(min1.x <= max2.x && max1.x >= min2.x) &&
 		(min1.y <= max2.y && max1.y >= min2.y) &&

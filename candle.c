@@ -189,12 +189,6 @@ static int render_loop(candle_t *self)
 					{
 						c_renderer_scene_changed(c_renderer(self->systems), NULL);
 					}
-					nk_layout_row_static(self->nkctx, 30, 110, 1);
-					if (nk_button_label(self->nkctx, "pick"))
-					{
-						c_renderer_get_pixel(c_renderer(self->systems), 0, 7,
-								window_width / 2, window_height / 2);
-					}
 					entity_signal(self->ecm->none, global_menu, self->nkctx);
 
 					node_tree(self);
@@ -216,7 +210,7 @@ static int render_loop(candle_t *self)
 				{
 					sprintf(buffer, "%ld", self->selected.id);
 				}
-				if (nk_begin(self->nkctx, final_name, nk_rect(300, 50, 230, 180),
+				if (nk_begin(self->nkctx, final_name, nk_rect(300, 50, 230, 280),
 							NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
 							NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
 				{

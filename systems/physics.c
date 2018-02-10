@@ -187,11 +187,11 @@ static int c_physics_update(c_physics_t *self, float *dt)
 		entity_t projectile = c_entity(vc);
 		c_spacial_t *sc = c_spacial(projectile);
 
-		vc->pre_movement_pos = sc->position;
+		vc->pre_movement_pos = sc->pos;
 		vc->velocity = c_physics_handle_forces(self, vc->velocity, dt);
 
 		vc->pre_collision_pos = vc->computed_pos =
-			vec3_add(sc->position, vec3_scale(vc->velocity, *dt));
+			vec3_add(sc->pos, vec3_scale(vc->velocity, *dt));
 	}
 
 	for(i = 0; i < bodies->components_size; i++)

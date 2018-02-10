@@ -453,10 +453,10 @@ static int c_renderer_probe_update_map(c_renderer_t *self, ecm_t *ecm,
 
 		shader_bind_probe(shader, probe);
 #ifdef MESH4
-		shader_bind_camera(shader, ps->position, &pp->views[face],
+		shader_bind_camera(shader, ps->pos, &pp->views[face],
 				&pp->projection, 1.0f, 0.0f);
 #else
-		shader_bind_camera(shader, ps->position, &pp->views[face],
+		shader_bind_camera(shader, ps->pos, &pp->views[face],
 				&pp->projection, 1.0f);
 #endif
 

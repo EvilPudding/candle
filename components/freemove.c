@@ -37,7 +37,7 @@ c_freemove_t *c_freemove_new(entity_t orientation, int plane_movement, entity_t 
 
 static int c_freemove_update(c_freemove_t *self, float *dt)
 {
-	/* vec3_t rot = c_spacial(self->orientation)->rotation; */
+	/* vec3_t rot = c_spacial(self->orientation)->rot; */
 	c_velocity_t *vc = c_velocity(c_entity(self));
 	vec3_t *vel = &vc->velocity;
 	float accel = 30 * (*dt);
@@ -48,9 +48,9 @@ static int c_freemove_update(c_freemove_t *self, float *dt)
 	vec3_t sideways;
 
 	front = vec3_sub(mat4_mul_vec4(sc->model_matrix,
-				vec4(0.0, 0.0, 1.0, 1.0)).xyz, sc->position);
+				vec4(0.0, 0.0, 1.0, 1.0)).xyz, sc->pos);
 	sideways = vec3_sub(mat4_mul_vec4(sc->model_matrix,
-				vec4(1.0, 0.0, 0.0, 1.0)).xyz, sc->position);
+				vec4(1.0, 0.0, 0.0, 1.0)).xyz, sc->pos);
 
 
 	if((self->left + self->right) && (self->forward || self->backward))

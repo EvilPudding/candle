@@ -3,7 +3,6 @@
 #include "spacial.h"
 #include "node.h"
 #include <nk.h>
-#include <nk.h>
 
 unsigned long ct_camera;
 

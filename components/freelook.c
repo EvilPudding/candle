@@ -56,7 +56,7 @@ static void c_freelook_update(c_freelook_t *self)
 
 	c_spacial_t *sc = c_spacial(self->super.entity);
 
-	float rot = sc->rotation.x;
+	float rot = sc->rot.x;
 	if(rot > max_up) rot = max_up;
 	if(rot < max_down) rot = max_down;
 	c_spacial_set_rot(sc, 1, 0, 0, rot);
@@ -70,12 +70,12 @@ static int c_freelook_mouse_move(c_freelook_t *self, mouse_move_data *event)
 	float frac = self->sensitivity / self->win_min_side;
 
 	c_spacial_t *sc_x = c_spacial(self->x_control);
-	float new_rot = sc_x->rotation.y - event->sx * frac;
+	float new_rot = sc_x->rot.y - event->sx * frac;
 	c_spacial_set_rot(sc_x, 0, 1, 0, new_rot);
 
 
 	c_spacial_t *sc_y = c_spacial(self->y_control);
-	new_rot = sc_y->rotation.x - event->sy * frac;
+	new_rot = sc_y->rot.x - event->sy * frac;
 	c_spacial_set_rot(sc_y, 1, 0, 0, new_rot);
 
 	c_freelook_update(self);
