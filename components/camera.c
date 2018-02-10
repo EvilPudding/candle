@@ -8,7 +8,9 @@
 unsigned long ct_camera;
 
 static int c_camera_update(c_camera_t *self, window_resize_data *event);
+#ifdef MESH4
 int c_camera_global_menu(c_camera_t *self, void *ctx);
+#endif
 
 static void c_camera_init(c_camera_t *self)
 {
@@ -48,7 +50,10 @@ void c_camera_register(ecm_t *ecm)
 			(init_cb)c_camera_init, 1, ct_spacial);
 
 	ct_register_listener(ct, WORLD, window_resize, (signal_cb)c_camera_update);
+
+#ifdef MESH4
 	ct_register_listener(ct, WORLD, global_menu, (signal_cb)c_camera_global_menu);
+#endif
 
 }
 
@@ -63,12 +68,14 @@ void c_camera_update_view(c_camera_t *self)
 #include<candle.h>
 #include<systems/renderer.h>
 
+#ifdef MESH4
 int c_camera_global_menu(c_camera_t *self, void *ctx)
 {
 	nk_layout_row_dynamic(ctx, 22, 1);
 	nk_property_float(ctx, "4D angle:", 0, &self->angle4, M_PI / 2, 0.1, 0.01);
 	return 1;
 }
+#endif
 
 static int c_camera_update(c_camera_t *self, window_resize_data *event)
 {
