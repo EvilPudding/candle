@@ -15,7 +15,7 @@ void main()
 	vec3 nor = textureLod(gbuffer.normal, texcoord, 0).rgb;
 
 	float dist_to_eye = length(c_pos);
-	/* FragColor = clamp(vec4((textureLod(gbuffer.normal, texcoord, 0).rgb+1.0f)/2, 1.0),0,1); return; */
+	/* FragColor = clamp(vec4((nor+1.0f)/2.0f, 1.0),0,1); return; */
 
 	vec3 color = ambient * dif;
 	if(light_intensity > 0.01)

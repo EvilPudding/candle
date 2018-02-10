@@ -149,9 +149,9 @@ void c_spacial_update_model_matrix(c_spacial_t *self)
 {
 	self->model_matrix = mat4_translate(self->pos.x, self->pos.y,
 			self->pos.z);
+	self->model_matrix = mat4_mul(self->model_matrix, self->rot_matrix);
 	self->model_matrix = mat4_scale_aniso(self->model_matrix, self->scale.x,
 			self->scale.y, self->scale.z);
-	self->model_matrix = mat4_mul(self->model_matrix, self->rot_matrix);
 
 	entity_signal(self->super.entity, spacial_changed,
 			&self->super.entity);

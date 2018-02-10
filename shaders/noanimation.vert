@@ -70,18 +70,20 @@ void main()
 	/* vec3 cameraspace_light_pos = ( V * vec4(light_pos, 1.0)).xyz; */
 	/* cameraspace_light_dir = cameraspace_light_pos - cameraspace_vertex_pos; */
 
+	vec3 rotated_N = (M * vec4(N, 0.0)).xyz;
+
 	vertex_color = COL;
 	texcoord = vec2(-UV.y, UV.x);
 	vertex_tangent = TG;
 	vertex_bitangent = BT;
-	vertex_normal = N;
+	vertex_normal = rotated_N;
 
 	selection_id = id;
 
-	TM = mat3(TG, BT, N);
+	TM = mat3(TG, BT, rotated_N);
 
 	{
-		cam_normal = (M * vec4(N, 0.0)).xyz;
+		cam_normal = rotated_N;
 		/* cam_tangent = (M * vec4(TG, 0.0)).xyz; */
 		/* cam_bitangent = (M * vec4(BT, 0.0)).xyz; */
 	}
