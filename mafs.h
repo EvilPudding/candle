@@ -746,6 +746,37 @@ static inline mat4_t mat4_perspective(n_t y_fov, n_t aspect, n_t n, n_t f)
 	return M;
 }
 
+static inline mat4_t mat4_from_vecs(vec3_t X, vec3_t Y, vec3_t Z)
+{
+	mat4_t result;
+	X = vec3_norm(X);
+	Y = vec3_norm(Y);
+	Z = vec3_norm(Z);
+
+	result._[0]._[0] = X._[0];
+	result._[0]._[1] = X._[1];
+	result._[0]._[2] = X._[2];
+	result._[0]._[3] = 0;
+
+	result._[1]._[0] = Y._[0];
+	result._[1]._[1] = Y._[1];
+	result._[1]._[2] = Y._[2];
+	result._[1]._[3] = 0;
+
+
+	result._[2]._[0] = Z._[0];
+	result._[2]._[1] = Z._[1];
+	result._[2]._[2] = Z._[2];
+	result._[2]._[3] = 0;
+
+
+	result._[3]._[0] = 0;
+	result._[3]._[1] = 0;
+	result._[3]._[2] = 0;
+	result._[3]._[3] = 1;
+	return result;
+}
+
 static inline mat4_t mat4_look_at(vec3_t eye, vec3_t center, vec3_t up)
 {
 	/* Adapted from Android's OpenGL Matrix.java.                        */

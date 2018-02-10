@@ -15,6 +15,10 @@ void c_spacial_init(c_spacial_t *self)
 	self->rot = vec3(0.0, 0.0, 0.0);
 	self->pos = vec3(0.0, 0.0, 0.0);
 
+	self->forward = vec3(1.0, 0.0, 0.0);
+	self->sideways = vec3(0.0, 0.0, 1.0);
+	self->upwards = vec3(0.0, 1.0, 0.0);
+
 	self->model_matrix = mat4();
 	self->rot_matrix = mat4();
 }
@@ -67,6 +71,50 @@ void c_spacial_set_rot2(c_spacial_t *self, vec3_t rot)
 			rot.y);
 
 	self->rot = rot;
+
+	c_spacial_update_model_matrix(self);
+}
+
+void c_spacial_rotate_X(c_spacial_t *self, float angle)
+{
+	float s = sinf(angle);
+	float c = cosf(angle);
+
+	self->sideways = vec3_rotate(self->sideways, self->forward, c, s);
+	self->upwards = vec3_rotate(self->upwards, self->forward, c, s);
+
+	self->rot_matrix = mat4_from_vecs(self->forward, self->upwards, self->sideways);
+
+	self->rot.x += angle;
+
+	c_spacial_update_model_matrix(self);
+}
+
+void c_spacial_rotate_Z(c_spacial_t *self, float angle)
+{
+	float s = sinf(angle);
+	float c = cosf(angle);
+
+	self->forward = vec3_rotate(self->forward, self->sideways, c, s);
+	self->upwards = vec3_rotate(self->upwards, self->sideways, c, s);
+
+	self->rot_matrix = mat4_from_vecs(self->forward, self->upwards, self->sideways);
+
+	self->rot.z += angle;
+
+	c_spacial_update_model_matrix(self);
+}
+
+void c_spacial_rotate_Y(c_spacial_t *self, float angle)
+{
+	float s = sinf(angle);
+	float c = cosf(angle);
+
+	self->sideways = vec3_rotate(self->sideways, self->upwards, c, s);
+	self->forward = vec3_rotate(self->forward, self->upwards, c, s);
+
+	self->rot_matrix = mat4_from_vecs(self->forward, self->upwards, self->sideways);
+	self->rot.y += angle;
 
 	c_spacial_update_model_matrix(self);
 }
@@ -135,9 +183,17 @@ int c_spacial_menu(c_spacial_t *self, void *ctx)
 	nk_property_float(ctx, "ry:", -1000, &start.y, 1000, 0.1, 0.01);
 	nk_property_float(ctx, "rz:", -1000, &start.z, 1000, 0.1, 0.01);
 
-	if(!vec3_equals(self->rot, start))
+	if(self->rot.x != start.x)
 	{
-		c_spacial_set_rot2(self, start);
+		c_spacial_rotate_X(self, start.x-self->rot.x);
+	}
+	if(self->rot.y != start.y)
+	{
+		c_spacial_rotate_Y(self, start.y-self->rot.y);
+	}
+	if(self->rot.z != start.z)
+	{
+		c_spacial_rotate_Z(self, start.z-self->rot.z);
 	}
 
 
