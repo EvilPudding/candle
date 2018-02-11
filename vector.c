@@ -1,5 +1,6 @@
 #include "vector.h"
 #include <stdlib.h>
+#include <string.h>
 
 struct element
 {
@@ -13,15 +14,20 @@ typedef struct vector_t
 	int alloc;
 	int free_count;
 
+	int index_matters;
+
 	int data_size;
 	int elem_size;
 	struct element *elements;
 } vector_t;
 
 
-vector_t *vector_new(int size)
+vector_t *vector_new(int size, int index_matters)
 {
 	vector_t *self = malloc(sizeof(*self));
+
+	self->index_matters = index_matters;
+	/* self->index_matters = 1; */
 
 	self->data_size = size;
 	self->elem_size = size + sizeof(struct element);
@@ -46,11 +52,48 @@ void *vector_get(vector_t *self, int i)
 	return NULL;
 }
 
+void vector_remove_item(vector_t *self, void *item)
+{
+	int i;
+	for(i = 0; i < self->count; i++)
+	{
+		void *element = vector_get(self, i);
+		if(element)
+		{
+			if(!memcmp(item, element, self->data_size))
+			{
+				vector_remove(self, i);
+				return;
+			}
+		}
+	}
+}
+
 void vector_remove(vector_t *self, int i)
 {
 	struct element *element = _vector_get(self, i);
-	element->set = 0;
-	self->free_count++;
+
+	if(!element || !element->set)
+	{
+		return;
+	}
+	if(self->index_matters)
+	{
+		element->set = 0;
+		self->free_count++;
+	}
+	else
+	{
+
+		if(i != self->count - 1)
+		{
+			void *data = vector_get(self, i);
+			void *last = vector_get(self, self->count - 1);
+
+			memcpy(data, last, self->data_size);
+		}
+		self->count--;
+	}
 }
 
 void vector_alloc(vector_t *self, int num)

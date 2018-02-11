@@ -505,8 +505,14 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 
 	glPolygonOffset(0.0f, model->layers[self->layer_id].offset);
 
-
-	glCullFace(cull_face); glerr();
+	if(cull_face == GL_NONE)
+	{
+		glDisable(GL_CULL_FACE);
+	}
+	else
+	{
+		glCullFace(cull_face); glerr();
+	}
 
 #ifdef USE_VAO
 

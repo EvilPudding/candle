@@ -21,6 +21,47 @@ void mesh_modified(mesh_t *self)
 	self->changes++;
 }
 
+void vector_add_int(vector_t *self, int value)
+{
+	int si = vector_add(self);
+	int *i = vector_get(self, si);
+	if(!i)
+	{
+		printf("Failed to add for some reason\n");
+		exit(1);
+	}
+	*i = value;
+}
+
+int vector_get_int(vector_t *self, int id)
+{
+	int *i = vector_get(self, id);
+	if(i) return *i;
+	return -1;
+}
+
+void mesh_selection_init(mesh_selection_t *self)
+{
+	self->faces = vector_new(sizeof(int), 0);
+	self->edges = vector_new(sizeof(int), 0);
+	self->verts = vector_new(sizeof(int), 0);
+#ifdef MESH4
+	self->cells = vector_new(sizeof(int), 0);
+#endif
+
+	self->faces_modified = 0;
+	self->edges_modified = 0;
+	self->verts_modified = 0;
+#ifdef MESH4
+	self->cells_modified = 0;
+#endif
+
+}
+
+#define SEL_UNSELECTED 0
+#define SEL_EDITING 1
+#define SEL_UNPAIRED 2
+
 mesh_t *mesh_new()
 {
 	mesh_t *self = calloc(1, sizeof *self);
@@ -34,18 +75,24 @@ mesh_t *mesh_new()
 	self->smooth_max = 0.4;
 	self->first_edge = 0;
 
-	self->unpaired_faces = kl_init(int);
-	self->selected_faces = kl_init(int);
-	self->selected_edges = kl_init(int);
+	int i;
+	for(i = 0; i < 16; i++)
+	{
+		mesh_selection_init(&self->selections[i]);
+	}
+
+	/* self->unpaired_faces = kl_init(int); */
+	/* self->selected_faces = kl_init(int); */
+	/* self->selected_edges = kl_init(int); */
 
 	self->support = (support_cb)mesh_support;
 
-	self->verts = vector_new(sizeof(vertex_t));
-	self->faces = vector_new(sizeof(face_t));
-	self->edges = vector_new(sizeof(edge_t));
+	self->verts = vector_new(sizeof(vertex_t), 1);
+	self->faces = vector_new(sizeof(face_t), 1);
+	self->edges = vector_new(sizeof(edge_t), 1);
 
 #ifdef MESH4
-	self->cells = vector_new(sizeof(cell_t));
+	self->cells = vector_new(sizeof(cell_t), 1);
 
 	vector_alloc(self->cells, 10);
 #endif
@@ -119,9 +166,10 @@ void mesh_destroy(mesh_t *self)
 	if(self->verts) free(self->verts);
 	if(self->edges) free(self->edges);
 
-	kl_destroy(int, self->unpaired_faces);
-	kl_destroy(int, self->selected_faces);
-	kl_destroy(int, self->selected_edges);
+	/* TODO destroy selections */
+	/* kl_destroy(int, self->unpaired_faces); */
+	/* kl_destroy(int, self->selected_faces); */
+	/* kl_destroy(int, self->selected_edges); */
 
 }
 
@@ -251,12 +299,13 @@ void mesh_invert_normals(mesh_t *self)
 {
 	mesh_lock(self);
 
-	kliter_t(int) *sf;
-	for(sf = self->selected_faces->head;
-			sf != self->selected_faces->tail;
-			sf = sf->next)
+	vector_t *selected_faces = self->selections[SEL_EDITING].faces;
+
+	int si;
+	for(si = 0; si < vector_count(selected_faces); si++)
 	{
-		face_t *f = m_face(self, sf->data); if(!f) continue;
+		int f_id = vector_get_int(selected_faces, si);
+		face_t *f = m_face(self, f_id); if(!f) continue;
 
 		edge_t *e0 = f_edge(f, 0, self),
 			   *e1 = f_edge(f, 1, self),
@@ -351,21 +400,21 @@ int mesh_edge_cell_pair(mesh_t *self, edge_t *e)
 
 int mesh_update_flips(mesh_t *self)
 {
-	int i, e;
+	int si;
 	int j, fix_iterations = 8;
 
 	mesh_update_cell_pairs(self);
 
-	kliter_t(int) *uf;
-	for(uf = self->selected_faces->head;
-			uf != self->selected_faces->tail;
-			uf = uf->next)
+	vector_t *selected_faces = self->selections[SEL_EDITING].faces;
+
+	for(si = 0; si < vector_count(selected_faces); si++)
 	{
-		i = uf->data;
-		face_t *face = m_face(self, i);
-		if(!face || face->selected != 1) continue;
+		int f_id = vector_get_int(selected_faces, si);
+		face_t *face = m_face(self, f_id);
+		if(!face || face->selected != SEL_EDITING) continue;
 
 		int last = 0;
+		int e;
 		for(e = 0; e < face->e_size; e++)
 		{
 			f_edge(face, e, self)->extrude_flip = last;
@@ -375,14 +424,17 @@ int mesh_update_flips(mesh_t *self)
 	for(j = 0; j < fix_iterations; j++)
 	{
 		int fixes = 0;
-		kliter_t(int) *uf;
-		for(uf = self->selected_edges->head;
-				uf != self->selected_edges->tail;
-				uf = uf->next)
+
+
+		vector_t *selected_edges = self->selections[SEL_EDITING].edges;
+
+		int si;
+		for(si = 0; si < vector_count(selected_edges); si++)
 		{
-			e = uf->data;
+			int e = vector_get_int(selected_edges, si);
 			edge_t *edge = m_edge(self, e);
-			if(!edge || edge->selected != 1) continue;
+
+			if(!edge || edge->selected != SEL_EDITING) continue;
 
 			/* int cpair = mesh_edge_cell_pair(self, edge); */
 			/* edge_t *pair = m_edge(self, cpair); if(!pair) continue; */
@@ -411,81 +463,66 @@ int mesh_update_flips(mesh_t *self)
 	return 0;
 }
 
-/* static void mesh_check_selection_list(mesh_t *self) */
-/* { */
-/* 	kliter_t(int) **uf; */
-/* 	kliter_t(int) **next; */
-/* 	for(uf = &self->selected_faces->head; */
-/* 			*uf && *uf != self->selected_faces->tail; */
-/* 			uf = next) */
-/* 	{ */
-/* 		face_t *face = m_face(self, (*uf)->data); */
-/* 		next = &(*uf)->next; */
-/* 		if(!face) printf("x"); */
-/* 		if(!face->selected) printf("!"); */
-/* 	} */
-/* 	printf("\n"); */
-/* } */
-
 static void mesh_udpate_selection_list(mesh_t *self)
 {
-	kliter_t(int) **uf;
-	if(self->selected_faces->modified)
+	int s;
+	for(s = 0; s < 16; s++)
 	{
-		for(uf = &self->selected_faces->head;
-				*uf != self->selected_faces->tail;)
+		mesh_selection_t *selection = &self->selections[s];
+		vector_t *selected_faces = selection->faces;
+		vector_t *selected_edges = selection->edges;
+
+		int si;
+		if(selection->faces_modified)
 		{
-			face_t *face = m_face(self, (*uf)->data);
-			if(!face || !face->selected)
+			for(si = 0; si < vector_count(selected_faces); si++)
 			{
-				kliter_t(int) *p = *uf;
-				*uf = p->next;
-				free(p);
-				self->selected_faces->size--;
+				int f_id = vector_get_int(selected_faces, si);
+				face_t *face = m_face(self, f_id);
+				if(!face || face->selected != s)
+				{
+					vector_remove(selected_faces, si);
+					si--;
+				}
 			}
-			else
-			{
-				uf = &(*uf)->next;
-			}
+			selection->faces_modified = 0;
 		}
-		self->selected_faces->modified = 0;
-	}
-	if(self->selected_edges->modified)
-	{
-		for(uf = &self->selected_edges->head;
-				*uf != self->selected_edges->tail;)
+		if(selection->edges_modified)
 		{
-			edge_t *edge = m_edge(self, (*uf)->data);
-			if(!edge || !edge->selected)
+			for(si = 0; si < vector_count(selected_edges); si++)
 			{
-				kliter_t(int) *p = *uf;
-				*uf = p->next;
-				free(p);
-				self->selected_edges->size--;														\
+				int e_id = vector_get_int(selected_edges, si);
+				edge_t *edge = m_edge(self, e_id);
+				if(!edge || edge->selected != s)
+				{
+					vector_remove(selected_edges, si);
+					si--;
+				}
 			}
-			else
-			{
-				uf = &(*uf)->next;
-			}
+			selection->edges_modified = 0;
 		}
-		self->selected_edges->modified = 0;
 	}
 }
 
 void mesh_edge_set_selection(mesh_t *self, int edge_id, int selection)
 {
 	edge_t *edge = m_edge(self, edge_id); if(!edge) return;
-	if(!edge->selected && selection)
+	if(edge->selected && selection != edge->selected)
 	{
-		*kl_pushp(int, self->selected_edges) = edge_id;
+		mesh_selection_t *sel = &self->selections[edge->selected];
+		/* vector_remove_item(sel->edges, &edge_id); */
+		sel->edges_modified = 1;
 	}
-	else if(edge->selected && !selection)
+	if(selection)
 	{
-		self->selected_edges->modified = 1;
+		mesh_selection_t *sel = &self->selections[selection];
+
+		vector_add_int(sel->edges, edge_id);
 	}
 
 	edge->selected = selection;
 }
+
 
 void mesh_face_set_selection(mesh_t *self, int face_id, int selection)
 {
@@ -495,25 +532,27 @@ void mesh_face_set_selection(mesh_t *self, int face_id, int selection)
 	{
 		mesh_edge_set_selection(self, face->e[e], selection);
 	}
+	if(face->selected && selection != face->selected)
+	{
+		mesh_selection_t *sel = &self->selections[face->selected];
+		/* vector_remove_item(sel->faces, &face_id); */
+		sel->faces_modified = 1;
+	}
+	if(selection)
+	{
+		mesh_selection_t *sel = &self->selections[selection];
 
-	if(!face->selected && selection)
-	{
-		*kl_pushp(int, self->selected_faces) = face_id;
+		vector_add_int(sel->faces, face_id);
 	}
-	else if(face->selected && !selection)
-	{
-		self->selected_faces->modified = 1;
-	}
+
 	face->selected = selection;
-
 }
-
 void mesh_unselect_faces(mesh_t *self)
 {
 	int i;
 	for(i = 0; i < vector_count(self->faces); i++)
 	{
-		mesh_face_set_selection(self, i, 0);
+		mesh_face_set_selection(self, i, SEL_UNSELECTED);
 	}
 	mesh_udpate_selection_list(self);
 }
@@ -523,7 +562,7 @@ void mesh_select_faces(mesh_t *self)
 	int i;
 	for(i = 0; i < vector_count(self->faces); i++)
 	{
-		mesh_face_set_selection(self, i, 1);
+		mesh_face_set_selection(self, i, SEL_EDITING);
 	}
 }
 
@@ -532,7 +571,7 @@ void mesh_select_edges(mesh_t *self)
 	int i;
 	for(i = 0; i < vector_count(self->edges); i++)
 	{
-		mesh_edge_set_selection(self, i, 1);
+		mesh_edge_set_selection(self, i, SEL_EDITING);
 	}
 }
 
@@ -541,34 +580,36 @@ void mesh_unselect_edges(mesh_t *self)
 	int i;
 	for(i = 0; i < vector_count(self->edges); i++)
 	{
-		mesh_edge_set_selection(self, i, 0);
+		mesh_edge_set_selection(self, i, SEL_UNSELECTED);
 	}
 	mesh_udpate_selection_list(self);
 }
 
 void mesh_for_each_selected(mesh_t *self, geom_t geom, iter_cb cb)
 {
+	int si;
 	if(geom == MESH_FACE)
 	{
-		kliter_t(int) *uf;
-		for(uf = self->selected_faces->head;
-				uf != self->selected_faces->tail;
-				uf = uf->next)
+		vector_t *selected_faces = self->selections[SEL_EDITING].faces;
+
+		for(si = 0; si < vector_count(selected_faces); si++)
 		{
-			face_t *face = m_face(self, uf->data); if(!face) continue;
-			if(face->selected != 1) continue;
+			int f_id = vector_get_int(selected_faces, si);
+
+			face_t *face = m_face(self, f_id); if(!face) continue;
+			if(face->selected != SEL_EDITING) continue;
 			if(!cb(self, face)) break;
 		}
 	}
 	else
 	{
-		kliter_t(int) *se;
-		for(se = self->selected_edges->head;
-				se != self->selected_edges->tail;
-				se = se->next)
+		vector_t *selected_edges = self->selections[SEL_EDITING].edges;
+
+		for(si = 0; si < vector_count(selected_edges); si++)
 		{
-			edge_t *e = m_edge(self, se->data);
-			if(!e || e->selected != 1) continue;
+			int e_id = vector_get_int(selected_edges, si);
+			edge_t *e = m_edge(self, e_id);
+			if(!e || e->selected != SEL_EDITING) continue;
 			int res;
 			if(geom == MESH_EDGE)
 			{
@@ -585,13 +626,14 @@ void mesh_for_each_selected(mesh_t *self, geom_t geom, iter_cb cb)
 
 void mesh_paint(mesh_t *self, vec4_t color)
 {
-	kliter_t(int) *se;
-	for(se = self->selected_edges->head;
-			se != self->selected_edges->tail;
-			se = se->next)
+	int si;
+	vector_t *selected_edges = self->selections[SEL_EDITING].edges;
+
+	for(si = 0; si < vector_count(selected_edges); si++)
 	{
-		edge_t *e = m_edge(self, se->data);
-		if(!e || e->selected != 1) continue;
+		int e_id = vector_get_int(selected_edges, si);
+		edge_t *e = m_edge(self, e_id);
+		if(!e || e->selected != SEL_EDITING) continue;
 		e_vert(e, self)->color = color;
 	}
 	mesh_modified(self);
@@ -611,17 +653,19 @@ void mesh_lock(mesh_t *self)
 static void mesh_sphere_1_subdivide(mesh_t *self)
 {
 	/* mesh has to be triangulated */
-	int i;
+	int si;
 
 	mesh_lock(self);
-	kliter_t(int) *uf;
-	for(uf = self->selected_faces->head;
-			uf != self->selected_faces->tail;
-			uf = uf->next)
+	int TMP = 4;
+
+	vector_t *selected_faces = self->selections[SEL_EDITING].faces;
+
+	for(si = 0; si < vector_count(selected_faces); si++)
 	{
-		i = uf->data;
-		face_t *face = m_face(self, i); if(!face) continue;
-		if(face->selected != 1) continue;
+		int f_id = vector_get_int(selected_faces, si);
+
+		face_t *face = m_face(self, f_id); if(!face) continue;
+		if(face->selected != SEL_EDITING) continue;
 
 		edge_t *e0 = f_edge(face, 0, self);
 		edge_t *e1 = f_edge(face, 1, self);
@@ -665,22 +709,23 @@ static void mesh_sphere_1_subdivide(mesh_t *self)
 		int f3 = mesh_add_triangle(self, i01, Z3, t01,
 								i12, Z3, t12,
 								i20, Z3, t20, 1);
-		mesh_remove_face(self, i);
+		mesh_remove_face(self, f_id);
 
-		mesh_face_set_selection(self, f0, 2);
-		mesh_face_set_selection(self, f1, 2);
-		mesh_face_set_selection(self, f2, 2);
-		mesh_face_set_selection(self, f3, 2);
+		mesh_face_set_selection(self, f0, TMP);
+		mesh_face_set_selection(self, f1, TMP);
+		mesh_face_set_selection(self, f2, TMP);
+		mesh_face_set_selection(self, f3, TMP);
 	}
 	mesh_udpate_selection_list(self);
 
-	for(uf = self->selected_faces->head;
-			uf != self->selected_faces->tail;
-			uf = uf->next)
+	vector_t *sel_tmp = self->selections[TMP].faces;
+
+	for(si = 0; si < vector_count(sel_tmp); si++)
 	{
-		i = uf->data;
-		face_t *face = m_face(self, i); if(!face) continue;
-		if(face->selected == 2) mesh_face_set_selection(self, i, 1);
+		int f_id = vector_get_int(sel_tmp, si);
+
+		face_t *face = m_face(self, f_id); if(!face) continue;
+		if(face->selected == TMP) mesh_face_set_selection(self, f_id, SEL_EDITING);
 	}
 
 	mesh_update_unpaired_edges(self);
@@ -958,14 +1003,14 @@ static int mesh_face_are_pairs(mesh_t *self,
 int mesh_get_face_from_verts(mesh_t *self,
 		int v0, int v1, int v2)
 {
-	int i;
-	kliter_t(int) *uf;
-	for(uf = self->unpaired_faces->head;
-			uf != self->unpaired_faces->tail;
-			uf = uf->next)
+	int si;
+	vector_t *unpaired_faces = self->selections[SEL_UNPAIRED].faces;
+
+	for(si = 0; si < vector_count(unpaired_faces); si++)
 	{
-		i = uf->data;
-		face_t *try = m_face(self, i); if(!try) continue;
+		int f_id = vector_get_int(unpaired_faces, si);
+
+		face_t *try = m_face(self, f_id); if(!try) continue;
 #ifdef MESH4
 		if(try->pair != -1) continue;
 #endif
@@ -977,7 +1022,7 @@ int mesh_get_face_from_verts(mesh_t *self,
 		
 		if(mesh_face_are_pairs(self, f2, f1, f0, v0, v1, v2) >= 0)
 		{
-			return i;
+			return f_id;
 		}
 	}
 	return -1;
@@ -1003,16 +1048,14 @@ static int mesh_get_pair_face(mesh_t *self, int f)
 	int f1 = f_edge(face, 1, self)->v;
 	int f2 = f_edge(face, 2, self)->v;
 
-	int i;
-	kliter_t(int) **uf;
-	for(uf = &self->unpaired_faces->head;
-			*uf != self->unpaired_faces->tail;
-			uf = &((*uf)->next))
-	{
-		i = (*uf)->data;
+	int si;
+	vector_t *unpaired_faces = self->selections[SEL_UNPAIRED].faces;
 
-		face_t *try = m_face(self, i);
-		if(!try) continue;
+	for(si = 0; si < vector_count(unpaired_faces); si++)
+	{
+		int f_id = vector_get_int(unpaired_faces, si);
+
+		face_t *try = m_face(self, f_id); if(!try) continue;
 
 		int v0 = f_edge(try, 0, self)->v;
 		int v1 = f_edge(try, 1, self)->v;
@@ -1039,19 +1082,17 @@ static int mesh_get_pair_face(mesh_t *self, int f)
 		else continue;
 
 		{
-			face->pair = i;
+			face->pair = f_id;
 			try->pair = f;
 
-			kl_rem(int, self->unpaired_faces, uf);
+			vector_remove(unpaired_faces, si);
+			si--;
 
 			return 1;
 		}
 	}
 
-	/* if(!kl_get_item(int, self->unpaired_faces, f)) */
-	/* { */
-		*kl_pushp(int, self->unpaired_faces) = f;
-	/* } */
+	vector_add_int(unpaired_faces, f);
 
 	return -1;
 }
@@ -1059,30 +1100,30 @@ static int mesh_get_pair_face(mesh_t *self, int f)
 
 static int mesh_get_cell_pair(mesh_t *self, int e)
 {
-	int i;
+	int si;
 	edge_t *edge = vector_get(self->edges, e);
 	int v1 = edge->v;
 	if(edge->next < 0 || edge->cell_pair >= 0) return -1;
 	int v2 = e_next(edge, self)->v;
 
-	kliter_t(int) *se;
-	for(se = self->selected_edges->head;
-			se != self->selected_edges->tail;
-			se = se->next)
-	{
-		i = se->data;
-		if(i == e) continue;
+	vector_t *selected_edges = self->selections[SEL_EDITING].edges;
 
-		edge_t *try1 = m_edge(self, i);
+	for(si = 0; si < vector_count(selected_edges); si++)
+	{
+		int e_id = vector_get_int(selected_edges, si);
+
+		if(e_id == e) continue;
+
+		edge_t *try1 = m_edge(self, e_id);
 		if(!try1 || try1->cell_pair != -1) continue;
-		if(try1->selected == 0) continue;
+		if(try1->selected == SEL_UNSELECTED) continue;
 
 		edge_t *try2 = e_next(try1, self);
 		if(!try2) continue;
 
 		if(try1->v == v2 && try2->v == v1)
 		{
-			edge->cell_pair = i;
+			edge->cell_pair = e_id;
 			try1->cell_pair = e;
 			return 1;
 		}
@@ -1092,16 +1133,16 @@ static int mesh_get_cell_pair(mesh_t *self, int e)
 
 static void mesh_update_cell_pairs(mesh_t *self)
 {
-	int i;
-	kliter_t(int) *se;
-	for(se = self->selected_edges->head;
-			se != self->selected_edges->tail;
-			se = se->next)
+	int si;
+
+	vector_t *selected_edges = self->selections[SEL_EDITING].edges;
+
+	for(si = 0; si < vector_count(selected_edges); si++)
 	{
-		i = se->data;
-		edge_t *edge = m_edge(self, i);
-		if(!edge || edge->selected != 1 || edge->cell_pair != -1) continue;
-		mesh_get_cell_pair(self, i);
+		int e_id = vector_get_int(selected_edges, si);
+		edge_t *edge = m_edge(self, e_id);
+		if(!edge || edge->selected != SEL_EDITING || edge->cell_pair != -1) continue;
+		mesh_get_cell_pair(self, e_id);
 	}
 }
 
@@ -1232,7 +1273,7 @@ void mesh_remove_edge(mesh_t *self, int edge_i)
 
 	if(edge->selected)
 	{
-		self->selected_edges->modified = 1;
+		self->selections[edge->selected].edges_modified = 1;
 	}
 	edge_t *pair = e_pair(edge, self);
 	if(pair)
@@ -1278,11 +1319,11 @@ void mesh_remove_face(mesh_t *self, int face_i)
 #ifdef MESH4
 	if(face->selected)
 	{
-		self->selected_faces->modified = 1;
+		self->selections[face->selected].faces_modified = 1;
 	}
 	if(face->pair == -1)
 	{
-		kl_rem_item(int, self->unpaired_faces, face_i);
+		vector_remove_item(self->selections[SEL_UNPAIRED].faces, &face_i);
 	}
 	else
 	{
@@ -1525,7 +1566,7 @@ mesh_t *mesh_circle(float radius, int segments)
 
 	prev_e = first_e = mesh_add_edge_s(self,
 			mesh_add_vert(self, VEC3(sin(0) * radius, 0.0, cos(0) * radius)), -1);
-	mesh_edge_set_selection(self, first_e, 1);
+	mesh_edge_set_selection(self, first_e, SEL_EDITING);
 
 	float inc = (M_PI * 2) / segments;
 	float a;
@@ -1538,7 +1579,7 @@ mesh_t *mesh_circle(float radius, int segments)
 						sin(-a) * radius,
 						0.0,
 						cos(-a) * radius)), prev_e);
-		mesh_edge_set_selection(self, e, 1);
+		mesh_edge_set_selection(self, e, SEL_EDITING);
 		prev_e = e;
 	}
 	self->has_texcoords = 0;
@@ -1552,17 +1593,17 @@ mesh_t *mesh_circle(float radius, int segments)
 
 vecN_t mesh_get_selection_center(mesh_t *self)
 {
-	int i;
+	int si;
 	vecN_t center = vecN(0.0f);
 	int count = 0;
-	kliter_t(int) *se;
-	for(se = self->selected_edges->head;
-			se != self->selected_edges->tail;
-			se = se->next)
+
+	vector_t *selected_edges = self->selections[SEL_EDITING].edges;
+
+	for(si = 0; si < vector_count(selected_edges); si++)
 	{
-		i = se->data;
-		edge_t *e = m_edge(self, i);
-		if(!e || e->selected != 1) continue;
+		int e_id = vector_get_int(selected_edges, si);
+		edge_t *e = m_edge(self, e_id);
+		if(!e || e->selected != SEL_EDITING) continue;
 		count++;
 		center = vecN_(add)(center, e_vert(e, self)->pos);
 	}
@@ -1705,26 +1746,25 @@ int mesh_check_duplicate_verts(mesh_t *self, int edge_id)
 void mesh_vert_dup_and_modify(mesh_t *self, vecN_t pivot,
 		float factor, vecN_t offset)
 {
-	int i;
+	int si;
 
-	kliter_t(int) *se;
 	/* for(se = self->selected_edges->head; */
 	/* 		se != self->selected_edges->tail; */
 	/* 		se = se->next) */
 	/* { */
 	/* 	i = se->data; */
 	/* 	edge_t *e = m_edge(self, i); */
-	/* 	if(!e || e->selected != 1) continue; */
+	/* 	if(!e || e->selected != SEL_EDITING) continue; */
 	/* 	e_vert(e, self)->tmp = -1; */
 	/* } */
 
-	for(se = self->selected_edges->head;
-			se != self->selected_edges->tail;
-			se = se->next)
+	vector_t *selected_edges = self->selections[SEL_EDITING].edges;
+
+	for(si = 0; si < vector_count(selected_edges); si++)
 	{
-		i = se->data;
-		edge_t *e = m_edge(self, i);
-		if(!e || e->selected != 1) continue;
+		int e_id = vector_get_int(selected_edges, si);
+		edge_t *e = m_edge(self, e_id);
+		if(!e || e->selected != SEL_EDITING) continue;
 		if(e_vert(e, self)->tmp >= 0) continue;
 
 		vertex_t *v = e_vert(e, self);
@@ -1750,7 +1790,7 @@ void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 		return;
 	}
 
-	int i, step;
+	int si, step;
 
 	mesh_lock(self);
 
@@ -1761,11 +1801,12 @@ void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 	vecN_t inc = vecN_(scale)(offset, percent_inc);
 	float prev_factor = 1.0f;
 	/* vecN_t center = mesh_get_selection_center(self); */
+	mesh_selection_t *editing = &self->selections[SEL_EDITING];
 	for(step = 0; step < steps; step++)
 	{
 		self->current_surface++;
-		printf("step %d %d %d\n", step, self->selected_faces->size,
-				self->selected_edges->size);
+		printf("step %d %d %d\n", step, vector_count(editing->faces),
+				vector_count(editing->edges));
 		if(!mesh_update_flips(self))
 		{
 			printf("Extrude tetrahedral not possible in this mesh.\n");
@@ -1785,17 +1826,17 @@ void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 
 		/* EXTRUDE FACES */
 
-		/* klist(int) *next_faces = kl_init(int); */
 		/* TODO */
+		int TMP = 4;
+		vector_t *sel_tmp = self->selections[TMP].faces;
+		vector_clear(sel_tmp);
 
-		kliter_t(int) *uf;
-		for(uf = self->selected_faces->head;
-				uf != self->selected_faces->tail;
-				uf = uf->next)
+		for(si = 0; si < vector_count(editing->faces); si++)
 		{
-			i = uf->data;
-			face_t *f = m_face(self, i); if(!f) continue;
-			if(f->selected != 1) continue;
+			int f_id = vector_get_int(editing->faces, si);
+
+			face_t *f = m_face(self, f_id); if(!f) continue;
+			if(f->selected != SEL_EDITING) continue;
 
 			int v0 = f_vert(f, 0, self)->tmp;
 			int v1 = f_vert(f, 1, self)->tmp;
@@ -1804,21 +1845,23 @@ void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 			int new_exposed_face =
 				mesh_add_tetrahedral_prism(self, f, v0, v1, v2);
 
-			mesh_face_set_selection(self, i, 0);
+			mesh_face_set_selection(self, f_id, SEL_UNSELECTED);
 
-			mesh_face_set_selection(self, new_exposed_face, 2);
+			mesh_face_set_selection(self, new_exposed_face, TMP);
 
 			/* *kl_pushp(int, next_faces) = new_exposed_face; */
 		}
 		mesh_udpate_selection_list(self);
 
-		for(uf = self->selected_faces->head;
-				uf != self->selected_faces->tail;
-				uf = uf->next)
+		for(si = 0; si < vector_count(sel_tmp); si++)
 		{
-			i = uf->data;
-			face_t *face = m_face(self, i); if(!face) continue;
-			if(face->selected == 2) mesh_face_set_selection(self, i, 1);
+			int f_id = vector_get_int(sel_tmp, si);
+
+			face_t *face = m_face(self, f_id); if(!face) continue;
+			if(face->selected == TMP)
+			{
+				mesh_face_set_selection(self, f_id, SEL_EDITING);
+			}
 		}
 
 	}
@@ -1831,7 +1874,7 @@ void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 void mesh_extrude_edges(mesh_t *self, int steps, vecN_t offset,
 		float scale, modifier_cb modifier)
 {
-	int i, step;
+	int si, step;
 
 	mesh_lock(self);
 
@@ -1841,6 +1884,11 @@ void mesh_extrude_edges(mesh_t *self, int steps, vecN_t offset,
 	vecN_t inc = vecN_(scale)(offset, percent_inc);
 	float prev_factor = 1.0f;
 
+	mesh_selection_t *editing = &self->selections[SEL_EDITING];
+
+	int TMP = 4;
+	vector_t *sel_tmp = self->selections[TMP].edges;
+	vector_clear(sel_tmp);
 	for(step = 0; step < steps; step++)
 	{
 		vecN_t center = mesh_get_selection_center(self);
@@ -1854,14 +1902,12 @@ void mesh_extrude_edges(mesh_t *self, int steps, vecN_t offset,
 
 		prev_factor = current_factor;
 
-		kliter_t(int) *se;
-		for(se = self->selected_edges->head;
-				se != self->selected_edges->tail;
-				se = se->next)
+		for(si = 0; si < vector_count(editing->edges); si++)
 		{
-			i = se->data;
-			edge_t *e = m_edge(self, i);
-			if(!e || e->selected != 1) continue;
+			int e_id = vector_get_int(editing->edges, si);
+
+			edge_t *e = m_edge(self, e_id);
+			if(!e || e->selected != SEL_EDITING) continue;
 
 			edge_t *ne = e_next(e, self); if(!ne) continue;
 
@@ -1878,24 +1924,23 @@ void mesh_extrude_edges(mesh_t *self, int steps, vecN_t offset,
 					et, Z3, e->t,
 					nt, Z3, ne->t
 			);
-			mesh_edge_set_selection(self, i, 0);
+			mesh_edge_set_selection(self, e_id, SEL_UNSELECTED);
 
-			e = m_edge(self, i);
+			e = m_edge(self, e_id);
 			int new = e_prev(e_pair(e, self), self)->prev;
 			if(new == -1) exit(1);
-			mesh_edge_set_selection(self, new, 2);
+			mesh_edge_set_selection(self, new, TMP);
 
 		}
 		mesh_udpate_selection_list(self);
-		for(se = self->selected_edges->head;
-				se != self->selected_edges->tail;
-				se = se->next)
+
+		for(si = 0; si < vector_count(sel_tmp); si++)
 		{
-			i = se->data;
-			edge_t *edge = m_edge(self, i); if(!edge) continue;
-			if(edge->selected == 2)
+			int e_id = vector_get_int(sel_tmp, si);
+			edge_t *edge = m_edge(self, e_id); if(!edge) continue;
+			if(edge->selected == TMP)
 			{
-				mesh_edge_set_selection(self, i, 1);
+				mesh_edge_set_selection(self, e_id, SEL_EDITING);
 			}
 		}
 	}
@@ -2098,10 +2143,10 @@ vertex_t *mesh_farthest(mesh_t *self, const vec3_t dir)
 
 	float last_dist = vec3_dot(dir, XYZ(v->pos));
 
-	int i;
-	for(i = 1; i < vector_count(self->verts); i++)
+	int si;
+	for(si = 1; si < vector_count(self->verts); si++)
 	{
-		vertex_t *vi = m_vert(self, i);
+		vertex_t *vi = m_vert(self, si);
 		float temp = vec3_dot(dir, XYZ(vi->pos));
 		if(temp > last_dist)
 		{

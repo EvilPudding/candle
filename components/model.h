@@ -11,6 +11,7 @@ typedef struct
 	int cull_face;
 	int update_id;
 	float offset;
+	float smooth_angle;
 } mat_layer_t;
 
 typedef struct

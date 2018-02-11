@@ -29,7 +29,7 @@ c_camera_t *c_camera_new(int active, float fov, float near, float far,
 	self->view_cached = 0;
 	self->exposure = 0.25f;
 #ifdef MESH4
-	self->angle4 = 0.0f;
+	self->angle4 = 0.01f;
 #endif
 
 	c_camera_update(self, &(window_resize_data){width, height});
@@ -70,8 +70,12 @@ void c_camera_update_view(c_camera_t *self)
 #ifdef MESH4
 int c_camera_global_menu(c_camera_t *self, void *ctx)
 {
-	nk_layout_row_dynamic(ctx, 22, 1);
-	nk_property_float(ctx, "4D angle:", 0, &self->angle4, M_PI / 2, 0.1, 0.01);
+    nk_layout_row_begin(ctx, NK_DYNAMIC, 0, 2);
+	nk_layout_row_push(ctx, 0.35);
+	nk_label(ctx, "4D angle:", NK_TEXT_LEFT);
+	nk_layout_row_push(ctx, 0.65);
+	nk_slider_float(ctx, 0, &self->angle4, M_PI / 2, 0.1);
+	nk_layout_row_end(ctx);
 	return 1;
 }
 #endif

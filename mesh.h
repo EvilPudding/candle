@@ -5,7 +5,6 @@
 #include "mafs.h"
 #include "material.h"
 #include "vector.h"
-#include "klist.h"
 
 typedef struct mesh_t mesh_t;
 typedef struct face_t face_t;
@@ -149,9 +148,22 @@ typedef struct cell_t /* Cell */
 
 #endif 
 
-#define Freer(x)
+typedef struct
+{
+	vector_t *faces;
+	vector_t *edges;
+	vector_t *verts;
+#ifdef MESH4
+	vector_t *cells;
+#endif
 
-KLIST_INIT(int, int, Freer)
+	int faces_modified;
+	int edges_modified;
+	int verts_modified;
+#ifdef MESH4
+	int cells_modified;
+#endif
+} mesh_selection_t;
 
 typedef struct mesh_t
 {
@@ -162,9 +174,7 @@ typedef struct mesh_t
 	vector_t *cells;
 #endif
 
-	klist_t(int) *unpaired_faces;
-	klist_t(int) *selected_faces;
-	klist_t(int) *selected_edges;
+	mesh_selection_t selections[16];
 
 	int has_texcoords;
 	int triangulated;
@@ -248,6 +258,7 @@ void mesh_remove_vert(mesh_t *self, int vert_i);
 void mesh_select_edges(mesh_t *self);
 void mesh_select_faces(mesh_t *self);
 void mesh_unselect_faces(mesh_t *self);
+void mesh_unselect_edges(mesh_t *self);
 void mesh_paint(mesh_t *self, vec4_t color);
 void mesh_for_each_selected(mesh_t *self, geom_t geom, iter_cb cb);
 void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
