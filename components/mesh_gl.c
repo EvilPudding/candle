@@ -446,6 +446,10 @@ static int glg_update_buffers(glg_t *self)
 	}
 
 	self->updated = 1;
+	/* if(!self->ready) */
+	{
+		entity_signal(self->entity, spacial_changed, NULL);
+	}
 	self->ready = 1;
 
 	glBindVertexArray(0); glerr();
