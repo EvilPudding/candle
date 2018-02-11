@@ -8,7 +8,8 @@ typedef struct
 	int selection;
 	material_t *mat;
 	int wireframe;
-	int cull_face;
+	int cull_front;
+	int cull_back;
 	int update_id;
 	float offset;
 	float smooth_angle;

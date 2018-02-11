@@ -9,14 +9,13 @@ void main()
 	float brightPassThreshold = 1.0f;
 
 	vec3 luminanceVector = vec3(0.2125, 0.7154, 0.0721);
-    vec4 c = textureLod(diffuse.texture, texcoord, 0);
+    vec3 c = textureLod(diffuse.texture, texcoord, 0).rgb;
 
-    float luminance = dot(luminanceVector, c.xyz);
+    float luminance = dot(luminanceVector, c);
     luminance = max(0.0, luminance - brightPassThreshold);
-    c.xyz *= sign(luminance);
-    c.a = 1.0;
+    c *= sign(luminance);
 
-    FragColor = c;
+    FragColor = vec4(c, 1.0f);
 }
 
 // vim: set ft=c:

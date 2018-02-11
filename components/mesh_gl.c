@@ -488,16 +488,30 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 	int wireframe;
 	material_t *mat;
 	c_model_t *model = c_model(self->entity);
+	mat_layer_t *layer = &model->layers[self->layer_id];
 	{
-		switch(model->layers[self->layer_id].cull_face)
+		if(layer->cull_front)
 		{
-			case 0: cull_face = GL_BACK; break;
-			case 1: cull_face = GL_FRONT; break;
-			case 2: cull_face = GL_FRONT_AND_BACK; break;
-			default: cull_face = GL_NONE; break;
+			if(layer->cull_back)
+			{
+				cull_face = GL_FRONT_AND_BACK;
+			}
+			else
+			{
+				cull_face = GL_FRONT;
+			}
 		}
-		wireframe = model->layers[self->layer_id].wireframe;
-		mat = model->layers[self->layer_id].mat;
+		else if(layer->cull_back)
+		{
+			cull_face = GL_BACK;
+		}
+		else
+		{
+			cull_face = GL_NONE;
+		}
+
+		wireframe = layer->wireframe;
+		mat = layer->mat;
 	}
 
 	if(mat && shader)

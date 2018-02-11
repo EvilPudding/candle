@@ -11,6 +11,8 @@
 
 typedef struct pass_t pass_t;
 
+typedef struct uniform_t uniform_t;
+
 typedef struct
 {
 	char name[32];
@@ -18,12 +20,50 @@ typedef struct
 	unsigned int draw_filter;
 } gbuffer_t;
 
+typedef enum
+{
+	BIND_NONE,
+	BIND_PASS_OUTPUT,
+	BIND_NUMBER,
+	BIND_INTEGER,
+	BIND_GBUFFER
+} bind_type_t;
+
 typedef struct
 {
-	pass_t *pass;
-	unsigned int u_brightness;
-	unsigned int u_texture;
-} pass_bind_t;
+	bind_type_t type;
+	char name[32];
+	union
+	{
+		struct {
+			uint u_brightness;
+			uint u_texture;
+			pass_t *pass;
+		} pass_output;
+		struct {
+			uint u;
+			float value;
+		} number;
+		struct {
+			uint u;
+			int value;
+		} integer;
+		struct {
+			uint u_diffuse;
+			uint u_specular;
+			uint u_reflection;
+			uint u_normal;
+			uint u_transparency;
+			uint u_wposition;
+			uint u_cposition;
+			uint u_id;
+			int id;
+			char name[32];
+		} gbuffer;
+	};
+} bind_t;
+
+typedef void(*bind_cb)(uniform_t *self, shader_t *shader);
 
 typedef struct pass_t
 {
@@ -36,12 +76,10 @@ typedef struct pass_t
 	char feed_name[32];
 
 	int binds_size;
-	pass_bind_t binds[15];
+	bind_t binds[15];
 
 	int mipmaped;
 	int record_brightness;
-
-	int gbuf_id;
 } pass_t;
 
 typedef struct c_renderer_t
@@ -89,9 +127,8 @@ void c_renderer_register(ecm_t *ecm);
 void c_renderer_set_resolution(c_renderer_t *self, float resolution);
 void c_renderer_draw_to_texture(c_renderer_t *self, shader_t *shader,
 		texture_t *screen, float scale, texture_t *buffer);
-void c_renderer_add_pass(c_renderer_t *self, int for_each_light,
-		int screen_scale, float wid, float hei, int mipmaped, int record_brightness,
-		const char *feed_name, const char *shader_name, const char *gbuffer_name);
+void c_renderer_add_pass(c_renderer_t *self, const char *feed_name, int flags,
+		float wid, float hei, const char *shader_name, bind_t binds[]);
 void c_renderer_clear_shader(c_renderer_t *self, shader_t *shader);
 int c_renderer_scene_changed(c_renderer_t *self, entity_t *entity);
 void c_renderer_get_pixel(c_renderer_t *self, int gbuffer, int buffer,

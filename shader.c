@@ -37,6 +37,7 @@ void shaders_position_vert_reg(void); void shaders_position_frag_reg(void);
 void shaders_shadow_vert_reg(void); void shaders_shadow_frag_reg(void);
 void shaders_ssao_vert_reg(void); void shaders_ssao_frag_reg(void);
 void shaders_transparency_vert_reg(void); void shaders_transparency_frag_reg(void);
+void shaders_highlight_vert_reg(void); void shaders_highlight_frag_reg(void);
 
 void shaders_reg()
 {
@@ -52,6 +53,7 @@ void shaders_reg()
 	shaders_shadow_vert_reg();shaders_shadow_frag_reg();
 	shaders_ssr_vert_reg();shaders_ssr_frag_reg();
 	shaders_transparency_vert_reg();shaders_transparency_frag_reg();
+	shaders_highlight_vert_reg();shaders_highlight_frag_reg();
 	shaders_blur_vert_reg();shaders_blur_frag_reg();
 	shaders_diffuse_vert_reg();shaders_diffuse_frag_reg();
 	shaders_noanimation_vert_reg();
@@ -370,6 +372,7 @@ static int shader_new_loader(shader_t *self)
 	self->u_has_tex = glGetUniformLocation(self->program, "has_tex"); glerr();
 
 	self->u_id = glGetUniformLocation(self->program, "id"); glerr();
+	self->u_id_filter = glGetUniformLocation(self->program, "id_filter"); glerr();
 
 	self->u_screen_scale_x = glGetUniformLocation(self->program, "screen_scale_x"); glerr();
 	self->u_screen_scale_y = glGetUniformLocation(self->program, "screen_scale_y"); glerr();
@@ -386,17 +389,6 @@ static int shader_new_loader(shader_t *self)
 	shader_get_prop_uniforms(self, &self->u_reflection, "reflection");
 	shader_get_prop_uniforms(self, &self->u_normal, "normal");
 	shader_get_prop_uniforms(self, &self->u_transparency, "transparency");
-
-
-	/* GBUFFER TEXTURES */
-	self->u_g_diffuse = glGetUniformLocation(self->program, "gbuffer.diffuse"); glerr();
-	self->u_g_specular = glGetUniformLocation(self->program, "gbuffer.specular"); glerr();
-	self->u_g_reflection = glGetUniformLocation(self->program, "gbuffer.reflection"); glerr();
-	self->u_g_normal = glGetUniformLocation(self->program, "gbuffer.normal"); glerr();
-	self->u_g_transparency = glGetUniformLocation(self->program, "gbuffer.transparency"); glerr();
-	self->u_g_cposition = glGetUniformLocation(self->program, "gbuffer.cposition"); glerr();
-	self->u_g_wposition = glGetUniformLocation(self->program, "gbuffer.wposition"); glerr();
-	self->u_g_id = glGetUniformLocation(self->program, "gbuffer.id"); glerr();
 
 	return 1;
 }
@@ -527,45 +519,6 @@ void shader_bind_screen(shader_t *self, texture_t *buffer, float sx, float sy)
 	texture_bind(buffer, COLOR_TEX);
 }
 
-void shader_bind_gbuffer(shader_t *self, texture_t *buffer)
-{
-	glUniform1f(self->u_screen_scale_x, 1.0f); glerr();
-	glUniform1f(self->u_screen_scale_y, 1.0f); glerr();
-
-	glUniform1i(self->u_g_diffuse, 1); glerr();
-	glActiveTexture(GL_TEXTURE0 + 1); glerr();
-	texture_bind(buffer, 1);
-
-	glUniform1i(self->u_g_specular, 2); glerr();
-	glActiveTexture(GL_TEXTURE0 + 2); glerr();
-	texture_bind(buffer, 2);
-
-	glUniform1i(self->u_g_reflection, 3); glerr();
-	glActiveTexture(GL_TEXTURE0 + 3); glerr();
-	texture_bind(buffer, 3);
-
-	glUniform1i(self->u_g_normal, 4); glerr();
-	glActiveTexture(GL_TEXTURE0 + 4); glerr();
-	texture_bind(buffer, 4);
-
-	glUniform1i(self->u_g_transparency, 5); glerr();
-	glActiveTexture(GL_TEXTURE0 + 5); glerr();
-	texture_bind(buffer, 5);
-
-	glUniform1i(self->u_g_cposition, 6); glerr();
-	glActiveTexture(GL_TEXTURE0 + 6); glerr();
-	texture_bind(buffer, 6);
-
-	glUniform1i(self->u_g_wposition, 7); glerr();
-	glActiveTexture(GL_TEXTURE0 + 7); glerr();
-	texture_bind(buffer, 7);
-
-	glUniform1i(self->u_g_id, 8); glerr();
-	glActiveTexture(GL_TEXTURE0 + 8); glerr();
-	texture_bind(buffer, 8);
-
-}
-
 void shader_bind(shader_t *self)
 {
 	glUseProgram(self->program);
@@ -583,6 +536,15 @@ void shader_bind_mesh(shader_t *self, mesh_t *mesh, unsigned int id)
 
 	glUniform3f(self->u_id, (float)convert.r / 255,
 			(float)convert.g / 255, (float)convert.b / 255);
+}
+
+GLuint shader_uniform(shader_t *self, const char *uniform, const char *member)
+{
+	char buffer[256];
+	snprintf(buffer, sizeof(buffer), "%s.%s", uniform, member);
+	GLuint res = glGetUniformLocation(self->program, buffer); glerr();
+
+	return res;
 }
 
 void shader_destroy(shader_t *self)

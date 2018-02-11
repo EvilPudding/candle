@@ -21,6 +21,8 @@ unsigned long ct_renderer;
 
 unsigned long world_changed;
 
+static int c_renderer_gbuffer(c_renderer_t *self, const char *name);
+
 static void c_renderer_add_gbuffer(c_renderer_t *self, const char *name,
 		unsigned int draw_filter);
 
@@ -52,46 +54,77 @@ int c_renderer_scene_changed(c_renderer_t *self, entity_t *entity)
 	return 1;
 }
 
-/* static void init_context_a(c_renderer_t *self) */
-/* { */
-/* 	SDL_CreateWindowAndRenderer(self->width, self->height, SDL_WINDOW_OPENGL, */
-/* 			&self->window, &self->display); */
-/* 	mainWindow = self->window; */
-	/* glInit(); */
-/* } */
-
 static int c_renderer_bind_passes(c_renderer_t *self)
 {
 	int i, j;
 
+	for(i = 0; i < self->passes_size; i++)
+	{
+		pass_t *pass = &self->passes[i];
+		int b;
+		for(b = 0; b < pass->binds_size; b++)
+		{
+			bind_t *bind = &pass->binds[b];
+			switch(bind->type)
+			{
+				case BIND_NONE:
+					printf("Empty bind??\n");
+					break;
+				case BIND_PASS_OUTPUT:
+					printf("Passes as input should not be explicit!\n");
+					break;
+				case BIND_GBUFFER:
+					bind->gbuffer.u_diffuse =
+						shader_uniform(pass->shader, bind->name, "diffuse");
+					bind->gbuffer.u_specular =
+						shader_uniform(pass->shader, bind->name, "specular");
+					bind->gbuffer.u_reflection =
+						shader_uniform(pass->shader, bind->name, "reflection");
+					bind->gbuffer.u_normal =
+						shader_uniform(pass->shader, bind->name, "normal");
+					bind->gbuffer.u_transparency =
+						shader_uniform(pass->shader, bind->name, "transparency");
+					bind->gbuffer.u_cposition =
+						shader_uniform(pass->shader, bind->name, "cposition");
+					bind->gbuffer.u_wposition =
+						shader_uniform(pass->shader, bind->name, "wposition");
+					bind->gbuffer.u_id =
+						shader_uniform(pass->shader, bind->name, "id"); glerr();
+					bind->gbuffer.id = c_renderer_gbuffer(self, bind->gbuffer.name);
+					break;
+				default:
+					bind->number.u = glGetUniformLocation(pass->shader->program,
+							bind->name);
+					if(bind->number.u >= 4294967295)
+					{
+						printf("Explicit bind '%s' is not present in shader '%s'!\n",
+								bind->name, pass->shader->filename);
+					}
+					break;
+			}
+		}
+	}
+
 	for(i = 1; i < self->passes_size; i++)
 	{
 		pass_t *pass = &self->passes[i];
-		pass->binds_size = 0;
 		for(j = i - 1; j >= 0; j--)
 		{
 			pass_t *pass_done = &self->passes[j];
 
-			char buffer[256];
-
-			snprintf(buffer, sizeof(buffer), "%s.texture",
-					pass_done->feed_name);
-
-			GLuint u_texture = glGetUniformLocation(pass->shader->program,
-					buffer); glerr();
+			uint u_texture = shader_uniform(pass->shader, pass_done->feed_name,
+					"texture"); glerr();
 
 			if(u_texture >= 4294967295) continue;
 
-			snprintf(buffer, sizeof(buffer), "%s.brightness",
-					pass_done->feed_name);
+			uint u_brightness = shader_uniform(pass->shader, pass_done->feed_name,
+					"brightness"); glerr();
 
-			GLuint u_brightness = glGetUniformLocation(pass->shader->program,
-					buffer); glerr();
-
-			pass_bind_t *bind = &pass->binds[pass->binds_size++];
-			bind->u_texture = u_texture;
-			bind->u_brightness = u_brightness;
-			bind->pass = pass_done;
+			bind_t *bind = &pass->binds[pass->binds_size++];
+			bind->type = BIND_PASS_OUTPUT;
+			bind->pass_output.u_texture = u_texture;
+			bind->pass_output.u_brightness = u_brightness;
+			bind->pass_output.pass = pass_done;
 		}
 	}
 	printf("PASSES BOUND\n");
@@ -104,6 +137,14 @@ void c_renderer_get_pixel(c_renderer_t *self, int gbuffer, int buffer,
 {
 	texture_get_pixel(self->gbuffers[gbuffer].buffer, buffer, x, y);
 }
+
+enum
+{
+	PASS_FOR_EACH_LIGHT    = 1 << 0,
+	PASS_MIPMAPED 		   = 1 << 1,
+	PASS_RECORD_BRIGHTNESS = 1 << 2,
+	PASS_SCREEN_SCALE	   = 1 << 3
+} pass_options;
 
 static void c_renderer_init(c_renderer_t *self)
 {
@@ -118,17 +159,45 @@ static void c_renderer_init(c_renderer_t *self)
 	c_renderer_add_gbuffer(self, "opaque", 0);
 	c_renderer_add_gbuffer(self, "transp", 1);
 
-	c_renderer_add_pass(self, 0, 1, 1.0f, 1.0f, 0, 0,
-			"ssao", "ssao", "opaque");
 
-	c_renderer_add_pass(self, 1, 1, 1.0f, 1.0f, 0, 0,
-			"phong", "phong", "opaque");
+	c_renderer_add_pass(self, "ssao",
+			PASS_SCREEN_SCALE,
+			1.0f, 1.0f, "ssao",
+		(bind_t[]){
+			{BIND_GBUFFER, "gbuffer", .gbuffer.name = "opaque"},
+			{BIND_NONE}
+		}
+	);
 
-	c_renderer_add_pass(self, 0, 1, 1.0f, 1.0f, self->roughness, 0,
-			"transp", "transparency", "transp");
+	c_renderer_add_pass(self, "phong",
+			PASS_FOR_EACH_LIGHT | PASS_SCREEN_SCALE,
+			1.0f, 1.0f, "phong",
+		(bind_t[]){
+			{BIND_GBUFFER, "gbuffer", .gbuffer.name = "opaque"},
+			{BIND_NONE}
+		}
+	);
 
-	c_renderer_add_pass(self, 0, 1, 1.0f, 1.0f, 0, self->auto_exposure,
-			"final", "ssr", "opaque");
+	c_renderer_add_pass(self, "transp",
+			PASS_SCREEN_SCALE | (self->roughness * PASS_MIPMAPED),
+			1.0f, 1.0f, "transparency",
+		(bind_t[]){
+			{BIND_GBUFFER, "gbuffer", .gbuffer.name = "transp"},
+			{BIND_NONE}
+		}
+	);
+
+	c_renderer_add_pass(self, "final",
+			PASS_SCREEN_SCALE | (self->auto_exposure * PASS_RECORD_BRIGHTNESS),
+			1.0f, 1.0f, "ssr",
+		(bind_t[]){
+			{BIND_GBUFFER, "gbuffer", .gbuffer.name = "opaque"},
+			{BIND_NONE}
+		}
+	);
+
+	/* c_renderer_add_pass(self, 0, 1, 1.0f, 1.0f, 0, 0, */
+			/* "selection", "blur5", "opaque"); */
 
 	self->quad = entity_new(candle->ecm, 2,
 			c_name_new("renderer_quad"),
@@ -225,6 +294,65 @@ static int c_renderer_resize(c_renderer_t *self, window_resize_data *event)
 	return 1;
 }
 
+static void c_renderer_bind_pass_output(c_renderer_t *self, pass_t *pass,
+		bind_t *bind, int i)
+{
+	glUniform1i(bind->pass_output.u_texture, 13 + i); glerr();
+	glActiveTexture(GL_TEXTURE0 + 13 + i); glerr();
+	texture_bind(bind->pass_output.pass->output, -1);
+
+	if(bind->pass_output.pass->record_brightness)
+	{
+		float brightness = bind->pass_output.pass->output->brightness;
+		glUniform1f(bind->pass_output.u_brightness, brightness); glerr();
+	}
+
+}
+
+static void c_renderer_bind_gbuffer(c_renderer_t *self, pass_t *pass,
+		bind_t *bind)
+{
+	if(bind->gbuffer.id < 0) return;
+
+	texture_t *gbuffer = self->gbuffers[bind->gbuffer.id].buffer;
+	if(!gbuffer) return;
+
+	glUniform1f(pass->shader->u_screen_scale_x, 1.0f); glerr();
+	glUniform1f(pass->shader->u_screen_scale_y, 1.0f); glerr();
+
+	glUniform1i(bind->gbuffer.u_diffuse, 1); glerr();
+	glActiveTexture(GL_TEXTURE0 + 1); glerr();
+	texture_bind(gbuffer, 1);
+
+	glUniform1i(bind->gbuffer.u_specular, 2); glerr();
+	glActiveTexture(GL_TEXTURE0 + 2); glerr();
+	texture_bind(gbuffer, 2);
+
+	glUniform1i(bind->gbuffer.u_reflection, 3); glerr();
+	glActiveTexture(GL_TEXTURE0 + 3); glerr();
+	texture_bind(gbuffer, 3);
+
+	glUniform1i(bind->gbuffer.u_normal, 4); glerr();
+	glActiveTexture(GL_TEXTURE0 + 4); glerr();
+	texture_bind(gbuffer, 4);
+
+	glUniform1i(bind->gbuffer.u_transparency, 5); glerr();
+	glActiveTexture(GL_TEXTURE0 + 5); glerr();
+	texture_bind(gbuffer, 5);
+
+	glUniform1i(bind->gbuffer.u_cposition, 6); glerr();
+	glActiveTexture(GL_TEXTURE0 + 6); glerr();
+	texture_bind(gbuffer, 6);
+
+	glUniform1i(bind->gbuffer.u_wposition, 7); glerr();
+	glActiveTexture(GL_TEXTURE0 + 7); glerr();
+	texture_bind(gbuffer, 7);
+
+	glUniform1i(bind->gbuffer.u_id, 8); glerr();
+	glActiveTexture(GL_TEXTURE0 + 8); glerr();
+	texture_bind(gbuffer, 8);
+}
+
 static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_t camera)
 {
 	unsigned long i;
@@ -246,12 +374,6 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 			&cam->projection_matrix, cam->exposure);
 #endif
 
-	if(pass->gbuf_id >= 0)
-	{
-		shader_bind_gbuffer(pass->shader,
-				self->gbuffers[pass->gbuf_id].buffer);
-	}
-
 	ct_t *ambients = ecm_get(c_ecm(self), ct_ambient);
 	c_ambient_t *ambient = (c_ambient_t*)ct_get_at(ambients, 0);
 
@@ -261,19 +383,24 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 		if(probe) shader_bind_ambient(pass->shader, probe->map);
 	}
 
-
 	for(i = 0; i < pass->binds_size; i++)
 	{
-		pass_bind_t *bind = &pass->binds[i];
-
-		glUniform1i(bind->u_texture, 13 + i); glerr();
-		glActiveTexture(GL_TEXTURE0 + 13 + i); glerr();
-		texture_bind(bind->pass->output, -1);
-
-		if(bind->pass->record_brightness)
+		bind_t *bind = &pass->binds[i];
+		switch(bind->type)
 		{
-			float brightness = bind->pass->output->brightness;
-			glUniform1f(bind->u_brightness, brightness);
+		case BIND_NONE: printf("error\n"); break;
+		case BIND_PASS_OUTPUT:
+			c_renderer_bind_pass_output(self, pass, bind, i);
+			break;
+		case BIND_NUMBER:
+			glUniform1f(bind->number.u, bind->number.value); glerr();
+			break;
+		case BIND_INTEGER:
+			glUniform1i(bind->integer.u, bind->integer.value); glerr();
+			break;
+		case BIND_GBUFFER:
+			c_renderer_bind_gbuffer(self, pass, bind);
+			break;
 		}
 
 	}
@@ -513,7 +640,7 @@ static void c_renderer_update_probes(c_renderer_t *self, ecm_t *ecm)
 
 }
 
-int c_renderer_gbuffer(c_renderer_t *self, const char *name)
+static int c_renderer_gbuffer(c_renderer_t *self, const char *name)
 {
 	int i;
 	if(!name) return -1;
@@ -538,21 +665,19 @@ static void c_renderer_add_gbuffer(c_renderer_t *self, const char *name,
 	strncpy(gb->name, name, sizeof(gb->name));
 }
 
-void c_renderer_add_pass(c_renderer_t *self, int for_each_light,
-		int screen_scale, float wid, float hei, int mipmaped, int record_brightness,
-		const char *feed_name, const char *shader_name, const char *gbuffer_name)
+void c_renderer_add_pass(c_renderer_t *self, const char *feed_name, int flags,
+		float wid, float hei, const char *shader_name, bind_t binds[])
 {
 	shader_t *shader = shader_new(shader_name);
 	int i = self->passes_size++;
 	pass_t *pass = &self->passes[i];
 	pass->shader = shader;
-	pass->for_each_light = for_each_light;
-	pass->mipmaped = mipmaped;
-	pass->record_brightness = record_brightness;
+	pass->for_each_light = flags & PASS_FOR_EACH_LIGHT;
+	pass->mipmaped = flags & PASS_MIPMAPED;
+	pass->record_brightness = flags & PASS_RECORD_BRIGHTNESS;
 	strncpy(pass->feed_name, feed_name, sizeof(pass->feed_name));
-	pass->screen_scale = screen_scale;
-	pass->gbuf_id = c_renderer_gbuffer(self, gbuffer_name);
-	if(screen_scale)
+	pass->screen_scale = flags & PASS_SCREEN_SCALE;
+	if(pass->screen_scale)
 	{
 		pass->screen_scale_x = wid;
 		pass->screen_scale_y = hei;
@@ -561,6 +686,14 @@ void c_renderer_add_pass(c_renderer_t *self, int for_each_light,
 	else
 	{
 		pass->output = texture_new_2D((int)wid, (int)hei, 32, GL_RGBA16F, 1, 0);
+	}
+	
+	pass->binds_size = 0;
+	for(i = 0;;i++)
+	{
+		bind_t *bind = &binds[i];
+		if(bind->type == BIND_NONE) break;
+		pass->binds[pass->binds_size++] = *bind;
 	}
 }
 
