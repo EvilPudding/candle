@@ -153,7 +153,7 @@ int c_spacial_menu(c_spacial_t *self, void *ctx)
 	if(nk_tree_push(ctx, NK_TREE_TAB, "Spacial", NK_MINIMIZED))
 	{
 		vec3_t tmp = self->pos;
-		if(nk_tree_push_id(ctx, NK_TREE_NODE, "Position", NK_MAXIMIZED, 0))
+		if(nk_tree_push(ctx, NK_TREE_NODE, "Position", NK_MINIMIZED))
 		{
 			/* nk_layout_row_dynamic(ctx, 0, 1); */
 			nk_property_float(ctx, "x:", -10000, &tmp.x, 10000, 0.1, 0.05);
@@ -168,7 +168,7 @@ int c_spacial_menu(c_spacial_t *self, void *ctx)
 		}
 
 		tmp = self->rot;
-		if(nk_tree_push_id(ctx, NK_TREE_NODE, "Rotation", NK_MAXIMIZED, 1))
+		if(nk_tree_push(ctx, NK_TREE_NODE, "Rotation", NK_MINIMIZED))
 		{
 			/* nk_layout_row_dynamic(ctx, 0, 1); */
 			nk_property_float(ctx, "rx:", -1000, &tmp.x, 1000, 0.1, 0.01);
@@ -191,7 +191,7 @@ int c_spacial_menu(c_spacial_t *self, void *ctx)
 		}
 
 		tmp = self->scale;
-		if(nk_tree_push_id(ctx, NK_TREE_NODE, "Scale", NK_MAXIMIZED, 2))
+		if(nk_tree_push(ctx, NK_TREE_NODE, "Scale", NK_MINIMIZED))
 		{
 			/* nk_layout_row_dynamic(ctx, 0, 1); */
 			nk_property_float(ctx, "sx:", -1000, &tmp.x, 1000, 0.1, 0.01);
