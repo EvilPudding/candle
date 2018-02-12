@@ -1,6 +1,7 @@
 #ifndef COMPONENT_H
 #define COMPONENT_H
 
+#include <limits.h>
 #include "material.h"
 #include "texture.h"
 #include "mesh.h"
@@ -22,7 +23,7 @@ typedef int(*before_draw_cb)(c_t *self);
 
 typedef struct
 {
-	unsigned long signal;
+	ulong signal;
 	signal_cb cb;
 	int flags;
 } listener_t;
@@ -33,46 +34,46 @@ typedef struct
 
 	init_cb init;
 
-	unsigned long id;
-	unsigned long size;
+	ulong id;
+	ulong size;
 
-	unsigned long *offsets;
-	unsigned long offsets_size;
+	ulong *offsets;
+	ulong offsets_size;
 
 	char *components;
-	unsigned long components_size;
+	ulong components_size;
 
-	unsigned long *depends;
-	unsigned long depends_size;
+	ulong *depends;
+	ulong depends_size;
 
 	listener_t *listeners;
-	unsigned long listeners_size;
+	ulong listeners_size;
 
 	/* void *system_info; */
-	/* unsigned long system_info_size; */
+	/* ulong system_info_size; */
 } ct_t;
 
 typedef struct
 {
-	unsigned long size;
+	ulong size;
 
-	unsigned long *cts;
-	unsigned long cts_size;
+	ulong *cts;
+	ulong cts_size;
 
 } signal_t;
 
 typedef struct ecm_t
 {
 	int *entities_busy;
-	unsigned long entities_busy_size;
+	ulong entities_busy_size;
 
 	ct_t *cts;
-	unsigned long cts_size;
+	ulong cts_size;
 
 	signal_t *signals;
-	unsigned long signals_size;
+	ulong signals_size;
 
-	unsigned long global;
+	ulong global;
 
 	entity_t none;
 	entity_t common;
@@ -80,7 +81,7 @@ typedef struct ecm_t
 
 typedef struct c_t
 {
-	unsigned long comp_type;
+	ulong comp_type;
 	entity_t entity;
 } c_t;
 
@@ -90,10 +91,15 @@ typedef struct c_t
 #define _type(a, b) __builtin_types_compatible_p(typeof(a), b)
 #define _if(c, a, b) __builtin_choose_expr(c, a, b)
 
-#define DEF_CASTER(ct, cn, nc_t) static inline nc_t *cn(const entity_t entity)\
-{ return (nc_t*)ct_get(ecm_get(entity.ecm, ct), entity); } \
+#define DEC_CT(var) ulong var = ULONG_MAX
+#define DEC_SIG(var) ulong var = ULONG_MAX
+#define DEF_SIG(var) extern ulong var
 
-static inline c_t *ct_get_at(ct_t *self, unsigned long i)
+#define DEF_CASTER(ct, cn, nc_t) extern ulong ct; \
+	static inline nc_t *cn(const entity_t entity)\
+{ return ct==ULONG_MAX?NULL:(nc_t*)ct_get(ecm_get(entity.ecm, ct), entity); } \
+
+static inline c_t *ct_get_at(ct_t *self, ulong i)
 {
 	return (c_t*)&(self->components[i * self->size]);
 }
@@ -101,38 +107,38 @@ static inline c_t *ct_get_at(ct_t *self, unsigned long i)
 static inline c_t *ct_get(ct_t *self, entity_t entity)
 {
 	if(entity.id >= self->offsets_size) return NULL;
-	unsigned long offset = self->offsets[entity.id];
+	ulong offset = self->offsets[entity.id];
 	if(offset == -1) return NULL;
 	return (c_t*)&(self->components[offset]);
 }
 
 void ct_register_listener(ct_t *self, int flags,
-		unsigned long signal, signal_cb cb);
+		ulong signal, signal_cb cb);
 
-listener_t *ct_get_listener(ct_t *self, unsigned long signal);
+listener_t *ct_get_listener(ct_t *self, ulong signal);
 
-/* void ct_register_callback(ct_t *self, unsigned long callback, void *cb); */
+/* void ct_register_callback(ct_t *self, ulong callback, void *cb); */
 
 void ct_add(ct_t *self, c_t *comp);
 
 ecm_t *ecm_new(void);
 entity_t ecm_new_entity(ecm_t *ecm);
-unsigned long ecm_register_signal(ecm_t *ecm, unsigned long size);
+void ecm_register_signal(ecm_t *ecm, ulong *target, ulong size);
 
 void ecm_add_entity(ecm_t *self, entity_t *entity);
-/* unsigned long ecm_register_system(ecm_t *self, void *system); */
+/* ulong ecm_register_system(ecm_t *self, void *system); */
 
-ct_t *ecm_register(ecm_t *self, unsigned long *target,
-		unsigned long size, init_cb init, int depend_size, ...);
+ct_t *ecm_register(ecm_t *self, ulong *target,
+		ulong size, init_cb init, int depend_size, ...);
 
-void ct_add_dependency(ct_t *ct, unsigned long target);
+void ct_add_dependency(ct_t *ct, ulong target);
 
-static inline ct_t *ecm_get(ecm_t *self, unsigned long comp_type) {
+static inline ct_t *ecm_get(ecm_t *self, ulong comp_type) {
 	return &self->cts[comp_type]; }
 
 c_t component_new(int comp_type);
 
 /* builtin signals */
-extern unsigned long entity_created;
+extern ulong entity_created;
 
 #endif /* !COMPONENT_H */

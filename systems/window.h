@@ -3,12 +3,10 @@
 
 #include <ecm.h>
 
-extern unsigned long ct_window;
-
 extern int window_width;
 extern int window_height;
 
-extern unsigned long window_resize;
+DEF_SIG(window_resize);
 
 typedef struct
 {

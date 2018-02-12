@@ -9,8 +9,6 @@ typedef struct
 	char name[32];
 } c_name_t;
 
-extern unsigned long ct_name;
-
 DEF_CASTER(ct_name, c_name, c_name_t)
 
 c_name_t *c_name_new(const char *name);

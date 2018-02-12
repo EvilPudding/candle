@@ -20,8 +20,6 @@ typedef struct
 } c_aabb_t;
 
 
-extern unsigned long ct_aabb;
-
 DEF_CASTER(ct_aabb, c_aabb, c_aabb_t)
 
 c_aabb_t *c_aabb_new(void);

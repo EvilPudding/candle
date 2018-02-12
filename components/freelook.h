@@ -12,8 +12,6 @@ typedef struct
 	entity_t x_control, y_control, force_down;
 } c_freelook_t;
 
-extern unsigned long ct_freelook;
-
 DEF_CASTER(ct_freelook, c_freelook, c_freelook_t)
 
 c_freelook_t *c_freelook_new(entity_t force_down, float sensitivity);

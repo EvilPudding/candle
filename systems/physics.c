@@ -9,8 +9,8 @@
 #include "../components/rigid_body.h"
 #include "../components/light.h"
 
-unsigned long ct_physics;
-unsigned long collider_callback;
+DEC_CT(ct_physics);
+DEC_SIG(collider_callback);
 
 static vec3_t c_physics_handle_forces(c_physics_t *self, vec3_t vel, float *dt)
 {
@@ -246,6 +246,6 @@ void c_physics_register(ecm_t *ecm)
 	ct_register_listener(ct, WORLD, world_update,
 			(signal_cb)c_physics_update);
 
-	collider_callback = ecm_register_signal(ecm, 0);
+	ecm_register_signal(ecm, &collider_callback, 0);
 }
 

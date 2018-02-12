@@ -1,19 +1,20 @@
 #include "candle.h"
 #include "file.h"
-#include <nk.h>
 
 #ifndef WIN32
 #include <unistd.h>
 #endif
 #include <dirent.h>
 
-unsigned long world_update;
-unsigned long world_draw;
-unsigned long global_menu;
-unsigned long component_menu;
+DEC_SIG(world_update);
+DEC_SIG(world_draw);
 
-#define MAX_VERTEX_MEMORY 512 * 1024
-#define MAX_ELEMENT_MEMORY 128 * 1024
+DEC_SIG(events_begin);
+DEC_SIG(event_handle);
+DEC_SIG(events_end);
+
+DEC_SIG(global_menu);
+DEC_SIG(component_menu);
 
 void candle_reset_dir(candle_t *self)
 {
@@ -30,16 +31,19 @@ static void candle_handle_events(candle_t *self)
 	/* SDL_WaitEvent(&event); */
 	/* keySpec(state->key_state, state); */
 	char key;
-	if(self->nkctx) nk_input_begin(self->nkctx);
+
+	entity_signal(self->ecm->none, events_begin, NULL);
 	while(SDL_PollEvent(&event))
 	{
+		if(event.type == SDL_QUIT)
+		{
+			self->exit = 1;
+			return;
+		}
 		if(!self->pressing)
 		{
-			if(self->nkctx && nk_sdl_handle_event(&event) &&
-					nk_item_is_any_active(self->nkctx))
-			{
+			if(entity_signal(self->ecm->none, event_handle, &event) == 0)
 				continue;
-			}
 		}
 		switch(event.type)
 		{
@@ -62,10 +66,8 @@ static void candle_handle_events(candle_t *self)
 				break;
 			case SDL_MOUSEMOTION:
 				entity_signal(self->ecm->none, mouse_move,
-						&(mouse_move_data){event.motion.xrel, event.motion.yrel});
-				break;
-			case SDL_QUIT:
-				self->exit = 1;
+						&(mouse_move_data){event.motion.xrel, event.motion.yrel,
+						event.motion.x, event.motion.y});
 				break;
 			case SDL_KEYUP:
 				key = event.key.keysym.sym;
@@ -92,50 +94,7 @@ static void candle_handle_events(candle_t *self)
 		}
 		/* break; */
 	}
-	if(self->nkctx) nk_input_end(self->nkctx);
-}
-
-void node_node(candle_t *self, c_node_t *node)
-{
-	char buffer[64];
-	char *final_name = buffer;
-	const entity_t entity = c_entity(node);
-	c_name_t *name = c_name(entity);
-	if(name)
-	{
-		final_name = name->name;
-	}
-	else
-	{
-		sprintf(buffer, "%ld", entity.id);
-	}
-	if(nk_tree_push_id(self->nkctx, NK_TREE_NODE, final_name, NK_MINIMIZED,
-				entity.id))
-	{
-		int i;
-		for(i = 0; i < node->children_size; i++)
-		{
-			node_node(self, c_node(node->children[i]));
-		}
-		nk_tree_pop(self->nkctx);
-	}
-}
-
-void node_tree(candle_t *self)
-{
-	int i;
-	ct_t *nodes = ecm_get(self->ecm, ct_node);
-
-	if(nk_tree_push(self->nkctx, NK_TREE_TAB, "nodes", NK_MINIMIZED))
-	{
-		for(i = 0; i < nodes->components_size; i++)
-		{
-			c_node_t *node = (c_node_t*)ct_get_at(nodes, i);
-			if(node->parent.id != -1) continue;
-			node_node(self, node);
-		}
-		nk_tree_pop(self->nkctx);
-	}
+	entity_signal(self->ecm->none, events_end, NULL);
 }
 
 static int render_loop(candle_t *self)
@@ -148,25 +107,6 @@ static int render_loop(candle_t *self)
 
 	while(!self->exit)
 	{
-		if(!self->nkctx)
-		{
-			self->nkctx = nk_sdl_init(c_window(self->systems)->window); 
-
-			{ 
-				struct nk_font_atlas *atlas; 
-				nk_sdl_font_stash_begin(&atlas); 
-				/* struct nk_font *droid = nk_font_atlas_add_from_file(atlas, "../../../extra_font/DroidSans.ttf", 14, 0); */
-				/* struct nk_font *roboto = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Roboto-Regular.ttf", 16, 0); */
-				/* struct nk_font *future = nk_font_atlas_add_from_file(atlas, "../../../extra_font/kenvector_future_thin.ttf", 13, 0); */
-				/* struct nk_font *clean = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyClean.ttf", 12, 0); */
-				/* struct nk_font *tiny = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyTiny.ttf", 10, 0); */
-				/* struct nk_font *cousine = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Cousine-Regular.ttf", 13, 0); */
-				nk_sdl_font_stash_end(); 
-				/* nk_style_load_all_cursors(self->nkctx, atlas->cursors); */
-				/* nk_style_set_font(self->nkctx, &roboto->handle); */
-			} 
-		}
-
 		candle_handle_events(self);
 		loader_update(self->loader);
 
@@ -177,47 +117,6 @@ static int render_loop(candle_t *self)
 
 
 			/* GUI */
-			if(self->nkctx)
-			{
-				if (nk_begin(self->nkctx, "clidian", nk_rect(50, 50, 230, 180),
-							NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
-							NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
-				{
-
-					nk_layout_row_static(self->nkctx, 30, 110, 1);
-					if (nk_button_label(self->nkctx, "redraw probes"))
-					{
-						c_renderer_scene_changed(c_renderer(self->systems), NULL);
-					}
-					entity_signal(self->ecm->none, global_menu, self->nkctx);
-
-					node_tree(self);
-				}
-				nk_end(self->nkctx);
-				nk_sdl_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_MEMORY, MAX_ELEMENT_MEMORY);
-
-			}
-			if(!entity_is_null(self->selected))
-			{
-				char buffer[64];
-				char *final_name = buffer;
-				c_name_t *name = c_name(self->selected);
-				if(name)
-				{
-					final_name = name->name;
-				}
-				else
-				{
-					sprintf(buffer, "%ld", self->selected.id);
-				}
-				if (nk_begin(self->nkctx, final_name, nk_rect(300, 50, 230, 280),
-							NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
-							NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
-				{
-					entity_signal_same(self->selected, component_menu, self->nkctx);
-				}
-				nk_end(self->nkctx);
-			}
 			c_window_draw(c_window(self->systems));
 
 			fps++;
@@ -241,10 +140,11 @@ static int render_loop(candle_t *self)
 
 void candle_register(ecm_t *ecm)
 {
-	world_update = ecm_register_signal(ecm, sizeof(float));
-	world_draw = ecm_register_signal(ecm, sizeof(void*));
-	global_menu = ecm_register_signal(ecm, 0);
-	component_menu = ecm_register_signal(ecm, 0);
+	ecm_register_signal(ecm, &world_update, sizeof(float));
+	ecm_register_signal(ecm, &world_draw, sizeof(void*));
+	ecm_register_signal(ecm, &event_handle, sizeof(void*));
+	ecm_register_signal(ecm, &events_end, sizeof(void*));
+	ecm_register_signal(ecm, &events_begin, sizeof(void*));
 }
 
 static void updateWorld(candle_t *self)
@@ -276,7 +176,7 @@ void candle_init(candle_t *candle)
 void candle_register_template(candle_t *self, const char *key,
 		template_cb cb)
 {
-	unsigned long i = self->templates_size++;
+	ulong i = self->templates_size++;
 	self->templates = realloc(self->templates,
 			sizeof(*self->templates) * self->templates_size);
 	template_t *template = &self->templates[i];
@@ -395,7 +295,7 @@ int candle_import_dir(candle_t *self, entity_t root, const char *dir_name)
 
 void candle_material_reg(candle_t *self, const char *name, material_t *material)
 {
-	unsigned long i = self->resources.materials_size++;
+	ulong i = self->resources.materials_size++;
 	self->resources.materials = realloc(self->resources.materials,
 			sizeof(*self->resources.materials) * self->resources.materials_size);
 	self->resources.materials[i] = material;
@@ -405,7 +305,7 @@ void candle_material_reg(candle_t *self, const char *name, material_t *material)
 material_t *candle_material_get(candle_t *self, const char *name)
 {
 	material_t *material;
-	unsigned long i;
+	ulong i;
 	for(i = 0; i < self->resources.materials_size; i++)
 	{
 		material = self->resources.materials[i];
@@ -418,7 +318,7 @@ material_t *candle_material_get(candle_t *self, const char *name)
 
 void candle_mesh_reg(candle_t *self, const char *name, mesh_t *mesh)
 {
-	unsigned long i = self->resources.meshes_size++;
+	ulong i = self->resources.meshes_size++;
 	self->resources.meshes = realloc(self->resources.meshes,
 			sizeof(*self->resources.meshes) * self->resources.meshes_size);
 	self->resources.meshes[i] = mesh;
@@ -428,7 +328,7 @@ void candle_mesh_reg(candle_t *self, const char *name, mesh_t *mesh)
 mesh_t *candle_mesh_get(candle_t *self, const char *name)
 {
 	mesh_t *mesh;
-	unsigned long i;
+	ulong i;
 	for(i = 0; i < self->resources.meshes_size; i++)
 	{
 		mesh = self->resources.meshes[i];
@@ -442,7 +342,7 @@ mesh_t *candle_mesh_get(candle_t *self, const char *name)
 texture_t *candle_texture_get(candle_t *self, const char *name)
 {
 	texture_t *texture;
-	unsigned long i;
+	ulong i;
 	for(i = 0; i < self->resources.textures_size; i++)
 	{
 		texture = self->resources.textures[i];
@@ -457,7 +357,7 @@ texture_t *candle_texture_get(candle_t *self, const char *name)
 void candle_texture_reg(candle_t *self, const char *name, texture_t *texture)
 {
 	if(!texture) return;
-	unsigned long i = self->resources.textures_size++;
+	ulong i = self->resources.textures_size++;
 	self->resources.textures = realloc(self->resources.textures,
 			sizeof(*self->resources.textures) * self->resources.textures_size);
 	self->resources.textures[i] = texture;
@@ -469,7 +369,6 @@ candle_t *candle_new(int comps_size, ...)
 	candle_t *self = calloc(1, sizeof *self);
 	candle = self;
 
-	self->selected = entity_null();
 	self->ecm = ecm_new();
 
 	self->firstDir = SDL_GetBasePath();
@@ -477,38 +376,51 @@ candle_t *candle_new(int comps_size, ...)
 
 	shaders_reg();
 
-	candle_register(self->ecm);
-	c_spacial_register(self->ecm);
-	c_node_register(self->ecm);
-	c_velocity_register(self->ecm);
-	c_force_register(self->ecm);
-	c_freemove_register(self->ecm);
-	c_freelook_register(self->ecm);
-	c_model_register(self->ecm);
-	c_rigid_body_register(self->ecm);
-	c_aabb_register(self->ecm);
-	c_probe_register(self->ecm);
-	c_light_register(self->ecm);
-	c_ambient_register(self->ecm);
-	c_name_register(self->ecm);
 
-	/* OpenGL mesh plugin */
-	c_mesh_gl_register(self->ecm);
+	int i;
+	for(i = 0; i < 3; i++)
+	{
+		candle_register(self->ecm);
 
-	keyboard_register(self->ecm);
-	mouse_register(self->ecm);
+		keyboard_register(self->ecm);
+		mouse_register(self->ecm);
 
-	c_physics_register(self->ecm);
-	c_window_register(self->ecm);
-	c_renderer_register(self->ecm);
-	c_camera_register(self->ecm);
+		c_spacial_register(self->ecm);
+		c_node_register(self->ecm);
+		c_velocity_register(self->ecm);
+		c_force_register(self->ecm);
+		c_freemove_register(self->ecm);
+		c_freelook_register(self->ecm);
+		c_model_register(self->ecm);
+		c_rigid_body_register(self->ecm);
+		c_aabb_register(self->ecm);
+		c_probe_register(self->ecm);
+		c_light_register(self->ecm);
+		c_ambient_register(self->ecm);
+		c_name_register(self->ecm);
+
+		/* OpenGL mesh plugin */
+		c_mesh_gl_register(self->ecm);
+
+		c_physics_register(self->ecm);
+		c_window_register(self->ecm);
+		c_renderer_register(self->ecm);
+		c_editmode_register(self->ecm);
+		c_camera_register(self->ecm);
+
+
+		va_list comps;
+		va_start(comps, comps_size);
+		int i;
+		for(i = 0; i < comps_size; i++)
+		{
+			c_reg_cb cb = va_arg(comps, c_reg_cb);
+			cb(self->ecm);
+		}
+		va_end(comps);
+	}
 
 	self->loader = loader_new(0);
-
-	va_list comps;
-	va_start(comps, comps_size);
-	while(comps_size--) (va_arg(comps, c_reg_cb))(self->ecm);
-	va_end(comps);
 
 	self->systems = entity_new(self->ecm, 2, c_window_new(0, 0), c_physics_new());
 

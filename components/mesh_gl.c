@@ -7,7 +7,7 @@ static int c_mesh_gl_new_loader(c_mesh_gl_t *self);
 static int glg_update_buffers(glg_t *self);
 static void glg_update_vbos(glg_t *self);
 
-unsigned long ct_mesh_gl;
+DEC_CT(ct_mesh_gl);
 
 static void c_mesh_gl_init(c_mesh_gl_t *self)
 {

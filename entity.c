@@ -13,14 +13,12 @@ entity_t entity_new(ecm_t *ecm, int comp_num, ...)
 	entity_t self = ecm_new_entity(ecm);
 
     va_start(comps, comp_num);
-
 	for(i = 0; i < comp_num; i++)
 	{
 		c_t *c = va_arg(comps, c_t*);
-		entity_add_component(self, c);
+		_entity_add_component(self, c, 1);
 		free(c);
 	}
-
 	va_end(comps);
 
 	entity_check_missing_dependencies(self);
@@ -44,7 +42,7 @@ static void *ct_create(ct_t *self)
 
 static void entity_check_missing_dependencies(entity_t self)
 {
-	unsigned long i, j;
+	ulong i, j;
 	for(j = 0; j < self.ecm->cts_size; j++)
 	{
 		ct_t *ct = &self.ecm->cts[j];
@@ -56,7 +54,7 @@ static void entity_check_missing_dependencies(entity_t self)
 				if(!ct_get(ct2, self))
 				{
 					c_t *comp2 = ct_create(ct2);
-					entity_add_component(self, comp2);
+					_entity_add_component(self, comp2, 1);
 					free(comp2);
 				}
 			}
@@ -64,9 +62,20 @@ static void entity_check_missing_dependencies(entity_t self)
 	}
 }
 
-void entity_signal_same(entity_t self, unsigned long signal, void *data)
+
+int component_signal(c_t *comp, ct_t *ct, ulong signal, void *data)
 {
-	unsigned long i;
+	listener_t *listener = ct_get_listener(ct, signal);
+	if(listener)
+	{
+		return listener->cb(comp, data);
+	}
+	return 1;
+}
+
+int entity_signal_same(entity_t self, ulong signal, void *data)
+{
+	ulong i;
 
 	signal_t *sig = &self.ecm->signals[signal];
 
@@ -76,25 +85,26 @@ void entity_signal_same(entity_t self, unsigned long signal, void *data)
 		c_t *comp = ct_get(ct, self);
 		if(comp)
 		{
-			listener_t *listener = ct_get_listener(ct, signal);
-			if(listener)
+			int res = component_signal(comp, ct, signal, data);
+			if(res == 0)
 			{
-				listener->cb(comp, data);
+				return 0;
 			}
 		}
 	}
+	return 1;
 }
 
-void entity_filter(entity_t self, unsigned long signal, void *data,
+void entity_filter(entity_t self, ulong signal, void *data,
 		filter_cb cb, c_t *c_caller, void *cb_data)
 {
-	unsigned long i, j;
+	ulong i, j;
 
 	signal_t *sig = &self.ecm->signals[signal];
 
 	for(i = 0; i < sig->cts_size; i++)
 	{
-		unsigned long ct_id = sig->cts[i];
+		ulong ct_id = sig->cts[i];
 		ct_t *ct = ecm_get(self.ecm, ct_id);
 		listener_t *listener = ct_get_listener(ct, signal);
 		if(listener)
@@ -114,15 +124,15 @@ void entity_filter(entity_t self, unsigned long signal, void *data,
 	}
 }
 
-void entity_signal(entity_t self, unsigned long signal, void *data)
+int entity_signal(entity_t self, ulong signal, void *data)
 {
-	unsigned long i, j;
+	ulong i, j;
 
 	signal_t *sig = &self.ecm->signals[signal];
 
 	for(i = 0; i < sig->cts_size; i++)
 	{
-		unsigned long ct_id = sig->cts[i];
+		ulong ct_id = sig->cts[i];
 		ct_t *ct = ecm_get(self.ecm, ct_id);
 		listener_t *listener = ct_get_listener(ct, signal);
 		if(listener)
@@ -132,21 +142,30 @@ void entity_signal(entity_t self, unsigned long signal, void *data)
 				c_t *c = ct_get_at(ct, j);
 				if(listener->flags != SAME_ENTITY || c_entity(c).id == self.id)
 				{
-					listener->cb(c, data);
+					int res = listener->cb(c, data);
+					if(res == 0)
+					{
+						return 0;
+					}
 				}
 			}
 		}
 	}
+	return 1;
 }
 
 void entity_destroy(entity_t self) 
 {
 }
 
-void _entity_add_component(entity_t self, c_t *comp)
+void _entity_add_component(entity_t self, c_t *comp, int on_creation)
 {
 	comp->entity = self;
 	ct_t *ct = ecm_get(self.ecm, comp->comp_type);
 	ct_add(ct, comp);
+	if(!on_creation)
+	{
+		component_signal(comp, ct, entity_created, NULL);
+	}
 }
 

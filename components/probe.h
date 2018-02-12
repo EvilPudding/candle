@@ -17,8 +17,6 @@ typedef struct c_probe_t
 	shader_t *shader;
 } c_probe_t;
 
-extern unsigned long ct_probe;
-
 DEF_CASTER(ct_probe, c_probe, c_probe_t)
 
 c_probe_t *c_probe_new(int map_size, shader_t *shader);

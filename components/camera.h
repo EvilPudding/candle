@@ -20,8 +20,6 @@ typedef struct
 	float exposure;
 } c_camera_t;
 
-extern unsigned long ct_camera;
-
 DEF_CASTER(ct_camera, c_camera, c_camera_t)
 
 c_camera_t *c_camera_new(int active, float fov, float near, float far,

@@ -1,7 +1,7 @@
 #include "../ext.h"
 #include "collider.h"
 
-unsigned long ct_collider;
+DEC_CT(ct_collider);
 
 static void c_collider_init(c_collider_t *self)
 {

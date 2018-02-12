@@ -1019,6 +1019,20 @@ static inline float float_mix(float x, float y, float a)
 	return x * (1.0f - a) + y * a; \
 }
 
+/* TODO maybe this shouldn't be here */
+static inline vec3_t int_to_vec3(int id)
+{
+	union {
+		unsigned int i;
+		struct{
+			char r, g, b, a;
+		};
+	} convert = {.i = id};
+
+	return vec3((float)convert.r / 255,
+			(float)convert.g / 255, (float)convert.b / 255);
+}
+
 #define Z3 (vec3(0.0f))
 #define Z2 (vec2(0.0f))
 /* CONST vec3_t Z3 = { .x = 0, .y = 0, .z = 0}; */

@@ -6,7 +6,7 @@
 #include <mouse.h>
 #include <math.h>
 
-unsigned long ct_freelook;
+DEC_CT(ct_freelook);
 
 static void c_freelook_init(c_freelook_t *self)
 {

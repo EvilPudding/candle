@@ -17,9 +17,9 @@
 #include "noise.h"
 #define bloom_scale 0.5f
 
-unsigned long ct_renderer;
+DEC_CT(ct_renderer);
 
-unsigned long world_changed;
+DEC_SIG(world_changed);
 
 static int c_renderer_gbuffer(c_renderer_t *self, const char *name);
 
@@ -138,13 +138,6 @@ void c_renderer_get_pixel(c_renderer_t *self, int gbuffer, int buffer,
 	texture_get_pixel(self->gbuffers[gbuffer].buffer, buffer, x, y);
 }
 
-enum
-{
-	PASS_FOR_EACH_LIGHT    = 1 << 0,
-	PASS_MIPMAPED 		   = 1 << 1,
-	PASS_RECORD_BRIGHTNESS = 1 << 2,
-	PASS_SCREEN_SCALE	   = 1 << 3
-} pass_options;
 
 static void c_renderer_init(c_renderer_t *self)
 {
@@ -187,7 +180,7 @@ static void c_renderer_init(c_renderer_t *self)
 		}
 	);
 
-	c_renderer_add_pass(self, "final",
+	c_renderer_add_pass(self, "refl",
 			PASS_SCREEN_SCALE | (self->auto_exposure * PASS_RECORD_BRIGHTNESS),
 			1.0f, 1.0f, "ssr",
 		(bind_t[]){
@@ -196,18 +189,18 @@ static void c_renderer_init(c_renderer_t *self)
 		}
 	);
 
-	/* c_renderer_add_pass(self, 0, 1, 1.0f, 1.0f, 0, 0, */
-			/* "selection", "blur5", "opaque"); */
 
 	self->quad = entity_new(candle->ecm, 2,
 			c_name_new("renderer_quad"),
 			c_model_new(mesh_quad(), 0));
 	c_model(self->quad)->visible = 0;
 
+}
 
-	/* entity_t ambient = entity_new(c_ecm(self), 1, c_ambient_new(64)); */
-	/* c_spacial_set_pos(c_spacial(ambient), vec3(0, 1, 0)); */
-	/* c_renderer_debug_gbuffer(self); */
+static int c_renderer_created(c_renderer_t *self)
+{
+	printf("here\n");
+	return 1;
 }
 
 static int c_renderer_gl_update_textures(c_renderer_t *self)
@@ -393,13 +386,29 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 			c_renderer_bind_pass_output(self, pass, bind, i);
 			break;
 		case BIND_NUMBER:
+			if(bind->getter)
+			{
+				bind->number.value = ((number_getter)bind->getter)(bind->entity);
+			}
 			glUniform1f(bind->number.u, bind->number.value); glerr();
 			break;
 		case BIND_INTEGER:
+			if(bind->getter)
+			{
+				bind->integer.value = ((integer_getter)bind->getter)(bind->entity);
+			}
 			glUniform1i(bind->integer.u, bind->integer.value); glerr();
 			break;
 		case BIND_GBUFFER:
 			c_renderer_bind_gbuffer(self, pass, bind);
+			break;
+		case BIND_VEC3:
+			if(bind->getter)
+			{
+				bind->vec3.value = ((vec3_getter)bind->getter)(bind->entity);
+			}
+			glUniform3f(bind->vec3.u, bind->vec3.value.r,
+					bind->vec3.value.g, bind->vec3.value.b);
 			break;
 		}
 
@@ -503,38 +512,12 @@ c_renderer_t *c_renderer_new(float resolution, int auto_exposure, int roughness,
 entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y)
 {
 	entity_t result;
+	if(!self->gbuffers[0].buffer) return entity_null();
 	result.id = texture_get_pixel(self->gbuffers[0].buffer, 7, x, y);
 
 	result.ecm = c_ecm(self);
 
 	return result;
-}
-
-int c_renderer_mouse_release(c_renderer_t *self, mouse_button_data *event)
-{
-	if(event->button == SDL_BUTTON_LEFT)
-	{
-		entity_t result = c_renderer_entity_at_pixel(self, event->x, event->y);
-		/* TODO entity 0 should be valid */
-		if(result.id != 0)
-		{
-			if(c_name(result))
-			{
-				printf("released entity %s\n", c_name(result)->name);
-			}
-			else
-			{
-				printf("released entity %ld\n", result.id);
-			}
-			/* c_spacial(result)-> */
-			candle->selected = result;
-		}
-		else
-		{
-			candle->selected = entity_null();
-		}
-	}
-	return 1;
 }
 
 
@@ -552,12 +535,8 @@ void c_renderer_register(ecm_t *ecm)
 	ct_register_listener(ct, WORLD, world_draw,
 			(signal_cb)c_renderer_draw);
 
-	/* ct_register_listener(ct, WORLD, mouse_press, */
-			/* (signal_cb)c_renderer_mouse_press); */
-
-	ct_register_listener(ct, WORLD, mouse_release,
-			(signal_cb)c_renderer_mouse_release);
-
+	ct_register_listener(ct, SAME_ENTITY, entity_created,
+			(signal_cb)c_renderer_created);
 }
 
 

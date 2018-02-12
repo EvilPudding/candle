@@ -3,7 +3,7 @@
 #include "spacial.h"
 #include "node.h"
 
-unsigned long ct_aabb;
+DEC_CT(ct_aabb);
 
 static void c_aabb_init(c_aabb_t *self)
 {

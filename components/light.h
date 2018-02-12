@@ -16,8 +16,6 @@ typedef struct c_light_t
 
 } c_light_t;
 
-extern unsigned long ct_light;
-
 DEF_CASTER(ct_light, c_light, c_light_t)
 
 c_light_t *c_light_new(float intensity, vec4_t color, int shadow_size);

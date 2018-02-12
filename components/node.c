@@ -3,7 +3,7 @@
 #include "spacial.h"
 #include <stdarg.h>
 
-unsigned long ct_node;
+DEC_CT(ct_node);
 
 static void c_node_init(c_node_t *self)
 {
@@ -24,7 +24,7 @@ c_node_t *c_node_new()
 
 static int c_node_changed(c_node_t *self)
 {
-	unsigned long i;
+	ulong i;
 	self->cached = 0;
 	for(i = 0; i < self->children_size; i++)
 	{
@@ -35,7 +35,7 @@ static int c_node_changed(c_node_t *self)
 
 entity_t c_node_get_by_name(c_node_t *self, const char *name)
 {
-	unsigned long i;
+	ulong i;
 	for(i = 0; i < self->children_size; i++)
 	{
 		entity_t child = self->children[i];
@@ -64,7 +64,7 @@ void c_node_add(c_node_t *self, int num, ...)
 {
 	va_list children;
 
-	unsigned long i = self->children_size;
+	ulong i = self->children_size;
 	self->children_size += num;
 	self->children = realloc(self->children,
 			(sizeof *self->children) * self->children_size);

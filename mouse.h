@@ -22,13 +22,14 @@ typedef struct
 typedef struct
 {
 	float sx, sy;
+	float x, y;
 } mouse_move_data;
 
 void mouse_register(ecm_t *ecm);
 
-extern unsigned long mouse_move;
-extern unsigned long mouse_press;
-extern unsigned long mouse_release;
-extern unsigned long mouse_wheel;
+DEF_SIG(mouse_move);
+DEF_SIG(mouse_press);
+DEF_SIG(mouse_release);
+DEF_SIG(mouse_wheel);
 
 #endif /* !MOUSE_H */

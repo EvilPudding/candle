@@ -2,8 +2,8 @@
 #include "keyboard.h"
 #include <SDL2/SDL.h>
 
-unsigned long key_up;
-unsigned long key_down;
+DEC_SIG(key_up);
+DEC_SIG(key_down);
 
 /* static char clearModifier(char key, int ctrl) */
 /* { */
@@ -12,8 +12,8 @@ unsigned long key_down;
 
 void keyboard_register(ecm_t *ecm)
 {
-	key_up = ecm_register_signal(ecm, sizeof(char));
-	key_down = ecm_register_signal(ecm, sizeof(char));
+	ecm_register_signal(ecm, &key_up, sizeof(char));
+	ecm_register_signal(ecm, &key_down, sizeof(char));
 }
 
 /* void keySpec(const Uint8 *ks, state_t *state) */

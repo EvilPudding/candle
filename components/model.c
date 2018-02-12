@@ -4,14 +4,15 @@
 #include "node.h"
 #include "spacial.h"
 #include <nk.h>
-#include "../systems/renderer.h"
+#include <systems/renderer.h>
 #include "shader.h"
+#include <systems/editmode.h>
 
-unsigned long ct_model;
+DEC_CT(ct_model);
 
-unsigned long mesh_changed;
+DEC_SIG(mesh_changed);
 
-unsigned long render_model;
+DEC_SIG(render_model);
 static material_t *g_missing_mat = NULL;
 
 int c_model_menu(c_model_t *self, void *ctx);
@@ -186,14 +187,14 @@ int c_model_menu(c_model_t *self, void *ctx)
 
 void c_model_register(ecm_t *ecm)
 {
-	mesh_changed = ecm_register_signal(ecm, sizeof(mesh_t));
-	render_model = ecm_register_signal(ecm, sizeof(shader_t));
+		ecm_register_signal(ecm, &mesh_changed, sizeof(mesh_t));
+		ecm_register_signal(ecm, &render_model, sizeof(shader_t));
 
-	ct_t *ct = ecm_register(ecm, &ct_model, sizeof(c_model_t),
-			(init_cb)c_model_init, 2, ct_spacial, ct_node);
-	ct_register_listener(ct, SAME_ENTITY, entity_created,
-			(signal_cb)c_model_created);
+		ct_t *ct = ecm_register(ecm, &ct_model, sizeof(c_model_t),
+				(init_cb)c_model_init, 2, ct_spacial, ct_node);
+		ct_register_listener(ct, SAME_ENTITY, entity_created,
+				(signal_cb)c_model_created);
 
-	ct_register_listener(ct, WORLD, component_menu, (signal_cb)c_model_menu);
+		ct_register_listener(ct, WORLD, component_menu, (signal_cb)c_model_menu);
 
 }

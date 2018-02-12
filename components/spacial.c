@@ -1,9 +1,10 @@
 #include "../ext.h"
 #include "spacial.h"
 #include <nk.h>
+#include <systems/editmode.h>
 
-unsigned long ct_spacial;
-unsigned long spacial_changed;
+DEC_CT(ct_spacial);
+DEC_SIG(spacial_changed);
 
 int c_spacial_menu(c_spacial_t *self, void *ctx);
 
@@ -36,7 +37,7 @@ void c_spacial_register(ecm_t *ecm)
 	ct_t *ct = ecm_register(ecm, &ct_spacial, sizeof(c_spacial_t),
 			(init_cb)c_spacial_init, 0);
 
-	spacial_changed = ecm_register_signal(ecm, sizeof(entity_t));
+	ecm_register_signal(ecm, &spacial_changed, sizeof(entity_t));
 
 	ct_register_listener(ct, WORLD, component_menu, (signal_cb)c_spacial_menu);
 }

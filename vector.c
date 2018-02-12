@@ -42,7 +42,7 @@ vector_t *vector_new(int size, int index_matters)
 static struct element *_vector_get(vector_t *self, int i)
 {
 	if(i < 0 || i >= self->count) return NULL;
-	return (struct element *)(((unsigned long)self->elements) + i * self->elem_size);
+	return (struct element *)(((ulong)self->elements) + i * self->elem_size);
 }
 
 void *vector_get(vector_t *self, int i)

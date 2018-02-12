@@ -1,8 +1,8 @@
 #include "velocity.h"
 #include "spacial.h"
 
-unsigned long ct_velocity;
-unsigned long velocity_changed;
+DEC_CT(ct_velocity);
+DEC_SIG(velocity_changed);
 
 void c_velocity_init(c_velocity_t *self)
 {

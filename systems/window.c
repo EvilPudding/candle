@@ -2,8 +2,8 @@
 #include "../shader.h"
 #include "../candle.h"
 
-unsigned long ct_window;
-unsigned long window_resize;
+DEC_CT(ct_window);
+DEC_SIG(window_resize);
 
 int window_width = 1360;
 int window_height = 740;
@@ -127,5 +127,5 @@ void c_window_register(ecm_t *ecm)
 	ct_register_listener(ct, SAME_ENTITY, entity_created,
 			(signal_cb)c_window_created);
 
-	window_resize = ecm_register_signal(ecm, sizeof(window_resize_data));
+	ecm_register_signal(ecm, &window_resize, sizeof(window_resize_data));
 }

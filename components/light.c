@@ -4,7 +4,7 @@
 #include "candle.h"
 #include <stdlib.h>
 
-unsigned long ct_light;
+DEC_CT(ct_light);
 
 static shader_t *g_shader;
 

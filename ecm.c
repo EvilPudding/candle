@@ -4,11 +4,13 @@
 
 #include "candle.h"
 
-unsigned long entity_created;
+DEC_SIG(entity_created);
 
-listener_t *ct_get_listener(ct_t *self, unsigned long signal)
+listener_t *ct_get_listener(ct_t *self, ulong signal)
 {
-	unsigned long i;
+	if(signal == ULONG_MAX) return NULL;
+	if(!self) return NULL;
+	ulong i;
 	for(i = 0; i < self->listeners_size; i++)
 	{
 		listener_t *listener = &self->listeners[i];
@@ -32,19 +34,25 @@ ecm_t *ecm_new()
 	ecm_t *self = calloc(1, sizeof *self);
 	self->none = (entity_t){.id = -1, .ecm = self};
 
+	self->global = ULONG_MAX;
+
 	ecm_register(self, &self->global, sizeof(c_t), NULL, 0);
 
-	entity_created = ecm_register_signal(self, 0);
+	ecm_register_signal(self, &entity_created, 0);
 
 	self->common = entity_new(self, 0);
 
 	return self;
 }
 
-void ct_register_listener(ct_t *self, int flags, unsigned long signal,
+void ct_register_listener(ct_t *self, int flags, ulong signal,
 	signal_cb cb)
 {
-	unsigned long i = self->listeners_size++;
+	if(!self) return;
+	if(signal == ULONG_MAX) return;
+	if(ct_get_listener(self, signal)) return;
+
+	ulong i = self->listeners_size++;
 	self->listeners = realloc(self->listeners, sizeof(*self->listeners) *
 			self->listeners_size);
 
@@ -57,20 +65,22 @@ void ct_register_listener(ct_t *self, int flags, unsigned long signal,
 	sig->cts[i] = self->id;
 }
 
-unsigned long ecm_register_signal(ecm_t *self, unsigned long size)
+void ecm_register_signal(ecm_t *self, ulong *target, ulong size)
 {
-	unsigned long i = self->signals_size++;
+	if(!self) return;
+	if(*target != ULONG_MAX) return;
+	ulong i = self->signals_size++;
 	self->signals = realloc(self->signals, sizeof(*self->signals) *
 			self->signals_size);
 
 	self->signals[i] = (signal_t){.size = size};
 
-	return i;
+	*target = i;
 }
 
 entity_t ecm_new_entity(ecm_t *self)
 {
-	unsigned long i;
+	ulong i;
 	int *iter;
 
 	for(i = 0, iter = self->entities_busy;
@@ -90,25 +100,38 @@ entity_t ecm_new_entity(ecm_t *self)
 	return (entity_t){.id = i, .ecm = self};
 }
 
-/* unsigned long ecm_register_system(ecm_t *self, void *system) */
+/* ulong ecm_register_system(ecm_t *self, void *system) */
 /* { */
-/* 	unsigned long i = self->systems_size++; */
+/* 	ulong i = self->systems_size++; */
 /* 	self->systems = realloc(self->systems, sizeof(*self->systems) * i); */
 /* 	self->systems[i] = system; */
 /* 	return i; */
 /* } */
 
-void ct_add_dependency(ct_t *ct, unsigned long target)
+void ct_add_dependency(ct_t *ct, ulong target)
 {
+	if(!ct) return;
+	if(target == ULONG_MAX) return;
 	int i = ct->depends_size++;
 	ct->depends = realloc(ct->depends, sizeof(*ct->depends) * ct->depends_size);
 	ct->depends[i] = target;
 }
 
-ct_t *ecm_register(ecm_t *self, unsigned long *target, unsigned long size,
+ct_t *ecm_register(ecm_t *self, ulong *target, ulong size,
 		init_cb init, int depend_size, ...)
 {
-	unsigned long i = self->cts_size++;
+	if(*target != ULONG_MAX) return ecm_get(self, *target);
+	va_list depends;
+
+	va_start(depends, depend_size);
+	ulong j;
+	for(j = 0; j < depend_size; j++)
+	{
+		if(va_arg(depends, ulong) == ULONG_MAX) return NULL;
+	}
+	va_end(depends);
+
+	ulong i = self->cts_size++;
 
 	if(target) *target = i;
 
@@ -129,18 +152,14 @@ ct_t *ecm_register(ecm_t *self, unsigned long *target, unsigned long size,
 
 	if(depend_size)
 	{
-		va_list depends;
-		unsigned long j;
 
 		ct->depends = malloc(sizeof(*ct->depends) * depend_size),
 
 		va_start(depends, depend_size);
-
 		for(j = 0; j < depend_size; j++)
 		{
-			ct->depends[j] = va_arg(depends, unsigned long);
+			ct->depends[j] = va_arg(depends, ulong);
 		}
-
 		va_end(depends);
 	}
 
@@ -149,10 +168,12 @@ ct_t *ecm_register(ecm_t *self, unsigned long *target, unsigned long size,
 
 void ct_add(ct_t *self, c_t *comp)
 {
-	unsigned long offset, i = self->components_size++;
+	if(!self) return;
+	if(!comp) return;
+	ulong offset, i = self->components_size++;
 	if(c_entity(comp).id >= self->offsets_size)
 	{
-		unsigned long j, new_size = c_entity(comp).id + 1;
+		ulong j, new_size = c_entity(comp).id + 1;
 		self->offsets = realloc(self->offsets, sizeof(*self->offsets) *
 				new_size);
 		for(j = self->offsets_size; j < new_size - 1; j++)

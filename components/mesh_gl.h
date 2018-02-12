@@ -54,8 +54,6 @@ typedef struct c_mesh_gl_t
 } c_mesh_gl_t;
 
 
-extern unsigned long ct_mesh_gl;
-
 DEF_CASTER(ct_mesh_gl, c_mesh_gl, c_mesh_gl_t)
 
 c_mesh_gl_t *c_mesh_gl_new(void);

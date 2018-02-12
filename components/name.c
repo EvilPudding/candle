@@ -1,7 +1,7 @@
 #include "name.h"
 #include <string.h>
 
-unsigned long ct_name;
+DEC_CT(ct_name);
 
 static void c_name_init(c_name_t *self)
 {

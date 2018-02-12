@@ -17,8 +17,6 @@ typedef struct
 	collider_cb costum;
 } c_rigid_body_t;
 
-extern unsigned long ct_rigid_body;
-
 DEF_CASTER(ct_rigid_body, c_rigid_body, c_rigid_body_t)
 
 c_rigid_body_t *c_rigid_body_new(collider_cb costum);

@@ -5,7 +5,7 @@
 #include <keyboard.h>
 #include <math.h>
 
-unsigned long ct_freemove;
+DEC_CT(ct_freemove);
 extern int window_width, window_height;
 
 #define friction 0.1
@@ -115,7 +115,6 @@ void c_freemove_register(ecm_t *ecm)
 {
 	ct_t *ct = ecm_register(ecm, &ct_freemove, sizeof(c_freemove_t),
 			(init_cb)c_freemove_init, 2, ct_spacial, ct_velocity);
-
 	ct_register_listener(ct, WORLD, key_up, (signal_cb)c_freemove_key_up);
 
 	ct_register_listener(ct, WORLD, key_down, (signal_cb)c_freemove_key_down);

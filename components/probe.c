@@ -3,7 +3,7 @@
 #include "candle.h"
 #include <stdlib.h>
 
-unsigned long ct_probe;
+DEC_CT(ct_probe);
 
 void c_probe_init(c_probe_t *self)
 {
@@ -50,7 +50,7 @@ static int c_probe_update_position(c_probe_t *self)
 
 	self->last_update++;
 
-	return 0;
+	return 1;
 }
 
 void c_probe_destroy(c_probe_t *self)

@@ -16,8 +16,6 @@ typedef struct
 	vec3_t velocity;
 } c_velocity_t;
 
-extern unsigned long ct_velocity;
-
 DEF_CASTER(ct_velocity, c_velocity, c_velocity_t)
 
 c_velocity_t *c_velocity_new(float x, float y, float z);

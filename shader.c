@@ -527,15 +527,9 @@ void shader_bind(shader_t *self)
 void shader_bind_mesh(shader_t *self, mesh_t *mesh, unsigned int id)
 {
 	glUniform1f(self->u_has_tex, (float)mesh->has_texcoords);
-	union {
-		unsigned int i;
-		struct{
-			char r, g, b, a;
-		};
-	} convert = {.i = id};
+	vec3_t id_color = int_to_vec3(id);
 
-	glUniform3f(self->u_id, (float)convert.r / 255,
-			(float)convert.g / 255, (float)convert.b / 255);
+	glUniform3f(self->u_id, id_color.r, id_color.g, id_color.b);
 }
 
 GLuint shader_uniform(shader_t *self, const char *uniform, const char *member)

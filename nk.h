@@ -11,7 +11,4 @@
 #include "nuklear/nuklear.h"
 #include "nuklear/demo/sdl_opengl3/nuklear_sdl_gl3.h"
 
-extern unsigned long global_menu;
-extern unsigned long component_menu;
-
 #endif /* !NK_H */

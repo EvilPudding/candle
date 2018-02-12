@@ -12,8 +12,6 @@ typedef struct
 	vec3_t force;
 } c_force_t;
 
-extern unsigned long ct_force;
-
 DEF_CASTER(ct_force, c_force, c_force_t)
 
 c_force_t *c_force_new(float x, float y, float z, int active);

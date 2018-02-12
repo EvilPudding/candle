@@ -17,12 +17,11 @@ typedef struct c_physics_t
 	/* currently, physics has no options */
 } c_physics_t;
 
-extern unsigned long ct_physics;
 DEF_CASTER(ct_physics, c_physics, c_physics_t)
 
 void c_physics_register(ecm_t *ecm);
 
-extern unsigned long collider_callback;
+DEF_SIG(collider_callback);
 
 c_physics_t *c_physics_new(void);
 

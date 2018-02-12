@@ -1,10 +1,11 @@
 #include "camera.h"
-#include "../systems/window.h"
+#include <systems/window.h>
+#include <systems/editmode.h>
 #include "spacial.h"
 #include "node.h"
 #include <nk.h>
 
-unsigned long ct_camera;
+DEC_CT(ct_camera);
 
 static int c_camera_update(c_camera_t *self, window_resize_data *event);
 #ifdef MESH4
@@ -74,7 +75,7 @@ int c_camera_global_menu(c_camera_t *self, void *ctx)
 	nk_layout_row_push(ctx, 0.35);
 	nk_label(ctx, "4D angle:", NK_TEXT_LEFT);
 	nk_layout_row_push(ctx, 0.65);
-	nk_slider_float(ctx, 0, &self->angle4, M_PI / 2, 0.1);
+	nk_slider_float(ctx, 0, &self->angle4, M_PI / 2, 0.01);
 	nk_layout_row_end(ctx);
 	return 1;
 }
@@ -96,7 +97,7 @@ static int c_camera_update(c_camera_t *self, window_resize_data *event)
 
 entity_t ecm_get_camera(ecm_t *self)
 {
-	unsigned long i;
+	ulong i;
 	ct_t *cameras = ecm_get(self, ct_camera);
 	c_camera_t *camera;
 

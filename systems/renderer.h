@@ -20,14 +20,28 @@ typedef struct
 	unsigned int draw_filter;
 } gbuffer_t;
 
+enum
+{
+	PASS_FOR_EACH_LIGHT    = 1 << 0,
+	PASS_MIPMAPED 		   = 1 << 1,
+	PASS_RECORD_BRIGHTNESS = 1 << 2,
+	PASS_SCREEN_SCALE	   = 1 << 3
+} pass_options;
+
 typedef enum
 {
 	BIND_NONE,
 	BIND_PASS_OUTPUT,
 	BIND_NUMBER,
+	BIND_VEC3,
 	BIND_INTEGER,
 	BIND_GBUFFER
 } bind_type_t;
+
+typedef vec3_t(*vec3_getter)(entity_t caller);
+typedef float(*number_getter)(entity_t caller);
+typedef int(*integer_getter)(entity_t caller);
+typedef void*(*ptr_getter)(entity_t caller);
 
 typedef struct
 {
@@ -46,6 +60,10 @@ typedef struct
 		} number;
 		struct {
 			uint u;
+			vec3_t value;
+		} vec3;
+		struct {
+			uint u;
 			int value;
 		} integer;
 		struct {
@@ -61,6 +79,8 @@ typedef struct
 			char name[32];
 		} gbuffer;
 	};
+	ptr_getter getter;
+	entity_t entity;
 } bind_t;
 
 typedef void(*bind_cb)(uniform_t *self, shader_t *shader);
@@ -116,8 +136,6 @@ typedef struct c_renderer_t
 	int ready;
 } c_renderer_t;
 
-extern unsigned long ct_renderer;
-
 DEF_CASTER(ct_renderer, c_renderer, c_renderer_t)
 
 c_renderer_t *c_renderer_new(float resolution, int auto_exposure, int roughness,
@@ -133,5 +151,6 @@ void c_renderer_clear_shader(c_renderer_t *self, shader_t *shader);
 int c_renderer_scene_changed(c_renderer_t *self, entity_t *entity);
 void c_renderer_get_pixel(c_renderer_t *self, int gbuffer, int buffer,
 		int x, int y);
+entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y);
 
 #endif /* !RENDERER_H */

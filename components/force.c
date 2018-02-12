@@ -3,7 +3,7 @@
 #include "velocity.h"
 #include "spacial.h"
 
-unsigned long ct_force;
+DEC_CT(ct_force);
 
 void c_force_init(c_force_t *self)
 {

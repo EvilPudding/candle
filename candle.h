@@ -21,6 +21,7 @@
 #include <systems/renderer.h>
 #include <systems/physics.h>
 #include <systems/window.h>
+#include <systems/editmode.h>
 
 #include <loader.h>
 
@@ -29,8 +30,11 @@
 #include <keyboard.h>
 #include <mouse.h>
 
-extern unsigned long world_update;
-extern unsigned long world_draw;
+DEF_SIG(world_update);
+DEF_SIG(world_draw);
+DEF_SIG(event_handle);
+DEF_SIG(events_begin);
+DEF_SIG(events_end);
 
 void candle_register(ecm_t *ecm);
 
@@ -45,13 +49,13 @@ typedef struct
 typedef struct
 {
 	material_t **materials;
-	unsigned long materials_size;
+	ulong materials_size;
 
 	texture_t **textures;
-	unsigned long textures_size;
+	ulong textures_size;
 
 	mesh_t **meshes;
-	unsigned long meshes_size;
+	ulong meshes_size;
 } resources_t;
 
 typedef struct candle_t
@@ -65,11 +69,9 @@ typedef struct candle_t
 	int exit;
 	int last_update;
 	int pressing;
-	void *nkctx;
-	entity_t selected;
 
 	template_t *templates;
-	unsigned long templates_size;
+	ulong templates_size;
 
 	resources_t resources;
 } candle_t;

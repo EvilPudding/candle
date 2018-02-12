@@ -30,10 +30,8 @@ typedef struct
 } c_model_t;
 
 
-extern unsigned long ct_model;
-
-extern unsigned long mesh_changed;
-extern unsigned long render_model;
+DEF_SIG(mesh_changed);
+DEF_SIG(render_model);
 
 DEF_CASTER(ct_model, c_model, c_model_t)
 
