@@ -127,7 +127,8 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 {
 	switch(*key)
 	{
-		case '`': self->control = !self->control; break;
+		case '`':
+			self->control = !self->control; break;
 	}
 	return 1;
 }
@@ -186,7 +187,7 @@ void node_tree(c_editmode_t *self)
 
 int c_editmode_draw(c_editmode_t *self)
 {
-	if(self->nkctx)
+	if(self->nkctx && (self->visible || self->control))
 	{
 		if (nk_begin(self->nkctx, "clidian", nk_rect(50, 50, 230, 180),
 					NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|

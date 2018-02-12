@@ -43,7 +43,9 @@ static void candle_handle_events(candle_t *self)
 		if(!self->pressing)
 		{
 			if(entity_signal(self->ecm->none, event_handle, &event) == 0)
+			{
 				continue;
+			}
 		}
 		switch(event.type)
 		{
