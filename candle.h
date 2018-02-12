@@ -49,13 +49,13 @@ typedef struct
 typedef struct
 {
 	material_t **materials;
-	ulong materials_size;
+	uint materials_size;
 
 	texture_t **textures;
-	ulong textures_size;
+	uint textures_size;
 
 	mesh_t **meshes;
-	ulong meshes_size;
+	uint meshes_size;
 } resources_t;
 
 typedef struct candle_t
@@ -71,7 +71,7 @@ typedef struct candle_t
 	int pressing;
 
 	template_t *templates;
-	ulong templates_size;
+	uint templates_size;
 
 	resources_t resources;
 } candle_t;

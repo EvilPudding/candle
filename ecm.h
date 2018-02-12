@@ -23,57 +23,67 @@ typedef int(*before_draw_cb)(c_t *self);
 
 typedef struct
 {
-	ulong signal;
+	uint signal;
 	signal_cb cb;
 	int flags;
 } listener_t;
 
 typedef struct
 {
+	uint ct;
+	int is_interaction;
+} dep_t;
+
+typedef struct ct_t
+{
 	ecm_t *ecm;
+
+	char name[32];
 
 	init_cb init;
 
-	ulong id;
-	ulong size;
+	uint id;
+	uint size;
 
-	ulong *offsets;
-	ulong offsets_size;
+	uint *offsets;
+	uint offsets_size;
 
 	char *components;
-	ulong components_size;
+	uint components_size;
 
-	ulong *depends;
-	ulong depends_size;
+	dep_t *depends;
+	uint depends_size;
 
 	listener_t *listeners;
-	ulong listeners_size;
+	uint listeners_size;
+
+	int is_interaction;
 
 	/* void *system_info; */
-	/* ulong system_info_size; */
+	/* uint system_info_size; */
 } ct_t;
 
 typedef struct
 {
-	ulong size;
+	uint size;
 
-	ulong *cts;
-	ulong cts_size;
+	uint *cts;
+	uint cts_size;
 
 } signal_t;
 
 typedef struct ecm_t
 {
 	int *entities_busy;
-	ulong entities_busy_size;
+	uint entities_busy_size;
 
 	ct_t *cts;
-	ulong cts_size;
+	uint cts_size;
 
 	signal_t *signals;
-	ulong signals_size;
+	uint signals_size;
 
-	ulong global;
+	uint global;
 
 	entity_t none;
 	entity_t common;
@@ -81,7 +91,7 @@ typedef struct ecm_t
 
 typedef struct c_t
 {
-	ulong comp_type;
+	uint comp_type;
 	entity_t entity;
 } c_t;
 
@@ -91,15 +101,17 @@ typedef struct c_t
 #define _type(a, b) __builtin_types_compatible_p(typeof(a), b)
 #define _if(c, a, b) __builtin_choose_expr(c, a, b)
 
-#define DEC_CT(var) ulong var = ULONG_MAX
-#define DEC_SIG(var) ulong var = ULONG_MAX
-#define DEF_SIG(var) extern ulong var
+#define IDENT_NULL UINT_MAX
 
-#define DEF_CASTER(ct, cn, nc_t) extern ulong ct; \
+#define DEC_CT(var) uint var = IDENT_NULL
+#define DEC_SIG(var) uint var = IDENT_NULL
+#define DEF_SIG(var) extern uint var
+
+#define DEF_CASTER(ct, cn, nc_t) extern uint ct; \
 	static inline nc_t *cn(const entity_t entity)\
-{ return ct==ULONG_MAX?NULL:(nc_t*)ct_get(ecm_get(entity.ecm, ct), entity); } \
+{ return ct==IDENT_NULL?NULL:(nc_t*)ct_get(ecm_get(entity.ecm, ct), entity); } \
 
-static inline c_t *ct_get_at(ct_t *self, ulong i)
+static inline c_t *ct_get_at(ct_t *self, uint i)
 {
 	return (c_t*)&(self->components[i * self->size]);
 }
@@ -107,38 +119,39 @@ static inline c_t *ct_get_at(ct_t *self, ulong i)
 static inline c_t *ct_get(ct_t *self, entity_t entity)
 {
 	if(entity.id >= self->offsets_size) return NULL;
-	ulong offset = self->offsets[entity.id];
+	uint offset = self->offsets[entity.id];
 	if(offset == -1) return NULL;
 	return (c_t*)&(self->components[offset]);
 }
 
 void ct_register_listener(ct_t *self, int flags,
-		ulong signal, signal_cb cb);
+		uint signal, signal_cb cb);
 
-listener_t *ct_get_listener(ct_t *self, ulong signal);
+listener_t *ct_get_listener(ct_t *self, uint signal);
 
-/* void ct_register_callback(ct_t *self, ulong callback, void *cb); */
+/* void ct_register_callback(ct_t *self, uint callback, void *cb); */
 
 void ct_add(ct_t *self, c_t *comp);
 
 ecm_t *ecm_new(void);
 entity_t ecm_new_entity(ecm_t *ecm);
-void ecm_register_signal(ecm_t *ecm, ulong *target, ulong size);
+void ecm_register_signal(ecm_t *ecm, uint *target, uint size);
 
 void ecm_add_entity(ecm_t *self, entity_t *entity);
-/* ulong ecm_register_system(ecm_t *self, void *system); */
+/* uint ecm_register_system(ecm_t *self, void *system); */
 
-ct_t *ecm_register(ecm_t *self, ulong *target,
-		ulong size, init_cb init, int depend_size, ...);
+ct_t *ecm_register(ecm_t *self, const char *name, uint *target, uint size,
+		init_cb init, int depend_size, ...);
 
-void ct_add_dependency(ct_t *ct, ulong target);
+void ct_add_dependency(ct_t *ct, ct_t *dep);
+void ct_add_interaction(ct_t *ct, ct_t *dep);
 
-static inline ct_t *ecm_get(ecm_t *self, ulong comp_type) {
+static inline ct_t *ecm_get(ecm_t *self, uint comp_type) {
 	return &self->cts[comp_type]; }
 
 c_t component_new(int comp_type);
 
 /* builtin signals */
-extern ulong entity_created;
+extern uint entity_created;
 
 #endif /* !COMPONENT_H */

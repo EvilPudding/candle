@@ -6,11 +6,11 @@
 
 DEC_SIG(entity_created);
 
-listener_t *ct_get_listener(ct_t *self, ulong signal)
+listener_t *ct_get_listener(ct_t *self, uint signal)
 {
-	if(signal == ULONG_MAX) return NULL;
+	if(signal == IDENT_NULL) return NULL;
 	if(!self) return NULL;
-	ulong i;
+	uint i;
 	for(i = 0; i < self->listeners_size; i++)
 	{
 		listener_t *listener = &self->listeners[i];
@@ -34,9 +34,9 @@ ecm_t *ecm_new()
 	ecm_t *self = calloc(1, sizeof *self);
 	self->none = (entity_t){.id = -1, .ecm = self};
 
-	self->global = ULONG_MAX;
+	self->global = IDENT_NULL;
 
-	ecm_register(self, &self->global, sizeof(c_t), NULL, 0);
+	ecm_register(self, "C_T", &self->global, sizeof(c_t), NULL, 0);
 
 	ecm_register_signal(self, &entity_created, 0);
 
@@ -45,14 +45,14 @@ ecm_t *ecm_new()
 	return self;
 }
 
-void ct_register_listener(ct_t *self, int flags, ulong signal,
+void ct_register_listener(ct_t *self, int flags, uint signal,
 	signal_cb cb)
 {
 	if(!self) return;
-	if(signal == ULONG_MAX) return;
+	if(signal == IDENT_NULL) return;
 	if(ct_get_listener(self, signal)) return;
 
-	ulong i = self->listeners_size++;
+	uint i = self->listeners_size++;
 	self->listeners = realloc(self->listeners, sizeof(*self->listeners) *
 			self->listeners_size);
 
@@ -65,11 +65,11 @@ void ct_register_listener(ct_t *self, int flags, ulong signal,
 	sig->cts[i] = self->id;
 }
 
-void ecm_register_signal(ecm_t *self, ulong *target, ulong size)
+void ecm_register_signal(ecm_t *self, uint *target, uint size)
 {
 	if(!self) return;
-	if(*target != ULONG_MAX) return;
-	ulong i = self->signals_size++;
+	if(*target != IDENT_NULL) return;
+	uint i = self->signals_size++;
 	self->signals = realloc(self->signals, sizeof(*self->signals) *
 			self->signals_size);
 
@@ -80,7 +80,7 @@ void ecm_register_signal(ecm_t *self, ulong *target, ulong size)
 
 entity_t ecm_new_entity(ecm_t *self)
 {
-	ulong i;
+	uint i;
 	int *iter;
 
 	for(i = 0, iter = self->entities_busy;
@@ -100,38 +100,51 @@ entity_t ecm_new_entity(ecm_t *self)
 	return (entity_t){.id = i, .ecm = self};
 }
 
-/* ulong ecm_register_system(ecm_t *self, void *system) */
+/* uint ecm_register_system(ecm_t *self, void *system) */
 /* { */
-/* 	ulong i = self->systems_size++; */
+/* 	uint i = self->systems_size++; */
 /* 	self->systems = realloc(self->systems, sizeof(*self->systems) * i); */
 /* 	self->systems[i] = system; */
 /* 	return i; */
 /* } */
 
-void ct_add_dependency(ct_t *ct, ulong target)
+void ct_add_interaction(ct_t *ct, ct_t *dep)
 {
 	if(!ct) return;
-	if(target == ULONG_MAX) return;
+	if(!dep) return;
+
+	dep->is_interaction = 1;
 	int i = ct->depends_size++;
 	ct->depends = realloc(ct->depends, sizeof(*ct->depends) * ct->depends_size);
-	ct->depends[i] = target;
+	ct->depends[i].ct = dep->id;
+	ct->depends[i].is_interaction = 1;
 }
 
-ct_t *ecm_register(ecm_t *self, ulong *target, ulong size,
+void ct_add_dependency(ct_t *ct, ct_t *dep)
+{
+	if(!ct) return;
+	if(!dep) return;
+	int i = ct->depends_size++;
+	ct->depends = realloc(ct->depends, sizeof(*ct->depends) * ct->depends_size);
+	ct->depends[i].ct = dep->id;
+	ct->depends[i].is_interaction = 0;
+}
+
+ct_t *ecm_register(ecm_t *self, const char *name, uint *target, uint size,
 		init_cb init, int depend_size, ...)
 {
-	if(*target != ULONG_MAX) return ecm_get(self, *target);
+	if(*target != IDENT_NULL) return ecm_get(self, *target);
 	va_list depends;
 
 	va_start(depends, depend_size);
-	ulong j;
+	uint j;
 	for(j = 0; j < depend_size; j++)
 	{
-		if(va_arg(depends, ulong) == ULONG_MAX) return NULL;
+		if(va_arg(depends, uint) == IDENT_NULL) return NULL;
 	}
 	va_end(depends);
 
-	ulong i = self->cts_size++;
+	uint i = self->cts_size++;
 
 	if(target) *target = i;
 
@@ -147,8 +160,10 @@ ct_t *ecm_register(ecm_t *self, ulong *target, ulong size,
 		.ecm = self,
 		.init = init,
 		.size = size,
-		.depends_size = depend_size
+		.depends_size = depend_size,
+		.is_interaction = 0
 	};
+	strncpy(ct->name, name, sizeof(ct->name));
 
 	if(depend_size)
 	{
@@ -158,7 +173,8 @@ ct_t *ecm_register(ecm_t *self, ulong *target, ulong size,
 		va_start(depends, depend_size);
 		for(j = 0; j < depend_size; j++)
 		{
-			ct->depends[j] = va_arg(depends, ulong);
+			ct->depends[j].ct = va_arg(depends, uint);
+			ct->depends[j].is_interaction = 0;
 		}
 		va_end(depends);
 	}
@@ -170,10 +186,10 @@ void ct_add(ct_t *self, c_t *comp)
 {
 	if(!self) return;
 	if(!comp) return;
-	ulong offset, i = self->components_size++;
+	uint offset, i = self->components_size++;
 	if(c_entity(comp).id >= self->offsets_size)
 	{
-		ulong j, new_size = c_entity(comp).id + 1;
+		uint j, new_size = c_entity(comp).id + 1;
 		self->offsets = realloc(self->offsets, sizeof(*self->offsets) *
 				new_size);
 		for(j = self->offsets_size; j < new_size - 1; j++)

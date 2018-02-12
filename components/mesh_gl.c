@@ -486,9 +486,16 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 
 	int cull_face;
 	int wireframe;
-	material_t *mat;
 	c_model_t *model = c_model(self->entity);
 	mat_layer_t *layer = &model->layers[self->layer_id];
+
+	if(layer->mat && shader)
+	{
+		if((layer->mat->transparency.color.a != 0.0f) != transparent) return 0;
+
+		material_bind(layer->mat, shader);
+	}
+
 	{
 		if(layer->cull_front)
 		{
@@ -511,14 +518,6 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 		}
 
 		wireframe = layer->wireframe;
-		mat = layer->mat;
-	}
-
-	if(mat && shader)
-	{
-		if((mat->transparency.color.a != 0.0f) != transparent) return 0;
-
-		material_bind(mat, shader);
 	}
 
 	glPolygonOffset(0.0f, model->layers[self->layer_id].offset);
@@ -546,7 +545,7 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 
 	if(wireframe)
 	{
-		/* glLineWidth(1); */
+		glLineWidth(2);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	}
 	else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -559,7 +558,7 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 	}
 	else
 	{
-		/* glLineWidth(3); glerr(); */
+		glLineWidth(3); glerr();
 		/* glLineWidth(5); */
 		glDrawElements(GL_LINES, self->gl_ind_num,
 				GL_UNSIGNED_INT, 0); glerr();
@@ -588,6 +587,14 @@ int c_mesh_gl_draw(c_mesh_gl_t *self, shader_t *shader, int transparent)
 	}
 
 	c_mesh_gl_update(self);
+
+	if(shader)
+	{
+		glUniform1f(shader->u_has_tex, (float)self->mesh->has_texcoords);
+		vec3_t id_color = int_to_vec3(c_entity(self).id);
+
+		glUniform3f(shader->u_id, id_color.r, id_color.g, id_color.b);
+	}
 
 	for(i = 0; i < self->groups_num; i++)
 	{
@@ -675,12 +682,15 @@ void c_mesh_gl_destroy(c_mesh_gl_t *self)
 
 void c_mesh_gl_register(ecm_t *ecm)
 {
-	ct_t *ct = ecm_register(ecm, &ct_mesh_gl, sizeof(c_mesh_gl_t),
-			(init_cb)c_mesh_gl_init, 0);
-	ct_register_listener(ct, WORLD, mesh_changed,
+	ct_t *ct = ecm_register(ecm, "Mesh gl", &ct_mesh_gl,
+			sizeof(c_mesh_gl_t), (init_cb)c_mesh_gl_init, 0);
+	ct_register_listener(ct, SAME_ENTITY, mesh_changed,
 			(signal_cb)c_mesh_gl_on_mesh_changed);
 
-	ct_add_dependency(ecm_get(ecm, ct_model), ct_mesh_gl);
+	ct_add_interaction(ecm_get(ecm, ct_model), ct);
+
+	/* ct_register_listener(ct, WORLD, component_menu, */
+			/* (signal_cb)c_mesh_gl_menu); */
 
 	/* ct_register_listener(ct, WORLD, collider_callback, c_grid_collider); */
 }

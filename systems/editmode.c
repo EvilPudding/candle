@@ -6,7 +6,9 @@
 #include "renderer.h"
 
 DEC_CT(ct_editmode);
-extern int window_width, window_height;
+
+DEC_SIG(global_menu);
+DEC_SIG(component_menu);
 
 #define MAX_VERTEX_MEMORY 512 * 1024
 #define MAX_ELEMENT_MEMORY 128 * 1024
@@ -16,7 +18,10 @@ void c_editmode_init(c_editmode_t *self)
 {
 	self->super = component_new(ct_editmode);
 	self->control = 1;
-	self->visible = 1;
+	self->visible = 0;
+	self->dragging = 0;
+	self->pressing = 0;
+	self->mouse_position = vec3(0.0f);
 	/* self->outside = 0; */
 	self->nkctx = NULL;
 	self->selected = entity_null();
@@ -75,43 +80,61 @@ static int c_editmode_resize(c_editmode_t *self)
 	return 1;
 }
 
-
 int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 {
+	entity_t camera = ecm_get_camera(c_ecm(self));
+	c_camera_t *cam = c_camera(camera);
+	c_renderer_t *renderer = c_renderer(c_entity(self));
+
+	float px = event->x / renderer->width;
+	float py = 1.0f - event->y / renderer->height;
 	if(self->control && !candle->pressing)
 	{
-		entity_t result = c_renderer_entity_at_pixel(c_renderer(c_entity(self)),
-				event->x, event->y);
-		if(result.id > 0)
+		if(self->pressing)
 		{
-			self->over = result;
+			c_spacial_t *sc = c_spacial(self->selected);
+			if(!self->dragging)
+			{
+				self->dragging = 1;
+				self->drag_diff = vec3_sub(sc->pos, self->mouse_position);
+			}
+			vec3_t pos = c_camera_real_pos(cam, self->mouse_depth, vec2(px, py));
+
+			vec3_t new_pos = vec3_add(self->drag_diff, pos);
+			c_spacial_set_pos(sc, new_pos);
 		}
 		else
 		{
-			self->over = entity_null();
+			entity_t result = c_renderer_entity_at_pixel(renderer,
+					event->x, event->y, &self->mouse_depth);
+
+			vec3_t pos = c_camera_real_pos(cam, self->mouse_depth, vec2(px, py));
+			self->mouse_position = pos;
+
+			if(result.id > 0)
+			{
+				self->over = result;
+			}
+			else
+			{
+				self->over = entity_null();
+			}
 		}
 	}
 	return 1;
 }
 
-int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
+int c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 {
 	if(event->button == SDL_BUTTON_LEFT)
 	{
+		self->pressing = 1;
+
 		entity_t result = c_renderer_entity_at_pixel(c_renderer(c_entity(self)),
-				event->x, event->y);
+				event->x, event->y, NULL);
 		/* TODO entity 0 should be valid */
 		if(result.id > 0)
 		{
-			if(c_name(result))
-			{
-				printf("released entity %s\n", c_name(result)->name);
-			}
-			else
-			{
-				printf("released entity %ld\n", result.id);
-			}
-			/* c_spacial(result)-> */
 			self->selected = result;
 		}
 		else
@@ -122,13 +145,31 @@ int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 	return 1;
 }
 
+int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
+{
+	if(self->dragging)
+	{
+		self->dragging = 0;
+		self->selected = entity_null();
+	}
+	self->pressing = 0;
+	return 1;
+}
+
 
 int c_editmode_key_up(c_editmode_t *self, char *key)
 {
 	switch(*key)
 	{
 		case '`':
-			self->control = !self->control; break;
+			{
+				self->control = !self->control;
+				if(!self->control)
+				{
+					self->over = entity_null();
+				}
+				break;
+			}
 	}
 	return 1;
 }
@@ -158,6 +199,10 @@ void node_node(c_editmode_t *self, c_node_t *node)
 	if(nk_tree_push_id(self->nkctx, NK_TREE_NODE, final_name, NK_MINIMIZED,
 				entity.id))
 	{
+		if(nk_button_label(self->nkctx, "select"))
+		{
+			self->selected = entity;
+		}
 		int i;
 		for(i = 0; i < node->children_size; i++)
 		{
@@ -197,7 +242,7 @@ int c_editmode_draw(c_editmode_t *self)
 			nk_layout_row_static(self->nkctx, 30, 110, 1);
 			if (nk_button_label(self->nkctx, "redraw probes"))
 			{
-				c_renderer_scene_changed(c_renderer(c_entity(self)), NULL);
+				c_renderer_scene_changed(c_renderer(c_entity(self)));
 			}
 			entity_signal(c_entity(self), global_menu, self->nkctx);
 
@@ -222,7 +267,36 @@ int c_editmode_draw(c_editmode_t *self)
 						NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
 						NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
 			{
-				entity_signal_same(self->selected, component_menu, self->nkctx);
+				int i;
+
+				signal_t *sig = &c_ecm(self)->signals[component_menu];
+
+				for(i = 0; i < sig->cts_size; i++)
+				{
+					ct_t *ct = ecm_get(c_ecm(self), sig->cts[i]);
+					c_t *comp = ct_get(ct, self->selected);
+					if(comp && !ct->is_interaction)
+					{
+						if(nk_tree_push_id(self->nkctx, NK_TREE_TAB, ct->name,
+									NK_MINIMIZED, i))
+						{
+							component_signal(comp, ct, component_menu, self->nkctx);
+							nk_tree_pop(self->nkctx);
+						}
+						int j;
+						for(j = 0; j < ct->depends_size; j++)
+						{
+							if(ct->depends[j].is_interaction)
+							{
+								c_t *inter = ct_get(ct, self->selected);
+								ct_t *inter_ct = ecm_get(c_ecm(self),
+										ct->depends[j].ct);
+								component_signal(inter, inter_ct,
+										component_menu, self->nkctx);
+							}
+						}
+					}
+				}
 			}
 			nk_end(self->nkctx);
 		}
@@ -265,8 +339,8 @@ int c_editmode_event(c_editmode_t *self, SDL_Event *event)
 
 void c_editmode_register(ecm_t *ecm)
 {
-	ct_t *ct = ecm_register(ecm, &ct_editmode, sizeof(c_editmode_t),
-			(init_cb)c_editmode_init, 0);
+	ct_t *ct = ecm_register(ecm, "EditMode", &ct_editmode,
+			sizeof(c_editmode_t), (init_cb)c_editmode_init, 0);
 
 	ecm_register_signal(ecm, &global_menu, sizeof(struct nk_context*));
 	ecm_register_signal(ecm, &component_menu, sizeof(struct nk_context*));
@@ -283,6 +357,9 @@ void c_editmode_register(ecm_t *ecm)
 
 	ct_register_listener(ct, WORLD, world_draw,
 			(signal_cb)c_editmode_draw);
+
+	ct_register_listener(ct, WORLD, mouse_press,
+			(signal_cb)c_editmode_mouse_press);
 
 	ct_register_listener(ct, WORLD, mouse_release,
 			(signal_cb)c_editmode_mouse_release);

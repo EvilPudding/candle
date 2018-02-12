@@ -46,7 +46,7 @@ c_camera_t *c_camera_new(int active, float fov, float near, float far,
 
 void c_camera_register(ecm_t *ecm)
 {
-	ct_t *ct = ecm_register(ecm, &ct_camera, sizeof(c_camera_t),
+	ct_t *ct = ecm_register(ecm, "Camera", &ct_camera, sizeof(c_camera_t),
 			(init_cb)c_camera_init, 1, ct_spacial);
 
 	ct_register_listener(ct, WORLD, window_resize, (signal_cb)c_camera_update);
@@ -56,6 +56,27 @@ void c_camera_register(ecm_t *ecm)
 #endif
 
 }
+
+vec3_t c_camera_real_pos(c_camera_t *self, float depth, vec2_t coord)
+{
+	/* float z = depth; */
+    float z = depth * 2.0 - 1.0;
+	coord = vec2_sub_number(vec2_scale(coord, 2.0f), 1.0);
+
+	mat4_t projInv = mat4_invert(self->projection_matrix);
+	mat4_t viewInv = mat4_invert(self->view_matrix);
+
+    vec4_t clipSpacePosition = vec4(_vec2(coord), z, 1.0);
+    vec4_t viewSpacePosition = mat4_mul_vec4(projInv, clipSpacePosition);
+
+    // Perspective division
+    viewSpacePosition = vec4_div_number(viewSpacePosition, viewSpacePosition.w);
+
+    vec4_t worldSpacePosition = mat4_mul_vec4(viewInv, viewSpacePosition);
+
+    return worldSpacePosition.xyz;
+}
+
 
 void c_camera_update_view(c_camera_t *self)
 {

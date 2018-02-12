@@ -3,6 +3,7 @@
 #include "mesh_gl.h"
 #include "node.h"
 #include "spacial.h"
+#include "light.h"
 #include <nk.h>
 #include <systems/renderer.h>
 #include "shader.h"
@@ -12,10 +13,10 @@ DEC_CT(ct_model);
 
 DEC_SIG(mesh_changed);
 
-DEC_SIG(render_model);
 static material_t *g_missing_mat = NULL;
 
 int c_model_menu(c_model_t *self, void *ctx);
+int g_update_id = 0;
 
 static void c_model_init(c_model_t *self)
 {
@@ -89,14 +90,14 @@ c_model_t *c_model_cull_face(c_model_t *self, int layer, int inverted)
 		self->layers[layer].cull_front = 1;
 		self->layers[layer].cull_back = 1;
 	}
-	entity_signal(c_entity(self), spacial_changed, NULL);
+	g_update_id++;
 	return self;
 }
 
 c_model_t *c_model_wireframe(c_model_t *self, int layer, int wireframe)
 {
 	self->layers[layer].wireframe = wireframe;
-	entity_signal(c_entity(self), spacial_changed, NULL);
+	g_update_id++;
 	return self;
 }
 
@@ -112,16 +113,23 @@ int c_model_created(c_model_t *self)
 {
 	if(self->mesh)
 	{
+		g_update_id++;
 		entity_signal_same(c_entity(self), mesh_changed, NULL);
 	}
 	return 1;
 }
 
 /* #include "components/name.h" */
-int c_model_render(c_model_t *self, int transparent, shader_t *shader)
+int c_model_render_shadows(c_model_t *self, shader_t *shader)
 {
-	if(!self->mesh || !self->visible) return 0;
-	if(self->before_draw) if(!self->before_draw((c_t*)self)) return 0;
+	if(self->cast_shadow) c_model_render_visible(self, shader);
+	return 1;
+}
+
+int c_model_render_transparent(c_model_t *self, shader_t *shader)
+{
+	if(!self->mesh || !self->visible) return 1;
+	if(self->before_draw) if(!self->before_draw((c_t*)self)) return 1;
 
 	c_node_t *node = c_node(c_entity(self));
 	if(node)
@@ -129,72 +137,119 @@ int c_model_render(c_model_t *self, int transparent, shader_t *shader)
 		c_node_update_model(node);
 		shader_update(shader, &node->model);
 	}
-	shader_bind_mesh(shader, self->mesh, c_entity(self).id);
-	/* if(c_name(c_entity(model))) printf("%s\n", c_name(c_entity(model))->name); */
 
-	return c_mesh_gl_draw(c_mesh_gl(c_entity(self)), shader, transparent);
+	c_mesh_gl_draw(c_mesh_gl(c_entity(self)), shader, 1);
+	return 1;
+}
+
+int c_model_render_visible(c_model_t *self, shader_t *shader)
+{
+	if(!self->mesh || !self->visible) return 1;
+	if(self->before_draw) if(!self->before_draw((c_t*)self)) return 1;
+
+	c_node_t *node = c_node(c_entity(self));
+	if(node)
+	{
+		c_node_update_model(node);
+		shader_update(shader, &node->model);
+	}
+
+	c_mesh_gl_draw(c_mesh_gl(c_entity(self)), shader, 0);
+	return 1;
 }
 
 int c_model_menu(c_model_t *self, void *ctx)
 {
 
-	if(nk_tree_push(ctx, NK_TREE_TAB, "Model", NK_MINIMIZED))
+	int i;
+	int new_value;
+
+	new_value = nk_check_label(ctx, "Visible", self->visible);
+	if(new_value != self->visible)
 	{
-		int i;
-		char buffer[32];
-		for(i = 0; i < self->layers_num; i++)
-		{
-			snprintf(buffer, sizeof(buffer), "Layer %d", i);
-			mat_layer_t *layer = &self->layers[i];
-			if(nk_tree_push_id(ctx, NK_TREE_NODE, buffer, NK_MINIMIZED, i))
-			{
-				int new_value = nk_check_label(ctx, "Wireframe",
-							layer->wireframe);
-
-				if(new_value != layer->wireframe)
-				{
-					layer->wireframe = new_value;
-					entity_signal(c_entity(self), spacial_changed, NULL);
-				}
-
-				new_value = nk_check_label(ctx, "Cull front",
-							layer->cull_front);
-
-				if(new_value != layer->cull_front)
-				{
-					layer->cull_front = new_value;
-					entity_signal(c_entity(self), spacial_changed, NULL);
-				}
-
-				new_value = nk_check_label(ctx, "Cull back",
-							layer->cull_back);
-
-				if(new_value != layer->cull_back)
-				{
-					layer->cull_back = new_value;
-					entity_signal(c_entity(self), spacial_changed, NULL);
-				}
-
-				nk_tree_pop(ctx);
-			}
-		}
-
-		nk_tree_pop(ctx);
+		self->visible = new_value;
+		g_update_id++;
 	}
+	new_value = nk_check_label(ctx, "Cast shadow", self->cast_shadow);
+	if(new_value != self->cast_shadow)
+	{
+		self->cast_shadow = new_value;
+		g_update_id++;
+	}
+	for(i = 0; i < self->layers_num; i++)
+	{
+		char buffer[32];
+		snprintf(buffer, sizeof(buffer), "Layer %d", i);
+		mat_layer_t *layer = &self->layers[i];
+		if(nk_tree_push_id(ctx, NK_TREE_NODE, buffer, NK_MINIMIZED, i))
+		{
+			new_value = nk_check_label(ctx, "Wireframe",
+					layer->wireframe);
+
+			if(new_value != layer->wireframe)
+			{
+				layer->wireframe = new_value;
+				g_update_id++;
+			}
+
+			new_value = nk_check_label(ctx, "Cull front",
+					layer->cull_front);
+
+			if(new_value != layer->cull_front)
+			{
+				layer->cull_front = new_value;
+				g_update_id++;
+			}
+
+			new_value = nk_check_label(ctx, "Cull back",
+					layer->cull_back);
+
+			if(new_value != layer->cull_back)
+			{
+				layer->cull_back = new_value;
+				g_update_id++;
+			}
+
+			nk_tree_pop(ctx);
+		}
+	}
+
 
 	return 1;
 }
 
+int c_model_scene_changed(c_model_t *self, entity_t *entity)
+{
+	if(self->visible)
+	{
+		g_update_id++;
+	}
+	return 1;
+}
+
+
 void c_model_register(ecm_t *ecm)
 {
-		ecm_register_signal(ecm, &mesh_changed, sizeof(mesh_t));
-		ecm_register_signal(ecm, &render_model, sizeof(shader_t));
+	ecm_register_signal(ecm, &mesh_changed, sizeof(mesh_t));
 
-		ct_t *ct = ecm_register(ecm, &ct_model, sizeof(c_model_t),
-				(init_cb)c_model_init, 2, ct_spacial, ct_node);
-		ct_register_listener(ct, SAME_ENTITY, entity_created,
-				(signal_cb)c_model_created);
+	ct_t *ct = ecm_register(ecm, "Model", &ct_model, sizeof(c_model_t),
+			(init_cb)c_model_init, 2, ct_spacial, ct_node);
 
-		ct_register_listener(ct, WORLD, component_menu, (signal_cb)c_model_menu);
+	ct_register_listener(ct, SAME_ENTITY, entity_created,
+			(signal_cb)c_model_created);
 
+	ct_register_listener(ct, WORLD, component_menu,
+			(signal_cb)c_model_menu);
+
+	ct_register_listener(ct, SAME_ENTITY, spacial_changed,
+			(signal_cb)c_model_scene_changed);
+
+	ct_register_listener(ct, WORLD, render_visible,
+			(signal_cb)c_model_render_visible);
+
+	ct_register_listener(ct, WORLD, render_transparent,
+			(signal_cb)c_model_render_transparent);
+
+	ct_register_listener(ct, WORLD, render_shadows,
+			(signal_cb)c_model_render_shadows);
 }

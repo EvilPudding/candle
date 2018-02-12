@@ -85,7 +85,7 @@ static int c_freelook_mouse_move(c_freelook_t *self, mouse_move_data *event)
 
 void c_freelook_register(ecm_t *ecm)
 {
-	ct_t *ct = ecm_register(ecm, &ct_freelook, sizeof(c_freelook_t),
+	ct_t *ct = ecm_register(ecm, "Freelook", &ct_freelook, sizeof(c_freelook_t),
 			(init_cb)c_freelook_init, 1, ct_spacial);
 
 	ct_register_listener(ct, WORLD, mouse_move,

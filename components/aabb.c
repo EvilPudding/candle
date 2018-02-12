@@ -96,7 +96,7 @@ int c_aabb_intersects(c_aabb_t *self, c_aabb_t *other)
 
 void c_aabb_register(ecm_t *ecm)
 {
-	ct_t *ct = ecm_register(ecm, &ct_aabb, sizeof(c_aabb_t),
+	ct_t *ct = ecm_register(ecm, "AABB", &ct_aabb, sizeof(c_aabb_t),
 			(init_cb)c_aabb_init, 1, ct_spacial);
 	ct_register_listener(ct, WORLD, mesh_changed,
 			(signal_cb)c_aabb_on_mesh_change);

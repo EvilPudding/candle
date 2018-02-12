@@ -44,24 +44,37 @@ void texture_update_gl(texture_t *self)
 			NULL);
 }
 
-int texture_get_pixel(texture_t *self, int buffer, int x, int y)
+int texture_get_pixel(texture_t *self, int buffer, int x, int y,
+		float *depth)
 {
+	int data = 0;
 	y = self->height-y;
 	glFlush();
 	glFinish();
-	texture_bind(self, COLOR_TEX + buffer);
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, self->frame_buffer[0]); glerr();
-	/* glGetTexImage(self->target, 0, self->type, GL_UNSIGNED_BYTE, */
-			/* self->imageData); */
-	glReadBuffer(self->attachments[buffer]);
 
-	/* texture_2D_frame_buffer(self); */
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	{
+		/* texture_bind(self, COLOR_TEX + buffer); */
+		glReadBuffer(self->attachments[buffer]);
+
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
 
-	int data = 0;
-	glReadPixels(x, y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &data);
+		glReadPixels(x, y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &data);
+	}
+	if(depth)
+	{
+		float fetch_depth = 0;
+		/* texture_bind(self, DEPTH_TEX); */
+		glReadBuffer(GL_NONE);
+
+		/* texture_2D_frame_buffer(self); */
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+		glReadPixels(x, y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &fetch_depth);
+		*depth = fetch_depth;
+	}
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	return data;
@@ -143,7 +156,8 @@ static void texture_new_2D_loader(texture_t *self)
 		glTexParameteri(self->target, GL_TEXTURE_WRAP_T, wrap);
 
 		glTexParameteri(self->target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(self->target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); glerr();
+		glTexParameteri(self->target, GL_TEXTURE_MIN_FILTER,
+				GL_LINEAR_MIPMAP_LINEAR); glerr();
 		/* glTexParameteri(self->target, GL_GENERATE_MIPMAP, GL_TRUE);  glerr(); */
 
 		glTexImage2D(self->target, 0, self->gl_type, self->width, self->height,

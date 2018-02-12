@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 DEC_CT(ct_light);
+DEC_SIG(render_shadows);
 
 static shader_t *g_shader;
 
@@ -39,13 +40,24 @@ void c_light_destroy(c_light_t *self)
 	free(self);
 }
 
+int c_light_render(c_light_t *self)
+{
+	c_probe_t *probe = c_probe(c_entity(self));
+
+	c_probe_render(probe, render_shadows, g_shader);
+	return 1;
+}
+
 void c_light_register(ecm_t *ecm)
 {
-	ct_t *ct = ecm_register(ecm, &ct_light, sizeof(c_light_t),
-			(init_cb)c_light_init, 1, ct_spacial);
+	ct_t *ct = ecm_register(ecm, "Light", &ct_light,
+			sizeof(c_light_t), (init_cb)c_light_init, 1, ct_spacial);
 
 	ct_register_listener(ct, SAME_ENTITY, entity_created,
 			(signal_cb)c_light_created);
+
+	ct_register_listener(ct, WORLD, offscreen_render,
+			(signal_cb)c_light_render);
+
+	ecm_register_signal(ecm, &render_shadows, sizeof(shader_t*));
 }
-
-

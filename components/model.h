@@ -31,14 +31,16 @@ typedef struct
 
 
 DEF_SIG(mesh_changed);
-DEF_SIG(render_model);
 
 DEF_CASTER(ct_model, c_model, c_model_t)
+extern int g_update_id;
 
 c_model_t *c_model_new(mesh_t *mesh, int cast_shadow);
 c_model_t *c_model_cull_face(c_model_t *self, int layer, int inverted);
 c_model_t *c_model_wireframe(c_model_t *self, int layer, int wireframe);
 c_model_t *c_model_paint(c_model_t *self, int layer, material_t *mat);
+int c_model_render_transparent(c_model_t *self, shader_t *shader);
+int c_model_render_visible(c_model_t *self, shader_t *shader);
 int c_model_render(c_model_t *self, int transparent, shader_t *shader);
 void c_model_register(ecm_t *ecm);
 void c_model_set_mesh(c_model_t *self, mesh_t *mesh);

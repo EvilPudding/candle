@@ -19,6 +19,8 @@ typedef struct
 	mat4_t model_matrix;
 } c_spacial_t;
 
+DEF_SIG(spacial_changed);
+
 DEF_CASTER(ct_spacial, c_spacial, c_spacial_t)
 
 c_spacial_t *c_spacial_new(void);
@@ -35,7 +37,5 @@ void c_spacial_update_model_matrix(c_spacial_t *self);
 void c_spacial_rotate_X(c_spacial_t *self, float angle);
 void c_spacial_rotate_Y(c_spacial_t *self, float angle);
 void c_spacial_rotate_Z(c_spacial_t *self, float angle);
-
-DEF_SIG(spacial_changed);
 
 #endif /* !SPACIAL_H */

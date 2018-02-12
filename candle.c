@@ -13,9 +13,6 @@ DEC_SIG(events_begin);
 DEC_SIG(event_handle);
 DEC_SIG(events_end);
 
-DEC_SIG(global_menu);
-DEC_SIG(component_menu);
-
 void candle_reset_dir(candle_t *self)
 {
 #ifdef WIN32
@@ -40,12 +37,9 @@ static void candle_handle_events(candle_t *self)
 			self->exit = 1;
 			return;
 		}
-		if(!self->pressing)
+		if(entity_signal(self->ecm->none, event_handle, &event) == 0)
 		{
-			if(entity_signal(self->ecm->none, event_handle, &event) == 0)
-			{
-				continue;
-			}
+			continue;
 		}
 		switch(event.type)
 		{
@@ -55,13 +49,11 @@ static void candle_handle_events(candle_t *self)
 						event.wheel.direction, SDL_BUTTON_MIDDLE});
 				break;
 			case SDL_MOUSEBUTTONUP:
-				self->pressing = 0;
 				entity_signal(self->ecm->none, mouse_release,
 						&(mouse_button_data){event.button.x, event.button.y,
 						0, event.button.button});
 				break;
 			case SDL_MOUSEBUTTONDOWN:
-				self->pressing = 1;
 				entity_signal(self->ecm->none, mouse_press,
 						&(mouse_button_data){event.button.x, event.button.y,
 						0, event.button.button});
@@ -178,7 +170,7 @@ void candle_init(candle_t *candle)
 void candle_register_template(candle_t *self, const char *key,
 		template_cb cb)
 {
-	ulong i = self->templates_size++;
+	uint i = self->templates_size++;
 	self->templates = realloc(self->templates,
 			sizeof(*self->templates) * self->templates_size);
 	template_t *template = &self->templates[i];
@@ -297,7 +289,7 @@ int candle_import_dir(candle_t *self, entity_t root, const char *dir_name)
 
 void candle_material_reg(candle_t *self, const char *name, material_t *material)
 {
-	ulong i = self->resources.materials_size++;
+	uint i = self->resources.materials_size++;
 	self->resources.materials = realloc(self->resources.materials,
 			sizeof(*self->resources.materials) * self->resources.materials_size);
 	self->resources.materials[i] = material;
@@ -307,7 +299,7 @@ void candle_material_reg(candle_t *self, const char *name, material_t *material)
 material_t *candle_material_get(candle_t *self, const char *name)
 {
 	material_t *material;
-	ulong i;
+	uint i;
 	for(i = 0; i < self->resources.materials_size; i++)
 	{
 		material = self->resources.materials[i];
@@ -320,7 +312,7 @@ material_t *candle_material_get(candle_t *self, const char *name)
 
 void candle_mesh_reg(candle_t *self, const char *name, mesh_t *mesh)
 {
-	ulong i = self->resources.meshes_size++;
+	uint i = self->resources.meshes_size++;
 	self->resources.meshes = realloc(self->resources.meshes,
 			sizeof(*self->resources.meshes) * self->resources.meshes_size);
 	self->resources.meshes[i] = mesh;
@@ -330,7 +322,7 @@ void candle_mesh_reg(candle_t *self, const char *name, mesh_t *mesh)
 mesh_t *candle_mesh_get(candle_t *self, const char *name)
 {
 	mesh_t *mesh;
-	ulong i;
+	uint i;
 	for(i = 0; i < self->resources.meshes_size; i++)
 	{
 		mesh = self->resources.meshes[i];
@@ -344,7 +336,7 @@ mesh_t *candle_mesh_get(candle_t *self, const char *name)
 texture_t *candle_texture_get(candle_t *self, const char *name)
 {
 	texture_t *texture;
-	ulong i;
+	uint i;
 	for(i = 0; i < self->resources.textures_size; i++)
 	{
 		texture = self->resources.textures[i];
@@ -359,7 +351,7 @@ texture_t *candle_texture_get(candle_t *self, const char *name)
 void candle_texture_reg(candle_t *self, const char *name, texture_t *texture)
 {
 	if(!texture) return;
-	ulong i = self->resources.textures_size++;
+	uint i = self->resources.textures_size++;
 	self->resources.textures = realloc(self->resources.textures,
 			sizeof(*self->resources.textures) * self->resources.textures_size);
 	self->resources.textures[i] = texture;
@@ -409,7 +401,6 @@ candle_t *candle_new(int comps_size, ...)
 		c_renderer_register(self->ecm);
 		c_editmode_register(self->ecm);
 		c_camera_register(self->ecm);
-
 
 		va_list comps;
 		va_start(comps, comps_size);

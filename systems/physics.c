@@ -240,8 +240,8 @@ c_physics_t *c_physics_new()
 
 void c_physics_register(ecm_t *ecm)
 {
-	ct_t *ct = ecm_register(ecm, &ct_physics, sizeof(c_physics_t),
-			(init_cb)c_physics_init, 1, ct_window);
+	ct_t *ct = ecm_register(ecm, "Physics", &ct_physics,
+			sizeof(c_physics_t), (init_cb)c_physics_init, 1, ct_window);
 
 	ct_register_listener(ct, WORLD, world_update,
 			(signal_cb)c_physics_update);

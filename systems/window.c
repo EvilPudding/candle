@@ -51,8 +51,8 @@ void c_window_init(c_window_t *self)
 	self->super = component_new(ct_window);
 	SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
 	SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER|SDL_INIT_EVENTS);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS,
-			SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
+	/* SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, */
+			/* SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); */
 
 	self->width = window_width;
 	self->height = window_height;
@@ -60,7 +60,7 @@ void c_window_init(c_window_t *self)
 	/* SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1); */
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
 			SDL_GL_CONTEXT_PROFILE_CORE);
 
@@ -121,8 +121,8 @@ void c_window_rect(c_window_t *self, int x, int y, int width, int height,
 
 void c_window_register(ecm_t *ecm)
 {
-	ct_t *ct = ecm_register(ecm, &ct_window, sizeof(c_window_t),
-			(init_cb)c_window_init, 0);
+	ct_t *ct = ecm_register(ecm, "Window", &ct_window,
+			sizeof(c_window_t), (init_cb)c_window_init, 0);
 
 	ct_register_listener(ct, SAME_ENTITY, entity_created,
 			(signal_cb)c_window_created);

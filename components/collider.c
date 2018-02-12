@@ -21,5 +21,6 @@ c_collider_t *c_collider_new(collider_cb cb)
 
 void c_collider_register(ecm_t *ecm)
 {
-	ecm_register(ecm, &ct_collider, sizeof(c_collider_t), (init_cb)c_collider_init, 0);
+	ecm_register(ecm, "Collider", &ct_collider, sizeof(c_collider_t),
+			(init_cb)c_collider_init, 0);
 }

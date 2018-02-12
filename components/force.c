@@ -26,6 +26,6 @@ c_force_t *c_force_new(float x, float y, float z, int active)
 
 void c_force_register(ecm_t *ecm)
 {
-	ecm_register(ecm, &ct_force, sizeof(c_force_t), (init_cb)c_force_init, 0);
+	ecm_register(ecm, "Force", &ct_force, sizeof(c_force_t), (init_cb)c_force_init, 0);
 }
 

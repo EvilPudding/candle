@@ -2,6 +2,7 @@
 #define EDITMODE_H
 
 #include <ecm.h>
+#include <mesh.h>
 
 typedef struct
 {
@@ -9,11 +10,21 @@ typedef struct
 
 	int control;
 	int visible;
+	int dragging;
+	int pressing;
 	/* int outside; */
+
+	vec3_t mouse_position;
+
+	vec3_t drag_diff;
+
+	float mouse_depth;
 
 	void *nkctx;
 	entity_t selected;
 	entity_t over;
+
+	geom_t mode;
 
 } c_editmode_t;
 

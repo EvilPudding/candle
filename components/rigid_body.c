@@ -55,8 +55,8 @@ int c_rigid_body_intersects(c_rigid_body_t *self, c_rigid_body_t *other,
 
 void c_rigid_body_register(ecm_t *ecm)
 {
-	ecm_register(ecm, &ct_rigid_body, sizeof(c_rigid_body_t),
-			(init_cb)c_rigid_body_init, 0);
+	ecm_register(ecm, "Rigid body", &ct_rigid_body,
+			sizeof(c_rigid_body_t), (init_cb)c_rigid_body_init, 0);
 }
 
 /* GJK */

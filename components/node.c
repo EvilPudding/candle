@@ -92,7 +92,7 @@ void c_node_add(c_node_t *self, int num, ...)
 
 void c_node_register(ecm_t *ecm)
 {
-	ct_t *ct = ecm_register(ecm, &ct_node, sizeof(c_node_t),
+	ct_t *ct = ecm_register(ecm, "Node", &ct_node, sizeof(c_node_t),
 			(init_cb)c_node_init, 1, ct_spacial);
 
 	ct_register_listener(ct, SAME_ENTITY, spacial_changed,

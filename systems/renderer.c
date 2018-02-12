@@ -19,15 +19,16 @@
 
 DEC_CT(ct_renderer);
 
-DEC_SIG(world_changed);
+DEC_SIG(offscreen_render);
+DEC_SIG(render_visible);
+DEC_SIG(render_transparent);
+/* DEC_SIG(world_changed); */
 
 static int c_renderer_gbuffer(c_renderer_t *self, const char *name);
 
 static void c_renderer_add_gbuffer(c_renderer_t *self, const char *name,
 		unsigned int draw_filter);
 
-static int c_renderer_probe_update_map(c_renderer_t *self, ecm_t *ecm,
-		entity_t probe, shader_t *shader);
 static void c_renderer_update_probes(c_renderer_t *self, ecm_t *ecm);
 
 static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_t camera);
@@ -36,21 +37,9 @@ static int c_renderer_resize(c_renderer_t *self, window_resize_data *event);
 
 static void c_renderer_update_screen_texture(c_renderer_t *self);
 
-int c_renderer_scene_changed(c_renderer_t *self, entity_t *entity)
+int c_renderer_scene_changed(c_renderer_t *self)
 {
-	if(!entity)
-	{
-		self->probe_update_id++;
-		return 1;
-	}
-	c_model_t *model = c_model(*entity);
-	/* c_node_t *node = c_node(*entity); */
-	/* if(model && model->cast_shadow) */
-	if(model)
-			/* || (node && node->children_size) ) */
-	{
-		self->probe_update_id++;
-	}
+	g_update_id++;
 	return 1;
 }
 
@@ -132,13 +121,6 @@ static int c_renderer_bind_passes(c_renderer_t *self)
 	return 1;
 }
 
-void c_renderer_get_pixel(c_renderer_t *self, int gbuffer, int buffer,
-		int x, int y)
-{
-	texture_get_pixel(self->gbuffers[gbuffer].buffer, buffer, x, y);
-}
-
-
 static void c_renderer_init(c_renderer_t *self)
 {
 	self->super = component_new(ct_renderer);
@@ -149,8 +131,8 @@ static void c_renderer_init(c_renderer_t *self)
 	filter_blur_init();
 	filter_bloom_init();
 
-	c_renderer_add_gbuffer(self, "opaque", 0);
-	c_renderer_add_gbuffer(self, "transp", 1);
+	c_renderer_add_gbuffer(self, "opaque", render_visible);
+	c_renderer_add_gbuffer(self, "transp", render_transparent);
 
 
 	c_renderer_add_pass(self, "ssao",
@@ -199,7 +181,6 @@ static void c_renderer_init(c_renderer_t *self)
 
 static int c_renderer_created(c_renderer_t *self)
 {
-	printf("here\n");
 	return 1;
 }
 
@@ -348,7 +329,7 @@ static void c_renderer_bind_gbuffer(c_renderer_t *self, pass_t *pass,
 
 static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_t camera)
 {
-	unsigned long i;
+	uint i;
 
 	if(!pass->output) return NULL;
 
@@ -509,11 +490,12 @@ c_renderer_t *c_renderer_new(float resolution, int auto_exposure, int roughness,
 	return self;
 }
 
-entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y)
+entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
+		float *depth)
 {
 	entity_t result;
 	if(!self->gbuffers[0].buffer) return entity_null();
-	result.id = texture_get_pixel(self->gbuffers[0].buffer, 7, x, y);
+	result.id = texture_get_pixel(self->gbuffers[0].buffer, 7, x, y, depth);
 
 	result.ecm = c_ecm(self);
 
@@ -523,11 +505,8 @@ entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y)
 
 void c_renderer_register(ecm_t *ecm)
 {
-	ct_t *ct = ecm_register(ecm, &ct_renderer, sizeof(c_renderer_t),
-			(init_cb)c_renderer_init, 1, ct_window);
-
-	ct_register_listener(ct, WORLD, spacial_changed,
-			(signal_cb)c_renderer_scene_changed);
+	ct_t *ct = ecm_register(ecm, "Renderer", &ct_renderer,
+			sizeof(c_renderer_t), (init_cb)c_renderer_init, 1, ct_window);
 
 	ct_register_listener(ct, WORLD, window_resize,
 			(signal_cb)c_renderer_resize);
@@ -537,81 +516,27 @@ void c_renderer_register(ecm_t *ecm)
 
 	ct_register_listener(ct, SAME_ENTITY, entity_created,
 			(signal_cb)c_renderer_created);
+
+	ecm_register_signal(ecm, &offscreen_render, 0);
+	ecm_register_signal(ecm, &render_visible, sizeof(shader_t));
+	ecm_register_signal(ecm, &render_transparent, sizeof(shader_t));
 }
 
 
-
-static int c_renderer_probe_update_map(c_renderer_t *self, ecm_t *ecm,
-		entity_t probe, shader_t *shader)
-{
-	unsigned long i;
-	int face;
-
-	/* c_probe_t *lc = c_probe(probe); */
-	c_probe_t *pp = c_probe(probe);
-	c_spacial_t *ps = c_spacial(probe);
-
-	for(face = 0; face < 6; face++)
-	{
-		self->bound = pp->map;
-		texture_target(pp->map, face);
-		glClear(GL_DEPTH_BUFFER_BIT);
-
-		shader_bind_probe(shader, probe);
-#ifdef MESH4
-		shader_bind_camera(shader, ps->pos, &pp->views[face],
-				&pp->projection, 1.0f, 0.0f);
-#else
-		shader_bind_camera(shader, ps->pos, &pp->views[face],
-				&pp->projection, 1.0f);
-#endif
-
-		ct_t *models = ecm_get(ecm, ct_model);
-		int res = 1;
-
-		for(i = 0; i < models->components_size; i++)
-		{
-			c_model_t *model = (c_model_t*)ct_get_at(models, i);
-
-			res |= c_model_render(model, 0, shader);
-		}
-		if(!res) return 0;
-	}
-	return 1;
-}
 
 static void c_renderer_update_probes(c_renderer_t *self, ecm_t *ecm)
 {
-	c_probe_t *probe;
-	unsigned long i;
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 	glerr();
 	/* c_renderer_target(self); */
 
-	ct_t *probes = ecm_get(ecm, ct_probe);
-
 	glEnable(GL_CULL_FACE); glerr();
 	glEnable(GL_DEPTH_TEST); glerr();
 
-	for(i = 0; i < probes->components_size; i++)
-	{
-		probe = (c_probe_t*)ct_get_at(probes, i);
-		entity_t entity = probe->super.entity;
+	entity_signal(c_entity(self), offscreen_render, NULL);
 
-		if(probe->before_draw && !probe->before_draw((c_t*)probe)) continue;
-
-		shader_bind(probe->shader);
-
-		if(probe->last_update != self->probe_update_id)
-		{
-			if(c_renderer_probe_update_map(self, ecm, entity, probe->shader))
-			{
-				probe->last_update = self->probe_update_id;
-			}
-		}
-	}
 	glerr();
 
 	glDisable(GL_CULL_FACE); glerr();
@@ -714,12 +639,7 @@ int c_renderer_update_gbuffers(c_renderer_t *self, entity_t camera)
 		glEnable(GL_CULL_FACE); glerr();
 		glEnable(GL_DEPTH_TEST); glerr();
 
-		ct_t *models = ecm_get(c_ecm(self), ct_model);
-		for(i = 0; i < models->components_size; i++)
-		{
-			c_model_t *model = (c_model_t*)ct_get_at(models, i);
-			res |= c_model_render(model, gb->draw_filter, self->gbuffer_shader);
-		}
+		entity_signal(c_entity(self), gb->draw_filter, self->gbuffer_shader);
 
 		glDisable(GL_CULL_FACE); glerr();
 		glDisable(GL_DEPTH_TEST); glerr();
@@ -744,7 +664,7 @@ void c_renderer_draw_to_texture(c_renderer_t *self, shader_t *shader,
 
 int c_renderer_draw(c_renderer_t *self)
 {
-	unsigned long i;
+	uint i;
 	if(!self->ready)
 	{
 		c_renderer_bind_passes(self);

@@ -42,7 +42,7 @@ static void *ct_create(ct_t *self)
 
 static void entity_check_missing_dependencies(entity_t self)
 {
-	ulong i, j;
+	uint i, j;
 	for(j = 0; j < self.ecm->cts_size; j++)
 	{
 		ct_t *ct = &self.ecm->cts[j];
@@ -50,7 +50,7 @@ static void entity_check_missing_dependencies(entity_t self)
 		{
 			for(i = 0; i < ct->depends_size; i++)
 			{
-				ct_t *ct2 = ecm_get(self.ecm, ct->depends[i]);
+				ct_t *ct2 = ecm_get(self.ecm, ct->depends[i].ct);
 				if(!ct_get(ct2, self))
 				{
 					c_t *comp2 = ct_create(ct2);
@@ -63,7 +63,7 @@ static void entity_check_missing_dependencies(entity_t self)
 }
 
 
-int component_signal(c_t *comp, ct_t *ct, ulong signal, void *data)
+int component_signal(c_t *comp, ct_t *ct, uint signal, void *data)
 {
 	listener_t *listener = ct_get_listener(ct, signal);
 	if(listener)
@@ -73,9 +73,10 @@ int component_signal(c_t *comp, ct_t *ct, ulong signal, void *data)
 	return 1;
 }
 
-int entity_signal_same(entity_t self, ulong signal, void *data)
+int entity_signal_same(entity_t self, uint signal, void *data)
 {
-	ulong i;
+	/* if(signal == IDENT_NULL) exit(1); */
+	uint i;
 
 	signal_t *sig = &self.ecm->signals[signal];
 
@@ -95,16 +96,16 @@ int entity_signal_same(entity_t self, ulong signal, void *data)
 	return 1;
 }
 
-void entity_filter(entity_t self, ulong signal, void *data,
+void entity_filter(entity_t self, uint signal, void *data,
 		filter_cb cb, c_t *c_caller, void *cb_data)
 {
-	ulong i, j;
+	uint i, j;
 
 	signal_t *sig = &self.ecm->signals[signal];
 
 	for(i = 0; i < sig->cts_size; i++)
 	{
-		ulong ct_id = sig->cts[i];
+		uint ct_id = sig->cts[i];
 		ct_t *ct = ecm_get(self.ecm, ct_id);
 		listener_t *listener = ct_get_listener(ct, signal);
 		if(listener)
@@ -124,15 +125,16 @@ void entity_filter(entity_t self, ulong signal, void *data,
 	}
 }
 
-int entity_signal(entity_t self, ulong signal, void *data)
+int entity_signal(entity_t self, uint signal, void *data)
 {
-	ulong i, j;
+	uint i, j;
+	/* if(signal == IDENT_NULL) exit(1); */
 
 	signal_t *sig = &self.ecm->signals[signal];
 
 	for(i = 0; i < sig->cts_size; i++)
 	{
-		ulong ct_id = sig->cts[i];
+		uint ct_id = sig->cts[i];
 		ct_t *ct = ecm_get(self.ecm, ct_id);
 		listener_t *listener = ct_get_listener(ct, signal);
 		if(listener)

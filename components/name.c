@@ -22,7 +22,7 @@ c_name_t *c_name_new(const char *name)
 
 void c_name_register(ecm_t *ecm)
 {
-	ecm_register(ecm, &ct_name, sizeof(c_name_t), (init_cb)c_name_init, 0);
+	ecm_register(ecm, "Name", &ct_name, sizeof(c_name_t), (init_cb)c_name_init, 0);
 }
 
 

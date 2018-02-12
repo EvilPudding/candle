@@ -24,7 +24,9 @@ DEF_CASTER(ct_camera, c_camera, c_camera_t)
 
 c_camera_t *c_camera_new(int active, float fov, float near, float far,
 		int width, int height);
+vec3_t c_camera_real_pos(c_camera_t *cam, float depth, vec2_t coord);
 void c_camera_update_view(c_camera_t *self);
+
 void c_camera_register(ecm_t *ecm);
 
 entity_t ecm_get_camera(ecm_t *self);

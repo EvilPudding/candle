@@ -24,8 +24,8 @@ c_velocity_t *c_velocity_new(float x, float y, float z)
 
 void c_velocity_register(ecm_t *ecm)
 {
-	ecm_register(ecm, &ct_velocity, sizeof(c_velocity_t), (init_cb)c_velocity_init, 1,
-			ct_spacial);
+	ecm_register(ecm, "Velocity", &ct_velocity, sizeof(c_velocity_t),
+			(init_cb)c_velocity_init, 1, ct_spacial);
 }
 
 void c_velocity_set_vel(c_velocity_t *self, float x, float y, float z)

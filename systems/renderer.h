@@ -136,6 +136,10 @@ typedef struct c_renderer_t
 	int ready;
 } c_renderer_t;
 
+DEF_SIG(render_visible);
+DEF_SIG(render_transparent);
+DEF_SIG(offscreen_render);
+
 DEF_CASTER(ct_renderer, c_renderer, c_renderer_t)
 
 c_renderer_t *c_renderer_new(float resolution, int auto_exposure, int roughness,
@@ -148,9 +152,8 @@ void c_renderer_draw_to_texture(c_renderer_t *self, shader_t *shader,
 void c_renderer_add_pass(c_renderer_t *self, const char *feed_name, int flags,
 		float wid, float hei, const char *shader_name, bind_t binds[]);
 void c_renderer_clear_shader(c_renderer_t *self, shader_t *shader);
-int c_renderer_scene_changed(c_renderer_t *self, entity_t *entity);
-void c_renderer_get_pixel(c_renderer_t *self, int gbuffer, int buffer,
-		int x, int y);
-entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y);
+int c_renderer_scene_changed(c_renderer_t *self);
+entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
+		float *depth);
 
 #endif /* !RENDERER_H */
