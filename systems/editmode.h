@@ -9,7 +9,7 @@ typedef struct
 
 	int control;
 	int visible;
-	int outside;
+	/* int outside; */
 
 	void *nkctx;
 	entity_t selected;

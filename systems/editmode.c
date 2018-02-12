@@ -17,7 +17,7 @@ void c_editmode_init(c_editmode_t *self)
 	self->super = component_new(ct_editmode);
 	self->control = 1;
 	self->visible = 1;
-	self->outside = 0;
+	/* self->outside = 0; */
 	self->nkctx = NULL;
 	self->selected = entity_null();
 	self->over = entity_null();
@@ -59,16 +59,16 @@ static int c_editmode_resize(c_editmode_t *self)
 			/* nk_style_load_all_cursors(self->nkctx, atlas->cursors); */
 			/* nk_style_set_font(self->nkctx, &roboto->handle); */
 		} 
-		/* c_renderer_add_pass(c_renderer(c_entity(self)), "hightlight", */
-		/* 		PASS_SCREEN_SCALE, */
-		/* 		1.0f, 1.0f, "highlight", */
-		/* 			(bind_t[]){ */
-		/* 		{BIND_GBUFFER, "gbuffer", .gbuffer.name = "opaque"}, */
-		/* 		{BIND_VEC3, "id_color", .getter = (ptr_getter)bind_selected, */
-		/* 		.entity = c_entity(self)}, */
-		/* 		{BIND_NONE} */
-		/* 	} */
-		/* ); */
+		c_renderer_add_pass(c_renderer(c_entity(self)), "hightlight",
+				PASS_SCREEN_SCALE,
+				1.0f, 1.0f, "highlight",
+					(bind_t[]){
+				{BIND_GBUFFER, "gbuffer", .gbuffer.name = "opaque"},
+				{BIND_VEC3, "id_color", .getter = (ptr_getter)bind_selected,
+				.entity = c_entity(self)},
+				{BIND_NONE}
+			}
+		);
 
 	}
 
@@ -251,7 +251,6 @@ int c_editmode_event(c_editmode_t *self, SDL_Event *event)
 		nk_sdl_handle_event(event);
 		if(nk_window_is_any_hovered(self->nkctx))
 		{
-			/* self->outside = 1; */
 			self->over = entity_null();
 			return 0;
 		}
