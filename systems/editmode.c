@@ -78,7 +78,7 @@ static int c_editmode_resize(c_editmode_t *self)
 
 int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 {
-	if(self->control && !candle->pressing && !self->outside)
+	if(self->control && !candle->pressing)
 	{
 		entity_t result = c_renderer_entity_at_pixel(c_renderer(c_entity(self)),
 				event->x, event->y);
