@@ -12,6 +12,7 @@ typedef struct
 	int visible;
 	int dragging;
 	int pressing;
+	int activated;
 	/* int outside; */
 
 	vec3_t mouse_position;
