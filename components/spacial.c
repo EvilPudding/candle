@@ -140,6 +140,15 @@ void c_spacial_set_rot(c_spacial_t *self, float x, float y, float z, float angle
 	c_spacial_update_model_matrix(self);
 }
 
+void c_spacial_set_model(c_spacial_t *self, mat4_t model)
+{
+	self->pos = mat4_mul_vec4(model, vec4(0,0,0,1)).xyz;
+
+	self->model_matrix = model;
+	/* c_spacial_update_model_matrix(self); */
+
+}
+
 void c_spacial_set_pos(c_spacial_t *self, vec3_t pos)
 {
 	self->pos = pos;

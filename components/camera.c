@@ -4,6 +4,9 @@
 #include "spacial.h"
 #include "node.h"
 #include <nk.h>
+#include<candle.h>
+#include<systems/renderer.h>
+
 
 DEC_CT(ct_camera);
 
@@ -24,6 +27,8 @@ c_camera_t *c_camera_new(float fov, float near, float far)
 	self->view_cached = 0;
 	self->exposure = 0.25f;
 
+	c_camera_update(self, NULL);
+
 	return self;
 }
 
@@ -38,20 +43,23 @@ c_camera_t *c_camera_clone(c_camera_t *self)
 	clone->view_cached = 0;
 	clone->exposure = self->exposure;
 
+	c_camera_update(self, NULL);
+
 	return clone;
 }
 
-/* int c_camera_changed(c_camera_t *self) */
-/* { */
-/* 	self->view_cached = 0; */
-/* 	return 1; */
-/* } */
+int c_camera_changed(c_camera_t *self)
+{
+	self->view_cached = 0;
+	return 1;
+}
 
 void c_camera_register(ecm_t *ecm)
 {
 	ct_t *ct = ecm_register(ecm, "Camera", &ct_camera, sizeof(c_camera_t),
 			(init_cb)c_camera_init, 2, ct_spacial, ct_node);
 
+	ct_register_listener(ct, SAME_ENTITY, spacial_changed, (signal_cb)c_camera_changed);
 	ct_register_listener(ct, WORLD, window_resize, (signal_cb)c_camera_update);
 
 }
@@ -85,17 +93,15 @@ void c_camera_update_view(c_camera_t *self)
 	self->view_matrix = mat4_invert(n->model);
 }
 
-#include<candle.h>
-#include<systems/renderer.h>
-
 static int c_camera_update(c_camera_t *self, window_resize_data *event)
 {
 	/* TODO: remove renderer reference, camera should update on render resize,
 	 * not window */
+	self->width = c_renderer(&candle->systems)->width;
+	self->height = c_renderer(&candle->systems)->height;
 	self->projection_matrix = mat4_perspective(
 		self->fov,
-		((float)c_renderer(&candle->systems)->width) /
-		c_renderer(&candle->systems)->height,
+		((float)self->width) / self->height,
 		/* ((float)event->width / 2) / event->height, */
 		self->near, self->far
 	);
