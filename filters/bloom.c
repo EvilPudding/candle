@@ -20,7 +20,7 @@ void filter_bloom(c_renderer_t *renderer, float scale, texture_t *screen)
 
 	shader_bind_screen(g_bright_shader, screen, 1, 1);
 
-	c_mesh_gl_draw(c_mesh_gl(renderer->quad), NULL, 0);
+	c_mesh_gl_draw(c_mesh_gl(&renderer->quad), NULL, 0);
 
 	/* ----------------- */
 
@@ -41,7 +41,7 @@ void filter_bloom(c_renderer_t *renderer, float scale, texture_t *screen)
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
-	c_mesh_gl_draw(c_mesh_gl(renderer->quad), NULL, 0);
+	c_mesh_gl_draw(c_mesh_gl(&renderer->quad), NULL, 0);
 
 	glDisable(GL_BLEND);
 }

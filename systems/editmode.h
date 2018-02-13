@@ -13,6 +13,8 @@ typedef struct
 	int dragging;
 	int pressing;
 	int activated;
+	entity_t camera;
+	entity_t backup_camera;
 	/* int outside; */
 
 	vec3_t mouse_position;

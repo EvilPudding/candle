@@ -63,7 +63,7 @@ c_model_t *c_model_new(mesh_t *mesh, int cast_shadow)
 c_model_t *c_model_paint(c_model_t *self, int layer, material_t *mat)
 {
 	self->layers[layer].mat = mat;
-	/* c_mesh_gl_t *gl = c_mesh_gl(c_entity(self)); */
+	/* c_mesh_gl_t *gl = c_mesh_gl(self); */
 	/* gl->groups[layer].mat = mat; */
 	return self;
 }
@@ -131,14 +131,14 @@ int c_model_render_transparent(c_model_t *self, shader_t *shader)
 	if(!self->mesh || !self->visible) return 1;
 	if(self->before_draw) if(!self->before_draw((c_t*)self)) return 1;
 
-	c_node_t *node = c_node(c_entity(self));
+	c_node_t *node = c_node(self);
 	if(node)
 	{
 		c_node_update_model(node);
 		shader_update(shader, &node->model);
 	}
 
-	c_mesh_gl_draw(c_mesh_gl(c_entity(self)), shader, 1);
+	c_mesh_gl_draw(c_mesh_gl(self), shader, 1);
 	return 1;
 }
 
@@ -147,14 +147,14 @@ int c_model_render_visible(c_model_t *self, shader_t *shader)
 	if(!self->mesh || !self->visible) return 1;
 	if(self->before_draw) if(!self->before_draw((c_t*)self)) return 1;
 
-	c_node_t *node = c_node(c_entity(self));
+	c_node_t *node = c_node(self);
 	if(node)
 	{
 		c_node_update_model(node);
 		shader_update(shader, &node->model);
 	}
 
-	c_mesh_gl_draw(c_mesh_gl(c_entity(self)), shader, 0);
+	c_mesh_gl_draw(c_mesh_gl(self), shader, 0);
 	return 1;
 }
 

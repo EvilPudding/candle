@@ -187,9 +187,10 @@ void ct_add(ct_t *self, c_t *comp)
 	if(!self) return;
 	if(!comp) return;
 	uint offset, i = self->components_size++;
-	if(c_entity(comp).id >= self->offsets_size)
+	entity_t entity = c_entity(comp);
+	if(entity.id >= self->offsets_size)
 	{
-		uint j, new_size = c_entity(comp).id + 1;
+		uint j, new_size = entity.id + 1;
 		self->offsets = realloc(self->offsets, sizeof(*self->offsets) *
 				new_size);
 		for(j = self->offsets_size; j < new_size - 1; j++)
@@ -197,10 +198,10 @@ void ct_add(ct_t *self, c_t *comp)
 			self->offsets[j] = -1;
 		}
 
-		self->offsets_size = c_entity(comp).id + 1;
+		self->offsets_size = entity.id + 1;
 	}
 
-	self->offsets[c_entity(comp).id] = offset = i * self->size;
+	self->offsets[entity.id] = offset = i * self->size;
 
 	self->components = realloc(self->components, self->size * self->components_size);
 

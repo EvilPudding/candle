@@ -75,7 +75,7 @@ vec3_t handle_dirs(c_t *c, collider_cb cb, vec3_t old_pos, vec3_t new_pos)
 static float handle_cols_for_offset(c_t *c, c_t *projectile, collider_cb cb,
 		vec3_t offset, vec3_t *new_pos, const vec3_t old_pos)
 {
-	c_node_t *node = c_node(c_entity(projectile));
+	c_node_t *node = c_node(projectile);
 	if(node)
 	{
 		c_node_update_model(node);
@@ -123,7 +123,7 @@ static void c_physics_handle_collisions(c_rigid_body_t *c1,
 	if(cb)
 	{
 		const float width = 0.20;
-		c_velocity_t *vc = c_velocity(c_entity(d));
+		c_velocity_t *vc = c_velocity(d);
 		/* if(!vc) return; */
 
 		vec3_t offsets[] = {
@@ -159,12 +159,12 @@ static void c_physics_handle_collisions(c_rigid_body_t *c1,
 		if(c_rigid_body_intersects(c1, c2, &contact))
 		{
 			c_velocity_t *v;
-			if((v = c_velocity(c_entity(c1))))
+			if((v = c_velocity(c1)))
 			{
 				v->velocity = vec3(0.0);
 				v->computed_pos = v->pre_movement_pos;
 			}
-			if((v = c_velocity(c_entity(c2))))
+			if((v = c_velocity(c2)))
 			{
 				v->velocity = vec3(0.0);
 				v->computed_pos = v->pre_movement_pos;
@@ -184,8 +184,7 @@ static int c_physics_update(c_physics_t *self, float *dt)
 	{
 		c_velocity_t *vc = (c_velocity_t*)ct_get_at(vels, i);
 
-		entity_t projectile = c_entity(vc);
-		c_spacial_t *sc = c_spacial(projectile);
+		c_spacial_t *sc = c_spacial(vc);
 
 		vc->pre_movement_pos = sc->pos;
 		vc->velocity = c_physics_handle_forces(self, vc->velocity, dt);
@@ -197,12 +196,12 @@ static int c_physics_update(c_physics_t *self, float *dt)
 	for(i = 0; i < bodies->components_size; i++)
 	{
 		c_rigid_body_t *c1 = (c_rigid_body_t*)ct_get_at(bodies, i);
-		c_velocity_t *v1 = c_velocity(c_entity(c1));
+		c_velocity_t *v1 = c_velocity(c1);
 
 		for(j = i + 1; j < bodies->components_size; j++)
 		{
 			c_rigid_body_t *c2 = (c_rigid_body_t*)ct_get_at(bodies, j);
-			c_velocity_t *v2 = c_velocity(c_entity(c2));
+			c_velocity_t *v2 = c_velocity(c2);
 
 			if(!v1 && !v2) continue;
 
@@ -214,7 +213,7 @@ static int c_physics_update(c_physics_t *self, float *dt)
 	{
 		c_velocity_t *vc = (c_velocity_t*)ct_get_at(vels, i);
 
-		c_spacial_t *sc = c_spacial(c_entity(vc));
+		c_spacial_t *sc = c_spacial(vc);
 
 		vc->normal = vec3_sub(vc->computed_pos, vc->pre_collision_pos);
 		if(vc->normal.x != vc->normal.x) vc->normal = vec3(0.0);

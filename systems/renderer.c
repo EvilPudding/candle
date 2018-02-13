@@ -15,6 +15,7 @@
 #include <string.h>
 #include <candle.h>
 #include "noise.h"
+#include <nk.h>
 #define bloom_scale 0.5f
 
 DEC_CT(ct_renderer);
@@ -134,6 +135,10 @@ static void c_renderer_init(c_renderer_t *self)
 	c_renderer_add_gbuffer(self, "opaque", render_visible);
 	c_renderer_add_gbuffer(self, "transp", render_transparent);
 
+	self->camera = entity_null();
+#ifdef MESH4
+	self->angle4 = 0.01f;
+#endif
 
 	c_renderer_add_pass(self, "ssao",
 			PASS_SCREEN_SCALE,
@@ -175,7 +180,7 @@ static void c_renderer_init(c_renderer_t *self)
 	self->quad = entity_new(candle->ecm, 2,
 			c_name_new("renderer_quad"),
 			c_model_new(mesh_quad(), 0));
-	c_model(self->quad)->visible = 0;
+	c_model(&self->quad)->visible = 0;
 
 }
 
@@ -339,10 +344,10 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 
 	shader_bind(pass->shader);
 
-	c_camera_t *cam = c_camera(camera);
+	c_camera_t *cam = c_camera(&camera);
 #ifdef MESH4
 	shader_bind_camera(pass->shader, cam->pos, &cam->view_matrix,
-			&cam->projection_matrix, cam->exposure, cam->angle4);
+			&cam->projection_matrix, cam->exposure, self->angle4);
 #else
 	shader_bind_camera(pass->shader, cam->pos, &cam->view_matrix,
 			&cam->projection_matrix, cam->exposure);
@@ -353,7 +358,7 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 
 	if(ambient)
 	{
-		c_probe_t *probe = c_probe(c_entity(ambient));
+		c_probe_t *probe = c_probe(ambient);
 		if(probe) shader_bind_ambient(pass->shader, probe->map);
 	}
 
@@ -395,7 +400,7 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 
 	}
 
-	c_mesh_gl_t *quad = c_mesh_gl(self->quad);
+	c_mesh_gl_t *quad = c_mesh_gl(&self->quad);
 	if(pass->for_each_light)
 	{
 		ct_t *lights = ecm_get(c_ecm(self), ct_light);
@@ -502,6 +507,24 @@ entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
 	return result;
 }
 
+#ifdef MESH4
+int c_renderer_global_menu(c_renderer_t *self, void *ctx)
+{
+	nk_layout_row_begin(ctx, NK_DYNAMIC, 0, 2);
+	nk_layout_row_push(ctx, 0.35);
+	nk_label(ctx, "4D angle:", NK_TEXT_LEFT);
+	nk_layout_row_push(ctx, 0.65);
+	float before = self->angle4;
+	nk_slider_float(ctx, 0, &self->angle4, M_PI / 2, 0.01);
+	if(self->angle4 != before)
+	{
+		g_update_id++;
+	}
+	nk_layout_row_end(ctx);
+	return 1;
+}
+#endif
+
 
 void c_renderer_register(ecm_t *ecm)
 {
@@ -516,6 +539,9 @@ void c_renderer_register(ecm_t *ecm)
 
 	ct_register_listener(ct, SAME_ENTITY, entity_created,
 			(signal_cb)c_renderer_created);
+
+	ct_register_listener(ct, WORLD, global_menu, (signal_cb)c_renderer_global_menu);
+
 
 	ecm_register_signal(ecm, &offscreen_render, 0);
 	ecm_register_signal(ecm, &render_visible, sizeof(shader_t));
@@ -627,10 +653,10 @@ int c_renderer_update_gbuffers(c_renderer_t *self, entity_t camera)
 
 		shader_bind(self->gbuffer_shader);
 
-		c_camera_t *cam = c_camera(camera);
+		c_camera_t *cam = c_camera(&camera);
 #ifdef MESH4
 		shader_bind_camera(self->gbuffer_shader, cam->pos, &cam->view_matrix,
-				&cam->projection_matrix, cam->exposure, cam->angle4);
+				&cam->projection_matrix, cam->exposure, self->angle4);
 #else
 		shader_bind_camera(self->gbuffer_shader, cam->pos, &cam->view_matrix,
 				&cam->projection_matrix, cam->exposure);
@@ -659,7 +685,7 @@ void c_renderer_draw_to_texture(c_renderer_t *self, shader_t *shader,
 
 	shader_bind_screen(shader, buffer, 1, 1);
 
-	c_mesh_gl_draw(c_mesh_gl(self->quad), NULL, 0);
+	c_mesh_gl_draw(c_mesh_gl(&self->quad), NULL, 0);
 }
 
 int c_renderer_draw(c_renderer_t *self)
@@ -670,23 +696,22 @@ int c_renderer_draw(c_renderer_t *self)
 		c_renderer_bind_passes(self);
 	}
 
-	entity_t camera = ecm_get_camera(c_ecm(self));
 	if(!self->perlin_size)
 	{
 		self->perlin_size = 13;
 		SDL_CreateThread((int(*)(void*))init_perlin, "perlin", self);
 	}
 
-	if(entity_is_null(camera)) return 0;
-	if(!self->gbuffer_shader) return 0;
+	if(entity_is_null(self->camera)) return 1;
+	if(!self->gbuffer_shader) return 1;
 
-	c_camera_update_view(c_camera(camera));
+	c_camera_update_view(c_camera(&self->camera));
 
 	c_renderer_update_probes(self, c_ecm(self));
 
 	glerr();
 
-	c_renderer_update_gbuffers(self, camera);
+	c_renderer_update_gbuffers(self, self->camera);
 
 
 	/* -------------- */
@@ -697,7 +722,7 @@ int c_renderer_draw(c_renderer_t *self)
 
 	for(i = 0; i < self->passes_size; i++)
 	{
-		output = c_renderer_draw_pass(self, &self->passes[i], camera);
+		output = c_renderer_draw_pass(self, &self->passes[i], self->camera);
 	}
 
 	/* ----------------------- */
@@ -711,7 +736,7 @@ int c_renderer_draw(c_renderer_t *self)
 
 	/* UPDATE SCREEN */
 
-	c_window_rect(c_window(c_entity(self)), 0, 0, self->width, self->height,
+	c_window_rect(c_window(self), 0, 0, self->width, self->height,
 			output);
 
 	/* ------------- */

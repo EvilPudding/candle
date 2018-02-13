@@ -42,7 +42,7 @@ void c_light_destroy(c_light_t *self)
 
 int c_light_render(c_light_t *self)
 {
-	c_probe_t *probe = c_probe(c_entity(self));
+	c_probe_t *probe = c_probe(self);
 
 	c_probe_render(probe, render_shadows, g_shader);
 	return 1;

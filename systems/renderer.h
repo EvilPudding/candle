@@ -133,6 +133,11 @@ typedef struct c_renderer_t
 	int auto_exposure; /* AUTO EXPOSURE */
 	int roughness; /* ssr roughness */
 
+	entity_t camera;
+#ifdef MESH4
+	float angle4;
+#endif
+
 	int ready;
 } c_renderer_t;
 

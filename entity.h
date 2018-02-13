@@ -24,6 +24,8 @@ void entity_filter(entity_t self, unsigned int signal, void *data,
 void _entity_add_component(entity_t self, c_t *comp, int on_creation);
 #define entity_add_component(self, comp) _entity_add_component(self, ((c_t*)(comp)), 0)
 
+int entity_equal(entity_t self, entity_t other);
+
 void entity_destroy(entity_t self);
 static inline int entity_is_null(entity_t self) { return self.id == -1; }
 static inline entity_t entity_null(void) { return (entity_t){.id = -1}; }

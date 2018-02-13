@@ -119,7 +119,7 @@ static int render_loop(candle_t *self)
 
 
 			/* GUI */
-			c_window_draw(c_window(self->systems));
+			c_window_draw(c_window(&self->systems));
 
 			fps++;
 			/* candle_handle_events(self); */
@@ -380,7 +380,7 @@ candle_t *candle_new(int comps_size, ...)
 
 
 	int i;
-	for(i = 0; i < 3; i++)
+	for(i = 0; i < 4; i++)
 	{
 		candle_register(self->ecm);
 

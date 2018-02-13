@@ -31,8 +31,8 @@ c_rigid_body_t *c_rigid_body_new(collider_cb costum)
 int c_rigid_body_narrow(c_rigid_body_t *self, c_rigid_body_t *other,
 		contact_t *contact)
 {
-	c_model_t *mc1 = c_model(c_entity(self));
-	c_model_t *mc2 = c_model(c_entity(other));
+	c_model_t *mc1 = c_model(self);
+	c_model_t *mc2 = c_model(other);
 	if(mc1 && mc2)
 	{
 		return gjk_intersects(self, other, contact);
@@ -43,8 +43,8 @@ int c_rigid_body_narrow(c_rigid_body_t *self, c_rigid_body_t *other,
 int c_rigid_body_intersects(c_rigid_body_t *self, c_rigid_body_t *other,
 		contact_t *contact)
 {
-	c_aabb_t *aabb1 = c_aabb(c_entity(self));
-	c_aabb_t *aabb2 = c_aabb(c_entity(other));
+	c_aabb_t *aabb1 = c_aabb(self);
+	c_aabb_t *aabb2 = c_aabb(other);
 	if(aabb1 && aabb2)
 	{
 		if(!c_aabb_intersects(aabb1, aabb2)) return 0;
@@ -331,11 +331,11 @@ static inline vec3_t gjk_support(mesh_t *self, mesh_t *other,
 
 int gjk_intersects_bak(c_rigid_body_t *self, c_rigid_body_t *other)
 {
-	mesh_t *mesh1 = c_model(c_entity(self))->mesh;
-	mesh_t *mesh2 = c_model(c_entity(other))->mesh;
+	mesh_t *mesh1 = c_model(self)->mesh;
+	mesh_t *mesh2 = c_model(other)->mesh;
 
-	c_spacial_t *sc1 = c_spacial(c_entity(self));
-	c_spacial_t *sc2 = c_spacial(c_entity(other));
+	c_spacial_t *sc1 = c_spacial(self);
+	c_spacial_t *sc2 = c_spacial(other);
 
 	mat4_t other_to_self;
 	mat4_t rotate_to_other;
@@ -742,11 +742,11 @@ int gjk_intersects(c_rigid_body_t *self, c_rigid_body_t *other,
 	float vDotw;
 	float prevDistSquare;
 
-	mesh_t *mesh1 = c_model(c_entity(self))->mesh;
-	mesh_t *mesh2 = c_model(c_entity(other))->mesh;
+	mesh_t *mesh1 = c_model(self)->mesh;
+	mesh_t *mesh2 = c_model(other)->mesh;
 
-	c_spacial_t *sc1 = c_spacial(c_entity(self));
-	c_spacial_t *sc2 = c_spacial(c_entity(other));
+	c_spacial_t *sc1 = c_spacial(self);
+	c_spacial_t *sc2 = c_spacial(other);
 
 	mat4_t other_to_self;
 	mat4_t rotate_to_other;

@@ -28,11 +28,12 @@ void c_editmode_init(c_editmode_t *self)
 	self->nkctx = NULL;
 	self->selected = entity_null();
 	self->over = entity_null();
+	self->camera = entity_null();
 }
 
 vec3_t bind_selected(entity_t caller)
 {
-	vec3_t id_color = int_to_vec3(c_editmode(caller)->over.id);
+	vec3_t id_color = int_to_vec3(c_editmode(&caller)->over.id);
 
 	return id_color;
 }
@@ -58,8 +59,27 @@ void c_editmode_activate(c_editmode_t *self)
 	self->activated = 1;
 	self->control = 1;
 
-	entity_t camera = ecm_get_camera(c_ecm(self));
-	entity_add_component(camera, c_editlook_new());
+	self->backup_camera = c_renderer(self)->camera;
+
+	if(entity_is_null(self->camera))
+	{
+		printf("creating\n");
+		self->camera = entity_new(candle->ecm, 3,
+			c_name_new("editmode"), c_editlook_new(), c_node_new()
+		);
+		if(!entity_is_null(self->backup_camera))
+		{
+			c_camera_t *bcam = c_camera(&self->backup_camera);
+			entity_add_component(self->camera,
+					c_camera_clone(bcam));
+		}
+		else
+		{
+			entity_add_component(self->camera,
+					c_camera_new(70, 0.1, 100.0));
+		}
+	}
+	c_renderer(self)->camera = self->camera;
 
 }
 
@@ -67,7 +87,7 @@ static int c_editmode_resize(c_editmode_t *self)
 {
 	if(!self->nkctx)
 	{
-		self->nkctx = nk_sdl_init(c_window(c_entity(self))->window); 
+		self->nkctx = nk_sdl_init(c_window(self)->window); 
 
 		{ 
 			struct nk_font_atlas *atlas; 
@@ -82,7 +102,7 @@ static int c_editmode_resize(c_editmode_t *self)
 			/* nk_style_load_all_cursors(self->nkctx, atlas->cursors); */
 			/* nk_style_set_font(self->nkctx, &roboto->handle); */
 		} 
-		c_renderer_add_pass(c_renderer(c_entity(self)), "hightlight",
+		c_renderer_add_pass(c_renderer(self), "hightlight",
 				PASS_SCREEN_SCALE,
 				1.0f, 1.0f, "highlight",
 					(bind_t[]){
@@ -100,8 +120,8 @@ static int c_editmode_resize(c_editmode_t *self)
 
 void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 {
-	c_camera_t *cam = c_camera(ecm_get_camera(c_ecm(self)));
-	c_renderer_t *renderer = c_renderer(c_entity(self));
+	c_renderer_t *renderer = c_renderer(self);
+	c_camera_t *cam = c_camera(&renderer->camera);
 	float px = x / renderer->width;
 	float py = 1.0f - y / renderer->height;
 	entity_t result = c_renderer_entity_at_pixel(renderer,
@@ -124,19 +144,19 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 
 int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 {
-	c_camera_t *cam = c_camera(ecm_get_camera(c_ecm(self)));
-
 	if(self->control && !candle->pressing)
 	{
 		if(self->pressing && !entity_is_null(self->selected))
 		{
-			c_spacial_t *sc = c_spacial(self->selected);
+			c_renderer_t *renderer = c_renderer(self);
+			c_camera_t *cam = c_camera(&renderer->camera);
+
+			c_spacial_t *sc = c_spacial(&self->selected);
 			if(!self->dragging)
 			{
 				self->dragging = 1;
 				self->drag_diff = vec3_sub(sc->pos, self->mouse_position);
 			}
-			c_renderer_t *renderer = c_renderer(c_entity(self));
 			float px = event->x / renderer->width;
 			float py = 1.0f - event->y / renderer->height;
 
@@ -159,7 +179,7 @@ int c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 	{
 		self->pressing = 1;
 
-		entity_t result = c_renderer_entity_at_pixel(c_renderer(c_entity(self)),
+		entity_t result = c_renderer_entity_at_pixel(c_renderer(self),
 				event->x, event->y, NULL);
 		/* TODO entity 0 should be valid */
 		if(result.id > 0)
@@ -192,15 +212,17 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 	{
 		case '`':
 			{
-				self->control = !self->control;
-				if(!self->activated)
-				{
-					c_editmode_activate(self);
-				}
 				if(!self->control)
 				{
-					self->over = entity_null();
+					self->backup_camera = c_renderer(self)->camera;
+					if(!self->activated) { c_editmode_activate(self); }
 				}
+				else
+				{
+					self->over = entity_null();
+					c_renderer(self)->camera = self->backup_camera;
+				}
+				self->control = !self->control;
 				break;
 			}
 	}
@@ -220,7 +242,7 @@ void node_node(c_editmode_t *self, c_node_t *node)
 	char buffer[64];
 	char *final_name = buffer;
 	const entity_t entity = c_entity(node);
-	c_name_t *name = c_name(entity);
+	c_name_t *name = c_name(node);
 	if(name)
 	{
 		final_name = name->name;
@@ -239,7 +261,7 @@ void node_node(c_editmode_t *self, c_node_t *node)
 		int i;
 		for(i = 0; i < node->children_size; i++)
 		{
-			node_node(self, c_node(node->children[i]));
+			node_node(self, c_node(&node->children[i]));
 		}
 		nk_tree_pop(self->nkctx);
 	}
@@ -275,7 +297,7 @@ int c_editmode_draw(c_editmode_t *self)
 			nk_layout_row_static(self->nkctx, 30, 110, 1);
 			if (nk_button_label(self->nkctx, "redraw probes"))
 			{
-				c_renderer_scene_changed(c_renderer(c_entity(self)));
+				c_renderer_scene_changed(c_renderer(self));
 			}
 			entity_signal(c_entity(self), global_menu, self->nkctx);
 
@@ -287,7 +309,7 @@ int c_editmode_draw(c_editmode_t *self)
 		{
 			char buffer[64];
 			char *final_name = buffer;
-			c_name_t *name = c_name(self->selected);
+			c_name_t *name = c_name(&self->selected);
 			if(name)
 			{
 				final_name = name->name;

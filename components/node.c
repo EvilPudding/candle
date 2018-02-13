@@ -28,7 +28,7 @@ static int c_node_changed(c_node_t *self)
 	self->cached = 0;
 	for(i = 0; i < self->children_size; i++)
 	{
-		c_node_changed(c_node(self->children[i]));
+		c_node_changed(c_node(&self->children[i]));
 	}
 	return 1;
 }
@@ -39,7 +39,7 @@ entity_t c_node_get_by_name(c_node_t *self, const char *name)
 	for(i = 0; i < self->children_size; i++)
 	{
 		entity_t child = self->children[i];
-		c_name_t *child_name = c_name(child);
+		c_name_t *child_name = c_name(&child);
 		c_node_t *child_node;
 
 		if(!strncmp(child_name->name, name, sizeof(child_name->name) - 1))
@@ -47,7 +47,7 @@ entity_t c_node_get_by_name(c_node_t *self, const char *name)
 			return child;
 		}
 
-		child_node = c_node(child);
+		child_node = c_node(&child);
 		if(child_node)
 		{
 			entity_t response = c_node_get_by_name(child_node, name);
@@ -77,11 +77,11 @@ void c_node_add(c_node_t *self, int num, ...)
 		entity_t child = va_arg(children, entity_t);
 
 		self->children[i] = child;
-		c_node_t *child_node = c_node(child);
+		c_node_t *child_node = c_node(&child);
 		if(!child_node)
 		{
 			entity_add_component(child, (c_t*)c_node_new());
-			child_node = c_node(child);
+			child_node = c_node(&child);
 		}
 		child_node->parent = self->super.entity;
 		c_node_changed(child_node);
@@ -108,16 +108,16 @@ void c_node_update_model(c_node_t *self)
 
 	if(self->parent.id != -1)
 	{
-		c_node_t *parent_node = c_node(parent);
+		c_node_t *parent_node = c_node(&parent);
 		c_node_update_model(parent_node);
 
 		self->model = mat4_mul(parent_node->model,
-				c_spacial(c_entity(self))->model_matrix);
+				c_spacial(self)->model_matrix);
 	}
 	else
 	{
 		/* self->model = mat4(); */
-		self->model = c_spacial(c_entity(self))->model_matrix;
+		self->model = c_spacial(self)->model_matrix;
 	}
 }
 

@@ -422,7 +422,7 @@ void shader_bind_ambient(shader_t *self, texture_t *ambient)
 
 void shader_bind_probe(shader_t *self, entity_t probe)
 {
-	const vec3_t lpos = c_spacial(probe)->pos;
+	const vec3_t lpos = c_spacial(&probe)->pos;
 
 	glUniform3f(self->u_probe_pos, lpos.x, lpos.y, lpos.z);
 
@@ -444,12 +444,12 @@ void shader_bind_light(shader_t *self, entity_t light)
 	c_light_t *light_c;
 	c_probe_t *probe_c;
 
-	const vec3_t lpos = c_spacial(light)->pos;
+	const vec3_t lpos = c_spacial(&light)->pos;
 
 	glUniform3f(self->u_light_pos, lpos.x, lpos.y, lpos.z);
 
-	light_c = c_light(light);
-	probe_c = c_probe(light);
+	light_c = c_light(&light);
+	probe_c = c_probe(&light);
 	/* if(!light_c->before_draw || light_c->before_draw((c_t*)light_c)) */
 	/* { */
 		glUniform1f(self->u_light_intensity, light_c->intensity);

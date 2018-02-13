@@ -170,7 +170,7 @@ void glg_add_triangle(glg_t *self, int v1, int v2, int v3)
 void glg_edges_to_gl(glg_t *self)
 {
 	int i;
-	mesh_t *mesh = c_model(self->entity)->mesh;
+	mesh_t *mesh = c_model(&self->entity)->mesh;
 
 	glg_ind_prealloc(self, vector_count(mesh->edges) * 2);
 
@@ -194,7 +194,7 @@ void glg_edges_to_gl(glg_t *self)
 
 void glg_face_to_gl(glg_t *self, face_t *f)
 {
-	mesh_t *mesh = c_model(self->entity)->mesh;
+	mesh_t *mesh = c_model(&self->entity)->mesh;
 	int v[4], i;
 	for(i = 0; i < f->e_size; i++)
 	{
@@ -222,7 +222,7 @@ void glg_face_to_gl(glg_t *self, face_t *f)
 
 void glg_get_tg_bt(glg_t *self)
 {
-	mesh_t *mesh = c_model(self->entity)->mesh;
+	mesh_t *mesh = c_model(&self->entity)->mesh;
 	int i, a;
 	/* if(self->bit) free(self->bit); */
 	/* if(self->tan) free(self->tan); */
@@ -332,7 +332,7 @@ static inline void update_buffer(int id, GLuint vbo, void *arr, int dim, size_t 
 
 int c_mesh_gl_on_mesh_changed(c_mesh_gl_t *self)
 {
-	self->mesh = c_model(c_entity(self))->mesh;
+	self->mesh = c_model(self)->mesh;
 
 	/* TODO strange code */
 	if(self->groups[0].vao == 0)
@@ -346,7 +346,7 @@ int c_mesh_gl_on_mesh_changed(c_mesh_gl_t *self)
 
 int glg_update_ram(glg_t *self)
 {
-	c_model_t *model = c_model(self->entity);
+	c_model_t *model = c_model(&self->entity);
 	mesh_t *mesh = model->mesh;
 	glg_clear(self);
 
@@ -477,7 +477,7 @@ void c_mesh_gl_update(c_mesh_gl_t *self)
 
 int glg_draw(glg_t *self, shader_t *shader, int transparent)
 {
-	mesh_t *mesh = c_model(self->entity)->mesh;
+	mesh_t *mesh = c_model(&self->entity)->mesh;
 
 	if(!self->ready)
 	{
@@ -486,7 +486,7 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 
 	int cull_face;
 	int wireframe;
-	c_model_t *model = c_model(self->entity);
+	c_model_t *model = c_model(&self->entity);
 	mat_layer_t *layer = &model->layers[self->layer_id];
 
 	if(layer->mat && shader)

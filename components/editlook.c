@@ -39,10 +39,10 @@ static int c_editlook_window_resize(c_editlook_t *self,
 
 int c_editlook_mouse_wheel(c_editlook_t *self, mouse_button_data *event)
 {
-	c_editmode_t *edit = c_editmode(candle->systems);
+	c_editmode_t *edit = c_editmode(&candle->systems);
 	if(!edit->control) return 1;
 
-	c_spacial_t *sc = c_spacial(c_entity(self));
+	c_spacial_t *sc = c_spacial(self);
 
 	float inc = 1.0f - (event->y * 0.1f);
 
@@ -92,13 +92,14 @@ int c_editlook_mouse_release(c_editlook_t *self, mouse_button_data *event)
 
 int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 {
-	c_editmode_t *edit = c_editmode(candle->systems);
-	c_renderer_t *renderer = c_renderer(candle->systems);
+	c_editmode_t *edit = c_editmode(&candle->systems);
+	c_renderer_t *renderer = c_renderer(&candle->systems);
 	if(!edit->control) return 1;
 	if(!self->pressed_r) return 1;
 
-	c_spacial_t *sc = c_spacial(c_entity(self));
-	c_camera_t *cam = c_camera(c_entity(self));
+	c_spacial_t *sc = c_spacial(self);
+	c_camera_t *cam = c_camera(self);
+	if(!cam) return 1;
 
 	fake_x += event->sx;
 	fake_y += event->sy;

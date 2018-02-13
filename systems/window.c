@@ -74,7 +74,7 @@ void c_window_init(c_window_t *self)
 	self->quad = entity_new(candle->ecm, 2,
 			c_name_new("renderer_quad"),
 			c_model_new(mesh_quad(), 0));
-	c_model(self->quad)->visible = 0;
+	c_model(&self->quad)->visible = 0;
 }
 
 int c_window_created(c_window_t *self)
@@ -115,7 +115,7 @@ void c_window_rect(c_window_t *self, int x, int y, int width, int height,
 
 	shader_bind_screen(self->quad_shader, texture, 1, 1);
 
-	c_mesh_gl_draw(c_mesh_gl(self->quad), NULL, 0);
+	c_mesh_gl_draw(c_mesh_gl(&self->quad), NULL, 0);
 
 }
 

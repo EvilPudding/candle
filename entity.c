@@ -23,9 +23,9 @@ entity_t entity_new(ecm_t *ecm, int comp_num, ...)
 
 	entity_check_missing_dependencies(self);
 
-	if(c_name(self) && !strcmp(c_name(self)->name, "grid"))
+	if(c_name(&self) && !strcmp(c_name(&self)->name, "grid"))
 	{
-		printf("new %s entity %ld\n", c_name(self)->name, self.id);
+		printf("new %s entity %ld\n", c_name(&self)->name, self.id);
 	}
 	entity_signal_same(self, entity_created, NULL);
 	return self;
@@ -154,6 +154,11 @@ int entity_signal(entity_t self, uint signal, void *data)
 		}
 	}
 	return 1;
+}
+
+int entity_equal(entity_t self, entity_t other)
+{
+	return self.id == other.id;
 }
 
 void entity_destroy(entity_t self) 

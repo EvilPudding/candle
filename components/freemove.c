@@ -38,11 +38,11 @@ c_freemove_t *c_freemove_new(entity_t orientation, int plane_movement, entity_t 
 static int c_freemove_update(c_freemove_t *self, float *dt)
 {
 	/* vec3_t rot = c_spacial(self->orientation)->rot; */
-	c_velocity_t *vc = c_velocity(c_entity(self));
+	c_velocity_t *vc = c_velocity(self);
 	vec3_t *vel = &vc->velocity;
 	float accel = 30 * (*dt);
 
-	c_spacial_t *sc = c_spacial(self->super.entity);
+	c_spacial_t *sc = c_spacial(self);
 
 	vec3_t front;
 	vec3_t sideways;

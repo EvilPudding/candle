@@ -25,7 +25,7 @@ c_probe_t *c_probe_new(int map_size, shader_t *shader)
 
 static int c_probe_update_position(c_probe_t *self)
 {
-	vec3_t pos = c_spacial(self->super.entity)->pos;
+	vec3_t pos = c_spacial(&self->super.entity)->pos;
 
 	self->projection = mat4_perspective(M_PI / 2.0f, 1.0f, 0.5f, 100.5f); 
 
@@ -58,8 +58,7 @@ int c_probe_render(c_probe_t *self, uint signal, shader_t *shader)
 
 	shader_bind(shader);
 
-	entity_t entity = c_entity(self);
-	c_spacial_t *ps = c_spacial(entity);
+	c_spacial_t *ps = c_spacial(self);
 
 	if(self->last_update == g_update_id) return 0;
 
@@ -68,10 +67,10 @@ int c_probe_render(c_probe_t *self, uint signal, shader_t *shader)
 		texture_target(self->map, face);
 		glClear(GL_DEPTH_BUFFER_BIT);
 
-		shader_bind_probe(shader, entity);
+		shader_bind_probe(shader, c_entity(self));
 #ifdef MESH4
 		shader_bind_camera(shader, ps->pos, &self->views[face],
-				&self->projection, 1.0f, 0.0f);
+				&self->projection, 1.0f, c_renderer(&candle->systems)->angle4);
 #else
 		shader_bind_camera(shader, ps->pos, &self->views[face],
 				&self->projection, 1.0f);

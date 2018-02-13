@@ -8,34 +8,37 @@
 DEC_CT(ct_camera);
 
 static int c_camera_update(c_camera_t *self, window_resize_data *event);
-#ifdef MESH4
-int c_camera_global_menu(c_camera_t *self, void *ctx);
-#endif
-
 static void c_camera_init(c_camera_t *self)
 {
 	self->super = component_new(ct_camera);
 }
 
-c_camera_t *c_camera_new(int active, float fov, float near, float far,
-		int width, int height)
+c_camera_t *c_camera_new(float fov, float near, float far)
 {
 	c_camera_t *self = malloc(sizeof *self);
 	c_camera_init(self);
 
-	self->active = active;
 	self->near = near;
 	self->far = far;
 	self->fov = fov * (M_PI / 180.0f);
 	self->view_cached = 0;
 	self->exposure = 0.25f;
-#ifdef MESH4
-	self->angle4 = 0.01f;
-#endif
-
-	c_camera_update(self, &(window_resize_data){width, height});
 
 	return self;
+}
+
+c_camera_t *c_camera_clone(c_camera_t *self)
+{
+	c_camera_t *clone = malloc(sizeof *clone);
+	c_camera_init(clone);
+
+	clone->near = self->near;
+	clone->far = self->far;
+	clone->fov = self->fov;
+	clone->view_cached = 0;
+	clone->exposure = self->exposure;
+
+	return clone;
 }
 
 /* int c_camera_changed(c_camera_t *self) */
@@ -50,10 +53,6 @@ void c_camera_register(ecm_t *ecm)
 			(init_cb)c_camera_init, 2, ct_spacial, ct_node);
 
 	ct_register_listener(ct, WORLD, window_resize, (signal_cb)c_camera_update);
-
-#ifdef MESH4
-	ct_register_listener(ct, WORLD, global_menu, (signal_cb)c_camera_global_menu);
-#endif
 
 }
 
@@ -80,7 +79,7 @@ vec3_t c_camera_real_pos(c_camera_t *self, float depth, vec2_t coord)
 
 void c_camera_update_view(c_camera_t *self)
 {
-	c_node_t *n = c_node(c_entity(self));
+	c_node_t *n = c_node(self);
 	c_node_update_model(n);
 	self->pos = mat4_mul_vec4(n->model, vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 	self->view_matrix = mat4_invert(n->model);
@@ -89,46 +88,17 @@ void c_camera_update_view(c_camera_t *self)
 #include<candle.h>
 #include<systems/renderer.h>
 
-#ifdef MESH4
-int c_camera_global_menu(c_camera_t *self, void *ctx)
-{
-    nk_layout_row_begin(ctx, NK_DYNAMIC, 0, 2);
-	nk_layout_row_push(ctx, 0.35);
-	nk_label(ctx, "4D angle:", NK_TEXT_LEFT);
-	nk_layout_row_push(ctx, 0.65);
-	nk_slider_float(ctx, 0, &self->angle4, M_PI / 2, 0.01);
-	nk_layout_row_end(ctx);
-	return 1;
-}
-#endif
-
 static int c_camera_update(c_camera_t *self, window_resize_data *event)
 {
 	/* TODO: remove renderer reference, camera should update on render resize,
 	 * not window */
 	self->projection_matrix = mat4_perspective(
 		self->fov,
-		((float)c_renderer(candle->systems)->width) /
-		c_renderer(candle->systems)->height,
+		((float)c_renderer(&candle->systems)->width) /
+		c_renderer(&candle->systems)->height,
 		/* ((float)event->width / 2) / event->height, */
 		self->near, self->far
 	);
 	return 1;
 }
-
-entity_t ecm_get_camera(ecm_t *self)
-{
-	ulong i;
-	ct_t *cameras = ecm_get(self, ct_camera);
-	c_camera_t *camera;
-
-	for(i = 0; i < cameras->components_size; i++)
-	{
-		camera = (c_camera_t*)ct_get_at(cameras, i);
-		if(camera->active) return camera->super.entity;
-	}
-
-	return self->none;
-}
-
 

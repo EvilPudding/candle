@@ -27,9 +27,9 @@ void c_aabb_update(c_aabb_t *self)
 {
 	mat4_t inv;
 
-	c_model_t *mc = c_model(c_entity(self));
+	c_model_t *mc = c_model(self);
 
-	c_spacial_t *sc = c_spacial(c_entity(self));
+	c_spacial_t *sc = c_spacial(self);
 	if(vec3_equals(sc->rot, self->rot) &&
 			vec3_equals(sc->scale, self->sca)) return;
 	/* c_node_update_model(nc); */
@@ -81,8 +81,8 @@ int c_aabb_spacial_changed(c_aabb_t *self)
 
 int c_aabb_intersects(c_aabb_t *self, c_aabb_t *other)
 {
-	c_spacial_t *sc1 = c_spacial(c_entity(self));
-	c_spacial_t *sc2 = c_spacial(c_entity(other));
+	c_spacial_t *sc1 = c_spacial(self);
+	c_spacial_t *sc2 = c_spacial(other);
 
 	vec3_t min1 = vec3_add(self->min, sc1->pos);
 	vec3_t max1 = vec3_add(self->max, sc1->pos);

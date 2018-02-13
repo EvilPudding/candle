@@ -91,8 +91,8 @@ typedef struct ecm_t
 
 typedef struct c_t
 {
-	uint comp_type;
 	entity_t entity;
+	uint comp_type;
 } c_t;
 
 #define c_entity(c) (((c_t*)c)->entity)
@@ -108,8 +108,9 @@ typedef struct c_t
 #define DEF_SIG(var) extern uint var
 
 #define DEF_CASTER(ct, cn, nc_t) extern uint ct; \
-	static inline nc_t *cn(const entity_t entity)\
-{ return ct==IDENT_NULL?NULL:(nc_t*)ct_get(ecm_get(entity.ecm, ct), entity); } \
+	static inline nc_t *cn(const void *entity)\
+{ return ct==IDENT_NULL?NULL:(nc_t*)ct_get(ecm_get(((entity_t*)entity)->ecm,\
+			ct), *(entity_t*)entity); } \
 
 static inline c_t *ct_get_at(ct_t *self, uint i)
 {
