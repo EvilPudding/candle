@@ -22,6 +22,7 @@ void c_editmode_init(c_editmode_t *self)
 	self->visible = 0;
 	self->dragging = 0;
 	self->pressing = 0;
+	self->activated = 0;
 	self->mouse_position = vec3(0.0f);
 	/* self->outside = 0; */
 	self->nkctx = NULL;
@@ -54,6 +55,7 @@ c_editmode_t *c_editmode_new()
 
 void c_editmode_activate(c_editmode_t *self)
 {
+	self->activated = 1;
 	self->control = 1;
 
 	entity_t camera = ecm_get_camera(c_ecm(self));
@@ -191,6 +193,10 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 		case '`':
 			{
 				self->control = !self->control;
+				if(!self->activated)
+				{
+					c_editmode_activate(self);
+				}
 				if(!self->control)
 				{
 					self->over = entity_null();
