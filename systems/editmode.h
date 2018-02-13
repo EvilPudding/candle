@@ -34,6 +34,8 @@ DEF_SIG(global_menu);
 DEF_SIG(component_menu);
 
 c_editmode_t *c_editmode_new(void);
+void c_editmode_activate(c_editmode_t *self);
 void c_editmode_register(ecm_t *ecm);
+void c_editmode_update_mouse(c_editmode_t *self, float x, float y);
 
 #endif /* !EDITMODE_H */

@@ -65,10 +65,18 @@ static void candle_handle_events(candle_t *self)
 				break;
 			case SDL_KEYUP:
 				key = event.key.keysym.sym;
+				if(key == -31)
+				{
+					self->shift = 0;
+				}
 				entity_signal(self->ecm->none, key_up, &key);
 				break;
 			case SDL_KEYDOWN:
 				key = event.key.keysym.sym;
+				if(key == -31)
+				{
+					self->shift = 1;
+				}
 				entity_signal(self->ecm->none, key_down, &key);
 				break;
 			case SDL_WINDOWEVENT:
@@ -392,6 +400,7 @@ candle_t *candle_new(int comps_size, ...)
 		c_light_register(self->ecm);
 		c_ambient_register(self->ecm);
 		c_name_register(self->ecm);
+		c_editlook_register(self->ecm);
 
 		/* OpenGL mesh plugin */
 		c_mesh_gl_register(self->ecm);

@@ -47,7 +47,7 @@ c_camera_t *c_camera_new(int active, float fov, float near, float far,
 void c_camera_register(ecm_t *ecm)
 {
 	ct_t *ct = ecm_register(ecm, "Camera", &ct_camera, sizeof(c_camera_t),
-			(init_cb)c_camera_init, 1, ct_spacial);
+			(init_cb)c_camera_init, 2, ct_spacial, ct_node);
 
 	ct_register_listener(ct, WORLD, window_resize, (signal_cb)c_camera_update);
 

@@ -18,6 +18,7 @@
 #include <components/probe.h>
 #include <components/light.h>
 #include <components/ambient.h>
+#include <components/editlook.h>
 #include <systems/renderer.h>
 #include <systems/physics.h>
 #include <systems/window.h>
@@ -69,6 +70,7 @@ typedef struct candle_t
 	int exit;
 	int last_update;
 	int pressing;
+	int shift;
 
 	template_t *templates;
 	uint templates_size;

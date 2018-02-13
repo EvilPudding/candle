@@ -1,4 +1,5 @@
 #include "editmode.h"
+#include <components/editlook.h>
 #include <candle.h>
 #include <nk.h>
 #include <keyboard.h>
@@ -17,7 +18,7 @@ DEC_SIG(component_menu);
 void c_editmode_init(c_editmode_t *self)
 {
 	self->super = component_new(ct_editmode);
-	self->control = 1;
+	self->control = 0;
 	self->visible = 0;
 	self->dragging = 0;
 	self->pressing = 0;
@@ -36,14 +37,29 @@ vec3_t bind_selected(entity_t caller)
 }
 
 
+/* entity_t p; */
 c_editmode_t *c_editmode_new()
 {
 	c_editmode_t *self = malloc(sizeof *self);
 	c_editmode_init(self);
 
+	/* mesh_t *cube = candle_mesh_get(candle, "cube.ply"); */
+	/* p = entity_new(candle->ecm, 1, */
+			/* c_model_paint(c_model_new(cube, 1), 0, candle_material_get(candle, */
+					/* "pack1/white"))); */
+	/* c_spacial_scale(c_spacial(p), vec3(0.2)); */
+
 	return self;
 }
 
+void c_editmode_activate(c_editmode_t *self)
+{
+	self->control = 1;
+
+	entity_t camera = ecm_get_camera(c_ecm(self));
+	entity_add_component(camera, c_editlook_new());
+
+}
 
 static int c_editmode_resize(c_editmode_t *self)
 {
@@ -80,17 +96,37 @@ static int c_editmode_resize(c_editmode_t *self)
 	return 1;
 }
 
+void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
+{
+	c_camera_t *cam = c_camera(ecm_get_camera(c_ecm(self)));
+	c_renderer_t *renderer = c_renderer(c_entity(self));
+	float px = x / renderer->width;
+	float py = 1.0f - y / renderer->height;
+	entity_t result = c_renderer_entity_at_pixel(renderer,
+			x, y, &self->mouse_depth);
+
+	vec3_t pos = c_camera_real_pos(cam, self->mouse_depth, vec2(px, py));
+	self->mouse_position = pos;
+
+	if(result.id > 0)
+	{
+		self->over = result;
+	}
+	else
+	{
+		self->over = entity_null();
+	}
+	/* c_spacial_set_pos(c_spacial(p), vec3_add(self->mouse_position, vec3(0.0, 0.3f, 0.0))); */
+
+}
+
 int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 {
-	entity_t camera = ecm_get_camera(c_ecm(self));
-	c_camera_t *cam = c_camera(camera);
-	c_renderer_t *renderer = c_renderer(c_entity(self));
+	c_camera_t *cam = c_camera(ecm_get_camera(c_ecm(self)));
 
-	float px = event->x / renderer->width;
-	float py = 1.0f - event->y / renderer->height;
 	if(self->control && !candle->pressing)
 	{
-		if(self->pressing)
+		if(self->pressing && !entity_is_null(self->selected))
 		{
 			c_spacial_t *sc = c_spacial(self->selected);
 			if(!self->dragging)
@@ -98,6 +134,10 @@ int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 				self->dragging = 1;
 				self->drag_diff = vec3_sub(sc->pos, self->mouse_position);
 			}
+			c_renderer_t *renderer = c_renderer(c_entity(self));
+			float px = event->x / renderer->width;
+			float py = 1.0f - event->y / renderer->height;
+
 			vec3_t pos = c_camera_real_pos(cam, self->mouse_depth, vec2(px, py));
 
 			vec3_t new_pos = vec3_add(self->drag_diff, pos);
@@ -105,20 +145,7 @@ int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 		}
 		else
 		{
-			entity_t result = c_renderer_entity_at_pixel(renderer,
-					event->x, event->y, &self->mouse_depth);
-
-			vec3_t pos = c_camera_real_pos(cam, self->mouse_depth, vec2(px, py));
-			self->mouse_position = pos;
-
-			if(result.id > 0)
-			{
-				self->over = result;
-			}
-			else
-			{
-				self->over = entity_null();
-			}
+			c_editmode_update_mouse(self, event->x, event->y);
 		}
 	}
 	return 1;
@@ -375,6 +402,5 @@ void c_editmode_register(ecm_t *ecm)
 
 	ct_register_listener(ct, WORLD, window_resize,
 			(signal_cb)c_editmode_resize);
-
 }
 
