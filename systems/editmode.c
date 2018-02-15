@@ -244,6 +244,7 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 			{
 				if(!self->control)
 				{
+					candle_grab_mouse(candle, c_entity(self), 1);
 					self->backup_camera = c_renderer(self)->camera;
 					if(!self->activated) { c_editmode_activate(self); }
 					c_renderer(self)->camera = self->camera;
@@ -251,6 +252,7 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 				}
 				else
 				{
+					candle_release_mouse(candle, c_entity(self), 0);
 					self->over = entity_null();
 					c_renderer(self)->camera = self->backup_camera;
 					self->control = 0;
@@ -288,6 +290,7 @@ void node_node(c_editmode_t *self, c_node_t *node)
 	{
 		if(nk_button_label(self->nk, "select"))
 		{
+			c_editmode_open_entity(self, entity);
 			self->selected = entity;
 		}
 		int i;

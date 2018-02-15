@@ -64,7 +64,7 @@ int c_editlook_mouse_press(c_editlook_t *self, mouse_button_data *event)
 		fake_x = event->x;
 		fake_y = event->y;
 
-		candle_grab_mouse(candle, c_entity(self));
+		candle_grab_mouse(candle, c_entity(self), 0);
 	}
 	return 1;
 }

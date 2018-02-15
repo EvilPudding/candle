@@ -64,7 +64,8 @@ typedef struct candle_t
 
 	/* TODO move this to mouse.h */
 	int mx, my;
-	entity_t mouse_owner;
+	entity_t mouse_owners[16];
+	int mouse_visible[16];
 	int mo_x, mo_y;
 	/* ------------------------- */
 
@@ -82,7 +83,7 @@ int candle_import(candle_t *self, entity_t root, const char *map_name);
 int candle_import_dir(candle_t *self, entity_t root, const char *dir_name);
 
 /* TODO send this to mouse.h */
-void candle_grab_mouse(candle_t *self, entity_t ent);
+void candle_grab_mouse(candle_t *self, entity_t ent, int visibility);
 void candle_release_mouse(candle_t *self, entity_t ent, int reset);
 
 extern candle_t *candle;
