@@ -10,7 +10,6 @@
 
 DEC_CT(ct_camera);
 
-static int c_camera_update(c_camera_t *self, window_resize_data *event);
 static void c_camera_init(c_camera_t *self)
 {
 	self->super = component_new(ct_camera);
@@ -93,7 +92,7 @@ void c_camera_update_view(c_camera_t *self)
 	self->view_matrix = mat4_invert(n->model);
 }
 
-static int c_camera_update(c_camera_t *self, window_resize_data *event)
+int c_camera_update(c_camera_t *self, void *event)
 {
 	/* TODO: remove renderer reference, camera should update on render resize,
 	 * not window */

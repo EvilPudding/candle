@@ -39,4 +39,6 @@ void c_spacial_rotate_X(c_spacial_t *self, float angle);
 void c_spacial_rotate_Y(c_spacial_t *self, float angle);
 void c_spacial_rotate_Z(c_spacial_t *self, float angle);
 
+void c_spacial_rotate_axis(c_spacial_t *self, vec3_t axis, float angle);
+
 #endif /* !SPACIAL_H */

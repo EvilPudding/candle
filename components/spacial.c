@@ -76,6 +76,20 @@ void c_spacial_set_rot2(c_spacial_t *self, vec3_t rot)
 	c_spacial_update_model_matrix(self);
 }
 
+void c_spacial_rotate_axis(c_spacial_t *self, vec3_t axis, float angle)
+{
+	float s = sinf(angle);
+	float c = cosf(angle);
+
+	self->sideways = vec3_rotate(self->sideways, axis, c, s);
+	self->upwards = vec3_rotate(self->upwards, axis, c, s);
+	self->forward = vec3_rotate(self->forward, axis, c, s);
+
+	self->rot_matrix = mat4_from_vecs(self->forward, self->upwards, self->sideways);
+
+	c_spacial_update_model_matrix(self);
+}
+
 void c_spacial_rotate_X(c_spacial_t *self, float angle)
 {
 	float s = sinf(angle);
@@ -144,8 +158,8 @@ void c_spacial_set_model(c_spacial_t *self, mat4_t model)
 {
 	self->pos = mat4_mul_vec4(model, vec4(0,0,0,1)).xyz;
 
-	self->model_matrix = model;
-	/* c_spacial_update_model_matrix(self); */
+	/* self->model_matrix = model; */
+	c_spacial_update_model_matrix(self);
 
 }
 

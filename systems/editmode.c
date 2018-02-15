@@ -50,11 +50,10 @@ c_editmode_t *c_editmode_new()
 	c_editmode_t *self = malloc(sizeof *self);
 	c_editmode_init(self);
 
-	/* mesh_t *cube = candle_mesh_get(candle, "cube.ply"); */
+	/* mesh_t *cube = sauces_mesh("cube.ply"); */
 	/* p = entity_new(candle->ecm, 1, */
-			/* c_model_paint(c_model_new(cube, 1), 0, candle_material_get(candle, */
-					/* "pack1/white"))); */
-	/* c_spacial_scale(c_spacial(p), vec3(0.2)); */
+			/* c_model_paint(c_model_new(cube, 1), 0, sauces_mat("pack1/white"))); */
+	/* c_spacial_scale(c_spacial(&p), vec3(0.2)); */
 
 	return self;
 }
@@ -80,6 +79,7 @@ void c_editmode_activate(c_editmode_t *self)
 			c_node_t *node = c_node(&self->backup_camera);
 			c_node_update_model(node);
 			c_spacial_set_model(c_spacial(&self->camera), node->model);
+			c_camera_update(c_camera(&self->camera), NULL);
 		}
 		else
 		{
@@ -147,7 +147,7 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 	{
 		self->over = entity_null();
 	}
-	/* c_spacial_set_pos(c_spacial(p), vec3_add(self->mouse_position, vec3(0.0, 0.3f, 0.0))); */
+	/* c_spacial_set_pos(c_spacial(&p), vec3_add(self->mouse_position, vec3(0.0, 0.3f, 0.0))); */
 
 }
 
@@ -283,7 +283,7 @@ void node_node(c_editmode_t *self, c_node_t *node)
 	}
 	else
 	{
-		sprintf(buffer, "%ld", entity.id);
+		sprintf(buffer, "NODE_%ld", entity.id);
 	}
 	if(nk_tree_push_id(self->nk, NK_TREE_NODE, final_name, NK_MINIMIZED,
 				entity.id))
@@ -370,7 +370,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 	c_name_t *name = c_name(&ent);
 	int res;
 	char buffer[64];
-	sprintf(buffer, "%ld", ent.id);
+	sprintf(buffer, "ENT_%ld", ent.id);
 	char *title = buffer;
 	if(name)
 	{

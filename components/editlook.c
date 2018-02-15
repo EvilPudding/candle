@@ -148,8 +148,10 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 	float cosx = cosf(inc_x);
 	float sinx = sinf(inc_x);
 
-	c_spacial_rotate_X(sc, inc_x);
+	float oldx = sc->rot.x;
+	c_spacial_rotate_X(sc, -oldx);
 	c_spacial_rotate_Y(sc, inc_y);
+
 
 
 	c_spacial_set_pos(sc, vec3_add(pivot,
@@ -159,6 +161,8 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 
 	c_spacial_set_pos(sc, vec3_add(pivot,
 				vec3_rotate(diff, sc->forward, cosx, sinx)));
+
+	c_spacial_rotate_X(sc, oldx + inc_x);
 
 	return 0;
 }

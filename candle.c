@@ -39,8 +39,7 @@ static void candle_handle_events(candle_t *self)
 		}
 		if(!entity_is_null(self->mouse_owners[0]))
 		{
-			if(entity_is_null(self->mouse_owners[0]) &&
-					entity_signal_same(self->mouse_owners[0],
+			if(entity_signal_same(self->mouse_owners[0],
 						event_handle, &event) == 0)
 			{
 				continue;
@@ -48,8 +47,7 @@ static void candle_handle_events(candle_t *self)
 		}
 		else
 		{
-			if(entity_is_null(self->mouse_owners[0]) &&
-					entity_signal(self->ecm->none, event_handle, &event) == 0)
+			if(entity_signal(self->ecm->none, event_handle, &event) == 0)
 			{
 				continue;
 			}
