@@ -31,6 +31,7 @@ vec3_t c_spacial_up(c_spacial_t *self);
 void c_spacial_scale(c_spacial_t *self, vec3_t scale);
 void c_spacial_look_at(c_spacial_t *self, vec3_t eye, vec3_t center, vec3_t up);
 void c_spacial_set_pos(c_spacial_t *self, vec3_t pos);
+void c_spacial_set_model(c_spacial_t *self, mat4_t model);
 void c_spacial_set_rot(c_spacial_t *self, float x, float y, float z, float angle);
 void c_spacial_update_model_matrix(c_spacial_t *self);
 

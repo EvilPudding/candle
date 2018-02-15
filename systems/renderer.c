@@ -507,9 +507,9 @@ entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
 	return result;
 }
 
-#ifdef MESH4
 int c_renderer_global_menu(c_renderer_t *self, void *ctx)
 {
+#ifdef MESH4
 	nk_layout_row_begin(ctx, NK_DYNAMIC, 0, 2);
 	nk_layout_row_push(ctx, 0.35);
 	nk_label(ctx, "4D angle:", NK_TEXT_LEFT);
@@ -521,9 +521,9 @@ int c_renderer_global_menu(c_renderer_t *self, void *ctx)
 		g_update_id++;
 	}
 	nk_layout_row_end(ctx);
+#endif
 	return 1;
 }
-#endif
 
 
 void c_renderer_register(ecm_t *ecm)

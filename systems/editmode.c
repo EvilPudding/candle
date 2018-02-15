@@ -67,15 +67,18 @@ void c_editmode_activate(c_editmode_t *self)
 
 	if(entity_is_null(self->camera))
 	{
-		printf("creating\n");
 		self->camera = entity_new(candle->ecm, 3,
-			c_name_new("editmode"), c_editlook_new(), c_node_new()
+			c_name_new("Edit Camera"), c_editlook_new(), c_node_new()
 		);
 		if(!entity_is_null(self->backup_camera))
 		{
 			c_camera_t *bcam = c_camera(&self->backup_camera);
 			entity_add_component(self->camera,
 					c_camera_clone(bcam));
+
+			c_node_t *node = c_node(&self->backup_camera);
+			c_node_update_model(node);
+			c_spacial_set_model(c_spacial(&self->camera), node->model);
 		}
 		else
 		{
@@ -83,6 +86,7 @@ void c_editmode_activate(c_editmode_t *self)
 					c_camera_new(70, 0.1, 100.0));
 		}
 	}
+	c_camera_update_view(c_camera(&self->camera));
 	c_renderer(self)->camera = self->camera;
 
 }
@@ -237,13 +241,15 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 				{
 					self->backup_camera = c_renderer(self)->camera;
 					if(!self->activated) { c_editmode_activate(self); }
+					c_renderer(self)->camera = self->camera;
+					self->control = 1;
 				}
 				else
 				{
 					self->over = entity_null();
 					c_renderer(self)->camera = self->backup_camera;
+					self->control = 0;
 				}
-				self->control = !self->control;
 				break;
 			}
 	}

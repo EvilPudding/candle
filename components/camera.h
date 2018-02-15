@@ -14,6 +14,8 @@ typedef struct
 	int view_cached;
 	float near, far, fov;
 	float exposure;
+	int width;
+	int height;
 } c_camera_t;
 
 DEF_CASTER(ct_camera, c_camera, c_camera_t)
