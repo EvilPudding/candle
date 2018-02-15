@@ -229,14 +229,14 @@ static int c_renderer_gl_update_textures(c_renderer_t *self)
 			texture_destroy(gb->buffer);
 		}
 		gb->buffer = texture_new_2D(w, h, 32, GL_RGBA16F, 1, 0);
-										   /* COLOR_TEX + 0 DIFFUSE	*/
-		texture_add_buffer(gb->buffer, 1, 1, 0); /* COLOR_TEX + 1 SPECULAR */
-		texture_add_buffer(gb->buffer, 1, 1, 0); /* COLOR_TEX + 2 REFLECTION */
-		texture_add_buffer(gb->buffer, 1, 0, 0); /* COLOR_TEX + 3 NORMAL	*/
-		texture_add_buffer(gb->buffer, 1, 1, 0); /* COLOR_TEX + 4 TRANSPARENCY	*/
-		texture_add_buffer(gb->buffer, 1, 0, 0); /* COLOR_TEX + 5 c_POSITION */
-		texture_add_buffer(gb->buffer, 1, 0, 0); /* COLOR_TEX + 6 w_POSITION */
-		texture_add_buffer(gb->buffer, 1, 0, 0); /* COLOR_TEX + 7 ID */
+		/* texture_add_buffer(gb->buffer, "diffuse", 1, 1, 0); */
+		texture_add_buffer(gb->buffer, "specular", 1, 1, 0);
+		texture_add_buffer(gb->buffer, "reflection", 1, 1, 0);
+		texture_add_buffer(gb->buffer, "normal", 1, 0, 0);
+		texture_add_buffer(gb->buffer, "transparency", 1, 1, 0);
+		texture_add_buffer(gb->buffer, "cameraspace position", 1, 0, 0);
+		texture_add_buffer(gb->buffer, "worldspace position", 1, 0, 0);
+		texture_add_buffer(gb->buffer, "id", 1, 0, 0);
 
 		texture_draw_id(gb->buffer, COLOR_TEX); /* DRAW DIFFUSE */
 
@@ -540,7 +540,8 @@ void c_renderer_register(ecm_t *ecm)
 	ct_register_listener(ct, SAME_ENTITY, entity_created,
 			(signal_cb)c_renderer_created);
 
-	ct_register_listener(ct, WORLD, global_menu, (signal_cb)c_renderer_global_menu);
+	ct_register_listener(ct, WORLD, global_menu,
+			(signal_cb)c_renderer_global_menu);
 
 
 	ecm_register_signal(ecm, &offscreen_render, 0);

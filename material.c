@@ -34,7 +34,7 @@ vec4_t color_from_hex(const char *hex_str)
 	return self;
 }
 
-void material_parse(material_t *self, FILE *fd, candle_t *candle)
+void material_parse(material_t *self, FILE *fd)
 {
 	char prop[64];
 	char arg[256];
@@ -68,10 +68,10 @@ void material_parse(material_t *self, FILE *fd, candle_t *candle)
 					strncpy(buffer, self->name, sizeof(buffer));
 					path_join(buffer, sizeof(buffer), arg);
 
-					prp->texture = candle_texture_get(candle, buffer);
+					prp->texture = sauces_tex(buffer);
 					if(!prp->texture)
 					{
-						prp->texture = candle_texture_get(candle, arg);
+						prp->texture = sauces_tex(arg);
 					}
 				}
 				prp->texture_scale = 1.0;
@@ -92,16 +92,7 @@ void material_parse(material_t *self, FILE *fd, candle_t *candle)
 	}
 }
 
-static inline int is_dir(const char *f)
-{
-	DIR *dir = opendir(f);
-	if(dir == NULL) return 0;
-	closedir(dir);
-	return 1;
-}
-
-
-material_t *material_from_file(const char *filename, candle_t *candle)
+material_t *material_from_file(const char *filename)
 {
 	material_t *self = material_new(filename);
 	char buffer[265];
@@ -130,7 +121,7 @@ material_t *material_from_file(const char *filename, candle_t *candle)
 
 	if(fp)
 	{
-		material_parse(self, fp, candle);
+		material_parse(self, fp);
 		fclose(fp);
 	}
 	else
@@ -140,7 +131,7 @@ material_t *material_from_file(const char *filename, candle_t *candle)
 		return 0;
 	}
 
-	candle_material_reg(candle, self->name, self);
+	c_sauces_material_reg(c_sauces(&candle->systems), self->name, self);
 	return self;
 }
 
@@ -150,8 +141,7 @@ void material_destroy(material_t *self)
 	free(self);
 }
 
-material_t *material_from_dir(const char *name, const char *dirname,
-		candle_t *candle)
+material_t *material_from_dir(const char *name, const char *dirname)
 {
 	/* material_t *self = material_new(name); */
 	/* candle_material_reg(candle, name, self); */

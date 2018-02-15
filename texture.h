@@ -26,6 +26,7 @@ typedef struct
 
 	GLuint texId[16]; /* 0 is depth, 1 is color, >= 2 are color buffers */
 	uint attachments[16];
+	char *texNames[16];
 
 	int color_buffers_size;
 
@@ -82,6 +83,7 @@ int texture_get_pixel(texture_t *self, int buffer, int x, int y,
 
 void texture_draw_id(texture_t *self, int tex);
 
-int texture_add_buffer(texture_t *self, int is_float, int alpha, int mipmaped);
+int texture_add_buffer(texture_t *self, const char *name,
+		int is_float, int alpha, int mipmaped);
 
 #endif /* !TEXTURE_H */

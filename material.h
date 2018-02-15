@@ -4,7 +4,7 @@
 #include "texture.h"
 #include "mafs.h"
 
-typedef struct candle_t candle_t;
+typedef struct c_sauces_t c_sauces_t;
 typedef struct shader_t shader_t;
 
 typedef struct
@@ -30,10 +30,11 @@ typedef struct
 	vec4_t ambient_light;
 } material_t;
 
+extern char g_materials_path[256];
+
 material_t *material_new(const char *name);
-material_t *material_from_file(const char *filename, candle_t *candle);
-material_t *material_from_dir(const char *name, const char *dirname,
-		candle_t *candle);
+material_t *material_from_file(const char *filename);
+material_t *material_from_dir(const char *name, const char *dirname);
 void material_bind(material_t *self, shader_t *shader);
 void material_set_diffuse(material_t *self, prop_t diffuse);
 void material_set_normal(material_t *self, prop_t normal);

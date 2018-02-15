@@ -54,8 +54,6 @@ int c_editlook_mouse_wheel(c_editlook_t *self, mouse_button_data *event)
 /* TODO remove this extern reference */
 extern SDL_Window *mainWindow;
 
-int start_x;
-int start_y;
 float fake_x;
 float fake_y;
 int c_editlook_mouse_press(c_editlook_t *self, mouse_button_data *event)
@@ -63,12 +61,10 @@ int c_editlook_mouse_press(c_editlook_t *self, mouse_button_data *event)
 	if(event->button == SDL_BUTTON_RIGHT)
 	{
 		self->pressed_r = 1;
-		fake_x = start_x = event->x;
-		fake_y = start_y = event->y;
+		fake_x = event->x;
+		fake_y = event->y;
 
-		SDL_ShowCursor(SDL_FALSE); 
-		/* // SDL_SetWindowGrab(mainWindow, SDL_TRUE); */
-		SDL_SetRelativeMouseMode(SDL_TRUE);
+		candle_grab_mouse(candle, c_entity(self));
 	}
 	return 1;
 }
@@ -80,10 +76,7 @@ int c_editlook_mouse_release(c_editlook_t *self, mouse_button_data *event)
 	{
 		if(self->pressed_r)
 		{
-			/* // SDL_SetWindowGrab(mainWindow, SDL_FALSE); */
-			SDL_SetRelativeMouseMode(SDL_FALSE);
-			SDL_WarpMouseInWindow(mainWindow, start_x, start_y);
-			SDL_ShowCursor(SDL_TRUE); 
+			candle_release_mouse(candle, c_entity(self), 1);
 		}
 		self->pressed_r = 0;
 	}

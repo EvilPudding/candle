@@ -1,10 +1,12 @@
 #include "editmode.h"
 #include <components/editlook.h>
 #include <candle.h>
-#include <nk.h>
 #include <keyboard.h>
 #include <stdlib.h>
 #include "renderer.h"
+
+void nk_candle_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
+		int max_element_buffer);
 
 DEC_CT(ct_editmode);
 
@@ -23,9 +25,11 @@ void c_editmode_init(c_editmode_t *self)
 	self->dragging = 0;
 	self->pressing = 0;
 	self->activated = 0;
+	self->open_entities_count = 0;
+	self->open_textures_count = 0;
 	self->mouse_position = vec3(0.0f);
 	/* self->outside = 0; */
-	self->nkctx = NULL;
+	self->nk = NULL;
 	self->selected = entity_null();
 	self->over = entity_null();
 	self->camera = entity_null();
@@ -85,9 +89,9 @@ void c_editmode_activate(c_editmode_t *self)
 
 static int c_editmode_resize(c_editmode_t *self)
 {
-	if(!self->nkctx)
+	if(!self->nk)
 	{
-		self->nkctx = nk_sdl_init(c_window(self)->window); 
+		self->nk = nk_sdl_init(c_window(self)->window); 
 
 		{ 
 			struct nk_font_atlas *atlas; 
@@ -99,8 +103,8 @@ static int c_editmode_resize(c_editmode_t *self)
 			/* struct nk_font *tiny = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyTiny.ttf", 10, 0); */
 			/* struct nk_font *cousine = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Cousine-Regular.ttf", 13, 0); */
 			nk_sdl_font_stash_end(); 
-			/* nk_style_load_all_cursors(self->nkctx, atlas->cursors); */
-			/* nk_style_set_font(self->nkctx, &roboto->handle); */
+			/* nk_style_load_all_cursors(self->nk, atlas->cursors); */
+			/* nk_style_set_font(self->nk, &roboto->handle); */
 		} 
 		c_renderer_add_pass(c_renderer(self), "hightlight",
 				PASS_SCREEN_SCALE,
@@ -194,12 +198,29 @@ int c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 	return 1;
 }
 
+void c_editmode_open_texture(c_editmode_t *self, texture_t *tex)
+{
+	self->open_textures[self->open_textures_count++] = tex;
+}
+
+void c_editmode_open_entity(c_editmode_t *self, entity_t ent)
+{
+	self->open_entities[self->open_entities_count++] = ent;
+}
+
 int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 {
 	if(self->dragging)
 	{
 		self->dragging = 0;
 		self->selected = entity_null();
+	}
+	else
+	{
+		if(self->pressing)
+		{
+			c_editmode_open_entity(self, self->selected);
+		}
 	}
 	self->pressing = 0;
 	return 1;
@@ -251,10 +272,10 @@ void node_node(c_editmode_t *self, c_node_t *node)
 	{
 		sprintf(buffer, "%ld", entity.id);
 	}
-	if(nk_tree_push_id(self->nkctx, NK_TREE_NODE, final_name, NK_MINIMIZED,
+	if(nk_tree_push_id(self->nk, NK_TREE_NODE, final_name, NK_MINIMIZED,
 				entity.id))
 	{
-		if(nk_button_label(self->nkctx, "select"))
+		if(nk_button_label(self->nk, "select"))
 		{
 			self->selected = entity;
 		}
@@ -263,7 +284,7 @@ void node_node(c_editmode_t *self, c_node_t *node)
 		{
 			node_node(self, c_node(&node->children[i]));
 		}
-		nk_tree_pop(self->nkctx);
+		nk_tree_pop(self->nk);
 	}
 }
 
@@ -272,7 +293,7 @@ void node_tree(c_editmode_t *self)
 	int i;
 	ct_t *nodes = ecm_get(c_ecm(self), ct_node);
 
-	if(nk_tree_push(self->nkctx, NK_TREE_TAB, "nodes", NK_MINIMIZED))
+	if(nk_tree_push(self->nk, NK_TREE_TAB, "nodes", NK_MINIMIZED))
 	{
 		for(i = 0; i < nodes->components_size; i++)
 		{
@@ -280,110 +301,177 @@ void node_tree(c_editmode_t *self)
 			if(node->parent.id != -1) continue;
 			node_node(self, node);
 		}
-		nk_tree_pop(self->nkctx);
+		nk_tree_pop(self->nk);
 	}
+}
+
+int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
+{
+	int res;
+	char buffer[64];
+	sprintf(buffer, "%u", tex->texId[0]);
+	char *title = buffer;
+	if(tex->name[0])
+	{
+		title = tex->name;
+	}
+	res = nk_begin_titled(self->nk, buffer, title, nk_rect(300, 50, 230, 280),
+			NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
+			NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE);
+	if (res)
+	{
+		const char *bufs[16];
+		int i;
+		int num = tex->color_buffers_size + 1;
+		for(i = 0; i < num; i++)
+		{
+			char *name = tex->texNames[i];
+			bufs[i] = name?name:"unnamed buffer";
+		}
+		static int current_tex = 4;
+
+		nk_layout_row_static(self->nk, 25, 200, 1);
+		current_tex = nk_combo(self->nk, bufs, num, current_tex, 25, nk_vec2(200,200));
+
+
+		/* slider color combobox */
+
+
+		glDisable(GL_BLEND);
+		struct nk_image im = nk_image_id(tex->texId[current_tex]);
+		/* im.handle.ptr = 1; */
+		struct nk_command_buffer *canvas = nk_window_get_canvas(self->nk);
+		struct nk_rect total_space = nk_window_get_content_region(self->nk);
+		total_space.y += 50;
+		total_space.h -= 50;
+		nk_draw_image_ext(canvas, total_space, &im, nk_rgba(255, 255, 255, 255), 1);
+	}
+	nk_end(self->nk);
+	return res;
+}
+
+int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
+{
+	c_name_t *name = c_name(&ent);
+	int res;
+	char buffer[64];
+	sprintf(buffer, "%ld", ent.id);
+	char *title = buffer;
+	if(name)
+	{
+		title = name->name;
+	}
+	res = nk_begin_titled(self->nk, buffer, title, nk_rect(300, 50, 230, 280),
+			NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
+			NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE);
+	if (res)
+	{
+		int i;
+
+		signal_t *sig = &c_ecm(self)->signals[component_menu];
+
+		for(i = 0; i < sig->cts_size; i++)
+		{
+			ct_t *ct = ecm_get(c_ecm(self), sig->cts[i]);
+			c_t *comp = ct_get(ct, ent);
+			if(comp && !ct->is_interaction)
+			{
+				if(nk_tree_push_id(self->nk, NK_TREE_TAB, ct->name,
+							NK_MINIMIZED, i))
+				{
+					component_signal(comp, ct, component_menu, self->nk);
+					nk_tree_pop(self->nk);
+				}
+				int j;
+				for(j = 0; j < ct->depends_size; j++)
+				{
+					if(ct->depends[j].is_interaction)
+					{
+						c_t *inter = ct_get(ct, ent);
+						ct_t *inter_ct = ecm_get(c_ecm(self),
+								ct->depends[j].ct);
+						component_signal(inter, inter_ct,
+								component_menu, self->nk);
+					}
+				}
+			}
+		}
+	}
+	nk_end(self->nk);
+	return res;
 }
 
 
 int c_editmode_draw(c_editmode_t *self)
 {
-	if(self->nkctx && (self->visible || self->control))
+	if(self->nk && (self->visible || self->control))
 	{
-		if (nk_begin(self->nkctx, "clidian", nk_rect(50, 50, 230, 180),
-					NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
-					NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
+		if (nk_begin(self->nk, "clidian", nk_rect(50, 50, 230, 180),
+					NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|
+					NK_WINDOW_SCALABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
 		{
 
-			nk_layout_row_static(self->nkctx, 30, 110, 1);
-			if (nk_button_label(self->nkctx, "redraw probes"))
+			nk_layout_row_static(self->nk, 30, 110, 1);
+			if (nk_button_label(self->nk, "open gbuffer"))
 			{
-				c_renderer_scene_changed(c_renderer(self));
+				c_editmode_open_texture(self, c_renderer(self)->gbuffers[0].buffer);
 			}
-			entity_signal(c_entity(self), global_menu, self->nkctx);
+			entity_signal(c_entity(self), global_menu, self->nk);
 
 			node_tree(self);
 		}
-		nk_end(self->nkctx);
+		nk_end(self->nk);
 
-		if(!entity_is_null(self->selected))
+		int e;
+		for(e = 0; e < self->open_textures_count; e++)
 		{
-			char buffer[64];
-			char *final_name = buffer;
-			c_name_t *name = c_name(&self->selected);
-			if(name)
+			if(!c_editmode_texture_window(self, self->open_textures[e]))
 			{
-				final_name = name->name;
+				self->open_textures_count--;
+				self->open_textures[e] =
+					self->open_textures[self->open_textures_count];
+				e--;
 			}
-			else
-			{
-				sprintf(buffer, "%ld", self->selected.id);
-			}
-			if (nk_begin(self->nkctx, final_name, nk_rect(300, 50, 230, 280),
-						NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
-						NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
-			{
-				int i;
-
-				signal_t *sig = &c_ecm(self)->signals[component_menu];
-
-				for(i = 0; i < sig->cts_size; i++)
-				{
-					ct_t *ct = ecm_get(c_ecm(self), sig->cts[i]);
-					c_t *comp = ct_get(ct, self->selected);
-					if(comp && !ct->is_interaction)
-					{
-						if(nk_tree_push_id(self->nkctx, NK_TREE_TAB, ct->name,
-									NK_MINIMIZED, i))
-						{
-							component_signal(comp, ct, component_menu, self->nkctx);
-							nk_tree_pop(self->nkctx);
-						}
-						int j;
-						for(j = 0; j < ct->depends_size; j++)
-						{
-							if(ct->depends[j].is_interaction)
-							{
-								c_t *inter = ct_get(ct, self->selected);
-								ct_t *inter_ct = ecm_get(c_ecm(self),
-										ct->depends[j].ct);
-								component_signal(inter, inter_ct,
-										component_menu, self->nkctx);
-							}
-						}
-					}
-				}
-			}
-			nk_end(self->nkctx);
 		}
-		nk_sdl_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_MEMORY, MAX_ELEMENT_MEMORY);
+		for(e = 0; e < self->open_entities_count; e++)
+		{
+			if(!c_editmode_entity_window(self, self->open_entities[e]))
+			{
+				self->open_entities_count--;
+				self->open_entities[e] =
+					self->open_entities[self->open_entities_count];
+				e--;
+			}
+		}
+		nk_candle_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_MEMORY, MAX_ELEMENT_MEMORY);
 	}
 	return 1;
 }
 
 int c_editmode_events_begin(c_editmode_t *self)
 {
-	if(self->nkctx) nk_input_begin(self->nkctx);
+	if(self->nk) nk_input_begin(self->nk);
 	return 1;
 }
 
 int c_editmode_events_end(c_editmode_t *self)
 {
-	if(self->nkctx) nk_input_end(self->nkctx);
+	if(self->nk) nk_input_end(self->nk);
 	return 1;
 }
 
 int c_editmode_event(c_editmode_t *self, SDL_Event *event)
 {
 
-	if(self->nkctx)
+	if(self->nk)
 	{
 		nk_sdl_handle_event(event);
-		if(nk_window_is_any_hovered(self->nkctx))
+		if(nk_window_is_any_hovered(self->nk))
 		{
 			self->over = entity_null();
 			return 0;
 		}
-		if(nk_item_is_any_active(self->nkctx))
+		if(nk_item_is_any_active(self->nk))
 		{
 			return 0;
 		}

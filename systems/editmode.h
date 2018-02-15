@@ -3,6 +3,7 @@
 
 #include <ecm.h>
 #include <mesh.h>
+#include <nk.h>
 
 typedef struct
 {
@@ -23,9 +24,15 @@ typedef struct
 
 	float mouse_depth;
 
-	void *nkctx;
+	void *nk;
 	entity_t selected;
 	entity_t over;
+
+	entity_t open_entities[16];
+	int open_entities_count;
+
+	texture_t *open_textures[16];
+	int open_textures_count;
 
 	geom_t mode;
 
@@ -40,5 +47,6 @@ c_editmode_t *c_editmode_new(void);
 void c_editmode_activate(c_editmode_t *self);
 void c_editmode_register(ecm_t *ecm);
 void c_editmode_update_mouse(c_editmode_t *self, float x, float y);
+void c_editmode_open_texture(c_editmode_t *self, texture_t *tex);
 
 #endif /* !EDITMODE_H */

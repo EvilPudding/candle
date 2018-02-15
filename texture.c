@@ -188,12 +188,14 @@ static void texture_new_2D_loader(texture_t *self)
 	self->ready = 1;
 }
 
-int texture_add_buffer(texture_t *self, int is_float, int alpha, int mipmaped)
+int texture_add_buffer(texture_t *self, const char *name, int is_float,
+		int alpha, int mipmaped)
 {
 	GLuint targ = self->target;
 	glActiveTexture(GL_TEXTURE15);
 
 	int i = self->color_buffers_size++;
+	self->texNames[COLOR_TEX + i] = strdup(name);
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, self->frame_buffer[0]); glerr();
 
@@ -255,6 +257,7 @@ texture_t *texture_new_2D
 	self->height = height;
 	self->depth_buffer = depth_buffer;
 	self->color_buffers_size = 1;
+	self->texNames[COLOR_TEX] = strdup("color");
 	self->draw_id = COLOR_TEX;
 
 	uint bytesPerPixel = (self->bpp / 8);
@@ -379,6 +382,7 @@ texture_t *texture_from_file(const char *filename)
 	self->filename = strdup(buffer);
 	self->draw_id = COLOR_TEX;
 	self->color_buffers_size = 1;
+	self->texNames[COLOR_TEX] = strdup("color");
 
 	loader_push(candle->loader, (loader_cb)texture_from_file_loader, self, NULL);
 
@@ -483,6 +487,7 @@ static int texture_2D_frame_buffer(texture_t *self)
 		attach = GL_DEPTH_ATTACHMENT;
 		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attach, targ,
 				self->texId[DEPTH_TEX], 0); glerr();
+		self->texNames[DEPTH_TEX] = strdup("Depth");
 	}
 
 	glDrawBuffers(self->color_buffers_size, self->attachments); glerr();

@@ -37,31 +37,63 @@ static void candle_handle_events(candle_t *self)
 			self->exit = 1;
 			return;
 		}
-		if(entity_signal(self->ecm->none, event_handle, &event) == 0)
+		if(entity_is_null(self->mouse_owner) &&
+				entity_signal(self->ecm->none, event_handle, &event) == 0)
 		{
 			continue;
 		}
+		mouse_button_data bdata;
+		mouse_move_data mdata;
 		switch(event.type)
 		{
 			case SDL_MOUSEWHEEL:
-				entity_signal(self->ecm->none, mouse_wheel,
-						&(mouse_button_data){event.wheel.x, event.wheel.y,
-						event.wheel.direction, SDL_BUTTON_MIDDLE});
+				bdata = (mouse_button_data){event.wheel.x, event.wheel.y,
+					event.wheel.direction, SDL_BUTTON_MIDDLE};
+				if(!entity_is_null(self->mouse_owner))
+				{
+					entity_signal_same(self->mouse_owner, mouse_wheel, &bdata);
+				}
+				else
+				{
+					entity_signal(self->ecm->none, mouse_wheel, &bdata);
+				}
 				break;
 			case SDL_MOUSEBUTTONUP:
-				entity_signal(self->ecm->none, mouse_release,
-						&(mouse_button_data){event.button.x, event.button.y,
-						0, event.button.button});
+				bdata = (mouse_button_data){event.button.x, event.button.y, 0,
+					event.button.button};
+				if(!entity_is_null(self->mouse_owner))
+				{
+					entity_signal_same(self->mouse_owner, mouse_release, &bdata);
+				}
+				else
+				{
+					entity_signal(self->ecm->none, mouse_release, &bdata);
+				}
 				break;
 			case SDL_MOUSEBUTTONDOWN:
-				entity_signal(self->ecm->none, mouse_press,
-						&(mouse_button_data){event.button.x, event.button.y,
-						0, event.button.button});
+				bdata = (mouse_button_data){event.button.x, event.button.y, 0,
+					event.button.button};
+				if(!entity_is_null(self->mouse_owner))
+				{
+					entity_signal_same(self->mouse_owner, mouse_press, &bdata);
+				}
+				else
+				{
+					entity_signal(self->ecm->none, mouse_press, &bdata);
+				}
 				break;
 			case SDL_MOUSEMOTION:
-				entity_signal(self->ecm->none, mouse_move,
-						&(mouse_move_data){event.motion.xrel, event.motion.yrel,
-						event.motion.x, event.motion.y});
+				self->mx = event.motion.x; self->my = event.motion.y;
+				mdata = (mouse_move_data){event.motion.xrel, event.motion.yrel,
+						event.motion.x, event.motion.y};
+				if(!entity_is_null(self->mouse_owner))
+				{
+					entity_signal_same(self->mouse_owner, mouse_move, &mdata);
+				}
+				else
+				{
+					entity_signal(self->ecm->none, mouse_move, &mdata);
+				}
 				break;
 			case SDL_KEYUP:
 				key = event.key.keysym.sym;
@@ -218,64 +250,6 @@ int candle_import(candle_t *self, entity_t root, const char *map_name)
 	return 1;
 }
 
-static inline int is_dir(const char *f)
-{
-	DIR *dir = opendir(f);
-	if(dir == NULL) return 0;
-	closedir(dir);
-	return 1;
-}
-
-extern char g_materials_path[256];
-
-
-
-int candle_get_materials_at(candle_t *self, const char *dir_name)
-{
-	char dir_buffer[2048];
-	strncpy(dir_buffer, g_materials_path, sizeof(dir_buffer));
-
-	path_join(dir_buffer, sizeof(dir_buffer), path_relative(dir_name, g_materials_path));
-
-	DIR *dir = opendir(dir_buffer);
-	if(dir == NULL) return 0;
-
-	struct dirent *ent;
-	while((ent = readdir(dir)) != NULL)
-	{
-		char buffer[512];
-
-		if(ent->d_name[0] == '.') continue;
-
-		strncpy(buffer, dir_buffer, sizeof(buffer));
-		path_join(buffer, sizeof(buffer), ent->d_name);
-
-		char *ext = strrchr(ent->d_name, '.');
-		if(ext && ext != ent->d_name && !strcmp(ext, ".mat"))
-		{
-			ext = strrchr(buffer, '.');
-			*ext = '\0';
-			material_from_file(buffer, self);
-			continue;
-		}
-
-		if(is_dir(buffer))
-		{
-			if(!material_from_file(buffer, self))
-			{
-				candle_get_materials_at(self, buffer);
-			}
-			continue;
-		}
-
-
-
-	}
-	closedir(dir);
-
-	return 1;
-}
-
 int candle_import_dir(candle_t *self, entity_t root, const char *dir_name)
 {
 	DIR *dir = opendir(dir_name);
@@ -295,75 +269,30 @@ int candle_import_dir(candle_t *self, entity_t root, const char *dir_name)
 	return 1;
 }
 
-void candle_material_reg(candle_t *self, const char *name, material_t *material)
+void candle_release_mouse(candle_t *self, entity_t ent, int reset)
 {
-	uint i = self->resources.materials_size++;
-	self->resources.materials = realloc(self->resources.materials,
-			sizeof(*self->resources.materials) * self->resources.materials_size);
-	self->resources.materials[i] = material;
-	if(material->name != name) strncpy(material->name, name, sizeof(material->name));
-}
-
-material_t *candle_material_get(candle_t *self, const char *name)
-{
-	material_t *material;
-	uint i;
-	for(i = 0; i < self->resources.materials_size; i++)
+	if(entity_equal(self->mouse_owner, ent))
 	{
-		material = self->resources.materials[i];
-		if(!strcmp(material->name, name)) return material;
+		/* // SDL_SetWindowGrab(mainWindow, SDL_FALSE); */
+		SDL_SetRelativeMouseMode(SDL_FALSE);
+		if(reset)
+		{
+			SDL_WarpMouseInWindow(c_window(&self->systems)->window, self->mo_x,
+					self->mo_y);
+		}
+		SDL_ShowCursor(SDL_TRUE); 
+		self->mouse_owner = entity_null();
 	}
-	material = material_from_file(name, self);
-	if(material) candle_material_reg(self, name, material);
-	return material;
 }
 
-void candle_mesh_reg(candle_t *self, const char *name, mesh_t *mesh)
+void candle_grab_mouse(candle_t *self, entity_t ent)
 {
-	uint i = self->resources.meshes_size++;
-	self->resources.meshes = realloc(self->resources.meshes,
-			sizeof(*self->resources.meshes) * self->resources.meshes_size);
-	self->resources.meshes[i] = mesh;
-	strncpy(mesh->name, name, sizeof(mesh->name));
-}
-
-mesh_t *candle_mesh_get(candle_t *self, const char *name)
-{
-	mesh_t *mesh;
-	uint i;
-	for(i = 0; i < self->resources.meshes_size; i++)
-	{
-		mesh = self->resources.meshes[i];
-		if(!strcmp(mesh->name, name)) return mesh;
-	}
-	mesh = mesh_from_file(name);
-	candle_mesh_reg(self, name, mesh);
-	return mesh;
-}
-
-texture_t *candle_texture_get(candle_t *self, const char *name)
-{
-	texture_t *texture;
-	uint i;
-	for(i = 0; i < self->resources.textures_size; i++)
-	{
-		texture = self->resources.textures[i];
-		if(!strcmp(texture->name, name)) return texture;
-	}
-	texture = texture_from_file(name);
-	candle_texture_reg(self, name, texture);
-
-	return texture;
-}
-
-void candle_texture_reg(candle_t *self, const char *name, texture_t *texture)
-{
-	if(!texture) return;
-	uint i = self->resources.textures_size++;
-	self->resources.textures = realloc(self->resources.textures,
-			sizeof(*self->resources.textures) * self->resources.textures_size);
-	self->resources.textures[i] = texture;
-	strncpy(texture->name, name, sizeof(texture->name));
+	self->mouse_owner = ent;
+	self->mo_x = self->mx;
+	self->mo_y = self->my;
+	SDL_ShowCursor(SDL_FALSE); 
+	/* // SDL_SetWindowGrab(mainWindow, SDL_TRUE); */
+	SDL_SetRelativeMouseMode(SDL_TRUE);
 }
 
 candle_t *candle_new(int comps_size, ...)
@@ -410,6 +339,7 @@ candle_t *candle_new(int comps_size, ...)
 		c_renderer_register(self->ecm);
 		c_editmode_register(self->ecm);
 		c_camera_register(self->ecm);
+		c_sauces_register(self->ecm);
 
 		va_list comps;
 		va_start(comps, comps_size);
@@ -424,7 +354,10 @@ candle_t *candle_new(int comps_size, ...)
 
 	self->loader = loader_new(0);
 
-	self->systems = entity_new(self->ecm, 2, c_window_new(0, 0), c_physics_new());
+	self->systems = entity_new(self->ecm, 3, c_window_new(0, 0),
+			c_physics_new(), c_sauces_new());
+
+	self->mouse_owner = entity_null();
 
 	/* candle_import_dir(self, self->ecm->none, "./"); */
 
