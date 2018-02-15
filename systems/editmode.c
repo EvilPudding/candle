@@ -30,6 +30,7 @@ void c_editmode_init(c_editmode_t *self)
 	self->mouse_position = vec3(0.0f);
 	/* self->outside = 0; */
 	self->nk = NULL;
+	self->spawn_pos = vec2(25, 25);
 	self->selected = entity_null();
 	self->over = entity_null();
 	self->camera = entity_null();
@@ -204,11 +205,15 @@ int c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 
 void c_editmode_open_texture(c_editmode_t *self, texture_t *tex)
 {
+	self->spawn_pos.x += 25;
+	self->spawn_pos.y += 25;
 	self->open_textures[self->open_textures_count++] = tex;
 }
 
 void c_editmode_open_entity(c_editmode_t *self, entity_t ent)
 {
+	self->spawn_pos.x += 25;
+	self->spawn_pos.y += 25;
 	self->open_entities[self->open_entities_count++] = ent;
 }
 
@@ -315,13 +320,14 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 {
 	int res;
 	char buffer[64];
-	sprintf(buffer, "%u", tex->texId[0]);
+	sprintf(buffer, "TEX_%u", tex->id);
 	char *title = buffer;
 	if(tex->name[0])
 	{
 		title = tex->name;
 	}
-	res = nk_begin_titled(self->nk, buffer, title, nk_rect(300, 50, 230, 280),
+	res = nk_begin_titled(self->nk, buffer, title,
+			nk_rect(self->spawn_pos.x, self->spawn_pos.y, 230, 280),
 			NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
 			NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE);
 	if (res)
@@ -334,17 +340,17 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 			char *name = tex->texNames[i];
 			bufs[i] = name?name:"unnamed buffer";
 		}
-		static int current_tex = 4;
 
 		nk_layout_row_static(self->nk, 25, 200, 1);
-		current_tex = nk_combo(self->nk, bufs, num, current_tex, 25, nk_vec2(200,200));
+		tex->prev_id = nk_combo(self->nk, bufs, num, tex->prev_id, 25,
+				nk_vec2(200,200));
 
 
 		/* slider color combobox */
 
 
 		glDisable(GL_BLEND);
-		struct nk_image im = nk_image_id(tex->texId[current_tex]);
+		struct nk_image im = nk_image_id(tex->texId[tex->prev_id]);
 		/* im.handle.ptr = 1; */
 		struct nk_command_buffer *canvas = nk_window_get_canvas(self->nk);
 		struct nk_rect total_space = nk_window_get_content_region(self->nk);
@@ -367,7 +373,8 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 	{
 		title = name->name;
 	}
-	res = nk_begin_titled(self->nk, buffer, title, nk_rect(300, 50, 230, 280),
+	res = nk_begin_titled(self->nk, buffer, title,
+			nk_rect(self->spawn_pos.x, self->spawn_pos.y, 230, 280),
 			NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
 			NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE);
 	if (res)
@@ -412,12 +419,17 @@ int c_editmode_draw(c_editmode_t *self)
 {
 	if(self->nk && (self->visible || self->control))
 	{
-		if (nk_begin(self->nk, "clidian", nk_rect(50, 50, 230, 180),
+		if (nk_begin(self->nk, "clidian",
+					nk_rect(self->spawn_pos.x, self->spawn_pos.y, 230, 180),
 					NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|
 					NK_WINDOW_SCALABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
 		{
 
 			nk_layout_row_static(self->nk, 30, 110, 1);
+			if (nk_button_label(self->nk, "systems"))
+			{
+				c_editmode_open_entity(self, c_entity(self));
+			}
 			if (nk_button_label(self->nk, "open gbuffer"))
 			{
 				c_editmode_open_texture(self, c_renderer(self)->gbuffers[0].buffer);

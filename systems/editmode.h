@@ -25,6 +25,7 @@ typedef struct
 	float mouse_depth;
 
 	void *nk;
+	vec2_t spawn_pos;
 	entity_t selected;
 	entity_t over;
 

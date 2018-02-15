@@ -12,6 +12,7 @@ static int texture_2D_frame_buffer(texture_t *self);
 
 char g_texture_paths[][256] = {"", "resauces/textures", "resauces/materials"};
 int g_texture_paths_size = 3;
+int g_tex_num = 0;
 
 static void texture_update_gl_loader(texture_t *self)
 {
@@ -246,6 +247,7 @@ texture_t *texture_new_2D
 )
 {
 	texture_t *self = calloc(1, sizeof *self);
+	self->id = g_tex_num++;
 
 	self->target = GL_TEXTURE_2D;
 
@@ -259,6 +261,7 @@ texture_t *texture_new_2D
 	self->color_buffers_size = 1;
 	self->texNames[COLOR_TEX] = strdup("color");
 	self->draw_id = COLOR_TEX;
+	self->prev_id = COLOR_TEX;
 
 	uint bytesPerPixel = (self->bpp / 8);
 
@@ -305,6 +308,7 @@ texture_t *texture_new_3D
 )
 {
 	texture_t *self = calloc(1, sizeof *self);
+	self->id = g_tex_num++;
 
 	self->target = GL_TEXTURE_3D;
 
@@ -314,6 +318,7 @@ texture_t *texture_new_3D
 	self->height = height;
 	self->depth = depth;
 	self->draw_id = COLOR_TEX;
+	self->prev_id = COLOR_TEX;
 
 	self->imageData	= calloc((self->bpp / 8) * width * height * depth, 1);
 
@@ -378,9 +383,11 @@ texture_t *texture_from_file(const char *filename)
 
 	texture_t *self = calloc(1, sizeof *self);
 	*self = temp;
+	self->id = g_tex_num++;
 	strncpy(self->name, filename, sizeof(self->name));
 	self->filename = strdup(buffer);
 	self->draw_id = COLOR_TEX;
+	self->prev_id = COLOR_TEX;
 	self->color_buffers_size = 1;
 	self->texNames[COLOR_TEX] = strdup("color");
 
@@ -607,12 +614,14 @@ texture_t *texture_cubemap
 )
 {
 	texture_t *self = calloc(1, sizeof *self);
+	self->id = g_tex_num++;
 	self->target = GL_TEXTURE_CUBE_MAP;
 
 	self->width = width;
 	self->height = height;
 	self->depth_buffer = depth_buffer;
 	self->draw_id = COLOR_TEX;
+	self->prev_id = COLOR_TEX;
 	self->color_buffers_size = 1;
 	self->attachments[0] = GL_COLOR_ATTACHMENT0;
 

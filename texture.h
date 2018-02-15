@@ -13,6 +13,7 @@
 typedef struct
 {
 	char name[256];
+	int id;
 
 	GLubyte	*imageData;
 	GLuint type;
@@ -36,6 +37,7 @@ typedef struct
 	char *filename;
 	int ready;
 	int draw_id;
+	int prev_id;
 } texture_t;
 
 texture_t *texture_from_file(const char *filename);
