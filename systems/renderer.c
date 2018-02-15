@@ -521,10 +521,28 @@ int c_renderer_global_menu(c_renderer_t *self, void *ctx)
 		g_update_id++;
 	}
 	nk_layout_row_end(ctx);
+
 #endif
 	return 1;
 }
 
+int c_renderer_component_menu(c_renderer_t *self, void *ctx)
+{
+	nk_layout_row_dynamic(ctx, 0, 1);
+	int i;
+	for(i = 0; i < self->passes_size; i++)
+	{
+		pass_t *pass = &self->passes[i];
+		if(pass->output)
+		{
+			if (nk_button_label(ctx, pass->feed_name))
+			{
+				c_editmode_open_texture(c_editmode(self), pass->output);
+			}
+		}
+	}
+	return 1;
+}
 
 void c_renderer_register(ecm_t *ecm)
 {
@@ -539,6 +557,9 @@ void c_renderer_register(ecm_t *ecm)
 
 	ct_register_listener(ct, SAME_ENTITY, entity_created,
 			(signal_cb)c_renderer_created);
+
+	ct_register_listener(ct, WORLD, component_menu,
+			(signal_cb)c_renderer_component_menu);
 
 	ct_register_listener(ct, WORLD, global_menu,
 			(signal_cb)c_renderer_global_menu);

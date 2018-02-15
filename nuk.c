@@ -97,7 +97,7 @@ void nk_candle_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
         /* iterate over and execute each draw command */
         nk_draw_foreach(cmd, &sdl.ctx, &dev->cmds) {
             if (!cmd->elem_count) continue;
-			if(cmd->userdata.ptr == (void*)1) glDisable(GL_BLEND);
+			if(cmd->userdata.ptr == (void*)(unsigned long)1) glDisable(GL_BLEND);
             glBindTexture(GL_TEXTURE_2D, (GLuint)cmd->texture.id);
             glScissor((GLint)(cmd->clip_rect.x * scale.x),
                 (GLint)((height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h)) * scale.y),
@@ -105,7 +105,7 @@ void nk_candle_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
                 (GLint)(cmd->clip_rect.h * scale.y));
             glDrawElements(GL_TRIANGLES, (GLsizei)cmd->elem_count, GL_UNSIGNED_SHORT, offset);
             offset += cmd->elem_count;
-			if(cmd->userdata.ptr == (void*)1) glEnable(GL_BLEND);
+			if(cmd->userdata.ptr == (void*)(unsigned long)1) glEnable(GL_BLEND);
         }
         nk_clear(&sdl.ctx);
     }

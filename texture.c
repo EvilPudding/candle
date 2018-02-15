@@ -23,7 +23,7 @@ static void texture_update_gl_loader(texture_t *self)
 		glBindTexture(self->target, self->texId[COLOR_TEX]);
 
 		glTexSubImage2D(self->target, 0, 0, 0, self->width, self->height,
-				self->type, GL_UNSIGNED_BYTE, self->imageData);
+				self->format, GL_UNSIGNED_BYTE, self->imageData);
 		glerr();
 	}
 	if(self->target == GL_TEXTURE_3D)
@@ -33,7 +33,7 @@ static void texture_update_gl_loader(texture_t *self)
 
 		glTexSubImage3D(self->target, 0, 0, 0, 0,
 				self->width, self->height, self->depth,
-				self->type, GL_UNSIGNED_BYTE, self->imageData);
+				self->format, GL_UNSIGNED_BYTE, self->imageData);
 		glerr();
 	}
 	glBindTexture(self->target, 0); glerr();
@@ -85,7 +85,7 @@ void texture_update_brightness(texture_t *self)
 {
 	texture_bind(self, COLOR_TEX);
 
-	glGetTexImage(self->target, 9, self->type, GL_UNSIGNED_BYTE,
+	glGetTexImage(self->target, 9, self->format, GL_UNSIGNED_BYTE,
 			self->imageData);
 	int value = *(char*)self->imageData;
 	self->brightness = ((float)value) / 256.0f;
@@ -117,7 +117,7 @@ static int texture_from_file_loader(texture_t *self)
 	glTexParameteri(self->target, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(self->target, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	glTexImage2D(self->target, 0, self->type, self->width, self->height, 0, self->type,
+	glTexImage2D(self->target, 0, self->format, self->width, self->height, 0, self->format,
 			GL_UNSIGNED_BYTE, self->imageData); glerr();
 
 	glGenerateMipmap(self->target); glerr();
@@ -161,8 +161,8 @@ static void texture_new_2D_loader(texture_t *self)
 				GL_LINEAR_MIPMAP_LINEAR); glerr();
 		/* glTexParameteri(self->target, GL_GENERATE_MIPMAP, GL_TRUE);  glerr(); */
 
-		glTexImage2D(self->target, 0, self->gl_type, self->width, self->height,
-				0, self->type, GL_UNSIGNED_BYTE, self->imageData); glerr();
+		glTexImage2D(self->target, 0, self->internal, self->width, self->height,
+				0, self->format, GL_UNSIGNED_BYTE, self->imageData); glerr();
 
 		glGenerateMipmap(self->target); glerr();
 		/* glTexParameteri(self->target, GL_TEXTURE_WRAP_S, GL_REPEAT); */
@@ -241,7 +241,7 @@ texture_t *texture_new_2D
 	uint width,
 	uint height,
 	uint bpp,
-	uint gl_type,
+	uint internal,
 	uint depth_buffer,
 	uint repeat
 )
@@ -253,8 +253,8 @@ texture_t *texture_new_2D
 
 	self->repeat = repeat;
 	self->bpp = bpp;
-	self->type	= bpp == 24 ? GL_RGB : GL_RGBA;
-	self->gl_type = gl_type;
+	self->format	= bpp == 24 ? GL_RGB : GL_RGBA;
+	self->internal = internal;
 	self->width = width;
 	self->height = height;
 	self->depth_buffer = depth_buffer;
@@ -290,9 +290,9 @@ static void texture_new_3D_loader(texture_t *self)
 
     /* glPixelStorei(GL_UNPACK_ALIGNMENT, 1); glerr(); */
 
-	glTexImage3D(self->target, 0, self->type,
+	glTexImage3D(self->target, 0, self->format,
 			self->width, self->height, self->depth,
-			0, self->type, GL_UNSIGNED_BYTE, self->imageData); glerr();
+			0, self->format, GL_UNSIGNED_BYTE, self->imageData); glerr();
 
 	glBindTexture(self->target, 0); glerr();
 
@@ -313,7 +313,7 @@ texture_t *texture_new_3D
 	self->target = GL_TEXTURE_3D;
 
 	self->bpp = bpp;
-	self->type	= bpp == 24 ? GL_RGB : GL_RGBA;
+	self->format	= bpp == 24 ? GL_RGB : GL_RGBA;
 	self->width = width;
 	self->height = height;
 	self->depth = depth;
@@ -639,7 +639,7 @@ typedef struct
 {
 	GLubyte			header[6];
 	uint	temp;
-	uint	type;
+	uint	format;
 } TGA;
 
 int LoadTGA(texture_t *self, const char * filename)
@@ -697,11 +697,11 @@ int LoadTGA(texture_t *self, const char * filename)
 
 	if(self->bpp == 24)
 	{
-		self->type	= GL_RGB;
+		self->format	= GL_RGB;
 	}
 	else
 	{
-		self->type	= GL_RGBA;
+		self->format	= GL_RGBA;
 	}
 
 	uint bytesPerPixel = self->bpp / 8;

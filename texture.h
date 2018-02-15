@@ -16,9 +16,9 @@ typedef struct
 	int id;
 
 	GLubyte	*imageData;
-	GLuint type;
+	GLuint format;
 	GLuint bpp;
-	GLuint gl_type;
+	GLuint internal;
 	uint width;
 	uint height;
 	uint depth;
@@ -47,7 +47,7 @@ texture_t *texture_new_2D
 	uint width,
 	uint height,
 	uint bpp,
-	uint gl_type,
+	uint internal,
 	uint depth_buffer,
 	uint repeat
 );
