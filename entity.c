@@ -6,11 +6,20 @@
 static void entity_check_missing_dependencies(entity_t self);
 static void *ct_create(ct_t *self);
 
-entity_t entity_new(ecm_t *ecm, int comp_num, ...)
+__thread entity_t _g_creating[16] = {0};
+__thread int _g_creating_num = 0;
+
+
+void _entity_new_pre(void)
+{
+	_g_creating[_g_creating_num++] = ecm_new_entity();
+}
+
+entity_t _entity_new(int comp_num, ...)
 {
 	int i;
 	va_list comps;
-	entity_t self = ecm_new_entity(ecm);
+	entity_t self = _g_creating[--_g_creating_num];
 
     va_start(comps, comp_num);
 	for(i = 0; i < comp_num; i++)
@@ -25,11 +34,11 @@ entity_t entity_new(ecm_t *ecm, int comp_num, ...)
 
 	if(c_name(&self) && !strcmp(c_name(&self)->name, "grid"))
 	{
-		printf("new %s entity %ld\n", c_name(&self)->name, self.id);
+		printf("new %s entity %ld\n", c_name(&self)->name, self);
 	}
 	entity_signal_same(self, entity_created, NULL);
-	return self;
 
+	return self;
 }
 
 static void *ct_create(ct_t *self)
@@ -43,14 +52,14 @@ static void *ct_create(ct_t *self)
 static void entity_check_missing_dependencies(entity_t self)
 {
 	uint i, j;
-	for(j = 0; j < self.ecm->cts_size; j++)
+	for(j = 0; j < g_ecm->cts_size; j++)
 	{
-		ct_t *ct = &self.ecm->cts[j];
+		ct_t *ct = &g_ecm->cts[j];
 		if(ct_get(ct, self))
 		{
 			for(i = 0; i < ct->depends_size; i++)
 			{
-				ct_t *ct2 = ecm_get(self.ecm, ct->depends[i].ct);
+				ct_t *ct2 = ecm_get(ct->depends[i].ct);
 				if(!ct_get(ct2, self))
 				{
 					c_t *comp2 = ct_create(ct2);
@@ -78,11 +87,11 @@ int entity_signal_same(entity_t self, uint signal, void *data)
 	/* if(signal == IDENT_NULL) exit(1); */
 	uint i;
 
-	signal_t *sig = &self.ecm->signals[signal];
+	signal_t *sig = &g_ecm->signals[signal];
 
 	for(i = 0; i < sig->cts_size; i++)
 	{
-		ct_t *ct = ecm_get(self.ecm, sig->cts[i]);
+		ct_t *ct = ecm_get(sig->cts[i]);
 		c_t *comp = ct_get(ct, self);
 		if(comp)
 		{
@@ -101,19 +110,19 @@ void entity_filter(entity_t self, uint signal, void *data,
 {
 	uint i, j;
 
-	signal_t *sig = &self.ecm->signals[signal];
+	signal_t *sig = &g_ecm->signals[signal];
 
 	for(i = 0; i < sig->cts_size; i++)
 	{
 		uint ct_id = sig->cts[i];
-		ct_t *ct = ecm_get(self.ecm, ct_id);
+		ct_t *ct = ecm_get(ct_id);
 		listener_t *listener = ct_get_listener(ct, signal);
 		if(listener)
 		{
 			for(j = 0; j < ct->components_size; j++)
 			{
 				c_t *c = ct_get_at(ct, j);
-				if(listener->flags != SAME_ENTITY || c_entity(c).id == self.id)
+				if(listener->flags != SAME_ENTITY || c_entity(c) == self)
 				{
 					if(listener->cb(c, data))
 					{
@@ -130,19 +139,19 @@ int entity_signal(entity_t self, uint signal, void *data)
 	uint i, j;
 	/* if(signal == IDENT_NULL) exit(1); */
 
-	signal_t *sig = &self.ecm->signals[signal];
+	signal_t *sig = &g_ecm->signals[signal];
 
 	for(i = 0; i < sig->cts_size; i++)
 	{
 		uint ct_id = sig->cts[i];
-		ct_t *ct = ecm_get(self.ecm, ct_id);
+		ct_t *ct = ecm_get(ct_id);
 		listener_t *listener = ct_get_listener(ct, signal);
 		if(listener)
 		{
 			for(j = 0; j < ct->components_size; j++)
 			{
 				c_t *c = ct_get_at(ct, j);
-				if(listener->flags != SAME_ENTITY || c_entity(c).id == self.id)
+				if(listener->flags != SAME_ENTITY || c_entity(c) == self)
 				{
 					int res = listener->cb(c, data);
 					if(res == 0)
@@ -156,11 +165,6 @@ int entity_signal(entity_t self, uint signal, void *data)
 	return 1;
 }
 
-int entity_equal(entity_t self, entity_t other)
-{
-	return self.id == other.id;
-}
-
 void entity_destroy(entity_t self) 
 {
 }
@@ -168,7 +172,7 @@ void entity_destroy(entity_t self)
 void _entity_add_component(entity_t self, c_t *comp, int on_creation)
 {
 	comp->entity = self;
-	ct_t *ct = ecm_get(self.ecm, comp->comp_type);
+	ct_t *ct = ecm_get(comp->comp_type);
 	ct_add(ct, comp);
 	if(!on_creation)
 	{

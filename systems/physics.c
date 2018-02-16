@@ -16,7 +16,7 @@ static vec3_t c_physics_handle_forces(c_physics_t *self, vec3_t vel, float *dt)
 {
 	unsigned long i;
 
-	ct_t *forces = ecm_get(c_ecm(self), ct_force);
+	ct_t *forces = ecm_get(ct_force);
 
 	for(i = 0; i < forces->components_size; i++)
 	{
@@ -177,8 +177,8 @@ static int c_physics_update(c_physics_t *self, float *dt)
 {
 	unsigned long i, j;
 
-	ct_t *vels = ecm_get(c_ecm(self), ct_velocity);
-	ct_t *bodies = ecm_get(c_ecm(self), ct_rigid_body);
+	ct_t *vels = ecm_get(ct_velocity);
+	ct_t *bodies = ecm_get(ct_rigid_body);
 
 	for(i = 0; i < vels->components_size; i++)
 	{
@@ -237,14 +237,14 @@ c_physics_t *c_physics_new()
 	return self;
 }
 
-void c_physics_register(ecm_t *ecm)
+void c_physics_register()
 {
-	ct_t *ct = ecm_register(ecm, "Physics", &ct_physics,
+	ct_t *ct = ecm_register("Physics", &ct_physics,
 			sizeof(c_physics_t), (init_cb)c_physics_init, 1, ct_window);
 
 	ct_register_listener(ct, WORLD, world_update,
 			(signal_cb)c_physics_update);
 
-	ecm_register_signal(ecm, &collider_callback, 0);
+	ecm_register_signal(&collider_callback, 0);
 }
 

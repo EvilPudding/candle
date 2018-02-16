@@ -31,14 +31,14 @@ void c_editmode_init(c_editmode_t *self)
 	/* self->outside = 0; */
 	self->nk = NULL;
 	self->spawn_pos = vec2(25, 25);
-	self->selected = entity_null();
-	self->over = entity_null();
-	self->camera = entity_null();
+	self->selected = entity_null;
+	self->over = entity_null;
+	self->camera = entity_null;
 }
 
 vec3_t bind_selected(entity_t caller)
 {
-	vec3_t id_color = int_to_vec3(c_editmode(&caller)->over.id);
+	vec3_t id_color = int_to_vec3(c_editmode(&caller)->over);
 
 	return id_color;
 }
@@ -51,7 +51,7 @@ c_editmode_t *c_editmode_new()
 	c_editmode_init(self);
 
 	/* mesh_t *cube = sauces_mesh("cube.ply"); */
-	/* p = entity_new(candle->ecm, 1, */
+	/* p = entity_new( */
 			/* c_model_paint(c_model_new(cube, 1), 0, sauces_mat("pack1/white"))); */
 	/* c_spacial_scale(c_spacial(&p), vec3(0.2)); */
 
@@ -65,12 +65,12 @@ void c_editmode_activate(c_editmode_t *self)
 
 	self->backup_camera = c_renderer(self)->camera;
 
-	if(entity_is_null(self->camera))
+	if(self->camera == entity_null)
 	{
-		self->camera = entity_new(candle->ecm, 3,
+		self->camera = entity_new(
 			c_name_new("Edit Camera"), c_editlook_new(), c_node_new()
 		);
-		if(!entity_is_null(self->backup_camera))
+		if(self->backup_camera != entity_null)
 		{
 			c_camera_t *bcam = c_camera(&self->backup_camera);
 			entity_add_component(self->camera,
@@ -139,14 +139,7 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 	vec3_t pos = c_camera_real_pos(cam, self->mouse_depth, vec2(px, py));
 	self->mouse_position = pos;
 
-	if(result.id > 0)
-	{
-		self->over = result;
-	}
-	else
-	{
-		self->over = entity_null();
-	}
+	self->over = result;
 	/* c_spacial_set_pos(c_spacial(&p), vec3_add(self->mouse_position, vec3(0.0, 0.3f, 0.0))); */
 
 }
@@ -155,7 +148,7 @@ int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 {
 	if(self->control && !candle->pressing)
 	{
-		if(self->pressing && !entity_is_null(self->selected))
+		if(self->pressing && self->selected != entity_null)
 		{
 			c_renderer_t *renderer = c_renderer(self);
 			c_camera_t *cam = c_camera(&renderer->camera);
@@ -190,15 +183,7 @@ int c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 
 		entity_t result = c_renderer_entity_at_pixel(c_renderer(self),
 				event->x, event->y, NULL);
-		/* TODO entity 0 should be valid */
-		if(result.id > 0)
-		{
-			self->selected = result;
-		}
-		else
-		{
-			self->selected = entity_null();
-		}
+		self->selected = result;
 	}
 	return 1;
 }
@@ -222,7 +207,7 @@ int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 	if(self->dragging)
 	{
 		self->dragging = 0;
-		self->selected = entity_null();
+		self->selected = entity_null;
 	}
 	else
 	{
@@ -253,7 +238,7 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 				else
 				{
 					candle_release_mouse(candle, c_entity(self), 0);
-					self->over = entity_null();
+					self->over = entity_null;
 					c_renderer(self)->camera = self->backup_camera;
 					self->control = 0;
 				}
@@ -283,10 +268,10 @@ void node_node(c_editmode_t *self, c_node_t *node)
 	}
 	else
 	{
-		sprintf(buffer, "NODE_%ld", entity.id);
+		sprintf(buffer, "NODE_%ld", entity);
 	}
 	if(nk_tree_push_id(self->nk, NK_TREE_NODE, final_name, NK_MINIMIZED,
-				entity.id))
+				(int)entity))
 	{
 		if(nk_button_label(self->nk, "select"))
 		{
@@ -305,14 +290,14 @@ void node_node(c_editmode_t *self, c_node_t *node)
 void node_tree(c_editmode_t *self)
 {
 	int i;
-	ct_t *nodes = ecm_get(c_ecm(self), ct_node);
+	ct_t *nodes = ecm_get(ct_node);
 
 	if(nk_tree_push(self->nk, NK_TREE_TAB, "nodes", NK_MINIMIZED))
 	{
 		for(i = 0; i < nodes->components_size; i++)
 		{
 			c_node_t *node = (c_node_t*)ct_get_at(nodes, i);
-			if(node->parent.id != -1) continue;
+			if(node->parent != entity_null) continue;
 			node_node(self, node);
 		}
 		nk_tree_pop(self->nk);
@@ -370,7 +355,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 	c_name_t *name = c_name(&ent);
 	int res;
 	char buffer[64];
-	sprintf(buffer, "ENT_%ld", ent.id);
+	sprintf(buffer, "ENT_%ld", ent);
 	char *title = buffer;
 	if(name)
 	{
@@ -384,11 +369,11 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 	{
 		int i;
 
-		signal_t *sig = &c_ecm(self)->signals[component_menu];
+		signal_t *sig = &g_ecm->signals[component_menu];
 
 		for(i = 0; i < sig->cts_size; i++)
 		{
-			ct_t *ct = ecm_get(c_ecm(self), sig->cts[i]);
+			ct_t *ct = ecm_get(sig->cts[i]);
 			c_t *comp = ct_get(ct, ent);
 			if(comp && !ct->is_interaction)
 			{
@@ -404,8 +389,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 					if(ct->depends[j].is_interaction)
 					{
 						c_t *inter = ct_get(ct, ent);
-						ct_t *inter_ct = ecm_get(c_ecm(self),
-								ct->depends[j].ct);
+						ct_t *inter_ct = ecm_get(ct->depends[j].ct);
 						component_signal(inter, inter_ct,
 								component_menu, self->nk);
 					}
@@ -489,7 +473,7 @@ int c_editmode_event(c_editmode_t *self, SDL_Event *event)
 		nk_sdl_handle_event(event);
 		if(nk_window_is_any_hovered(self->nk))
 		{
-			self->over = entity_null();
+			self->over = entity_null;
 			return 0;
 		}
 		if(nk_item_is_any_active(self->nk))
@@ -501,13 +485,13 @@ int c_editmode_event(c_editmode_t *self, SDL_Event *event)
 	return 1;
 }
 
-void c_editmode_register(ecm_t *ecm)
+void c_editmode_register()
 {
-	ct_t *ct = ecm_register(ecm, "EditMode", &ct_editmode,
+	ct_t *ct = ecm_register("EditMode", &ct_editmode,
 			sizeof(c_editmode_t), (init_cb)c_editmode_init, 0);
 
-	ecm_register_signal(ecm, &global_menu, sizeof(struct nk_context*));
-	ecm_register_signal(ecm, &component_menu, sizeof(struct nk_context*));
+	ecm_register_signal(&global_menu, sizeof(struct nk_context*));
+	ecm_register_signal(&component_menu, sizeof(struct nk_context*));
 
 	ct_register_listener(ct, WORLD, key_up, (signal_cb)c_editmode_key_up);
 

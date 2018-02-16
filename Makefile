@@ -13,8 +13,8 @@ SRCS = $(wildcard *.c) $(wildcard components/*.c) $(wildcard systems/*.c) \
 OBJS_REL = $(patsubst %.c, $(DIR)/%.o, $(SRCS))
 OBJS_DEB = $(patsubst %.c, $(DIR)/%.debug.o, $(SRCS))
 
-CFLAGS = $(shell sdl2-config --cflags) -DUSE_VAO -Wall -I. -pedantic \
-		 -Wuninitialized -Wstrict-prototypes -std=gnu11 $(PARENTCFLAGS)
+CFLAGS = $(shell sdl2-config --cflags) -DUSE_VAO -Wall -I. \
+		 -Wuninitialized -Wstrict-prototypes $(PARENTCFLAGS)
 
 CFLAGS_REL = $(CFLAGS) -O3
 

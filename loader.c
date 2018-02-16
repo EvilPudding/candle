@@ -79,7 +79,7 @@ int loader_update(loader_t *self)
 		}
 		else
 		{
-			void *c = ct_get(ecm_get(load->ct.entity.ecm, load->ct.comp_type),
+			void *c = ct_get(ecm_get(load->ct.comp_type),
 					load->ct.entity);
 			load->cb(c);
 		}

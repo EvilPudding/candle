@@ -1039,10 +1039,10 @@ static inline vec3_t int_to_vec3(int id)
 /* CONST vec2_t Z2 = { .x = 0, .y = 0}; */
 
 #ifndef __OPENCL_C_VERSION__
-#define ARGNUM(...) \
-    _ARGNUM(_0, ##__VA_ARGS__, 4, 3, 2, 1, 0)
+#define MAFS_ARGNUM(...) \
+    _MAFS_ARGNUM(_0, ##__VA_ARGS__, 4, 3, 2, 1, 0)
 
-#define _ARGNUM(_0, _1, _2, _3, _4, N, ...) N
+#define _MAFS_ARGNUM(_0, _1, _2, _3, _4, N, ...) N
 
 #define CAT(a,b) a##b
 #define CAT2(a,b) CAT(a,b)
@@ -1090,9 +1090,9 @@ static inline vec3_t int_to_vec3(int id)
 #define __vec4_4(a, b, c, d)  \
 			vec4_n_n_n_n(a, b, c, d)
 
-#define vec2(...) CAT2(__vec2_, ARGNUM(__VA_ARGS__))(__VA_ARGS__)
-#define vec3(...) CAT2(__vec3_, ARGNUM(__VA_ARGS__))(__VA_ARGS__)
-#define vec4(...) CAT2(__vec4_, ARGNUM(__VA_ARGS__))(__VA_ARGS__)
+#define vec2(...) CAT2(__vec2_, MAFS_ARGNUM(__VA_ARGS__))(__VA_ARGS__)
+#define vec3(...) CAT2(__vec3_, MAFS_ARGNUM(__VA_ARGS__))(__VA_ARGS__)
+#define vec4(...) CAT2(__vec4_, MAFS_ARGNUM(__VA_ARGS__))(__VA_ARGS__)
 
 #define xy(vec) vec.xy
 #define xz(vec) vec2(vec.x, vec.z)

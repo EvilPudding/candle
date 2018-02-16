@@ -12,7 +12,7 @@ static void c_node_init(c_node_t *self)
 	self->children_size = 0;
 	self->model = mat4();
 	self->cached = 0;
-	self->parent = (entity_t){.id = -1, .ecm = NULL};
+	self->parent = entity_null;
 }
 
 c_node_t *c_node_new()
@@ -51,13 +51,13 @@ entity_t c_node_get_by_name(c_node_t *self, const char *name)
 		if(child_node)
 		{
 			entity_t response = c_node_get_by_name(child_node, name);
-			if(!entity_is_null(response))
+			if(response != entity_null)
 			{
 				return response;
 			}
 		}
 	}
-	return c_ecm(self)->none;
+	return entity_null;
 }
 
 void c_node_add(c_node_t *self, int num, ...)
@@ -90,9 +90,9 @@ void c_node_add(c_node_t *self, int num, ...)
 	va_end(children);
 }
 
-void c_node_register(ecm_t *ecm)
+void c_node_register()
 {
-	ct_t *ct = ecm_register(ecm, "Node", &ct_node, sizeof(c_node_t),
+	ct_t *ct = ecm_register("Node", &ct_node, sizeof(c_node_t),
 			(init_cb)c_node_init, 1, ct_spacial);
 
 	ct_register_listener(ct, SAME_ENTITY, spacial_changed,
@@ -106,7 +106,7 @@ void c_node_update_model(c_node_t *self)
 
 	entity_t parent = self->parent;
 
-	if(self->parent.id != -1)
+	if(self->parent != entity_null)
 	{
 		c_node_t *parent_node = c_node(&parent);
 		c_node_update_model(parent_node);

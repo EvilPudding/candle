@@ -46,9 +46,9 @@ int c_ambient_render(c_ambient_t *self)
 	return 1;
 }
 
-void c_ambient_register(ecm_t *ecm)
+void c_ambient_register()
 {
-	ct_t *ct = ecm_register(ecm, "Ambient", &ct_ambient,
+	ct_t *ct = ecm_register("Ambient", &ct_ambient,
 			sizeof(c_ambient_t), (init_cb)c_ambient_init, 1, ct_spacial);
 
 	ct_register_listener(ct, SAME_ENTITY, entity_created,

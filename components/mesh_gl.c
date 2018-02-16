@@ -591,7 +591,7 @@ int c_mesh_gl_draw(c_mesh_gl_t *self, shader_t *shader, int transparent)
 	if(shader)
 	{
 		glUniform1f(shader->u_has_tex, (float)self->mesh->has_texcoords);
-		vec3_t id_color = int_to_vec3(c_entity(self).id);
+		vec3_t id_color = int_to_vec3(c_entity(self));
 
 		glUniform3f(shader->u_id, id_color.r, id_color.g, id_color.b);
 	}
@@ -680,14 +680,14 @@ void c_mesh_gl_destroy(c_mesh_gl_t *self)
 			(c_t*)self);
 }
 
-void c_mesh_gl_register(ecm_t *ecm)
+void c_mesh_gl_register()
 {
-	ct_t *ct = ecm_register(ecm, "Mesh gl", &ct_mesh_gl,
+	ct_t *ct = ecm_register("Mesh gl", &ct_mesh_gl,
 			sizeof(c_mesh_gl_t), (init_cb)c_mesh_gl_init, 0);
 	ct_register_listener(ct, SAME_ENTITY, mesh_changed,
 			(signal_cb)c_mesh_gl_on_mesh_changed);
 
-	ct_add_interaction(ecm_get(ecm, ct_model), ct);
+	ct_add_interaction(ecm_get(ct_model), ct);
 
 	/* ct_register_listener(ct, WORLD, component_menu, */
 			/* (signal_cb)c_mesh_gl_menu); */

@@ -38,6 +38,6 @@ void c_window_rect(c_window_t *self, int x, int y, int width, int height,
 
 
 c_window_t *c_window_new(int width, int height);
-void c_window_register(ecm_t *ecm);
+void c_window_register(void);
 
 #endif /* !WINDOW_H */

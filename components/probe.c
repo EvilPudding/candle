@@ -89,9 +89,9 @@ void c_probe_destroy(c_probe_t *self)
 	free(self);
 }
 
-void c_probe_register(ecm_t *ecm)
+void c_probe_register()
 {
-	ct_t *ct = ecm_register(ecm, "Probe", &ct_probe,
+	ct_t *ct = ecm_register("Probe", &ct_probe,
 			sizeof(c_probe_t), (init_cb)c_probe_init, 1, ct_spacial);
 
 	ct_register_listener(ct, SAME_ENTITY, spacial_changed,

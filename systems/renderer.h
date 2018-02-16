@@ -150,7 +150,7 @@ DEF_CASTER(ct_renderer, c_renderer, c_renderer_t)
 c_renderer_t *c_renderer_new(float resolution, int auto_exposure, int roughness,
 		float percent_of_screen, int lock_fps);
 int c_renderer_draw(c_renderer_t *self);
-void c_renderer_register(ecm_t *ecm);
+void c_renderer_register(void);
 void c_renderer_set_resolution(c_renderer_t *self, float resolution);
 void c_renderer_draw_to_texture(c_renderer_t *self, shader_t *shader,
 		texture_t *screen, float scale, texture_t *buffer);

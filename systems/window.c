@@ -71,8 +71,7 @@ void c_window_init(c_window_t *self)
 	self->key_state = SDL_GetKeyboardState(NULL);
 
 	self->quad_shader = shader_new("quad");
-	self->quad = entity_new(candle->ecm, 2,
-			c_name_new("renderer_quad"),
+	self->quad = entity_new(c_name_new("renderer_quad"),
 			c_model_new(mesh_quad(), 0));
 	c_model(&self->quad)->visible = 0;
 }
@@ -119,13 +118,13 @@ void c_window_rect(c_window_t *self, int x, int y, int width, int height,
 
 }
 
-void c_window_register(ecm_t *ecm)
+void c_window_register()
 {
-	ct_t *ct = ecm_register(ecm, "Window", &ct_window,
+	ct_t *ct = ecm_register("Window", &ct_window,
 			sizeof(c_window_t), (init_cb)c_window_init, 0);
 
 	ct_register_listener(ct, SAME_ENTITY, entity_created,
 			(signal_cb)c_window_created);
 
-	ecm_register_signal(ecm, &window_resize, sizeof(window_resize_data));
+	ecm_register_signal(&window_resize, sizeof(window_resize_data));
 }

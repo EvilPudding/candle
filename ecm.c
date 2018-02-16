@@ -1,3 +1,6 @@
+#define _GNU_SOURCE
+#include <search.h>
+
 #include "ext.h"
 #include "ecm.h"
 #include <stdarg.h>
@@ -25,24 +28,27 @@ listener_t *ct_get_listener(ct_t *self, uint signal)
 
 c_t component_new(int comp_type)
 {
-	c_t self = {.comp_type = comp_type, .entity = {.id = -1}};
+	c_t self = {.comp_type = comp_type,
+		.entity = _g_creating[_g_creating_num - 1]};
 	return self;
 }
 
-ecm_t *ecm_new()
+ecm_t *g_ecm = NULL;
+void ecm_init()
 {
 	ecm_t *self = calloc(1, sizeof *self);
-	self->none = (entity_t){.id = -1, .ecm = self};
+	g_ecm = self;
 
 	self->global = IDENT_NULL;
 
-	ecm_register(self, "C_T", &self->global, sizeof(c_t), NULL, 0);
+	ecm_register("C_T", &g_ecm->global, sizeof(c_t), NULL, 0);
 
-	ecm_register_signal(self, &entity_created, 0);
+	ecm_register_signal(&entity_created, 0);
 
-	self->common = entity_new(self, 0);
+	ecm_new_entity(); // entity_null
 
-	return self;
+	g_ecm->common = entity_new();
+
 }
 
 void ct_register_listener(ct_t *self, int flags, uint signal,
@@ -59,45 +65,45 @@ void ct_register_listener(ct_t *self, int flags, uint signal,
 	self->listeners[i] = (listener_t){.signal = signal, .cb = (signal_cb)cb,
 		.flags = flags};
 
-	signal_t *sig = &self->ecm->signals[signal];
+	signal_t *sig = &g_ecm->signals[signal];
 	i = sig->cts_size++;
 	sig->cts = realloc(sig->cts, sizeof(*sig->cts) * sig->cts_size);
 	sig->cts[i] = self->id;
 }
 
-void ecm_register_signal(ecm_t *self, uint *target, uint size)
+void ecm_register_signal(uint *target, uint size)
 {
-	if(!self) return;
+	if(!g_ecm) return;
 	if(*target != IDENT_NULL) return;
-	uint i = self->signals_size++;
-	self->signals = realloc(self->signals, sizeof(*self->signals) *
-			self->signals_size);
+	uint i = g_ecm->signals_size++;
+	g_ecm->signals = realloc(g_ecm->signals, sizeof(*g_ecm->signals) *
+			g_ecm->signals_size);
 
-	self->signals[i] = (signal_t){.size = size};
+	g_ecm->signals[i] = (signal_t){.size = size};
 
 	*target = i;
 }
 
-entity_t ecm_new_entity(ecm_t *self)
+entity_t ecm_new_entity()
 {
 	uint i;
 	int *iter;
 
-	for(i = 0, iter = self->entities_busy;
-			i < self->entities_busy_size && *iter; i++, iter++);
+	for(i = 0, iter = g_ecm->entities_busy;
+			i < g_ecm->entities_busy_size && *iter; i++, iter++);
 
-	/* printf("%lu %lu\n", self->entities_busy_size, i); */
-	if(iter == NULL || i == self->entities_busy_size)
+	/* printf("%lu %lu\n", g_ecm->entities_busy_size, i); */
+	if(iter == NULL || i == g_ecm->entities_busy_size)
 	{
-		i = self->entities_busy_size++;
-		self->entities_busy = realloc(self->entities_busy,
-				sizeof(*self->entities_busy) * self->entities_busy_size);
-		iter = &self->entities_busy[i];
+		i = g_ecm->entities_busy_size++;
+		g_ecm->entities_busy = realloc(g_ecm->entities_busy,
+				sizeof(*g_ecm->entities_busy) * g_ecm->entities_busy_size);
+		iter = &g_ecm->entities_busy[i];
 	}
 
 	*iter = 1;
 
-	return (entity_t){.id = i, .ecm = self};
+	return i;
 }
 
 /* uint ecm_register_system(ecm_t *self, void *system) */
@@ -130,10 +136,30 @@ void ct_add_dependency(ct_t *ct, ct_t *dep)
 	ct->depends[i].is_interaction = 0;
 }
 
-ct_t *ecm_register(ecm_t *self, const char *name, uint *target, uint size,
+/* void ecm_generate_hashes(ecm_t *self) */
+/* { */
+/* 	int i, j; */
+/* 	for(i = 0; i < self->cts_size; i++) */
+/* 	{ */
+/* 		ct_t *ct = &self->cts[i]; */
+/* 		ct->listeners_table = calloc(1, sizeof(*ct->listeners_table)); */
+/* 		int res = hcreate_r(ct->listeners_size, ct->listeners_table); */
+/* 		ENTRY item; */
+/* 		for(j = 0; j < ct->listeners_size; j++) */
+/* 		{ */
+/* 			listener_t *listener = &ct->listeners[j]; */
+/* 			item.data = listener; */
+/* 			item.key = listener->signal; */
+
+/* 			res = hsearch_r(item, ENTER, NULL, &ct->listeners_table); */
+/* 		} */
+/* 	} */
+/* } */
+
+ct_t *ecm_register(const char *name, uint *target, uint size,
 		init_cb init, int depend_size, ...)
 {
-	if(*target != IDENT_NULL) return ecm_get(self, *target);
+	if(*target != IDENT_NULL) return ecm_get(*target);
 	va_list depends;
 
 	va_start(depends, depend_size);
@@ -144,20 +170,19 @@ ct_t *ecm_register(ecm_t *self, const char *name, uint *target, uint size,
 	}
 	va_end(depends);
 
-	uint i = self->cts_size++;
+	uint i = g_ecm->cts_size++;
 
 	if(target) *target = i;
 
-	self->cts = realloc(self->cts,
-			sizeof(*self->cts) *
-			self->cts_size);
+	g_ecm->cts = realloc(g_ecm->cts,
+			sizeof(*g_ecm->cts) *
+			g_ecm->cts_size);
 
-	ct_t *ct = &self->cts[i];
+	ct_t *ct = &g_ecm->cts[i];
 
 	*ct = (ct_t)
 	{
 		.id = i,
-		.ecm = self,
 		.init = init,
 		.size = size,
 		.depends_size = depend_size,
@@ -188,9 +213,9 @@ void ct_add(ct_t *self, c_t *comp)
 	if(!comp) return;
 	uint offset, i = self->components_size++;
 	entity_t entity = c_entity(comp);
-	if(entity.id >= self->offsets_size)
+	if(entity >= self->offsets_size)
 	{
-		uint j, new_size = entity.id + 1;
+		uint j, new_size = entity + 1;
 		self->offsets = realloc(self->offsets, sizeof(*self->offsets) *
 				new_size);
 		for(j = self->offsets_size; j < new_size - 1; j++)
@@ -198,10 +223,10 @@ void ct_add(ct_t *self, c_t *comp)
 			self->offsets[j] = -1;
 		}
 
-		self->offsets_size = entity.id + 1;
+		self->offsets_size = entity + 1;
 	}
 
-	self->offsets[entity.id] = offset = i * self->size;
+	self->offsets[entity] = offset = i * self->size;
 
 	self->components = realloc(self->components, self->size * self->components_size);
 

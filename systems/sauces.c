@@ -153,9 +153,9 @@ int c_sauces_component_menu(c_sauces_t *self, void *ctx)
 }
 
 
-void c_sauces_register(ecm_t *ecm)
+void c_sauces_register()
 {
-	ct_t *ct = ecm_register(ecm, "Resources", &ct_sauces,
+	ct_t *ct = ecm_register("Resources", &ct_sauces,
 			sizeof(c_sauces_t), (init_cb)c_sauces_init, 0);
 
 	ct_register_listener(ct, WORLD, component_menu,

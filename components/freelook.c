@@ -13,9 +13,9 @@ static void c_freelook_init(c_freelook_t *self)
 	self->super = component_new(ct_freelook);
 	self->win_min_side = 1080;
 
-	self->x_control = entity_null();
-	self->y_control = entity_null();
-	self->force_down = entity_null();
+	self->x_control = entity_null;
+	self->y_control = entity_null;
+	self->force_down = entity_null;
 }
 
 c_freelook_t *c_freelook_new(entity_t force_down, float sensitivity)
@@ -49,7 +49,7 @@ static void c_freelook_update(c_freelook_t *self)
 	const float max_up = M_PI / 2.0 - 0.01;
 	const float max_down = -M_PI / 2.0 + 0.01;
 
-	if(entity_is_null(self->x_control) || entity_is_null(self->y_control))
+	if(self->x_control == entity_null || self->y_control == entity_null)
 	{
 		return;
 	}
@@ -83,9 +83,9 @@ static int c_freelook_mouse_move(c_freelook_t *self, mouse_move_data *event)
 	return 1;
 }
 
-void c_freelook_register(ecm_t *ecm)
+void c_freelook_register()
 {
-	ct_t *ct = ecm_register(ecm, "Freelook", &ct_freelook, sizeof(c_freelook_t),
+	ct_t *ct = ecm_register("Freelook", &ct_freelook, sizeof(c_freelook_t),
 			(init_cb)c_freelook_init, 1, ct_spacial);
 
 	ct_register_listener(ct, WORLD, mouse_move,

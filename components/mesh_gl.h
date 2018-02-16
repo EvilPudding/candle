@@ -58,7 +58,7 @@ DEF_CASTER(ct_mesh_gl, c_mesh_gl, c_mesh_gl_t)
 
 c_mesh_gl_t *c_mesh_gl_new(void);
 
-void c_mesh_gl_register(ecm_t *ecm);
+void c_mesh_gl_register(void);
 
 int c_mesh_gl_draw(c_mesh_gl_t *self, shader_t *shader, int transparent);
 

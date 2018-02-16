@@ -21,6 +21,6 @@ DEF_CASTER(ct_velocity, c_velocity, c_velocity_t)
 c_velocity_t *c_velocity_new(float x, float y, float z);
 void c_velocity_init(c_velocity_t *self);
 void c_velocity_set_vel(c_velocity_t *self, float x, float y, float z);
-void c_velocity_register(ecm_t *ecm);
+void c_velocity_register(void);
 
 #endif /* !VELOCITY_H */

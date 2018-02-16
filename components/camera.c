@@ -53,9 +53,9 @@ int c_camera_changed(c_camera_t *self)
 	return 1;
 }
 
-void c_camera_register(ecm_t *ecm)
+void c_camera_register()
 {
-	ct_t *ct = ecm_register(ecm, "Camera", &ct_camera, sizeof(c_camera_t),
+	ct_t *ct = ecm_register("Camera", &ct_camera, sizeof(c_camera_t),
 			(init_cb)c_camera_init, 2, ct_spacial, ct_node);
 
 	ct_register_listener(ct, SAME_ENTITY, spacial_changed, (signal_cb)c_camera_changed);

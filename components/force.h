@@ -16,6 +16,6 @@ DEF_CASTER(ct_force, c_force, c_force_t)
 
 c_force_t *c_force_new(float x, float y, float z, int active);
 void c_force_init(c_force_t *self);
-void c_force_register(ecm_t *ecm);
+void c_force_register(void);
 
 #endif /* !FORCE_H */

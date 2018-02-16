@@ -20,9 +20,9 @@ c_name_t *c_name_new(const char *name)
 	return self;
 }
 
-void c_name_register(ecm_t *ecm)
+void c_name_register()
 {
-	ecm_register(ecm, "Name", &ct_name, sizeof(c_name_t), (init_cb)c_name_init, 0);
+	ecm_register("Name", &ct_name, sizeof(c_name_t), (init_cb)c_name_init, 0);
 }
 
 

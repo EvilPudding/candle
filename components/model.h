@@ -42,7 +42,7 @@ c_model_t *c_model_paint(c_model_t *self, int layer, material_t *mat);
 int c_model_render_transparent(c_model_t *self, shader_t *shader);
 int c_model_render_visible(c_model_t *self, shader_t *shader);
 int c_model_render(c_model_t *self, int transparent, shader_t *shader);
-void c_model_register(ecm_t *ecm);
+void c_model_register(void);
 void c_model_set_mesh(c_model_t *self, mesh_t *mesh);
 
 #endif /* !MODEL_H */

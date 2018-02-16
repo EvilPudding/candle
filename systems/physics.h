@@ -19,7 +19,7 @@ typedef struct c_physics_t
 
 DEF_CASTER(ct_physics, c_physics, c_physics_t)
 
-void c_physics_register(ecm_t *ecm);
+void c_physics_register(void);
 
 DEF_SIG(collider_callback);
 

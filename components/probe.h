@@ -21,7 +21,7 @@ DEF_CASTER(ct_probe, c_probe, c_probe_t)
 
 c_probe_t *c_probe_new(int map_size, shader_t *shader);
 void c_probe_destroy(c_probe_t *self);
-void c_probe_register(ecm_t *ecm);
+void c_probe_register(void);
 int c_probe_render(c_probe_t *self, uint signal, shader_t *shader);
 
 #endif /* !PROBE_H */

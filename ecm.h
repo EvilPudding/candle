@@ -1,11 +1,15 @@
-#ifndef COMPONENT_H
-#define COMPONENT_H
+#ifndef ECM_H
+#define ECM_H
 
 #include <limits.h>
 #include "material.h"
 #include "texture.h"
 #include "mesh.h"
 #include "entity.h"
+#include "vector.h"
+
+#define _GNU_SOURCE
+#include <search.h>
 
 typedef struct ecm_t ecm_t;
 
@@ -13,7 +17,7 @@ typedef struct c_t c_t;
 
 typedef void(*init_cb)(c_t *self);
 typedef int(*signal_cb)(c_t *self, void *data);
-typedef void(*c_reg_cb)(ecm_t *ecm);
+typedef void(*c_reg_cb)(void);
 
 /* TODO: find appropriate place */
 typedef int(*before_draw_cb)(c_t *self);
@@ -36,8 +40,6 @@ typedef struct
 
 typedef struct ct_t
 {
-	ecm_t *ecm;
-
 	char name[32];
 
 	init_cb init;
@@ -59,6 +61,8 @@ typedef struct ct_t
 
 	int is_interaction;
 
+	/* struct hsearch_data *listeners_table; */
+
 	/* void *system_info; */
 	/* uint system_info_size; */
 } ct_t;
@@ -70,6 +74,7 @@ typedef struct
 	uint *cts;
 	uint cts_size;
 
+	
 } signal_t;
 
 typedef struct ecm_t
@@ -85,7 +90,6 @@ typedef struct ecm_t
 
 	uint global;
 
-	entity_t none;
 	entity_t common;
 } ecm_t; /* Entity Component System */
 
@@ -96,7 +100,6 @@ typedef struct c_t
 } c_t;
 
 #define c_entity(c) (((c_t*)c)->entity)
-#define c_ecm(c) (((c_t*)c)->entity.ecm)
 
 #define _type(a, b) __builtin_types_compatible_p(typeof(a), b)
 #define _if(c, a, b) __builtin_choose_expr(c, a, b)
@@ -109,8 +112,7 @@ typedef struct c_t
 
 #define DEF_CASTER(ct, cn, nc_t) extern uint ct; \
 	static inline nc_t *cn(const void *entity)\
-{ return ct==IDENT_NULL?NULL:(nc_t*)ct_get(ecm_get(((entity_t*)entity)->ecm,\
-			ct), *(entity_t*)entity); } \
+{ return ct==IDENT_NULL?NULL:(nc_t*)ct_get(ecm_get(ct), *(entity_t*)entity); } \
 
 static inline c_t *ct_get_at(ct_t *self, uint i)
 {
@@ -119,8 +121,8 @@ static inline c_t *ct_get_at(ct_t *self, uint i)
 
 static inline c_t *ct_get(ct_t *self, entity_t entity)
 {
-	if(entity.id >= self->offsets_size) return NULL;
-	uint offset = self->offsets[entity.id];
+	if(entity >= self->offsets_size) return NULL;
+	uint offset = self->offsets[entity];
 	if(offset == -1) return NULL;
 	return (c_t*)&(self->components[offset]);
 }
@@ -134,25 +136,27 @@ listener_t *ct_get_listener(ct_t *self, uint signal);
 
 void ct_add(ct_t *self, c_t *comp);
 
-ecm_t *ecm_new(void);
-entity_t ecm_new_entity(ecm_t *ecm);
-void ecm_register_signal(ecm_t *ecm, uint *target, uint size);
+extern ecm_t *g_ecm;
+void ecm_init(void);
+entity_t ecm_new_entity(void);
+void ecm_register_signal(uint *target, uint size);
 
-void ecm_add_entity(ecm_t *self, entity_t *entity);
+void ecm_add_entity(entity_t *entity);
 /* uint ecm_register_system(ecm_t *self, void *system); */
 
-ct_t *ecm_register(ecm_t *self, const char *name, uint *target, uint size,
+ct_t *ecm_register(const char *name, uint *target, uint size,
 		init_cb init, int depend_size, ...);
 
 void ct_add_dependency(ct_t *ct, ct_t *dep);
 void ct_add_interaction(ct_t *ct, ct_t *dep);
 
-static inline ct_t *ecm_get(ecm_t *self, uint comp_type) {
-	return &self->cts[comp_type]; }
+static inline ct_t *ecm_get(uint comp_type) {
+	return &g_ecm->cts[comp_type]; }
+/* void ecm_generate_hashes(ecm_t *self); */
 
 c_t component_new(int comp_type);
 
 /* builtin signals */
 extern uint entity_created;
 
-#endif /* !COMPONENT_H */
+#endif /* !ECM_H */

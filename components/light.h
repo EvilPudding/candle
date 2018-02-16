@@ -22,6 +22,6 @@ DEF_CASTER(ct_light, c_light, c_light_t)
 
 c_light_t *c_light_new(float intensity, vec4_t color, int shadow_size);
 void c_light_destroy(c_light_t *self);
-void c_light_register(ecm_t *ecm);
+void c_light_register(void);
 
 #endif /* !LIGHT_H */

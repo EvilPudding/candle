@@ -24,7 +24,7 @@ typedef struct c_sauces_t
 DEF_CASTER(ct_sauces, c_sauces, c_sauces_t)
 
 c_sauces_t *c_sauces_new(void);
-void c_sauces_register(ecm_t *ecm);
+void c_sauces_register(void);
 
 material_t *c_sauces_material_get(c_sauces_t *self, const char *name);
 int c_sauces_get_materials_at(c_sauces_t *self, const char *dir_name);

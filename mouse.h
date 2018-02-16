@@ -25,7 +25,7 @@ typedef struct
 	float x, y;
 } mouse_move_data;
 
-void mouse_register(ecm_t *ecm);
+void mouse_register(void);
 
 DEF_SIG(mouse_move);
 DEF_SIG(mouse_press);

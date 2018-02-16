@@ -228,11 +228,11 @@ int c_model_scene_changed(c_model_t *self, entity_t *entity)
 }
 
 
-void c_model_register(ecm_t *ecm)
+void c_model_register()
 {
-	ecm_register_signal(ecm, &mesh_changed, sizeof(mesh_t));
+	ecm_register_signal(&mesh_changed, sizeof(mesh_t));
 
-	ct_t *ct = ecm_register(ecm, "Model", &ct_model, sizeof(c_model_t),
+	ct_t *ct = ecm_register("Model", &ct_model, sizeof(c_model_t),
 			(init_cb)c_model_init, 2, ct_spacial, ct_node);
 
 	ct_register_listener(ct, SAME_ENTITY, entity_created,

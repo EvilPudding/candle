@@ -24,7 +24,7 @@ DEF_CASTER(ct_aabb, c_aabb, c_aabb_t)
 
 c_aabb_t *c_aabb_new(void);
 
-void c_aabb_register(ecm_t *ecm);
+void c_aabb_register(void);
 
 int c_aabb_intersects(c_aabb_t *self, c_aabb_t *other);
 

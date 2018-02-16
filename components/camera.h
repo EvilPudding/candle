@@ -26,6 +26,6 @@ vec3_t c_camera_real_pos(c_camera_t *cam, float depth, vec2_t coord);
 void c_camera_update_view(c_camera_t *self);
 int c_camera_update(c_camera_t *self, void *event);
 
-void c_camera_register(ecm_t *ecm);
+void c_camera_register(void);
 
 #endif /* !CAMERA_H */

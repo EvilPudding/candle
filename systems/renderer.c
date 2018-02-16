@@ -30,7 +30,7 @@ static int c_renderer_gbuffer(c_renderer_t *self, const char *name);
 static void c_renderer_add_gbuffer(c_renderer_t *self, const char *name,
 		unsigned int draw_filter);
 
-static void c_renderer_update_probes(c_renderer_t *self, ecm_t *ecm);
+static void c_renderer_update_probes(c_renderer_t *self);
 
 static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_t camera);
 
@@ -135,7 +135,7 @@ static void c_renderer_init(c_renderer_t *self)
 	c_renderer_add_gbuffer(self, "opaque", render_visible);
 	c_renderer_add_gbuffer(self, "transp", render_transparent);
 
-	self->camera = entity_null();
+	self->camera = entity_null;
 #ifdef MESH4
 	self->angle4 = 0.01f;
 #endif
@@ -177,8 +177,7 @@ static void c_renderer_init(c_renderer_t *self)
 	);
 
 
-	self->quad = entity_new(candle->ecm, 2,
-			c_name_new("renderer_quad"),
+	self->quad = entity_new(c_name_new("renderer_quad"),
 			c_model_new(mesh_quad(), 0));
 	c_model(&self->quad)->visible = 0;
 
@@ -353,7 +352,7 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 			&cam->projection_matrix, cam->exposure);
 #endif
 
-	ct_t *ambients = ecm_get(c_ecm(self), ct_ambient);
+	ct_t *ambients = ecm_get(ct_ambient);
 	c_ambient_t *ambient = (c_ambient_t*)ct_get_at(ambients, 0);
 
 	if(ambient)
@@ -403,7 +402,7 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 	c_mesh_gl_t *quad = c_mesh_gl(&self->quad);
 	if(pass->for_each_light)
 	{
-		ct_t *lights = ecm_get(c_ecm(self), ct_light);
+		ct_t *lights = ecm_get(ct_light);
 		c_light_t *light;
 
 		glEnable(GL_BLEND);
@@ -499,10 +498,8 @@ entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
 		float *depth)
 {
 	entity_t result;
-	if(!self->gbuffers[0].buffer) return entity_null();
-	result.id = texture_get_pixel(self->gbuffers[0].buffer, 7, x, y, depth);
-
-	result.ecm = c_ecm(self);
+	if(!self->gbuffers[0].buffer) return entity_null;
+	result = texture_get_pixel(self->gbuffers[0].buffer, 7, x, y, depth);
 
 	return result;
 }
@@ -544,9 +541,9 @@ int c_renderer_component_menu(c_renderer_t *self, void *ctx)
 	return 1;
 }
 
-void c_renderer_register(ecm_t *ecm)
+void c_renderer_register()
 {
-	ct_t *ct = ecm_register(ecm, "Renderer", &ct_renderer,
+	ct_t *ct = ecm_register("Renderer", &ct_renderer,
 			sizeof(c_renderer_t), (init_cb)c_renderer_init, 1, ct_window);
 
 	ct_register_listener(ct, WORLD, window_resize,
@@ -565,14 +562,14 @@ void c_renderer_register(ecm_t *ecm)
 			(signal_cb)c_renderer_global_menu);
 
 
-	ecm_register_signal(ecm, &offscreen_render, 0);
-	ecm_register_signal(ecm, &render_visible, sizeof(shader_t));
-	ecm_register_signal(ecm, &render_transparent, sizeof(shader_t));
+	ecm_register_signal(&offscreen_render, 0);
+	ecm_register_signal(&render_visible, sizeof(shader_t));
+	ecm_register_signal(&render_transparent, sizeof(shader_t));
 }
 
 
 
-static void c_renderer_update_probes(c_renderer_t *self, ecm_t *ecm)
+static void c_renderer_update_probes(c_renderer_t *self)
 {
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -724,12 +721,12 @@ int c_renderer_draw(c_renderer_t *self)
 		SDL_CreateThread((int(*)(void*))init_perlin, "perlin", self);
 	}
 
-	if(entity_is_null(self->camera)) return 1;
+	if(self->camera == entity_null) return 1;
 	if(!self->gbuffer_shader) return 1;
 
 	c_camera_update_view(c_camera(&self->camera));
 
-	c_renderer_update_probes(self, c_ecm(self));
+	c_renderer_update_probes(self);
 
 	glerr();
 

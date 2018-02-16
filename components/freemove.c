@@ -19,8 +19,8 @@ static void c_freemove_init(c_freemove_t *self)
 	self->backward = 0;
 	self->left = 0;
 	self->right = 0;
-	self->orientation = entity_null();
-	self->force_down = entity_null();
+	self->orientation = entity_null;
+	self->force_down = entity_null;
 }
 
 c_freemove_t *c_freemove_new(entity_t orientation, int plane_movement, entity_t force_down)
@@ -111,9 +111,9 @@ static int c_freemove_key_down(c_freemove_t *self, char *key)
 	return 1;
 }
 
-void c_freemove_register(ecm_t *ecm)
+void c_freemove_register()
 {
-	ct_t *ct = ecm_register(ecm, "Freemove", &ct_freemove,
+	ct_t *ct = ecm_register("Freemove", &ct_freemove,
 			sizeof(c_freemove_t), (init_cb)c_freemove_init,
 			2, ct_spacial, ct_velocity);
 	ct_register_listener(ct, WORLD, key_up, (signal_cb)c_freemove_key_up);

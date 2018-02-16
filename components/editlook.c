@@ -71,14 +71,14 @@ int c_editlook_mouse_press(c_editlook_t *self, mouse_button_data *event)
 
 int c_editlook_mouse_release(c_editlook_t *self, mouse_button_data *event)
 {
-	self->panning = 0;
 	if(event->button == SDL_BUTTON_RIGHT)
 	{
 		if(self->pressed_r)
 		{
-			candle_release_mouse(candle, c_entity(self), 1);
+			candle_release_mouse(candle, c_entity(self), !self->panning);
 		}
 		self->pressed_r = 0;
+		self->panning = 0;
 	}
 	return 1;
 }
@@ -167,9 +167,9 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 	return 0;
 }
 
-void c_editlook_register(ecm_t *ecm)
+void c_editlook_register()
 {
-	ct_t *ct = ecm_register(ecm, "EditLook", &ct_editlook,
+	ct_t *ct = ecm_register("EditLook", &ct_editlook,
 			sizeof(c_editlook_t), (init_cb)c_editlook_init,
 			1, ct_spacial);
 

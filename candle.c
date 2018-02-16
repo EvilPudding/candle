@@ -29,7 +29,7 @@ static void candle_handle_events(candle_t *self)
 	/* keySpec(state->key_state, state); */
 	char key;
 
-	entity_signal(self->ecm->none, events_begin, NULL);
+	entity_signal(entity_null, events_begin, NULL);
 	while(SDL_PollEvent(&event))
 	{
 		if(event.type == SDL_QUIT)
@@ -37,7 +37,7 @@ static void candle_handle_events(candle_t *self)
 			self->exit = 1;
 			return;
 		}
-		if(!entity_is_null(self->mouse_owners[0]))
+		if(self->mouse_owners[0] != entity_null)
 		{
 			if(entity_signal_same(self->mouse_owners[0],
 						event_handle, &event) == 0)
@@ -47,7 +47,7 @@ static void candle_handle_events(candle_t *self)
 		}
 		else
 		{
-			if(entity_signal(self->ecm->none, event_handle, &event) == 0)
+			if(entity_signal(entity_null, event_handle, &event) == 0)
 			{
 				continue;
 			}
@@ -65,19 +65,19 @@ static void candle_handle_events(candle_t *self)
 				/* } */
 				/* else */
 				{
-					entity_signal(self->ecm->none, mouse_wheel, &bdata);
+					entity_signal(entity_null, mouse_wheel, &bdata);
 				}
 				break;
 			case SDL_MOUSEBUTTONUP:
 				bdata = (mouse_button_data){event.button.x, event.button.y, 0,
 					event.button.button};
-				if(!entity_is_null(self->mouse_owners[0]))
+				if(self->mouse_owners[0] != entity_null)
 				{
 					entity_signal_same(self->mouse_owners[0], mouse_release, &bdata);
 				}
 				else
 				{
-					entity_signal(self->ecm->none, mouse_release, &bdata);
+					entity_signal(entity_null, mouse_release, &bdata);
 				}
 				break;
 			case SDL_MOUSEBUTTONDOWN:
@@ -89,20 +89,20 @@ static void candle_handle_events(candle_t *self)
 				/* } */
 				/* else */
 				{
-					entity_signal(self->ecm->none, mouse_press, &bdata);
+					entity_signal(entity_null, mouse_press, &bdata);
 				}
 				break;
 			case SDL_MOUSEMOTION:
 				self->mx = event.motion.x; self->my = event.motion.y;
 				mdata = (mouse_move_data){event.motion.xrel, event.motion.yrel,
 						event.motion.x, event.motion.y};
-				if(!entity_is_null(self->mouse_owners[0]))
+				if(self->mouse_owners[0] != entity_null)
 				{
 					entity_signal_same(self->mouse_owners[0], mouse_move, &mdata);
 				}
 				else
 				{
-					entity_signal(self->ecm->none, mouse_move, &mdata);
+					entity_signal(entity_null, mouse_move, &mdata);
 				}
 				break;
 			case SDL_KEYUP:
@@ -111,7 +111,7 @@ static void candle_handle_events(candle_t *self)
 				{
 					self->shift = 0;
 				}
-				entity_signal(self->ecm->none, key_up, &key);
+				entity_signal(entity_null, key_up, &key);
 				break;
 			case SDL_KEYDOWN:
 				key = event.key.keysym.sym;
@@ -119,7 +119,7 @@ static void candle_handle_events(candle_t *self)
 				{
 					self->shift = 1;
 				}
-				entity_signal(self->ecm->none, key_down, &key);
+				entity_signal(entity_null, key_down, &key);
 				break;
 			case SDL_WINDOWEVENT:
 				switch(event.window.event)
@@ -128,7 +128,7 @@ static void candle_handle_events(candle_t *self)
 
 						printf("window resize: %dx%d\n", event.window.data1,
 								event.window.data2);
-						entity_signal(self->ecm->none, window_resize,
+						entity_signal(entity_null, window_resize,
 								&(window_resize_data){
 								.width = event.window.data1,
 								.height = event.window.data2});
@@ -138,7 +138,7 @@ static void candle_handle_events(candle_t *self)
 		}
 		/* break; */
 	}
-	entity_signal(self->ecm->none, events_end, NULL);
+	entity_signal(entity_null, events_end, NULL);
 }
 
 static int render_loop(candle_t *self)
@@ -157,7 +157,7 @@ static int render_loop(candle_t *self)
 		/* if(state->gameStarted) */
 		{
 			/* candle_handle_events(self); */
-			entity_signal(self->ecm->none, world_draw, NULL);
+			entity_signal(entity_null, world_draw, NULL);
 
 
 			/* GUI */
@@ -182,20 +182,20 @@ static int render_loop(candle_t *self)
 	return 1;
 }
 
-void candle_register(ecm_t *ecm)
+void candle_register()
 {
-	ecm_register_signal(ecm, &world_update, sizeof(float));
-	ecm_register_signal(ecm, &world_draw, sizeof(void*));
-	ecm_register_signal(ecm, &event_handle, sizeof(void*));
-	ecm_register_signal(ecm, &events_end, sizeof(void*));
-	ecm_register_signal(ecm, &events_begin, sizeof(void*));
+	ecm_register_signal(&world_update, sizeof(float));
+	ecm_register_signal(&world_draw, sizeof(void*));
+	ecm_register_signal(&event_handle, sizeof(void*));
+	ecm_register_signal(&events_end, sizeof(void*));
+	ecm_register_signal(&events_begin, sizeof(void*));
 }
 
 static void updateWorld(candle_t *self)
 {
 	int current = SDL_GetTicks();
 	float dt = (current - self->last_update) / 1000.0;
-	entity_signal(self->ecm->none, world_update, &dt);
+	entity_signal(entity_null, world_update, &dt);
 	self->last_update = current;
 }
 
@@ -252,7 +252,7 @@ int candle_import(candle_t *self, entity_t root, const char *map_name)
 				break;
 			}
 		}
-		if(entity_is_null(pass)) pass = root;
+		if(pass == entity_null) pass = root;
 	}
 
 	fclose(file);
@@ -284,7 +284,7 @@ void candle_release_mouse(candle_t *self, entity_t ent, int reset)
 	int i;
 	for(i = 0; i < 16; i++)
 	{
-		if(entity_equal(self->mouse_owners[i], ent))
+		if(self->mouse_owners[i] == ent)
 		{
 			/* // SDL_SetWindowGrab(mainWindow, SDL_FALSE); */
 			SDL_SetRelativeMouseMode(SDL_FALSE);
@@ -327,7 +327,7 @@ candle_t *candle_new(int comps_size, ...)
 	candle_t *self = calloc(1, sizeof *self);
 	candle = self;
 
-	self->ecm = ecm_new();
+	ecm_init();
 
 	self->firstDir = SDL_GetBasePath();
 	candle_reset_dir(self);
@@ -338,35 +338,35 @@ candle_t *candle_new(int comps_size, ...)
 	int i;
 	for(i = 0; i < 4; i++)
 	{
-		candle_register(self->ecm);
+		candle_register();
 
-		keyboard_register(self->ecm);
-		mouse_register(self->ecm);
+		keyboard_register();
+		mouse_register();
 
-		c_spacial_register(self->ecm);
-		c_node_register(self->ecm);
-		c_velocity_register(self->ecm);
-		c_force_register(self->ecm);
-		c_freemove_register(self->ecm);
-		c_freelook_register(self->ecm);
-		c_model_register(self->ecm);
-		c_rigid_body_register(self->ecm);
-		c_aabb_register(self->ecm);
-		c_probe_register(self->ecm);
-		c_light_register(self->ecm);
-		c_ambient_register(self->ecm);
-		c_name_register(self->ecm);
-		c_editlook_register(self->ecm);
+		c_spacial_register();
+		c_node_register();
+		c_velocity_register();
+		c_force_register();
+		c_freemove_register();
+		c_freelook_register();
+		c_model_register();
+		c_rigid_body_register();
+		c_aabb_register();
+		c_probe_register();
+		c_light_register();
+		c_ambient_register();
+		c_name_register();
+		c_editlook_register();
 
 		/* OpenGL mesh plugin */
-		c_mesh_gl_register(self->ecm);
+		c_mesh_gl_register();
 
-		c_physics_register(self->ecm);
-		c_window_register(self->ecm);
-		c_renderer_register(self->ecm);
-		c_editmode_register(self->ecm);
-		c_camera_register(self->ecm);
-		c_sauces_register(self->ecm);
+		c_physics_register();
+		c_window_register();
+		c_renderer_register();
+		c_editmode_register();
+		c_camera_register();
+		c_sauces_register();
 
 		va_list comps;
 		va_start(comps, comps_size);
@@ -374,20 +374,20 @@ candle_t *candle_new(int comps_size, ...)
 		for(i = 0; i < comps_size; i++)
 		{
 			c_reg_cb cb = va_arg(comps, c_reg_cb);
-			cb(self->ecm);
+			cb();
 		}
 		va_end(comps);
 	}
+	/* ecm_generate_hashes(); */
 
 	self->loader = loader_new(0);
 
-	self->systems = entity_new(self->ecm, 3, c_window_new(0, 0),
-			c_physics_new(), c_sauces_new());
+	self->systems = entity_new(c_window_new(0, 0), c_physics_new(), c_sauces_new());
 
-	self->mouse_owners[0] = entity_null();
+	self->mouse_owners[0] = entity_null;
 	self->mouse_visible[0] = 1;
 
-	/* candle_import_dir(self, self->ecm->none, "./"); */
+	/* candle_import_dir(self, entity_null, "./"); */
 
 	return self;
 }

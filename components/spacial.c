@@ -32,12 +32,12 @@ c_spacial_t *c_spacial_new()
 	return self;
 }
 
-void c_spacial_register(ecm_t *ecm)
+void c_spacial_register()
 {
-	ct_t *ct = ecm_register(ecm, "Spacial", &ct_spacial,
+	ct_t *ct = ecm_register("Spacial", &ct_spacial,
 			sizeof(c_spacial_t), (init_cb)c_spacial_init, 0);
 
-	ecm_register_signal(ecm, &spacial_changed, sizeof(entity_t));
+	ecm_register_signal(&spacial_changed, sizeof(entity_t));
 
 	ct_register_listener(ct, WORLD, component_menu, (signal_cb)c_spacial_menu);
 }

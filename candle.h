@@ -38,7 +38,7 @@ DEF_SIG(event_handle);
 DEF_SIG(events_begin);
 DEF_SIG(events_end);
 
-void candle_register(ecm_t *ecm);
+void candle_register(void);
 
 typedef struct candle_t candle_t;
 typedef entity_t(*template_cb)(entity_t root, FILE *fd, candle_t *candle);
@@ -53,7 +53,6 @@ typedef struct candle_t
 {
 	entity_t systems;
 	loader_t *loader;
-	ecm_t *ecm;
 
 	char *firstDir;
 

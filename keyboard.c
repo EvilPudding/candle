@@ -10,10 +10,10 @@ DEC_SIG(key_down);
 	/* return key + ctrl * 64; */
 /* } */
 
-void keyboard_register(ecm_t *ecm)
+void keyboard_register()
 {
-	ecm_register_signal(ecm, &key_up, sizeof(char));
-	ecm_register_signal(ecm, &key_down, sizeof(char));
+	ecm_register_signal(&key_up, sizeof(char));
+	ecm_register_signal(&key_down, sizeof(char));
 }
 
 /* void keySpec(const Uint8 *ks, state_t *state) */
