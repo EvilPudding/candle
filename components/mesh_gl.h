@@ -46,7 +46,7 @@ typedef struct c_mesh_gl_t
 
 	mesh_t *mesh;
 
-	glg_t groups[8];
+	glg_t *groups;
 	int groups_num;
 
 

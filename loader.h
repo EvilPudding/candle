@@ -28,7 +28,7 @@ typedef struct
 	int first;
 } loader_t;
 
-loader_t *loader_new(int async);
+loader_t *loader_new(void);
 void loader_push(loader_t *self, loader_cb cb, void *usrptr, c_t *c);
 void loader_push_wait(loader_t *self, loader_cb cb, void *usrptr, c_t *c);
 int loader_update(loader_t *self);

@@ -10,13 +10,11 @@ static shader_t *g_shader;
 
 void c_ambient_init(c_ambient_t *self)
 {
-	self->super = component_new(ct_ambient);
 }
 
 c_ambient_t *c_ambient_new(int map_size)
 {
-	c_ambient_t *self = malloc(sizeof *self);
-	c_ambient_init(self);
+	c_ambient_t *self = component_new(ct_ambient);
 
 	self->map_size = map_size;
 
@@ -54,7 +52,7 @@ void c_ambient_register()
 	ct_register_listener(ct, SAME_ENTITY, entity_created,
 			(signal_cb)c_ambient_created);
 
-	ct_register_listener(ct, WORLD, offscreen_render,
+	ct_register_listener(ct, WORLD|RENDER_THREAD, offscreen_render,
 			(signal_cb)c_ambient_render);
 }
 

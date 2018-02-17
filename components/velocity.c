@@ -6,7 +6,6 @@ DEC_SIG(velocity_changed);
 
 void c_velocity_init(c_velocity_t *self)
 {
-	self->super = component_new(ct_velocity);
 
 	self->normal = vec3(0.0, 0.0, 0.0);
 	self->velocity = vec3(0.0, 0.0, 0.0);
@@ -14,8 +13,7 @@ void c_velocity_init(c_velocity_t *self)
 
 c_velocity_t *c_velocity_new(float x, float y, float z)
 {
-	c_velocity_t *self = malloc(sizeof *self);
-	c_velocity_init(self);
+	c_velocity_t *self = component_new(ct_velocity);
 
 	self->velocity = vec3(x, y, z);
 

@@ -12,7 +12,6 @@ extern int window_width, window_height;
 
 static void c_freemove_init(c_freemove_t *self)
 {
-	self->super = component_new(ct_freemove);
 
 	self->plane_movement = 0;
 	self->forward = 0;
@@ -25,8 +24,7 @@ static void c_freemove_init(c_freemove_t *self)
 
 c_freemove_t *c_freemove_new(entity_t orientation, int plane_movement, entity_t force_down)
 {
-	c_freemove_t *self = malloc(sizeof *self);
-	c_freemove_init(self);
+	c_freemove_t *self = component_new(ct_freemove);
 	self->plane_movement = plane_movement;
 	self->force_down = force_down;
 

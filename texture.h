@@ -27,7 +27,9 @@ typedef struct
 
 	GLuint texId[16]; /* 0 is depth, 1 is color, >= 2 are color buffers */
 	uint attachments[16];
+	uint attachments_ready[16];
 	char *texNames[16];
+	uint depth_attachment;
 
 	int color_buffers_size;
 
@@ -36,6 +38,7 @@ typedef struct
 	GLuint frame_buffer[6];
 	char *filename;
 	int ready;
+	int framebuffer_ready;
 	int draw_id;
 	int prev_id;
 } texture_t;

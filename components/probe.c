@@ -7,13 +7,11 @@ DEC_CT(ct_probe);
 
 void c_probe_init(c_probe_t *self)
 {
-	self->super = component_new(ct_probe);
 }
 
 c_probe_t *c_probe_new(int map_size, shader_t *shader)
 {
-	c_probe_t *self = malloc(sizeof *self);
-	c_probe_init(self);
+	c_probe_t *self = component_new(ct_probe);
 	self->shader = shader;
 
 	self->map = texture_cubemap(map_size, map_size, 1);

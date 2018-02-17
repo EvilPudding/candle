@@ -45,6 +45,14 @@ void texture_update_gl(texture_t *self)
 			NULL);
 }
 
+struct pixel_request
+{
+	int x, y, buffer;
+	texture_t *tex;
+	int *output;
+	float *depth;
+};
+
 int texture_get_pixel(texture_t *self, int buffer, int x, int y,
 		float *depth)
 {
@@ -56,7 +64,6 @@ int texture_get_pixel(texture_t *self, int buffer, int x, int y,
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, self->frame_buffer[0]); glerr();
 
 	{
-		/* texture_bind(self, COLOR_TEX + buffer); */
 		glReadBuffer(self->attachments[buffer]);
 
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -80,6 +87,53 @@ int texture_get_pixel(texture_t *self, int buffer, int x, int y,
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	return data;
 }
+
+
+/* void texture_get_pixel_loader(struct pixel_request *info) */
+/* { */
+/* 	glFlush(); */
+/* 	glFinish(); */
+
+/* 	glBindFramebuffer(GL_READ_FRAMEBUFFER, info->tex->frame_buffer[0]); glerr(); */
+
+/* 	if(info->output) */
+/* 	{ */
+/* 		glReadBuffer(info->tex->attachments[info->buffer]); */
+
+/* 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1); */
+
+
+/* 		glReadPixels(info->x, info->y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &info->output); */
+/* 		printf("%d\n", *info->output); */
+/* 	} */
+/* 	if(info->depth) */
+/* 	{ */
+/* 		/1* texture_bind(info->tex, DEPTH_TEX); *1/ */
+/* 		glReadBuffer(GL_NONE); */
+
+/* 		/1* texture_2D_frame_buffer(info->tex); *1/ */
+/* 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1); */
+
+/* 		glReadPixels(info->x, info->y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, info->depth); */
+/* 	} */
+
+/* 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0); */
+/* } */
+
+
+/* int texture_get_pixel(texture_t *self, int buffer, int x, int y, */
+/* 		float *depth) */
+/* { */
+/* 	int data = 0; */
+/* 	y = self->height-y; */
+
+/* 	struct pixel_request req = {.tex = self, .x = x, .y = y, .buffer = buffer, */
+/* 		.depth = depth, .output = &data}; */
+
+/* 	loader_push_wait(candle->loader, (loader_cb)texture_get_pixel_loader, &req, NULL); */
+
+/* 	return data; */
+/* } */
 
 void texture_update_brightness(texture_t *self)
 {
@@ -233,6 +287,7 @@ int texture_add_buffer(texture_t *self, const char *name, int is_float,
 
 
 	glBindTexture(targ, 0);
+	self->framebuffer_ready = 0;
 	return i;
 }
 
@@ -428,7 +483,7 @@ int texture_target_sub(texture_t *self, int width, int height,
 {
 	if(!self->ready) return 0;
 
-	if(!self->frame_buffer[id]) texture_frame_buffer(self);
+	if(!self->framebuffer_ready) texture_frame_buffer(self);
 
     glBindTexture(self->target, 0); glerr();
 
@@ -472,7 +527,10 @@ void texture_destroy(texture_t *self)
 static int texture_2D_frame_buffer(texture_t *self)
 {
 	glBindTexture(self->target, self->texId[COLOR_TEX]); glerr();
-	glGenFramebuffers(1, self->frame_buffer); glerr();
+	if(!self->frame_buffer[0])
+	{
+		glGenFramebuffers(1, self->frame_buffer); glerr();
+	}
 	GLuint targ = self->target;
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, self->frame_buffer[0]); glerr();
@@ -482,19 +540,25 @@ static int texture_2D_frame_buffer(texture_t *self)
 
 	for(i = 0; i < self->color_buffers_size; i++)
 	{
-		attach = self->attachments[n++] = GL_COLOR_ATTACHMENT0 + i;
-
-		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attach, targ,
-				self->texId[COLOR_TEX + i], 0); glerr();
+		self->attachments[n++] = attach = GL_COLOR_ATTACHMENT0 + i;
+		if(!self->attachments_ready[n])
+		{
+			self->attachments_ready[n] = 1;
+			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attach, targ,
+					self->texId[COLOR_TEX + i], 0); glerr();
+		}
 
 	}
 	if(self->depth_buffer)
 	{
-		/* self->attachments[n++] = */
 		attach = GL_DEPTH_ATTACHMENT;
-		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attach, targ,
-				self->texId[DEPTH_TEX], 0); glerr();
-		self->texNames[DEPTH_TEX] = strdup("Depth");
+		if(self->depth_attachment != attach)
+		{
+			self->depth_attachment = attach;
+			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attach, targ,
+					self->texId[DEPTH_TEX], 0); glerr();
+			self->texNames[DEPTH_TEX] = strdup("Depth");
+		}
 	}
 
 	glDrawBuffers(self->color_buffers_size, self->attachments); glerr();
@@ -509,6 +573,8 @@ static int texture_2D_frame_buffer(texture_t *self)
 	glBindTexture(targ, 0);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	glerr();
+
+	self->framebuffer_ready = 1;
 
 	return 1;
 }

@@ -11,14 +11,13 @@ DEC_CT(ct_mesh_gl);
 
 static void c_mesh_gl_init(c_mesh_gl_t *self)
 {
-	self->super = component_new(ct_mesh_gl);
 
+	self->groups = calloc(8, sizeof(*self->groups));
 }
 
 c_mesh_gl_t *c_mesh_gl_new()
 {
-	c_mesh_gl_t *self = calloc(1, sizeof *self);
-	c_mesh_gl_init(self);
+	c_mesh_gl_t *self = component_new(ct_mesh_gl);
 
 	return self;
 }
@@ -346,6 +345,7 @@ int c_mesh_gl_on_mesh_changed(c_mesh_gl_t *self)
 
 int glg_update_ram(glg_t *self)
 {
+	printf("updating ram\n");
 	c_model_t *model = c_model(&self->entity);
 	mesh_t *mesh = model->mesh;
 	glg_clear(self);
@@ -460,6 +460,7 @@ static int glg_update_buffers(glg_t *self)
 void c_mesh_gl_update(c_mesh_gl_t *self)
 {
 	/* TODO update only dirty group */
+	if(!self->mesh) return;
 	int i;
 	for(i = 0; i < self->groups_num; i++)
 	{
@@ -479,6 +480,10 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 {
 	mesh_t *mesh = c_model(&self->entity)->mesh;
 
+	if(!mesh)
+	{
+		return 0;
+	}
 	if(!self->ready)
 	{
 		return 0;
@@ -521,10 +526,11 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 	}
 
 	glPolygonOffset(0.0f, model->layers[self->layer_id].offset);
+	glerr();
 
 	if(cull_face == GL_NONE)
 	{
-		glDisable(GL_CULL_FACE);
+		glDisable(GL_CULL_FACE); glerr();
 	}
 	else
 	{
@@ -580,6 +586,7 @@ int c_mesh_gl_draw(c_mesh_gl_t *self, shader_t *shader, int transparent)
 {
 	int i;
 	int res = 1;
+		glerr();
 
 	if(!self->mesh)
 	{
@@ -594,6 +601,7 @@ int c_mesh_gl_draw(c_mesh_gl_t *self, shader_t *shader, int transparent)
 		vec3_t id_color = int_to_vec3(c_entity(self));
 
 		glUniform3f(shader->u_id, id_color.r, id_color.g, id_color.b);
+		glerr();
 	}
 
 	for(i = 0; i < self->groups_num; i++)
@@ -651,6 +659,7 @@ static int c_mesh_gl_destroy_loader(c_mesh_gl_t *self)
 	{
 		glg_destroy_loader(&self->groups[i]);
 	}	
+	free(self->groups);
 	free(self);
 
 	return 1;
@@ -689,7 +698,7 @@ void c_mesh_gl_register()
 
 	ct_add_interaction(ecm_get(ct_model), ct);
 
-	/* ct_register_listener(ct, WORLD, component_menu, */
+	/* ct_register_listener(ct, WORLD|RENDER_THREAD, component_menu, */
 			/* (signal_cb)c_mesh_gl_menu); */
 
 	/* ct_register_listener(ct, WORLD, collider_callback, c_grid_collider); */

@@ -24,6 +24,7 @@ typedef int(*before_draw_cb)(c_t *self);
 
 #define WORLD 0x00
 #define SAME_ENTITY 0x01
+#define RENDER_THREAD 0x02
 
 typedef struct
 {
@@ -38,6 +39,14 @@ typedef struct
 	int is_interaction;
 } dep_t;
 
+#define PAGE_SIZE 32
+
+struct comp_page
+{
+	char *components;
+	uint components_size;
+};
+
 typedef struct ct_t
 {
 	char name[32];
@@ -47,11 +56,14 @@ typedef struct ct_t
 	uint id;
 	uint size;
 
-	uint *offsets;
+	struct {
+		uint page;
+		uint offset;
+	} *offsets;
 	uint offsets_size;
 
-	char *components;
-	uint components_size;
+	struct comp_page *pages;
+	uint pages_size;
 
 	dep_t *depends;
 	uint depends_size;
@@ -90,7 +102,6 @@ typedef struct ecm_t
 
 	uint global;
 
-	entity_t common;
 } ecm_t; /* Entity Component System */
 
 typedef struct c_t
@@ -114,17 +125,18 @@ typedef struct c_t
 	static inline nc_t *cn(const void *entity)\
 { return ct==IDENT_NULL?NULL:(nc_t*)ct_get(ecm_get(ct), *(entity_t*)entity); } \
 
-static inline c_t *ct_get_at(ct_t *self, uint i)
+static inline c_t *ct_get_at(ct_t *self, uint page, uint i)
 {
-	return (c_t*)&(self->components[i * self->size]);
+	return (c_t*)&(self->pages[page].components[i * self->size]);
 }
 
 static inline c_t *ct_get(ct_t *self, entity_t entity)
 {
 	if(entity >= self->offsets_size) return NULL;
-	uint offset = self->offsets[entity];
+	uint offset = self->offsets[entity].offset;
+	uint page = self->offsets[entity].page;
 	if(offset == -1) return NULL;
-	return (c_t*)&(self->components[offset]);
+	return (c_t*)&(self->pages[page].components[offset]);
 }
 
 void ct_register_listener(ct_t *self, int flags,
@@ -134,7 +146,7 @@ listener_t *ct_get_listener(ct_t *self, uint signal);
 
 /* void ct_register_callback(ct_t *self, uint callback, void *cb); */
 
-void ct_add(ct_t *self, c_t *comp);
+c_t *ct_add(ct_t *self, entity_t entity);
 
 extern ecm_t *g_ecm;
 void ecm_init(void);
@@ -154,7 +166,7 @@ static inline ct_t *ecm_get(uint comp_type) {
 	return &g_ecm->cts[comp_type]; }
 /* void ecm_generate_hashes(ecm_t *self); */
 
-c_t component_new(int comp_type);
+void *component_new(int comp_type);
 
 /* builtin signals */
 extern uint entity_created;

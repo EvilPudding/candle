@@ -7,7 +7,6 @@ DEC_CT(ct_aabb);
 
 static void c_aabb_init(c_aabb_t *self)
 {
-	self->super = component_new(ct_aabb);
 	self->min = vec3(1, 1, 1);
 	self->max = vec3(-1, -1, -1);
 	self->rot = vec3(-1000.0, -1000.0, -1000.0);
@@ -17,8 +16,7 @@ static void c_aabb_init(c_aabb_t *self)
 
 c_aabb_t *c_aabb_new()
 {
-	c_aabb_t *self = calloc(1, sizeof *self);
-	c_aabb_init(self);
+	c_aabb_t *self = component_new(ct_aabb);
 
 	return self;
 }

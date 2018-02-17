@@ -7,13 +7,11 @@ DEC_CT(ct_sauces);
 
 void c_sauces_init(c_sauces_t *self)
 {
-	self->super = component_new(ct_sauces);
 }
 
 c_sauces_t *c_sauces_new()
 {
-	c_sauces_t *self = calloc(1, sizeof *self);
-	c_sauces_init(self);
+	c_sauces_t *self = component_new(ct_sauces);
 	return self;
 }
 
@@ -158,6 +156,6 @@ void c_sauces_register()
 	ct_t *ct = ecm_register("Resources", &ct_sauces,
 			sizeof(c_sauces_t), (init_cb)c_sauces_init, 0);
 
-	ct_register_listener(ct, WORLD, component_menu,
+	ct_register_listener(ct, WORLD|RENDER_THREAD, component_menu,
 			(signal_cb)c_sauces_component_menu);
 }

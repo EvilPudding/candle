@@ -10,7 +10,6 @@ DEC_CT(ct_freelook);
 
 static void c_freelook_init(c_freelook_t *self)
 {
-	self->super = component_new(ct_freelook);
 	self->win_min_side = 1080;
 
 	self->x_control = entity_null;
@@ -20,8 +19,7 @@ static void c_freelook_init(c_freelook_t *self)
 
 c_freelook_t *c_freelook_new(entity_t force_down, float sensitivity)
 {
-	c_freelook_t *self = malloc(sizeof *self);
-	c_freelook_init(self);
+	c_freelook_t *self = component_new(ct_freelook);
 	self->sensitivity = sensitivity;
 
 	self->force_down = force_down;

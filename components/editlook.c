@@ -12,7 +12,6 @@ DEC_CT(ct_editlook);
 
 void c_editlook_init(c_editlook_t *self)
 {
-	self->super = component_new(ct_editlook);
 	self->win_min_side = 1080;
 
 	self->panning = 0;
@@ -21,8 +20,7 @@ void c_editlook_init(c_editlook_t *self)
 
 c_editlook_t *c_editlook_new()
 {
-	c_editlook_t *self = malloc(sizeof *self);
-	c_editlook_init(self);
+	c_editlook_t *self = component_new(ct_editlook);
 
 	self->sensitivity = 0.8;
 
@@ -50,9 +48,6 @@ int c_editlook_mouse_wheel(c_editlook_t *self, mouse_button_data *event)
 
 	return 1;
 }
-
-/* TODO remove this extern reference */
-extern SDL_Window *mainWindow;
 
 float fake_x;
 float fake_y;
@@ -152,10 +147,8 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 	c_spacial_rotate_X(sc, -oldx);
 	c_spacial_rotate_Y(sc, inc_y);
 
-
-
-	c_spacial_set_pos(sc, vec3_add(pivot,
-				vec3_rotate(diff, sc->upwards, cosy, siny)));
+	c_spacial_lock(sc);
+	sc->pos = vec3_add(pivot, vec3_rotate(diff, sc->upwards, cosy, siny));
 
 	diff = vec3_sub(sc->pos, pivot);
 
@@ -163,6 +156,7 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 				vec3_rotate(diff, sc->forward, cosx, sinx)));
 
 	c_spacial_rotate_X(sc, oldx + inc_x);
+	c_spacial_unlock(sc);
 
 	return 0;
 }

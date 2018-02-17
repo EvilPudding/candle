@@ -46,14 +46,16 @@ int c_renderer_scene_changed(c_renderer_t *self)
 
 static int c_renderer_bind_passes(c_renderer_t *self)
 {
-	int i, j;
+	int i, j, b;
 
 	for(i = 0; i < self->passes_size; i++)
 	{
 		pass_t *pass = &self->passes[i];
-		int b;
+		if(pass->cached) continue;
+		pass->cached =  1;
 		for(b = 0; b < pass->binds_size; b++)
 		{
+			pass->binds[b] = pass->binds[b];
 			bind_t *bind = &pass->binds[b];
 			switch(bind->type)
 			{
@@ -98,6 +100,8 @@ static int c_renderer_bind_passes(c_renderer_t *self)
 	for(i = 1; i < self->passes_size; i++)
 	{
 		pass_t *pass = &self->passes[i];
+		if(pass->cached == 2) continue;
+		pass->cached = 2;
 		for(j = i - 1; j >= 0; j--)
 		{
 			pass_t *pass_done = &self->passes[j];
@@ -117,15 +121,17 @@ static int c_renderer_bind_passes(c_renderer_t *self)
 			bind->pass_output.pass = pass_done;
 		}
 	}
-	printf("PASSES BOUND\n");
+	c_renderer_resize(self, &(window_resize_data){.width = c_window(self)->width,
+			.height = c_window(self)->height });
+	printf("PASSES BOUND\n\n");
 	self->ready = 1;
 	return 1;
 }
 
-static void c_renderer_init(c_renderer_t *self)
-{
-	self->super = component_new(ct_renderer);
+static void c_renderer_init(c_renderer_t *self) { } 
 
+static int c_renderer_created(c_renderer_t *self)
+{
 	self->gbuffer_shader = shader_new("gbuffer");
 	self->quad_shader = shader_new("quad");
 
@@ -135,7 +141,6 @@ static void c_renderer_init(c_renderer_t *self)
 	c_renderer_add_gbuffer(self, "opaque", render_visible);
 	c_renderer_add_gbuffer(self, "transp", render_transparent);
 
-	self->camera = entity_null;
 #ifdef MESH4
 	self->angle4 = 0.01f;
 #endif
@@ -181,10 +186,8 @@ static void c_renderer_init(c_renderer_t *self)
 			c_model_new(mesh_quad(), 0));
 	c_model(&self->quad)->visible = 0;
 
-}
-
-static int c_renderer_created(c_renderer_t *self)
-{
+	c_renderer_resize(self, &(window_resize_data){.width = c_window(self)->width,
+			.height = c_window(self)->height });
 	return 1;
 }
 
@@ -266,6 +269,7 @@ static int c_renderer_resize(c_renderer_t *self, window_resize_data *event)
 {
     self->width = event->width * self->percent_of_screen;
     self->height = event->height;
+	printf("%d %d\n", self->width, self->height);
 
 	c_renderer_update_screen_texture(self);
 
@@ -353,7 +357,7 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 #endif
 
 	ct_t *ambients = ecm_get(ct_ambient);
-	c_ambient_t *ambient = (c_ambient_t*)ct_get_at(ambients, 0);
+	c_ambient_t *ambient = (c_ambient_t*)ct_get_at(ambients, 0, 0);
 
 	if(ambient)
 	{
@@ -361,6 +365,7 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 		if(probe) shader_bind_ambient(pass->shader, probe->map);
 	}
 
+	glerr();
 	for(i = 0; i < pass->binds_size; i++)
 	{
 		bind_t *bind = &pass->binds[i];
@@ -369,6 +374,7 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 		case BIND_NONE: printf("error\n"); break;
 		case BIND_PASS_OUTPUT:
 			c_renderer_bind_pass_output(self, pass, bind, i);
+			glerr();
 			break;
 		case BIND_NUMBER:
 			if(bind->getter)
@@ -376,6 +382,7 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 				bind->number.value = ((number_getter)bind->getter)(bind->entity);
 			}
 			glUniform1f(bind->number.u, bind->number.value); glerr();
+			glerr();
 			break;
 		case BIND_INTEGER:
 			if(bind->getter)
@@ -383,9 +390,11 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 				bind->integer.value = ((integer_getter)bind->getter)(bind->entity);
 			}
 			glUniform1i(bind->integer.u, bind->integer.value); glerr();
+			glerr();
 			break;
 		case BIND_GBUFFER:
 			c_renderer_bind_gbuffer(self, pass, bind);
+			glerr();
 			break;
 		case BIND_VEC3:
 			if(bind->getter)
@@ -394,6 +403,7 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 			}
 			glUniform3f(bind->vec3.u, bind->vec3.value.r,
 					bind->vec3.value.g, bind->vec3.value.b);
+			glerr();
 			break;
 		}
 
@@ -402,14 +412,16 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 	c_mesh_gl_t *quad = c_mesh_gl(&self->quad);
 	if(pass->for_each_light)
 	{
+		int p;
 		ct_t *lights = ecm_get(ct_light);
 		c_light_t *light;
 
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-		for(i = 0; i < lights->components_size; i++)
+		for(p = 0; p < lights->pages_size; p++)
+		for(i = 0; i < lights->pages[p].components_size; i++)
 		{
-			light = (c_light_t*)ct_get_at(lights, i);
+			light = (c_light_t*)ct_get_at(lights, p, i);
 
 			shader_bind_light(pass->shader, c_entity(light));
 
@@ -482,14 +494,12 @@ c_renderer_t *c_renderer_new(float resolution, int auto_exposure, int roughness,
 {
 	SDL_GL_SetSwapInterval(lock_fps);
 
-	c_renderer_t *self = calloc(1, sizeof *self);
+	c_renderer_t *self = component_new(ct_renderer);
 
 	self->resolution = resolution;
 	self->auto_exposure = auto_exposure;
 	self->roughness = roughness;
 	self->percent_of_screen = percent_of_screen;
-
-	c_renderer_init(self);
 
 	return self;
 }
@@ -549,16 +559,16 @@ void c_renderer_register()
 	ct_register_listener(ct, WORLD, window_resize,
 			(signal_cb)c_renderer_resize);
 
-	ct_register_listener(ct, WORLD, world_draw,
+	ct_register_listener(ct, WORLD|RENDER_THREAD, world_draw,
 			(signal_cb)c_renderer_draw);
 
 	ct_register_listener(ct, SAME_ENTITY, entity_created,
 			(signal_cb)c_renderer_created);
 
-	ct_register_listener(ct, WORLD, component_menu,
+	ct_register_listener(ct, WORLD|RENDER_THREAD, component_menu,
 			(signal_cb)c_renderer_component_menu);
 
-	ct_register_listener(ct, WORLD, global_menu,
+	ct_register_listener(ct, WORLD|RENDER_THREAD, global_menu,
 			(signal_cb)c_renderer_global_menu);
 
 
@@ -621,6 +631,7 @@ void c_renderer_add_pass(c_renderer_t *self, const char *feed_name, int flags,
 	int i = self->passes_size++;
 	pass_t *pass = &self->passes[i];
 	pass->shader = shader;
+	pass->cached = 0;
 	pass->for_each_light = flags & PASS_FOR_EACH_LIGHT;
 	pass->mipmaped = flags & PASS_MIPMAPED;
 	pass->record_brightness = flags & PASS_RECORD_BRIGHTNESS;
@@ -644,6 +655,7 @@ void c_renderer_add_pass(c_renderer_t *self, const char *feed_name, int flags,
 		if(bind->type == BIND_NONE) break;
 		pass->binds[pass->binds_size++] = *bind;
 	}
+	self->ready = 0;
 }
 
 void c_renderer_clear_shaders(c_renderer_t *self, shader_t *shader)
@@ -715,11 +727,11 @@ int c_renderer_draw(c_renderer_t *self)
 		c_renderer_bind_passes(self);
 	}
 
-	if(!self->perlin_size)
-	{
-		self->perlin_size = 13;
-		SDL_CreateThread((int(*)(void*))init_perlin, "perlin", self);
-	}
+	/* if(!self->perlin_size) */
+	/* { */
+		/* self->perlin_size = 13; */
+		/* SDL_CreateThread((int(*)(void*))init_perlin, "perlin", self); */
+	/* } */
 
 	if(self->camera == entity_null) return 1;
 	if(!self->gbuffer_shader) return 1;

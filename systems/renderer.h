@@ -97,6 +97,7 @@ typedef struct pass_t
 
 	int binds_size;
 	bind_t binds[15];
+	int cached;
 
 	int mipmaped;
 	int record_brightness;

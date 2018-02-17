@@ -11,13 +11,11 @@ static shader_t *g_shader;
 
 void c_light_init(c_light_t *self)
 {
-	self->super = component_new(ct_light);
 }
 
 c_light_t *c_light_new(float intensity, vec4_t color, int shadow_size)
 {
-	c_light_t *self = malloc(sizeof *self);
-	c_light_init(self);
+	c_light_t *self = component_new(ct_light);
 
 	self->intensity = intensity;
 	self->color = color;
@@ -56,7 +54,7 @@ void c_light_register()
 	ct_register_listener(ct, SAME_ENTITY, entity_created,
 			(signal_cb)c_light_created);
 
-	ct_register_listener(ct, WORLD, offscreen_render,
+	ct_register_listener(ct, WORLD|RENDER_THREAD, offscreen_render,
 			(signal_cb)c_light_render);
 
 	ecm_register_signal(&render_shadows, sizeof(shader_t*));

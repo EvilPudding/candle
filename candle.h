@@ -54,6 +54,8 @@ typedef struct candle_t
 	entity_t systems;
 	loader_t *loader;
 
+	int events[2];
+
 	char *firstDir;
 
 	int exit;
@@ -71,10 +73,14 @@ typedef struct candle_t
 	template_t *templates;
 	uint templates_size;
 
+	void *render_thr;
+	void *candle_thr;
+	void *ticker_thr;
+	SDL_threadID render_id;
 } candle_t;
 
 candle_t *candle_new(int comps_size, ...);
-void candle_init(candle_t *self);
+void candle_wait(candle_t *self);
 void candle_reset_dir(candle_t *self);
 
 void candle_register_template(candle_t *self, const char *key, template_cb cb);

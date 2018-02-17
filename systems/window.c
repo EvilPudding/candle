@@ -48,7 +48,6 @@ static void init_context_b(c_window_t *self)
 
 void c_window_init(c_window_t *self)
 {
-	self->super = component_new(ct_window);
 	SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
 	SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER|SDL_INIT_EVENTS);
 	/* SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, */
@@ -66,8 +65,6 @@ void c_window_init(c_window_t *self)
 
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-	init_context_b(self);
-
 	self->key_state = SDL_GetKeyboardState(NULL);
 
 	self->quad_shader = shader_new("quad");
@@ -78,6 +75,8 @@ void c_window_init(c_window_t *self)
 
 int c_window_created(c_window_t *self)
 {
+	init_context_b(self);
+
 	entity_signal(c_entity(self), window_resize,
 			&(window_resize_data){
 			.width = self->width,
@@ -87,8 +86,7 @@ int c_window_created(c_window_t *self)
 
 c_window_t *c_window_new(int width, int height)
 {
-	c_window_t *self = calloc(1, sizeof *self);
-	c_window_init(self);
+	c_window_t *self = component_new(ct_window);
 	self->width = width ? width : window_width;
 	self->height = height ? height : window_height;
 	return self;
@@ -103,7 +101,10 @@ int c_window_draw(c_window_t *self)
 void c_window_rect(c_window_t *self, int x, int y, int width, int height,
 		texture_t *texture)
 {
-	if(!texture) return;
+	if(!texture)
+	{
+		exit(1);
+	}
 
 	/* Draw to opengl context */
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); glerr();
@@ -123,7 +124,7 @@ void c_window_register()
 	ct_t *ct = ecm_register("Window", &ct_window,
 			sizeof(c_window_t), (init_cb)c_window_init, 0);
 
-	ct_register_listener(ct, SAME_ENTITY, entity_created,
+	ct_register_listener(ct, SAME_ENTITY|RENDER_THREAD, entity_created,
 			(signal_cb)c_window_created);
 
 	ecm_register_signal(&window_resize, sizeof(window_resize_data));

@@ -1,12 +1,13 @@
 #include "glutil.h"
 #include <stdio.h>
+#include <candle.h>
 #include <stdlib.h>
 
-char last_error[512] = "";
-int count = 0;
 
 void _check_gl_error(const char *file, int line)
 {
+	static char last_error[512] = "";
+	static int count = 0;
 	char message[512];
 	GLenum err = glGetError();
 	while(err!=GL_NO_ERROR)
@@ -33,6 +34,10 @@ void _check_gl_error(const char *file, int line)
 		}
 
 		err=glGetError();
+	}
+	if(SDL_ThreadID() != candle->render_id)
+	{
+		exit(1);
 	}
 }
 

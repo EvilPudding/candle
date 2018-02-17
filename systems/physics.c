@@ -14,13 +14,14 @@ DEC_SIG(collider_callback);
 
 static vec3_t c_physics_handle_forces(c_physics_t *self, vec3_t vel, float *dt)
 {
-	unsigned long i;
+	unsigned int i, p;
 
 	ct_t *forces = ecm_get(ct_force);
 
-	for(i = 0; i < forces->components_size; i++)
+	for(p = 0; p < forces->pages_size; p++)
+	for(i = 0; i < forces->pages[p].components_size; i++)
 	{
-		c_force_t *fc = (c_force_t*)ct_get_at(forces, i);
+		c_force_t *fc = (c_force_t*)ct_get_at(forces, p, i);
 		if(fc->active) vel = vec3_add(vel, vec3_scale(fc->force, *dt));
 	}
 
@@ -175,14 +176,15 @@ static void c_physics_handle_collisions(c_rigid_body_t *c1,
 
 static int c_physics_update(c_physics_t *self, float *dt)
 {
-	unsigned long i, j;
+	unsigned long i, j, p, p2;
 
 	ct_t *vels = ecm_get(ct_velocity);
 	ct_t *bodies = ecm_get(ct_rigid_body);
 
-	for(i = 0; i < vels->components_size; i++)
+	for(p = 0; p < vels->pages_size; p++)
+	for(i = 0; i < vels->pages[p].components_size; i++)
 	{
-		c_velocity_t *vc = (c_velocity_t*)ct_get_at(vels, i);
+		c_velocity_t *vc = (c_velocity_t*)ct_get_at(vels, p, i);
 
 		c_spacial_t *sc = c_spacial(vc);
 
@@ -193,25 +195,32 @@ static int c_physics_update(c_physics_t *self, float *dt)
 			vec3_add(sc->pos, vec3_scale(vc->velocity, *dt));
 	}
 
-	for(i = 0; i < bodies->components_size; i++)
+	for(p = 0; p < bodies->pages_size; p++)
+	for(i = 0; i < bodies->pages[p].components_size; i++)
 	{
-		c_rigid_body_t *c1 = (c_rigid_body_t*)ct_get_at(bodies, i);
+		c_rigid_body_t *c1 = (c_rigid_body_t*)ct_get_at(bodies, p, i);
 		c_velocity_t *v1 = c_velocity(c1);
+		int si = i + 1;
 
-		for(j = i + 1; j < bodies->components_size; j++)
+		for(p2 = p; p2 < bodies->pages_size; p2++)
 		{
-			c_rigid_body_t *c2 = (c_rigid_body_t*)ct_get_at(bodies, j);
-			c_velocity_t *v2 = c_velocity(c2);
+			for(j = si; j < bodies->pages[p2].components_size; j++)
+			{
+				c_rigid_body_t *c2 = (c_rigid_body_t*)ct_get_at(bodies, p2, j);
+				c_velocity_t *v2 = c_velocity(c2);
 
-			if(!v1 && !v2) continue;
+				if(!v1 && !v2) continue;
 
-			c_physics_handle_collisions(c1, c2);
+				c_physics_handle_collisions(c1, c2);
+			}
+			si = 0;
 		}
 	}
 
-	for(i = 0; i < vels->components_size; i++)
+	for(p = 0; p < vels->pages_size; p++)
+	for(i = 0; i < vels->pages[p].components_size; i++)
 	{
-		c_velocity_t *vc = (c_velocity_t*)ct_get_at(vels, i);
+		c_velocity_t *vc = (c_velocity_t*)ct_get_at(vels, p, i);
 
 		c_spacial_t *sc = c_spacial(vc);
 
@@ -226,13 +235,11 @@ static int c_physics_update(c_physics_t *self, float *dt)
 
 static void c_physics_init(c_physics_t *self)
 {
-	self->super = component_new(ct_physics);
 }
 
 c_physics_t *c_physics_new()
 {
-	c_physics_t *self = calloc(1, sizeof *self);
-	c_physics_init(self);
+	c_physics_t *self = component_new(ct_physics);
 
 	return self;
 }
@@ -240,7 +247,7 @@ c_physics_t *c_physics_new()
 void c_physics_register()
 {
 	ct_t *ct = ecm_register("Physics", &ct_physics,
-			sizeof(c_physics_t), (init_cb)c_physics_init, 1, ct_window);
+			sizeof(c_physics_t), (init_cb)c_physics_init, 0);
 
 	ct_register_listener(ct, WORLD, world_update,
 			(signal_cb)c_physics_update);

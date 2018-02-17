@@ -1,83 +1,120 @@
 #include "entity.h"
 #include <stdarg.h>
 #include <ecm.h>
+#include <candle.h>
 #include <components/name.h>
 
-static void entity_check_missing_dependencies(entity_t self);
-static void *ct_create(ct_t *self);
+/* static void entity_check_missing_dependencies(entity_t self); */
 
-__thread entity_t _g_creating[16] = {0};
+__thread entity_t _g_creating[32] = {0};
 __thread int _g_creating_num = 0;
 
+extern SDL_sem *sem;
 
 void _entity_new_pre(void)
 {
 	_g_creating[_g_creating_num++] = ecm_new_entity();
 }
 
+int filter_listener(listener_t *self)
+{
+	return 1;
+	unsigned long thr = SDL_ThreadID();
+	int is_render_thread = thr == candle->render_id;
+	if(is_render_thread)
+	{
+		return self->flags & RENDER_THREAD;
+	}
+	return !(self->flags & RENDER_THREAD);
+}
+
 entity_t _entity_new(int comp_num, ...)
 {
-	int i;
-	va_list comps;
+	/* int i; */
+	/* va_list comps; */
 	entity_t self = _g_creating[--_g_creating_num];
 
-    va_start(comps, comp_num);
-	for(i = 0; i < comp_num; i++)
-	{
-		c_t *c = va_arg(comps, c_t*);
-		_entity_add_component(self, c, 1);
-		free(c);
-	}
-	va_end(comps);
+    /* va_start(comps, comp_num); */
+	/* for(i = 0; i < comp_num; i++) */
+	/* { */
+		/* c_t *c = va_arg(comps, c_t*); */
+		/* _entity_add_component(self, c, 1); */
+		/* free(c); */
+	/* } */
+	/* va_end(comps); */
 
-	entity_check_missing_dependencies(self);
+	/* entity_check_missing_dependencies(self); */
 
-	if(c_name(&self) && !strcmp(c_name(&self)->name, "grid"))
-	{
-		printf("new %s entity %ld\n", c_name(&self)->name, self);
-	}
+	/* if(c_name(&self) && !strcmp(c_name(&self)->name, "grid")) */
+	/* { */
+		/* printf("new %s entity %ld\n", c_name(&self)->name, self); */
+	/* } */
 	entity_signal_same(self, entity_created, NULL);
 
 	return self;
 }
 
-static void *ct_create(ct_t *self)
-{
-	c_t *comp = calloc(self->size, 1);
-	comp->comp_type = self->id;
-	if(self->init) self->init(comp);
-	return comp;
-}
+/* static void entity_check_missing_dependencies(entity_t self) */
+/* { */
+/* 	uint i, j; */
+/* 	for(j = 0; j < g_ecm->cts_size; j++) */
+/* 	{ */
+/* 		ct_t *ct = &g_ecm->cts[j]; */
+/* 		if(ct_get(ct, self)) */
+/* 		{ */
+/* 			for(i = 0; i < ct->depends_size; i++) */
+/* 			{ */
+/* 				ct_t *ct2 = ecm_get(ct->depends[i].ct); */
+/* 				if(!ct_get(ct2, self)) */
+/* 				{ */
+/* 					exit(1); */
+/* 				} */
+/* 			} */
+/* 		} */
+/* 	} */
+/* } */
 
-static void entity_check_missing_dependencies(entity_t self)
+
+int component_signal_TOPLEVEL(c_t *comp, ct_t *ct, uint signal, void *data)
 {
-	uint i, j;
-	for(j = 0; j < g_ecm->cts_size; j++)
+	listener_t *listener = ct_get_listener(ct, signal);
+	if(listener)
 	{
-		ct_t *ct = &g_ecm->cts[j];
-		if(ct_get(ct, self))
-		{
-			for(i = 0; i < ct->depends_size; i++)
-			{
-				ct_t *ct2 = ecm_get(ct->depends[i].ct);
-				if(!ct_get(ct2, self))
-				{
-					c_t *comp2 = ct_create(ct2);
-					_entity_add_component(self, comp2, 1);
-					free(comp2);
-				}
-			}
-		}
+		if(filter_listener(listener))
+			listener->cb(comp, data);
 	}
+	return 1;
 }
-
 
 int component_signal(c_t *comp, ct_t *ct, uint signal, void *data)
 {
 	listener_t *listener = ct_get_listener(ct, signal);
 	if(listener)
 	{
-		return listener->cb(comp, data);
+		listener->cb(comp, data);
+	}
+	return 1;
+}
+
+int entity_signal_same_TOPLEVEL(entity_t self, uint signal, void *data)
+{
+	/* if(signal == IDENT_NULL) exit(1); */
+	uint i;
+
+	signal_t *sig = &g_ecm->signals[signal];
+
+	for(i = 0; i < sig->cts_size; i++)
+	{
+		ct_t *ct = ecm_get(sig->cts[i]);
+		c_t *comp = ct_get(ct, self);
+		if(comp)
+		{
+			int res = component_signal_TOPLEVEL(comp, ct, signal, data);
+			if(res == 0)
+			{
+				return 0;
+			}
+		}
 	}
 	return 1;
 }
@@ -108,7 +145,7 @@ int entity_signal_same(entity_t self, uint signal, void *data)
 void entity_filter(entity_t self, uint signal, void *data,
 		filter_cb cb, c_t *c_caller, void *cb_data)
 {
-	uint i, j;
+	uint i, j, p;
 
 	signal_t *sig = &g_ecm->signals[signal];
 
@@ -119,11 +156,13 @@ void entity_filter(entity_t self, uint signal, void *data,
 		listener_t *listener = ct_get_listener(ct, signal);
 		if(listener)
 		{
-			for(j = 0; j < ct->components_size; j++)
+			for(p = 0; p < ct->pages_size; p++)
 			{
-				c_t *c = ct_get_at(ct, j);
-				if(listener->flags != SAME_ENTITY || c_entity(c) == self)
+				for(j = 0; j < ct->pages[p].components_size; j++)
 				{
+					c_t *c = ct_get_at(ct, p, j);
+
+					if((listener->flags & SAME_ENTITY) && c_entity(c) != self)
 					if(listener->cb(c, data))
 					{
 						cb(c_caller, c, cb_data);
@@ -134,13 +173,12 @@ void entity_filter(entity_t self, uint signal, void *data,
 	}
 }
 
-int entity_signal(entity_t self, uint signal, void *data)
+int entity_signal_TOPLEVEL(entity_t self, uint signal, void *data)
 {
-	uint i, j;
+	uint i, j, p;
 	/* if(signal == IDENT_NULL) exit(1); */
 
 	signal_t *sig = &g_ecm->signals[signal];
-
 	for(i = 0; i < sig->cts_size; i++)
 	{
 		uint ct_id = sig->cts[i];
@@ -148,16 +186,50 @@ int entity_signal(entity_t self, uint signal, void *data)
 		listener_t *listener = ct_get_listener(ct, signal);
 		if(listener)
 		{
-			for(j = 0; j < ct->components_size; j++)
+			for(p = 0; p < ct->pages_size; p++)
+			for(j = 0; j < ct->pages[p].components_size; j++)
 			{
-				c_t *c = ct_get_at(ct, j);
-				if(listener->flags != SAME_ENTITY || c_entity(c) == self)
+				c_t *c = ct_get_at(ct, p, j);
+
+				if(!filter_listener(listener)) continue;
+
+				if((listener->flags & SAME_ENTITY) && c_entity(c) != self)
+					continue;
+
+				int res = listener->cb(c, data);
+				if(res == 0)
 				{
-					int res = listener->cb(c, data);
-					if(res == 0)
-					{
-						return 0;
-					}
+					return 0;
+				}
+			}
+		}
+	}
+	return 1;
+}
+int entity_signal(entity_t self, uint signal, void *data)
+{
+	uint i, j, p;
+	/* if(signal == IDENT_NULL) exit(1); */
+
+	signal_t *sig = &g_ecm->signals[signal];
+	for(i = 0; i < sig->cts_size; i++)
+	{
+		uint ct_id = sig->cts[i];
+		ct_t *ct = ecm_get(ct_id);
+		listener_t *listener = ct_get_listener(ct, signal);
+		if(listener)
+		{
+			for(p = 0; p < ct->pages_size; p++)
+			for(j = 0; j < ct->pages[p].components_size; j++)
+			{
+				c_t *c = ct_get_at(ct, p, j);
+
+				if((listener->flags & SAME_ENTITY) && c_entity(c) != self)
+					continue;
+				int res = listener->cb(c, data);
+				if(res == 0)
+				{
+					return 0;
 				}
 			}
 		}
@@ -169,14 +241,28 @@ void entity_destroy(entity_t self)
 {
 }
 
-void _entity_add_component(entity_t self, c_t *comp, int on_creation)
+
+void _entity_add_post(entity_t self, c_t *comp)
 {
-	comp->entity = self;
+	--_g_creating_num;
+
 	ct_t *ct = ecm_get(comp->comp_type);
-	ct_add(ct, comp);
-	if(!on_creation)
-	{
-		component_signal(comp, ct, entity_created, NULL);
-	}
+	component_signal(comp, ct, entity_created, NULL);
+
 }
+
+void _entity_add_pre(entity_t entity)
+{
+	_g_creating[_g_creating_num++] = entity;
+}
+
+/* void _entity_add_component(entity_t self, c_t *comp, int on_creation) */
+/* { */
+/* 	ct_t *ct = ecm_get(comp->comp_type); */
+/* 	ct_add(ct, comp); */
+/* 	if(!on_creation) */
+/* 	{ */
+/* 		component_signal(comp, ct, entity_created, NULL); */
+/* 	} */
+/* } */
 

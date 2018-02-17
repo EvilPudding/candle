@@ -21,7 +21,7 @@ typedef struct
 
 	mesh_t *mesh;
 
-	mat_layer_t layers[16];
+	mat_layer_t *layers;
 	int layers_num;
 
 	int visible;

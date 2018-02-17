@@ -29,7 +29,7 @@ void main()
 	WPositionColor = worldspace_position;
 	CPositionColor = cameraspace_vertex_pos;
 
-	ID = vec3(selection_id);
+	ID = selection_id;
 
 	/* float up = max(n.y, 0.0); */
 	/* DiffuseColor = vec4(vec3(up), 1.0); */

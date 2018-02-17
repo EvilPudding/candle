@@ -7,16 +7,13 @@ DEC_CT(ct_force);
 
 void c_force_init(c_force_t *self)
 {
-	self->super = component_new(ct_force);
-
 	self->force = vec3(0.0, 0.0, 0.0);
 	self->active = 1;
 }
 
 c_force_t *c_force_new(float x, float y, float z, int active)
 {
-	c_force_t *self = malloc(sizeof *self);
-	c_force_init(self);
+	c_force_t *self = component_new(ct_force);
 
 	self->active = active;
 	self->force = vec3(x, y, z);

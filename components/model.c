@@ -26,12 +26,12 @@ static void c_model_init(c_model_t *self)
 		material_set_diffuse(g_missing_mat, (prop_t){.color=vec4(0.0, 0.9, 1.0, 1.0)});
 
 	}
-	self->super = component_new(ct_model);
 
 	self->cast_shadow = 0;
 	self->visible = 1;
 	self->mesh = NULL;
 	self->before_draw = NULL;
+	self->layers = malloc(sizeof(*self->layers) * 16);
 }
 
 void c_model_add_layer(c_model_t *self, int selection, float offset)
@@ -48,8 +48,7 @@ void c_model_add_layer(c_model_t *self, int selection, float offset)
 
 c_model_t *c_model_new(mesh_t *mesh, int cast_shadow)
 {
-	c_model_t *self = malloc(sizeof *self);
-	c_model_init(self);
+	c_model_t *self = component_new(ct_model);
 
 	self->layers_num = 0;
 	self->mesh = mesh;
@@ -238,18 +237,18 @@ void c_model_register()
 	ct_register_listener(ct, SAME_ENTITY, entity_created,
 			(signal_cb)c_model_created);
 
-	ct_register_listener(ct, WORLD, component_menu,
+	ct_register_listener(ct, WORLD|RENDER_THREAD, component_menu,
 			(signal_cb)c_model_menu);
 
 	ct_register_listener(ct, SAME_ENTITY, spacial_changed,
 			(signal_cb)c_model_scene_changed);
 
-	ct_register_listener(ct, WORLD, render_visible,
+	ct_register_listener(ct, WORLD|RENDER_THREAD, render_visible,
 			(signal_cb)c_model_render_visible);
 
-	ct_register_listener(ct, WORLD, render_transparent,
+	ct_register_listener(ct, WORLD|RENDER_THREAD, render_transparent,
 			(signal_cb)c_model_render_transparent);
 
-	ct_register_listener(ct, WORLD, render_shadows,
+	ct_register_listener(ct, WORLD|RENDER_THREAD, render_shadows,
 			(signal_cb)c_model_render_shadows);
 }

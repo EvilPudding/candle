@@ -14,14 +14,12 @@ const float REL_ERROR = (float)(1.0e-3);
 
 static void c_rigid_body_init(c_rigid_body_t *self)
 {
-	self->super = component_new(ct_rigid_body);
 	self->costum = NULL;
 }
 
 c_rigid_body_t *c_rigid_body_new(collider_cb costum)
 {
-	c_rigid_body_t *self = malloc(sizeof *self);
-	c_rigid_body_init(self);
+	c_rigid_body_t *self = component_new(ct_rigid_body);
 
 	self->costum = costum;
 

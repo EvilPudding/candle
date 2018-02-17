@@ -17,6 +17,8 @@ typedef struct
 	vec3_t up;
 	mat4_t rot_matrix;
 	mat4_t model_matrix;
+	int lock_count;
+	int modified;
 } c_spacial_t;
 
 DEF_SIG(spacial_changed);
@@ -27,6 +29,9 @@ c_spacial_t *c_spacial_new(void);
 void c_spacial_init(c_spacial_t *self);
 void c_spacial_register(void);
 vec3_t c_spacial_up(c_spacial_t *self);
+
+void c_spacial_lock(c_spacial_t *self);
+void c_spacial_unlock(c_spacial_t *self);
 
 void c_spacial_scale(c_spacial_t *self, vec3_t scale);
 void c_spacial_look_at(c_spacial_t *self, vec3_t eye, vec3_t center, vec3_t up);

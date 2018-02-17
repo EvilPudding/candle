@@ -2,32 +2,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-static int loader_thread(loader_t *self);
-
-loader_t *loader_new(int async)
+/* SDL_threadID glid; */
+loader_t *loader_new()
 {
 	loader_t *self = calloc(1, sizeof *self);
-
-	if(async)
-	{
-		SDL_AtomicSet(&self->done, 0);
-
-		self->semaphore = SDL_CreateSemaphore(0);
-
-		self->context = SDL_GL_CreateContext(NULL);
-
-		if(self->context == NULL)
-		{
-			printf( "OpenGL context could not be created! SDL Error: %s\n", SDL_GetError());
-			exit(1);
-		}
-
-		self->thread = SDL_CreateThread((int(*)(void*))loader_thread, "loader_thread", self);
-	}
-	else
-	{
-		self->threadId = SDL_ThreadID();
-	}
+	self->threadId = SDL_ThreadID();
+	self->semaphore = SDL_CreateSemaphore(1);
 	return self;
 }
 
@@ -35,16 +15,25 @@ void loader_push_wait(loader_t *self, loader_cb cb, void *usrptr, c_t *c)
 {
 	if(SDL_ThreadID() == self->threadId)
 	{
-		printf("Can't wait for load in the same thread as loader!\n");
-		exit(1);
+		if(usrptr)
+		{
+			cb(usrptr);
+		}
+		else
+		{
+			cb(ct_get(ecm_get(c->comp_type),
+					c->entity));
+		}
 	}
 	else
 	{
-		load_t *load = &self->stack[self->last];
-		load->usrptr = usrptr;
-		load->cb = cb;
-		if(c) load->ct = *c;
-		self->last = (self->last + 1) % LOADER_STACK_SIZE;
+		SDL_SemWait(self->semaphore);
+			load_t *load = &self->stack[self->last];
+			load->usrptr = usrptr;
+			load->cb = cb;
+			if(c) load->ct = *c;
+			self->last = (self->last + 1) % LOADER_STACK_SIZE;
+		SDL_SemPost(self->semaphore);
 
 		load->semaphore = SDL_CreateSemaphore(0);
 
@@ -56,18 +45,20 @@ void loader_push_wait(loader_t *self, loader_cb cb, void *usrptr, c_t *c)
 
 void loader_push(loader_t *self, loader_cb cb, void *usrptr, c_t *c)
 {
-	load_t *load = &self->stack[self->last];
-	load->usrptr = usrptr;
-	load->cb = cb;
-	if(c) load->ct = *c;
-	load->semaphore = NULL;
-	self->last = (self->last + 1) % LOADER_STACK_SIZE;
-
-	if(self->semaphore) SDL_SemPost(self->semaphore);
+	int same_thread = SDL_ThreadID() == self->threadId;
+	if(!same_thread) SDL_SemWait(self->semaphore);
+		load_t *load = &self->stack[self->last];
+		load->usrptr = usrptr;
+		load->cb = cb;
+		if(c) load->ct = *c;
+		load->semaphore = NULL;
+		self->last = (self->last + 1) % LOADER_STACK_SIZE;
+	if(!same_thread) SDL_SemPost(self->semaphore);
 }
 
 int loader_update(loader_t *self)
 {
+	SDL_SemWait(self->semaphore);
 	while(self->first != self->last)
 	{
 
@@ -95,32 +86,13 @@ int loader_update(loader_t *self)
 
 		self->first = (self->first + 1) % LOADER_STACK_SIZE;
 	}
-	return 1;
-}
-
-static int loader_thread(loader_t *self)
-{
-	self->threadId = SDL_ThreadID();
-
-	while(!SDL_AtomicGet(&self->done))
-	{
-		loader_update(self);
-		SDL_SemWait(self->semaphore);
-	}
+	SDL_SemPost(self->semaphore);
 	return 1;
 }
 
 void loader_destroy(loader_t *self)
 {
-	if(self->thread)
-	{
-		SDL_AtomicSet(&self->done, 1);
-		SDL_SemPost(self->semaphore);
-		SDL_WaitThread(self->thread, NULL);
-
-		SDL_GL_DeleteContext(self->context);  
-		SDL_DestroySemaphore(self->semaphore);  
-	}
+	SDL_DestroySemaphore(self->semaphore);  
 	
 	free(self);
 }

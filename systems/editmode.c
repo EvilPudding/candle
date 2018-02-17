@@ -19,7 +19,6 @@ DEC_SIG(component_menu);
 
 void c_editmode_init(c_editmode_t *self)
 {
-	self->super = component_new(ct_editmode);
 	self->control = 0;
 	self->visible = 0;
 	self->dragging = 0;
@@ -36,8 +35,9 @@ void c_editmode_init(c_editmode_t *self)
 	self->camera = entity_null;
 }
 
-vec3_t bind_selected(entity_t caller)
+vec3_t c_editmode_bind_selected(entity_t caller)
 {
+	/* if(!c_editmode(&caller)) return vec3(0.0f); */
 	vec3_t id_color = int_to_vec3(c_editmode(&caller)->over);
 
 	return id_color;
@@ -47,8 +47,7 @@ vec3_t bind_selected(entity_t caller)
 /* entity_t p; */
 c_editmode_t *c_editmode_new()
 {
-	c_editmode_t *self = malloc(sizeof *self);
-	c_editmode_init(self);
+	c_editmode_t *self = component_new(ct_editmode);
 
 	/* mesh_t *cube = sauces_mesh("cube.ply"); */
 	/* p = entity_new( */
@@ -68,60 +67,54 @@ void c_editmode_activate(c_editmode_t *self)
 	if(self->camera == entity_null)
 	{
 		self->camera = entity_new(
-			c_name_new("Edit Camera"), c_editlook_new(), c_node_new()
+			c_name_new("Edit Camera"), c_editlook_new(), c_node_new(),
+			c_camera_new(70, 0.1, 100.0)
 		);
-		if(self->backup_camera != entity_null)
-		{
-			c_camera_t *bcam = c_camera(&self->backup_camera);
-			entity_add_component(self->camera,
-					c_camera_clone(bcam));
-
-			c_node_t *node = c_node(&self->backup_camera);
-			c_node_update_model(node);
-			c_spacial_set_model(c_spacial(&self->camera), node->model);
-			c_camera_update(c_camera(&self->camera), NULL);
-		}
-		else
-		{
-			entity_add_component(self->camera,
-					c_camera_new(70, 0.1, 100.0));
-		}
 	}
+	c_camera_activate(c_camera(&self->camera));
 	c_camera_update_view(c_camera(&self->camera));
 	c_renderer(self)->camera = self->camera;
 
+}
+
+static int c_editmode_resize_loader(c_editmode_t *self)
+{
+	self->nk = nk_sdl_init(c_window(self)->window); 
+
+	{ 
+		struct nk_font_atlas *atlas; 
+		nk_sdl_font_stash_begin(&atlas); 
+		/* struct nk_font *droid = nk_font_atlas_add_from_file(atlas, "../../../extra_font/DroidSans.ttf", 14, 0); */
+		/* struct nk_font *roboto = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Roboto-Regular.ttf", 16, 0); */
+		/* struct nk_font *future = nk_font_atlas_add_from_file(atlas, "../../../extra_font/kenvector_future_thin.ttf", 13, 0); */
+		/* struct nk_font *clean = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyClean.ttf", 12, 0); */
+		/* struct nk_font *tiny = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyTiny.ttf", 10, 0); */
+		/* struct nk_font *cousine = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Cousine-Regular.ttf", 13, 0); */
+		nk_sdl_font_stash_end(); 
+		/* nk_style_load_all_cursors(self->nk, atlas->cursors); */
+		/* nk_style_set_font(self->nk, &roboto->handle); */
+	} 
+
+	c_renderer_add_pass(c_renderer(self), "hightlight",
+		PASS_SCREEN_SCALE,
+		1.0f, 1.0f, "highlight",
+		(bind_t[]){
+			{BIND_GBUFFER, "gbuffer", .gbuffer.name = "opaque"},
+			{BIND_VEC3, "id_color", .getter = (ptr_getter)c_editmode_bind_selected,
+			.entity = c_entity(self)},
+			{BIND_NONE}
+		}
+	);
+
+	return 1;
 }
 
 static int c_editmode_resize(c_editmode_t *self)
 {
 	if(!self->nk)
 	{
-		self->nk = nk_sdl_init(c_window(self)->window); 
-
-		{ 
-			struct nk_font_atlas *atlas; 
-			nk_sdl_font_stash_begin(&atlas); 
-			/* struct nk_font *droid = nk_font_atlas_add_from_file(atlas, "../../../extra_font/DroidSans.ttf", 14, 0); */
-			/* struct nk_font *roboto = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Roboto-Regular.ttf", 16, 0); */
-			/* struct nk_font *future = nk_font_atlas_add_from_file(atlas, "../../../extra_font/kenvector_future_thin.ttf", 13, 0); */
-			/* struct nk_font *clean = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyClean.ttf", 12, 0); */
-			/* struct nk_font *tiny = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyTiny.ttf", 10, 0); */
-			/* struct nk_font *cousine = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Cousine-Regular.ttf", 13, 0); */
-			nk_sdl_font_stash_end(); 
-			/* nk_style_load_all_cursors(self->nk, atlas->cursors); */
-			/* nk_style_set_font(self->nk, &roboto->handle); */
-		} 
-		c_renderer_add_pass(c_renderer(self), "hightlight",
-				PASS_SCREEN_SCALE,
-				1.0f, 1.0f, "highlight",
-					(bind_t[]){
-				{BIND_GBUFFER, "gbuffer", .gbuffer.name = "opaque"},
-				{BIND_VEC3, "id_color", .getter = (ptr_getter)bind_selected,
-				.entity = c_entity(self)},
-				{BIND_NONE}
-			}
-		);
-
+		loader_push(candle->loader, (loader_cb)c_editmode_resize_loader, NULL,
+				(c_t*)self);
 	}
 
 	return 1;
@@ -148,7 +141,7 @@ int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 {
 	if(self->control && !candle->pressing)
 	{
-		if(self->pressing && self->selected != entity_null)
+		if(self->pressing && self->selected)
 		{
 			c_renderer_t *renderer = c_renderer(self);
 			c_camera_t *cam = c_camera(&renderer->camera);
@@ -190,6 +183,13 @@ int c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 
 void c_editmode_open_texture(c_editmode_t *self, texture_t *tex)
 {
+	if(!tex) return;
+	int i;
+	for(i = 0; i < self->open_textures_count; i++)
+	{
+		if(self->open_textures[i] == tex) return;
+	}
+
 	self->spawn_pos.x += 25;
 	self->spawn_pos.y += 25;
 	self->open_textures[self->open_textures_count++] = tex;
@@ -197,6 +197,13 @@ void c_editmode_open_texture(c_editmode_t *self, texture_t *tex)
 
 void c_editmode_open_entity(c_editmode_t *self, entity_t ent)
 {
+	if(!ent) return;
+	int i;
+	for(i = 0; i < self->open_entities_count; i++)
+	{
+		if(self->open_entities[i] == ent) return;
+	}
+
 	self->spawn_pos.x += 25;
 	self->spawn_pos.y += 25;
 	self->open_entities[self->open_entities_count++] = ent;
@@ -294,9 +301,11 @@ void node_tree(c_editmode_t *self)
 
 	if(nk_tree_push(self->nk, NK_TREE_TAB, "nodes", NK_MINIMIZED))
 	{
-		for(i = 0; i < nodes->components_size; i++)
+		int p;
+		for(p = 0; p < nodes->pages_size; p++)
+		for(i = 0; i < nodes->pages[p].components_size; i++)
 		{
-			c_node_t *node = (c_node_t*)ct_get_at(nodes, i);
+			c_node_t *node = (c_node_t*)ct_get_at(nodes, p, i);
 			if(node->parent != entity_null) continue;
 			node_node(self, node);
 		}
@@ -503,7 +512,7 @@ void c_editmode_register()
 	ct_register_listener(ct, WORLD, mouse_move,
 			(signal_cb)c_editmode_mouse_move);
 
-	ct_register_listener(ct, WORLD, world_draw,
+	ct_register_listener(ct, WORLD|RENDER_THREAD, world_draw,
 			(signal_cb)c_editmode_draw);
 
 	ct_register_listener(ct, WORLD, mouse_press,
@@ -512,13 +521,13 @@ void c_editmode_register()
 	ct_register_listener(ct, WORLD, mouse_release,
 			(signal_cb)c_editmode_mouse_release);
 
-	ct_register_listener(ct, WORLD, event_handle,
+	ct_register_listener(ct, WORLD|RENDER_THREAD, event_handle,
 			(signal_cb)c_editmode_event);
 
-	ct_register_listener(ct, WORLD, events_begin,
+	ct_register_listener(ct, WORLD|RENDER_THREAD, events_begin,
 			(signal_cb)c_editmode_events_begin);
 
-	ct_register_listener(ct, WORLD, events_end,
+	ct_register_listener(ct, WORLD|RENDER_THREAD, events_end,
 			(signal_cb)c_editmode_events_end);
 
 	ct_register_listener(ct, WORLD, window_resize,

@@ -12,13 +12,11 @@ DEC_CT(ct_camera);
 
 static void c_camera_init(c_camera_t *self)
 {
-	self->super = component_new(ct_camera);
 }
 
 c_camera_t *c_camera_new(float fov, float near, float far)
 {
-	c_camera_t *self = malloc(sizeof *self);
-	c_camera_init(self);
+	c_camera_t *self = component_new(ct_camera);
 
 	self->near = near;
 	self->far = far;
@@ -90,6 +88,12 @@ void c_camera_update_view(c_camera_t *self)
 	c_node_update_model(n);
 	self->pos = mat4_mul_vec4(n->model, vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 	self->view_matrix = mat4_invert(n->model);
+}
+
+void c_camera_activate(c_camera_t *self)
+{
+	c_camera_update(self, NULL);
+	c_renderer(&candle->systems)->camera = c_entity(self);
 }
 
 int c_camera_update(c_camera_t *self, void *event)

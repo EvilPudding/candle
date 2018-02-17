@@ -5,14 +5,12 @@ DEC_CT(ct_collider);
 
 static void c_collider_init(c_collider_t *self)
 {
-	self->super = component_new(ct_collider);
 	self->cb = NULL;
 }
 
 c_collider_t *c_collider_new(collider_cb cb)
 {
-	c_collider_t *self = malloc(sizeof *self);
-	c_collider_init(self);
+	c_collider_t *self = component_new(ct_collider);
 
 	self->cb = cb;
 

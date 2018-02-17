@@ -4,10 +4,12 @@
 #include "ext.h"
 #include "ecm.h"
 #include <stdarg.h>
+#include <SDL2/SDL.h>
 
 #include "candle.h"
 
 DEC_SIG(entity_created);
+SDL_sem *sem;
 
 listener_t *ct_get_listener(ct_t *self, uint signal)
 {
@@ -26,10 +28,27 @@ listener_t *ct_get_listener(ct_t *self, uint signal)
 	return NULL;
 }
 
-c_t component_new(int comp_type)
+void *component_new(int comp_type)
 {
-	c_t self = {.comp_type = comp_type,
-		.entity = _g_creating[_g_creating_num - 1]};
+	entity_t entity = _g_creating[_g_creating_num - 1];
+
+	ct_t *ct = &g_ecm->cts[comp_type];
+
+	printf("%ld << %s\n", entity, ct->name);
+	c_t *self = ct_add(ct, entity);
+
+	int i;
+	for(i = 0; i < ct->depends_size; i++)
+	{
+		ct_t *ct2 = ecm_get(ct->depends[i].ct);
+		if(!ct_get(ct2, entity))
+		{
+			printf("adding dependency %s\n", ct2->name);
+			component_new(ct2->id);
+		}
+	}
+	if(ct->init) ct->init(self);
+
 	return self;
 }
 
@@ -39,16 +58,15 @@ void ecm_init()
 	ecm_t *self = calloc(1, sizeof *self);
 	g_ecm = self;
 
-	self->global = IDENT_NULL;
+	/* self->global = IDENT_NULL; */
 
-	ecm_register("C_T", &g_ecm->global, sizeof(c_t), NULL, 0);
+	/* ecm_register("C_T", &g_ecm->global, sizeof(c_t), NULL, 0); */
 
 	ecm_register_signal(&entity_created, 0);
 
 	ecm_new_entity(); // entity_null
 
-	g_ecm->common = entity_new();
-
+	sem = SDL_CreateSemaphore(1);
 }
 
 void ct_register_listener(ct_t *self, int flags, uint signal,
@@ -89,6 +107,7 @@ entity_t ecm_new_entity()
 	uint i;
 	int *iter;
 
+	SDL_SemWait(sem);
 	for(i = 0, iter = g_ecm->entities_busy;
 			i < g_ecm->entities_busy_size && *iter; i++, iter++);
 
@@ -102,6 +121,8 @@ entity_t ecm_new_entity()
 	}
 
 	*iter = 1;
+	SDL_SemPost(sem);
+	printf(">>>>>>>> %u\n", i);
 
 	return i;
 }
@@ -156,6 +177,18 @@ void ct_add_dependency(ct_t *ct, ct_t *dep)
 /* 	} */
 /* } */
 
+struct comp_page *ct_add_page(ct_t *self)
+{
+	int page_id = self->pages_size++;
+	self->pages = realloc(self->pages, sizeof(*self->pages) * self->pages_size);
+	struct comp_page *page = &self->pages[page_id];
+	
+	page->components = malloc(self->size * PAGE_SIZE);
+	page->components_size = 0;
+	return page;
+
+}
+
 ct_t *ecm_register(const char *name, uint *target, uint size,
 		init_cb init, int depend_size, ...)
 {
@@ -186,7 +219,8 @@ ct_t *ecm_register(const char *name, uint *target, uint size,
 		.init = init,
 		.size = size,
 		.depends_size = depend_size,
-		.is_interaction = 0
+		.is_interaction = 0,
+		.pages_size = 0
 	};
 	strncpy(ct->name, name, sizeof(ct->name));
 
@@ -203,33 +237,58 @@ ct_t *ecm_register(const char *name, uint *target, uint size,
 		}
 		va_end(depends);
 	}
+	ct_add_page(ct);
 
 	return ct;
 }
 
-void ct_add(ct_t *self, c_t *comp)
+static SDL_mutex *mut = NULL;
+c_t *ct_add(ct_t *self, entity_t entity)
 {
-	if(!self) return;
-	if(!comp) return;
-	uint offset, i = self->components_size++;
-	entity_t entity = c_entity(comp);
+	if(!mut) SDL_CreateMutex();
+	SDL_LockMutex(mut);
+	if(!self) return NULL;
+
+	int page_id = self->pages_size - 1;
+	struct comp_page *page = &self->pages[page_id];
+	if(page->components_size == PAGE_SIZE)
+	{
+		page = ct_add_page(self);
+		page_id++;
+	}
+
+	uint offset;
+
+
 	if(entity >= self->offsets_size)
 	{
+		/* printf("increasing offsets %d -> %d\n", self->offsets_size, (int)entity + 1); */
 		uint j, new_size = entity + 1;
 		self->offsets = realloc(self->offsets, sizeof(*self->offsets) *
 				new_size);
 		for(j = self->offsets_size; j < new_size - 1; j++)
 		{
-			self->offsets[j] = -1;
+			self->offsets[j].offset = -1;
 		}
 
+	}
+	/* printf("c_size %d %s\n", (int)self->size, self->name); */
+
+	self->offsets[entity].offset = offset = page->components_size * self->size;
+	self->offsets[entity].page = page_id;
+
+
+	page->components_size++;
+
+	if(entity >= self->offsets_size)
+	{
 		self->offsets_size = entity + 1;
 	}
-
-	self->offsets[entity] = offset = i * self->size;
-
-	self->components = realloc(self->components, self->size * self->components_size);
-
-	memcpy(&(self->components[offset]), comp, self->size);
+	SDL_UnlockMutex(mut);
+	c_t *comp = (c_t*)&page->components[offset];
+	memset(comp, 0, self->size);
+	comp->entity = entity;
+	comp->comp_type = self->id;
+	return comp;
 }
 

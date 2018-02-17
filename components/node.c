@@ -7,7 +7,6 @@ DEC_CT(ct_node);
 
 static void c_node_init(c_node_t *self)
 {
-	self->super = component_new(ct_node);
 	self->children = NULL;
 	self->children_size = 0;
 	self->model = mat4();
@@ -17,8 +16,7 @@ static void c_node_init(c_node_t *self)
 
 c_node_t *c_node_new()
 {
-	c_node_t *self = malloc(sizeof *self);
-	c_node_init(self);
+	c_node_t *self = component_new(ct_node);
 	return self;
 }
 
