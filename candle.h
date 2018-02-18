@@ -77,6 +77,7 @@ typedef struct candle_t
 	void *candle_thr;
 	void *ticker_thr;
 	SDL_threadID render_id;
+	SDL_sem *sem;
 } candle_t;
 
 candle_t *candle_new(int comps_size, ...);

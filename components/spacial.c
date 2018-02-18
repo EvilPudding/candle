@@ -64,10 +64,13 @@ vec3_t c_spacial_up(c_spacial_t *self)
 
 void c_spacial_look_at(c_spacial_t *self, vec3_t eye, vec3_t center, vec3_t up)
 {
+	c_spacial_lock(self);
 	self->up = up;
-	self->model_matrix = mat4_look_at(eye, center, up);
-	entity_signal(self->super.entity, spacial_changed,
-			&self->super.entity);
+	self->pos = eye;
+
+	self->rot_matrix = mat4_look_at(vec3(0,0,0), vec3_sub(center, eye), up);
+	self->modified = 1;
+	c_spacial_unlock(self);
 }
 
 void c_spacial_scale(c_spacial_t *self, vec3_t scale)

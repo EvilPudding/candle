@@ -162,6 +162,7 @@ static int render_loop(candle_t *self)
 	/* SDL_LockMutex(self->mut); */
 	entity_add_component(self->systems, c_window_new(0, 0));
 	/* printf("unlock 2\n"); */
+	SDL_SemPost(self->sem);
 
 	while(!self->exit)
 	{
@@ -355,7 +356,6 @@ candle_t *candle_new(int comps_size, ...)
 
 	shaders_reg();
 
-	/* self->mut = SDL_CreateMutex(); */
 
 	int i;
 	for(i = 0; i < 4; i++)
@@ -412,12 +412,13 @@ candle_t *candle_new(int comps_size, ...)
 	if(res == -1) exit(1);
 
 	/* self->candle_thr = SDL_CreateThread((int(*)(void*))candle_loop, "candle_loop", candle); */
+	self->sem = SDL_CreateSemaphore(0);
 	self->render_thr = SDL_CreateThread((int(*)(void*))render_loop, "render_loop", candle);
 	self->ticker_thr = SDL_CreateThread((int(*)(void*))ticker_loop, "ticker_loop", candle);
-	SDL_Delay(500);
+	SDL_SemWait(self->sem);
+	/* SDL_Delay(500); */
 
 	/* candle_import_dir(self, entity_null, "./"); */
-	/* SDL_UnlockMutex(candle->mut); */
 
 	return self;
 }

@@ -143,6 +143,7 @@ static int c_renderer_created(c_renderer_t *self)
 
 #ifdef MESH4
 	self->angle4 = 0.01f;
+	self->angle4 = M_PI * 0.45;
 #endif
 
 	c_renderer_add_pass(self, "ssao",

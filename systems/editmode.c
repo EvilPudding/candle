@@ -70,6 +70,12 @@ void c_editmode_activate(c_editmode_t *self)
 			c_name_new("Edit Camera"), c_editlook_new(), c_node_new(),
 			c_camera_new(70, 0.1, 100.0)
 		);
+		c_spacial_t *sc = c_spacial(&self->camera);
+		c_spacial_lock(sc);
+		c_spacial_set_pos(sc, vec3(3, 3, 3));
+		c_spacial_rotate_Y(sc, M_PI / 4);
+		c_spacial_rotate_X(sc, -M_PI * 0.2);
+		c_spacial_unlock(sc);
 	}
 	c_camera_activate(c_camera(&self->camera));
 	c_camera_update_view(c_camera(&self->camera));
