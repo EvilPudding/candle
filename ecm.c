@@ -80,13 +80,20 @@ void ct_register_listener(ct_t *self, int flags, uint signal,
 	self->listeners = realloc(self->listeners, sizeof(*self->listeners) *
 			self->listeners_size);
 
-	self->listeners[i] = (listener_t){.signal = signal, .cb = (signal_cb)cb,
-		.flags = flags};
+	listener_t lis = {.signal = signal, .cb = (signal_cb)cb,
+		.flags = flags, .comp_type = self->id};
+	self->listeners[i] = lis;
 
 	signal_t *sig = &g_ecm->signals[signal];
+
 	i = sig->cts_size++;
 	sig->cts = realloc(sig->cts, sizeof(*sig->cts) * sig->cts_size);
 	sig->cts[i] = self->id;
+
+	i = sig->listeners_size++;
+	sig->listeners = realloc(sig->listeners, sizeof(*sig->listeners) *
+			sig->listeners_size);
+	sig->listeners[i] = lis;
 }
 
 void ecm_register_signal(uint *target, uint size)

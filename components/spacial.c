@@ -36,7 +36,7 @@ void c_spacial_register()
 
 	ecm_register_signal(&spacial_changed, sizeof(entity_t));
 
-	ct_register_listener(ct, WORLD, component_menu|RENDER_THREAD,
+	ct_register_listener(ct, WORLD|RENDER_THREAD, component_menu,
 			(signal_cb)c_spacial_menu);
 }
 
@@ -206,7 +206,6 @@ void c_spacial_set_pos(c_spacial_t *self, vec3_t pos)
 
 int c_spacial_menu(c_spacial_t *self, void *ctx)
 {
-
 	vec3_t tmp = self->pos;
 	if(nk_tree_push(ctx, NK_TREE_NODE, "Position", NK_MINIMIZED))
 	{

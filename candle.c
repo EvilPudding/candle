@@ -28,7 +28,7 @@ int handle_event(candle_t *self, SDL_Event event)
 	char key;
 	if(self->mouse_owners[0] != entity_null)
 	{
-		if(entity_signal_same_TOPLEVEL(self->mouse_owners[0],
+		if(entity_signal_same(self->mouse_owners[0],
 					event_handle, &event) == 0)
 		{
 			return 1;
@@ -36,7 +36,7 @@ int handle_event(candle_t *self, SDL_Event event)
 	}
 	else
 	{
-		if(entity_signal_TOPLEVEL(entity_null, event_handle, &event) == 0)
+		if(entity_signal(entity_null, event_handle, &event) == 0)
 		{
 			return 1;
 		}
@@ -49,7 +49,7 @@ int handle_event(candle_t *self, SDL_Event event)
 			bdata = (mouse_button_data){event.wheel.x, event.wheel.y,
 				event.wheel.direction, SDL_BUTTON_MIDDLE};
 			{
-				entity_signal_TOPLEVEL(entity_null, mouse_wheel, &bdata);
+				entity_signal(entity_null, mouse_wheel, &bdata);
 			}
 			break;
 		case SDL_MOUSEBUTTONUP:
@@ -57,18 +57,18 @@ int handle_event(candle_t *self, SDL_Event event)
 				event.button.button};
 			if(self->mouse_owners[0] != entity_null)
 			{
-				entity_signal_TOPLEVEL(self->mouse_owners[0], mouse_release, &bdata);
+				entity_signal(self->mouse_owners[0], mouse_release, &bdata);
 			}
 			else
 			{
-				entity_signal_TOPLEVEL(entity_null, mouse_release, &bdata);
+				entity_signal(entity_null, mouse_release, &bdata);
 			}
 			break;
 		case SDL_MOUSEBUTTONDOWN:
 			bdata = (mouse_button_data){event.button.x, event.button.y, 0,
 				event.button.button};
 			{
-				entity_signal_TOPLEVEL(entity_null, mouse_press, &bdata);
+				entity_signal(entity_null, mouse_press, &bdata);
 			}
 			break;
 		case SDL_MOUSEMOTION:
@@ -77,11 +77,11 @@ int handle_event(candle_t *self, SDL_Event event)
 				event.motion.x, event.motion.y};
 			if(self->mouse_owners[0] != entity_null)
 			{
-				entity_signal_same_TOPLEVEL(self->mouse_owners[0], mouse_move, &mdata);
+				entity_signal_same(self->mouse_owners[0], mouse_move, &mdata);
 			}
 			else
 			{
-				entity_signal_TOPLEVEL(entity_null, mouse_move, &mdata);
+				entity_signal(entity_null, mouse_move, &mdata);
 			}
 			break;
 		case SDL_KEYUP:
@@ -90,7 +90,7 @@ int handle_event(candle_t *self, SDL_Event event)
 			{
 				self->shift = 0;
 			}
-			entity_signal_TOPLEVEL(entity_null, key_up, &key);
+			entity_signal(entity_null, key_up, &key);
 			break;
 		case SDL_KEYDOWN:
 			key = event.key.keysym.sym;
@@ -98,7 +98,7 @@ int handle_event(candle_t *self, SDL_Event event)
 			{
 				self->shift = 1;
 			}
-			entity_signal_TOPLEVEL(entity_null, key_down, &key);
+			entity_signal(entity_null, key_down, &key);
 			break;
 		case SDL_WINDOWEVENT:
 			switch(event.window.event)
@@ -107,7 +107,7 @@ int handle_event(candle_t *self, SDL_Event event)
 
 					printf("window resize: %dx%d\n", event.window.data1,
 							event.window.data2);
-					entity_signal_TOPLEVEL(entity_null, window_resize,
+					entity_signal(entity_null, window_resize,
 							&(window_resize_data){
 							.width = event.window.data1,
 							.height = event.window.data2});
@@ -172,7 +172,7 @@ static int render_loop(candle_t *self)
 		{
 			/* candle_handle_events(self); */
 			/* printf("\t%ld\n", self->render_id); */
-			entity_signal_TOPLEVEL(entity_null, world_draw, NULL);
+			entity_signal(entity_null, world_draw, NULL);
 
 			c_window_draw(c_window(&self->systems));
 

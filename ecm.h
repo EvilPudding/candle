@@ -31,6 +31,7 @@ typedef struct
 	uint signal;
 	signal_cb cb;
 	int flags;
+	uint comp_type;
 } listener_t;
 
 typedef struct
@@ -85,6 +86,8 @@ typedef struct
 
 	uint *cts;
 	uint cts_size;
+	listener_t *listeners;
+	uint listeners_size;
 
 	
 } signal_t;

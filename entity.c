@@ -74,14 +74,30 @@ entity_t _entity_new(int comp_num, ...)
 /* 	} */
 /* } */
 
-
-int component_signal_TOPLEVEL(c_t *comp, ct_t *ct, uint signal, void *data)
+int listener_signal(listener_t *self, entity_t ent, void *data)
 {
-	listener_t *listener = ct_get_listener(ct, signal);
-	if(listener)
+	int p, j;
+	ct_t *ct = ecm_get(self->comp_type);
+	for(p = 0; p < ct->pages_size; p++)
 	{
-		if(filter_listener(listener))
-			listener->cb(comp, data);
+		for(j = 0; j < ct->pages[p].components_size; j++)
+		{
+			c_t *c = ct_get_at(ct, p, j);
+			if((self->flags & SAME_ENTITY) && c_entity(c) != ent)
+				continue;
+
+			if(self->cb(c, data) == 0) return 0;
+		}
+	}
+	return 1;
+}
+
+int listener_signal_same(listener_t *self, entity_t ent, void *data)
+{
+	c_t *comp = ct_get(ecm_get(self->comp_type), ent);
+	if(comp)
+	{
+		return self->cb(comp, data);
 	}
 	return 1;
 }
@@ -96,29 +112,6 @@ int component_signal(c_t *comp, ct_t *ct, uint signal, void *data)
 	return 1;
 }
 
-int entity_signal_same_TOPLEVEL(entity_t self, uint signal, void *data)
-{
-	/* if(signal == IDENT_NULL) exit(1); */
-	uint i;
-
-	signal_t *sig = &g_ecm->signals[signal];
-
-	for(i = 0; i < sig->cts_size; i++)
-	{
-		ct_t *ct = ecm_get(sig->cts[i]);
-		c_t *comp = ct_get(ct, self);
-		if(comp)
-		{
-			int res = component_signal_TOPLEVEL(comp, ct, signal, data);
-			if(res == 0)
-			{
-				return 0;
-			}
-		}
-	}
-	return 1;
-}
-
 int entity_signal_same(entity_t self, uint signal, void *data)
 {
 	/* if(signal == IDENT_NULL) exit(1); */
@@ -126,113 +119,56 @@ int entity_signal_same(entity_t self, uint signal, void *data)
 
 	signal_t *sig = &g_ecm->signals[signal];
 
-	for(i = 0; i < sig->cts_size; i++)
+	for(i = 0; i < sig->listeners_size; i++)
 	{
-		ct_t *ct = ecm_get(sig->cts[i]);
-		c_t *comp = ct_get(ct, self);
-		if(comp)
-		{
-			int res = component_signal(comp, ct, signal, data);
-			if(res == 0)
-			{
-				return 0;
-			}
-		}
+		listener_t *lis = &sig->listeners[i];
+		int res = listener_signal_same(lis, self, data);
+		if(res == 0) return 0;
 	}
 	return 1;
 }
 
-void entity_filter(entity_t self, uint signal, void *data,
-		filter_cb cb, c_t *c_caller, void *cb_data)
-{
-	uint i, j, p;
+/* void entity_filter(entity_t self, uint signal, void *data, */
+/* 		filter_cb cb, c_t *c_caller, void *cb_data) */
+/* { */
+/* 	uint i, j, p; */
 
-	signal_t *sig = &g_ecm->signals[signal];
+/* 	signal_t *sig = &g_ecm->signals[signal]; */
 
-	for(i = 0; i < sig->cts_size; i++)
-	{
-		uint ct_id = sig->cts[i];
-		ct_t *ct = ecm_get(ct_id);
-		listener_t *listener = ct_get_listener(ct, signal);
-		if(listener)
-		{
-			for(p = 0; p < ct->pages_size; p++)
-			{
-				for(j = 0; j < ct->pages[p].components_size; j++)
-				{
-					c_t *c = ct_get_at(ct, p, j);
+/* 	for(i = 0; i < sig->cts_size; i++) */
+/* 	{ */
+/* 		uint ct_id = sig->cts[i]; */
+/* 		ct_t *ct = ecm_get(ct_id); */
+/* 		listener_t *listener = ct_get_listener(ct, signal); */
+/* 		if(listener) */
+/* 		{ */
+/* 			for(p = 0; p < ct->pages_size; p++) */
+/* 			{ */
+/* 				for(j = 0; j < ct->pages[p].components_size; j++) */
+/* 				{ */
+/* 					c_t *c = ct_get_at(ct, p, j); */
 
-					if((listener->flags & SAME_ENTITY) && c_entity(c) != self)
-					if(listener->cb(c, data))
-					{
-						cb(c_caller, c, cb_data);
-					}
-				}
-			}
-		}
-	}
-}
+/* 					if((listener->flags & SAME_ENTITY) && c_entity(c) != self) */
+/* 					if(listener->cb(c, data)) */
+/* 					{ */
+/* 						cb(c_caller, c, cb_data); */
+/* 					} */
+/* 				} */
+/* 			} */
+/* 		} */
+/* 	} */
+/* } */
 
-int entity_signal_TOPLEVEL(entity_t self, uint signal, void *data)
-{
-	uint i, j, p;
-	/* if(signal == IDENT_NULL) exit(1); */
-
-	signal_t *sig = &g_ecm->signals[signal];
-	for(i = 0; i < sig->cts_size; i++)
-	{
-		uint ct_id = sig->cts[i];
-		ct_t *ct = ecm_get(ct_id);
-		listener_t *listener = ct_get_listener(ct, signal);
-		if(listener)
-		{
-			for(p = 0; p < ct->pages_size; p++)
-			for(j = 0; j < ct->pages[p].components_size; j++)
-			{
-				c_t *c = ct_get_at(ct, p, j);
-
-				if(!filter_listener(listener)) continue;
-
-				if((listener->flags & SAME_ENTITY) && c_entity(c) != self)
-					continue;
-
-				int res = listener->cb(c, data);
-				if(res == 0)
-				{
-					return 0;
-				}
-			}
-		}
-	}
-	return 1;
-}
 int entity_signal(entity_t self, uint signal, void *data)
 {
-	uint i, j, p;
+	uint i;
 	/* if(signal == IDENT_NULL) exit(1); */
 
 	signal_t *sig = &g_ecm->signals[signal];
-	for(i = 0; i < sig->cts_size; i++)
+	for(i = 0; i < sig->listeners_size; i++)
 	{
-		uint ct_id = sig->cts[i];
-		ct_t *ct = ecm_get(ct_id);
-		listener_t *listener = ct_get_listener(ct, signal);
-		if(listener)
-		{
-			for(p = 0; p < ct->pages_size; p++)
-			for(j = 0; j < ct->pages[p].components_size; j++)
-			{
-				c_t *c = ct_get_at(ct, p, j);
-
-				if((listener->flags & SAME_ENTITY) && c_entity(c) != self)
-					continue;
-				int res = listener->cb(c, data);
-				if(res == 0)
-				{
-					return 0;
-				}
-			}
-		}
+		listener_t *lis = &sig->listeners[i];
+		if(listener_signal(lis, self, data) == 0) return 0;
 	}
 	return 1;
 }
