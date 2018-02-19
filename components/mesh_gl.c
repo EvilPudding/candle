@@ -499,7 +499,7 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 	{
 		if((layer->mat->transparency.color.a != 0.0f) != transparent) return 0;
 
-		material_bind(layer->mat, shader);
+		mat_bind(layer->mat, shader);
 	}
 
 	{

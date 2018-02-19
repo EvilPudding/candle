@@ -69,7 +69,7 @@ void c_window_init(c_window_t *self)
 
 	self->quad_shader = shader_new("quad");
 	self->quad = entity_new(c_name_new("renderer_quad"),
-			c_model_new(mesh_quad(), 0));
+			c_model_new(mesh_quad(), NULL, 0));
 	c_model(&self->quad)->visible = 0;
 }
 

@@ -13,7 +13,7 @@ DEC_CT(ct_model);
 
 DEC_SIG(mesh_changed);
 
-static material_t *g_missing_mat = NULL;
+static mat_t *g_missing_mat = NULL;
 
 int c_model_menu(c_model_t *self, void *ctx);
 int g_update_id = 0;
@@ -22,8 +22,8 @@ static void c_model_init(c_model_t *self)
 {
 	if(!g_missing_mat)
 	{
-		g_missing_mat = material_new("missing");
-		material_set_diffuse(g_missing_mat, (prop_t){.color=vec4(0.0, 0.9, 1.0, 1.0)});
+		g_missing_mat = mat_new("missing");
+		mat_set_diffuse(g_missing_mat, (prop_t){.color=vec4(0.0, 0.9, 1.0, 1.0)});
 
 	}
 
@@ -34,10 +34,10 @@ static void c_model_init(c_model_t *self)
 	self->layers = malloc(sizeof(*self->layers) * 16);
 }
 
-void c_model_add_layer(c_model_t *self, int selection, float offset)
+void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset)
 {
 	int i = self->layers_num++;
-	self->layers[i].mat = NULL;
+	self->layers[i].mat = mat;
 	self->layers[i].selection = selection;
 	self->layers[i].cull_front = 0;
 	self->layers[i].cull_back = 1;
@@ -46,7 +46,7 @@ void c_model_add_layer(c_model_t *self, int selection, float offset)
 	self->layers[i].offset = 0;
 }
 
-c_model_t *c_model_new(mesh_t *mesh, int cast_shadow)
+c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow)
 {
 	c_model_t *self = component_new(ct_model);
 
@@ -54,12 +54,12 @@ c_model_t *c_model_new(mesh_t *mesh, int cast_shadow)
 	self->mesh = mesh;
 	self->cast_shadow = cast_shadow;
 
-	c_model_add_layer(self, -1, 0);
+	c_model_add_layer(self, mat, -1, 0);
 
 	return self;
 }
 
-c_model_t *c_model_paint(c_model_t *self, int layer, material_t *mat)
+c_model_t *c_model_paint(c_model_t *self, int layer, mat_t *mat)
 {
 	self->layers[layer].mat = mat;
 	/* c_mesh_gl_t *gl = c_mesh_gl(self); */

@@ -184,7 +184,7 @@ static int c_renderer_created(c_renderer_t *self)
 
 
 	self->quad = entity_new(c_name_new("renderer_quad"),
-			c_model_new(mesh_quad(), 0));
+			c_model_new(mesh_quad(), NULL, 0));
 	c_model(&self->quad)->visible = 0;
 
 	c_renderer_resize(self, &(window_resize_data){.width = c_window(self)->width,

@@ -6,7 +6,7 @@
 typedef struct
 {
 	int selection;
-	material_t *mat;
+	mat_t *mat;
 	int wireframe;
 	int cull_front;
 	int cull_back;
@@ -35,10 +35,10 @@ DEF_SIG(mesh_changed);
 DEF_CASTER(ct_model, c_model, c_model_t)
 extern int g_update_id;
 
-c_model_t *c_model_new(mesh_t *mesh, int cast_shadow);
+c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow);
 c_model_t *c_model_cull_face(c_model_t *self, int layer, int inverted);
 c_model_t *c_model_wireframe(c_model_t *self, int layer, int wireframe);
-c_model_t *c_model_paint(c_model_t *self, int layer, material_t *mat);
+c_model_t *c_model_paint(c_model_t *self, int layer, mat_t *mat);
 int c_model_render_transparent(c_model_t *self, shader_t *shader);
 int c_model_render_visible(c_model_t *self, shader_t *shader);
 int c_model_render(c_model_t *self, int transparent, shader_t *shader);

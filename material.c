@@ -7,14 +7,14 @@
 #include <candle.h>
 #include <dirent.h>
 
-char g_materials_path[256] = "resauces/materials";
+char g_mats_path[256] = "resauces/mats";
 
-material_t *material_new(const char *name)
+mat_t *mat_new(const char *name)
 {
-	material_t *self = calloc(1, sizeof *self);
-	material_set_normal(self, (prop_t){.color=vec4(0.5, 0.5, 1.0, 0.0)});
+	mat_t *self = calloc(1, sizeof *self);
+	mat_set_normal(self, (prop_t){.color=vec4(0.5, 0.5, 1.0, 0.0)});
 
-	material_set_reflection(self, (prop_t){.color=vec4(1.0, 1.0, 1.0, 0.8)});
+	mat_set_reflection(self, (prop_t){.color=vec4(1.0, 1.0, 1.0, 0.8)});
 
 	strncpy(self->name, name, sizeof(self->name));
 
@@ -34,7 +34,7 @@ vec4_t color_from_hex(const char *hex_str)
 	return self;
 }
 
-void material_parse(material_t *self, FILE *fd)
+void mat_parse(mat_t *self, FILE *fd)
 {
 	char prop[64];
 	char arg[256];
@@ -92,19 +92,19 @@ void material_parse(material_t *self, FILE *fd)
 	}
 }
 
-material_t *material_from_file(const char *filename)
+mat_t *mat_from_file(const char *filename)
 {
-	material_t *self = material_new(filename);
+	mat_t *self = mat_new(filename);
 	char buffer[265];
 	char global_path[265];
 
-	strncpy(self->name, path_relative(filename, g_materials_path),
+	strncpy(self->name, path_relative(filename, g_mats_path),
 			sizeof(self->name));
 
-	strncpy(global_path, g_materials_path, sizeof(global_path));
+	strncpy(global_path, g_mats_path, sizeof(global_path));
 	path_join(global_path, sizeof(global_path), self->name);
 
-	strncpy(buffer, g_materials_path, sizeof(buffer));
+	strncpy(buffer, g_mats_path, sizeof(buffer));
 
 	char *file_name = self->name + (strrchr(self->name, '/') - self->name);
 	if(!file_name) file_name = self->name;
@@ -121,30 +121,30 @@ material_t *material_from_file(const char *filename)
 
 	if(fp)
 	{
-		material_parse(self, fp);
+		mat_parse(self, fp);
 		fclose(fp);
 	}
 	else
 	{
 		printf("File does not exist: '%s'\n", buffer);
-		material_destroy(self);
+		mat_destroy(self);
 		return 0;
 	}
 
-	c_sauces_material_reg(c_sauces(&candle->systems), self->name, self);
+	c_sauces_mat_reg(c_sauces(&candle->systems), self->name, self);
 	return self;
 }
 
-void material_destroy(material_t *self)
+void mat_destroy(mat_t *self)
 {
 	/* TODO: free textures */
 	free(self);
 }
 
-material_t *material_from_dir(const char *name, const char *dirname)
+mat_t *mat_from_dir(const char *name, const char *dirname)
 {
-	/* material_t *self = material_new(name); */
-	/* candle_material_reg(candle, name, self); */
+	/* mat_t *self = mat_new(name); */
+	/* candle_mat_reg(candle, name, self); */
 	/* texture_set_path(dirname); */
 
 	/* printf("importing mat %s from %s\n", name, dirname); */
@@ -195,7 +195,7 @@ material_t *material_from_dir(const char *name, const char *dirname)
 	return NULL;
 }
 
-void material_bind_prop(u_prop_t *uniforms, prop_t *prop, int num)
+void mat_bind_prop(u_prop_t *uniforms, prop_t *prop, int num)
 {
 	glUniform1f(uniforms->texture_blend, prop->texture_blend); glerr();
 	glUniform1f(uniforms->texture_scale, prop->texture_scale); glerr();
@@ -216,45 +216,45 @@ void material_bind_prop(u_prop_t *uniforms, prop_t *prop, int num)
 			prop->color.a); glerr();
 }
 
-void material_set_specular(material_t *self, prop_t specular)
+void mat_set_specular(mat_t *self, prop_t specular)
 {
 	self->specular = specular;
 }
 
-void material_set_transparency(material_t *self, prop_t transparency)
+void mat_set_transparency(mat_t *self, prop_t transparency)
 {
 	self->transparency = transparency;
 }
 
-void material_set_reflection(material_t *self, prop_t reflection)
+void mat_set_reflection(mat_t *self, prop_t reflection)
 {
 	self->reflection = reflection;
 }
 
-void material_set_normal(material_t *self, prop_t normal)
+void mat_set_normal(mat_t *self, prop_t normal)
 {
 	self->normal = normal;
 }
 
-void material_set_diffuse(material_t *self, prop_t diffuse)
+void mat_set_diffuse(mat_t *self, prop_t diffuse)
 {
 	self->diffuse = diffuse;
 }
 
-void material_set_ambient_light(material_t *self, vec4_t light)
+void mat_set_ambient_light(mat_t *self, vec4_t light)
 {
 	self->ambient_light = light;
 }
 
-void material_bind(material_t *self, shader_t *shader)
+void mat_bind(mat_t *self, shader_t *shader)
 {
-	material_bind_prop(&shader->u_diffuse, &self->diffuse, 1);
-	material_bind_prop(&shader->u_specular, &self->specular, 2);
-	material_bind_prop(&shader->u_reflection, &self->reflection, 3);
-	material_bind_prop(&shader->u_normal, &self->normal, 4);
-	material_bind_prop(&shader->u_transparency, &self->transparency, 5);
-	/* material_bind_prop(&shader->u_position, &self->position, 5); */
-	/* material_bind_prop(&shader->u_position, &self->position, 6); */
+	mat_bind_prop(&shader->u_diffuse, &self->diffuse, 1);
+	mat_bind_prop(&shader->u_specular, &self->specular, 2);
+	mat_bind_prop(&shader->u_reflection, &self->reflection, 3);
+	mat_bind_prop(&shader->u_normal, &self->normal, 4);
+	mat_bind_prop(&shader->u_transparency, &self->transparency, 5);
+	/* mat_bind_prop(&shader->u_position, &self->position, 5); */
+	/* mat_bind_prop(&shader->u_position, &self->position, 6); */
 
 	glUniform4f(shader->u_ambient_light, self->ambient_light.r,
 			self->ambient_light.g, self->ambient_light.b, self->ambient_light.a);

@@ -28,21 +28,21 @@ typedef struct
 	/* prop_t position; */
 
 	vec4_t ambient_light;
-} material_t;
+} mat_t;
 
-extern char g_materials_path[256];
+extern char g_mats_path[256];
 
-material_t *material_new(const char *name);
-material_t *material_from_file(const char *filename);
-material_t *material_from_dir(const char *name, const char *dirname);
-void material_bind(material_t *self, shader_t *shader);
-void material_set_diffuse(material_t *self, prop_t diffuse);
-void material_set_normal(material_t *self, prop_t normal);
-void material_set_reflection(material_t *self, prop_t reflection);
-void material_set_specular(material_t *self, prop_t specular);
-void material_set_transparency(material_t *self, prop_t transparency);
-/* void material_set_reflection(material_t *self, prop_t reflection); */
-void material_set_ambient_light(material_t *self, vec4_t light);
-void material_destroy(material_t *self);
+mat_t *mat_new(const char *name);
+mat_t *mat_from_file(const char *filename);
+mat_t *mat_from_dir(const char *name, const char *dirname);
+void mat_bind(mat_t *self, shader_t *shader);
+void mat_set_diffuse(mat_t *self, prop_t diffuse);
+void mat_set_normal(mat_t *self, prop_t normal);
+void mat_set_reflection(mat_t *self, prop_t reflection);
+void mat_set_specular(mat_t *self, prop_t specular);
+void mat_set_transparency(mat_t *self, prop_t transparency);
+/* void mat_set_reflection(mat_t *self, prop_t reflection); */
+void mat_set_ambient_light(mat_t *self, vec4_t light);
+void mat_destroy(mat_t *self);
 
 #endif /* !MATERIAL_H */

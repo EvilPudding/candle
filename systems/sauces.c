@@ -16,27 +16,27 @@ c_sauces_t *c_sauces_new()
 }
 
 
-void c_sauces_material_reg(c_sauces_t *self, const char *name, material_t *material)
+void c_sauces_mat_reg(c_sauces_t *self, const char *name, mat_t *mat)
 {
-	uint i = self->materials_size++;
-	self->materials = realloc(self->materials,
-			sizeof(*self->materials) * self->materials_size);
-	self->materials[i] = material;
-	if(material->name != name) strncpy(material->name, name, sizeof(material->name));
+	uint i = self->mats_size++;
+	self->mats = realloc(self->mats,
+			sizeof(*self->mats) * self->mats_size);
+	self->mats[i] = mat;
+	if(mat->name != name) strncpy(mat->name, name, sizeof(mat->name));
 }
 
-material_t *c_sauces_material_get(c_sauces_t *self, const char *name)
+mat_t *c_sauces_mat_get(c_sauces_t *self, const char *name)
 {
-	material_t *material;
+	mat_t *mat;
 	uint i;
-	for(i = 0; i < self->materials_size; i++)
+	for(i = 0; i < self->mats_size; i++)
 	{
-		material = self->materials[i];
-		if(!strcmp(material->name, name)) return material;
+		mat = self->mats[i];
+		if(!strcmp(mat->name, name)) return mat;
 	}
-	material = material_from_file(name);
-	if(material) c_sauces_material_reg(self, name, material);
-	return material;
+	mat = mat_from_file(name);
+	if(mat) c_sauces_mat_reg(self, name, mat);
+	return mat;
 }
 
 void c_sauces_mesh_reg(c_sauces_t *self, const char *name, mesh_t *mesh)
@@ -87,12 +87,12 @@ void c_sauces_texture_reg(c_sauces_t *self, const char *name, texture_t *texture
 	strncpy(texture->name, name, sizeof(texture->name));
 }
 
-int c_sauces_get_materials_at(c_sauces_t *self, const char *dir_name)
+int c_sauces_get_mats_at(c_sauces_t *self, const char *dir_name)
 {
 	char dir_buffer[2048];
-	strncpy(dir_buffer, g_materials_path, sizeof(dir_buffer));
+	strncpy(dir_buffer, g_mats_path, sizeof(dir_buffer));
 
-	path_join(dir_buffer, sizeof(dir_buffer), path_relative(dir_name, g_materials_path));
+	path_join(dir_buffer, sizeof(dir_buffer), path_relative(dir_name, g_mats_path));
 
 	DIR *dir = opendir(dir_buffer);
 	if(dir == NULL) return 0;
@@ -112,15 +112,15 @@ int c_sauces_get_materials_at(c_sauces_t *self, const char *dir_name)
 		{
 			ext = strrchr(buffer, '.');
 			*ext = '\0';
-			material_from_file(buffer);
+			mat_from_file(buffer);
 			continue;
 		}
 
 		if(is_dir(buffer))
 		{
-			if(!material_from_file(buffer))
+			if(!mat_from_file(buffer))
 			{
-				c_sauces_get_materials_at(self, buffer);
+				c_sauces_get_mats_at(self, buffer);
 			}
 			continue;
 		}
