@@ -125,8 +125,6 @@ int c_sauces_get_mats_at(c_sauces_t *self, const char *dir_name)
 			continue;
 		}
 
-
-
 	}
 	closedir(dir);
 
