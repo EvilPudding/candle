@@ -76,6 +76,7 @@ typedef struct candle_t
 	void *render_thr;
 	void *candle_thr;
 	void *ticker_thr;
+	int fps;
 	SDL_threadID render_id;
 	SDL_sem *sem;
 } candle_t;

@@ -519,16 +519,32 @@ int c_renderer_global_menu(c_renderer_t *self, void *ctx)
 {
 #ifdef MESH4
 	nk_layout_row_begin(ctx, NK_DYNAMIC, 0, 2);
-	nk_layout_row_push(ctx, 0.35);
-	nk_label(ctx, "4D angle:", NK_TEXT_LEFT);
-	nk_layout_row_push(ctx, 0.65);
-	float before = self->angle4;
-	nk_slider_float(ctx, 0, &self->angle4, M_PI / 2, 0.01);
-	if(self->angle4 != before)
-	{
-		g_update_id++;
-	}
+		nk_layout_row_push(ctx, 0.35);
+		nk_label(ctx, "4D angle:", NK_TEXT_LEFT);
+		nk_layout_row_push(ctx, 0.65);
+		float before = self->angle4;
+		nk_slider_float(ctx, 0, &self->angle4, M_PI / 2, 0.01);
+		if(self->angle4 != before)
+		{
+			g_update_id++;
+		}
 	nk_layout_row_end(ctx);
+
+	char fps[12]; sprintf(fps, "%d", candle->fps);
+
+	nk_layout_row_begin(ctx, NK_DYNAMIC, 30, 2);
+		nk_layout_row_push(ctx, 0.35);
+		nk_label(ctx, "FPS: ", NK_TEXT_LEFT);
+		nk_layout_row_push(ctx, 0.65);
+		nk_label(ctx, fps, NK_TEXT_RIGHT);
+	nk_layout_row_end(ctx);
+
+	if (nk_button_label(ctx, "open gbuffer"))
+	{
+		c_editmode_open_texture(c_editmode(self),
+				c_renderer(self)->gbuffers[0].buffer);
+	}
+
 
 #endif
 	return 1;

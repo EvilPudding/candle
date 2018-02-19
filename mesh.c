@@ -100,6 +100,8 @@ mesh_t *mesh_new()
 	vector_alloc(self->faces, 100);
 	vector_alloc(self->edges, 100);
 
+	self->sem = SDL_CreateSemaphore(1);
+
 	return self;
 }
 
@@ -166,6 +168,7 @@ void mesh_destroy(mesh_t *self)
 	if(self->verts) free(self->verts);
 	if(self->edges) free(self->edges);
 
+	SDL_DestroySemaphore(self->sem);
 	/* TODO destroy selections */
 	/* kl_destroy(int, self->unpaired_faces); */
 	/* kl_destroy(int, self->selected_faces); */
@@ -642,11 +645,19 @@ void mesh_paint(mesh_t *self, vec4_t color)
 void mesh_unlock(mesh_t *self)
 {
 	self->update_locked--;
+	if(self->update_locked == 0)
+	{
+		SDL_SemPost(self->sem);
+	}
 	mesh_update(self);
 }
 
 void mesh_lock(mesh_t *self)
 {
+	if(self->update_locked == 0)
+	{
+		SDL_SemWait(self->sem);
+	}
 	self->update_locked++;
 }
 
@@ -1868,7 +1879,6 @@ void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 		}
 		mesh_unlock(self);
 
-		SDL_Delay(60);
 	}
 
 	printf("end of extrusion\n");

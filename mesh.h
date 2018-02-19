@@ -192,6 +192,8 @@ typedef struct mesh_t
 	int update_id;
 	int changes;
 	float smooth_max;
+
+	SDL_sem *sem;
 } mesh_t;
 
 #ifdef MESH4

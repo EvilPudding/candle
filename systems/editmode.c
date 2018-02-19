@@ -329,6 +329,8 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 	{
 		title = tex->name;
 	}
+
+
 	res = nk_begin_titled(self->nk, buffer, title,
 			nk_rect(self->spawn_pos.x, self->spawn_pos.y, 230, 280),
 			NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
@@ -352,7 +354,6 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 		/* slider color combobox */
 
 
-		glDisable(GL_BLEND);
 		struct nk_image im = nk_image_id(tex->texId[tex->prev_id]);
 		/* im.handle.ptr = 1; */
 		struct nk_command_buffer *canvas = nk_window_get_canvas(self->nk);
@@ -427,15 +428,13 @@ int c_editmode_draw(c_editmode_t *self)
 					NK_WINDOW_SCALABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
 		{
 
+
 			nk_layout_row_static(self->nk, 30, 110, 1);
 			if (nk_button_label(self->nk, "systems"))
 			{
 				c_editmode_open_entity(self, c_entity(self));
 			}
-			if (nk_button_label(self->nk, "open gbuffer"))
-			{
-				c_editmode_open_texture(self, c_renderer(self)->gbuffers[0].buffer);
-			}
+
 			entity_signal(c_entity(self), global_menu, self->nk);
 
 			node_tree(self);
@@ -463,6 +462,8 @@ int c_editmode_draw(c_editmode_t *self)
 				e--;
 			}
 		}
+
+
 		nk_candle_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_MEMORY, MAX_ELEMENT_MEMORY);
 	}
 	return 1;

@@ -34,7 +34,7 @@ void *component_new(int comp_type)
 
 	ct_t *ct = &g_ecm->cts[comp_type];
 
-	printf("%ld << %s\n", entity, ct->name);
+	/* printf("%ld << %s\n", entity, ct->name); */
 	c_t *self = ct_add(ct, entity);
 
 	int i;
@@ -43,7 +43,7 @@ void *component_new(int comp_type)
 		ct_t *ct2 = ecm_get(ct->depends[i].ct);
 		if(!ct_get(ct2, entity))
 		{
-			printf("adding dependency %s\n", ct2->name);
+			/* printf("adding dependency %s\n", ct2->name); */
 			component_new(ct2->id);
 		}
 	}
@@ -118,7 +118,6 @@ entity_t ecm_new_entity()
 	for(i = 0, iter = g_ecm->entities_busy;
 			i < g_ecm->entities_busy_size && *iter; i++, iter++);
 
-	/* printf("%lu %lu\n", g_ecm->entities_busy_size, i); */
 	if(iter == NULL || i == g_ecm->entities_busy_size)
 	{
 		i = g_ecm->entities_busy_size++;
@@ -129,7 +128,7 @@ entity_t ecm_new_entity()
 
 	*iter = 1;
 	SDL_SemPost(sem);
-	printf(">>>>>>>> %u\n", i);
+	/* printf(">>>>>>>> %u\n", i); */
 
 	return i;
 }

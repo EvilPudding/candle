@@ -185,7 +185,7 @@ static int render_loop(candle_t *self)
 		int current = SDL_GetTicks();
 		if(current - last > 1000)
 		{
-			printf("FPS: %d\n", fps);
+			self->fps = fps;
 			fps = 0;
 			last = current;
 		}

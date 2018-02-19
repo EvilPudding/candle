@@ -345,7 +345,6 @@ int c_mesh_gl_on_mesh_changed(c_mesh_gl_t *self)
 
 int glg_update_ram(glg_t *self)
 {
-	printf("updating ram\n");
 	c_model_t *model = c_model(&self->entity);
 	mesh_t *mesh = model->mesh;
 	glg_clear(self);
@@ -462,6 +461,7 @@ void c_mesh_gl_update(c_mesh_gl_t *self)
 	/* TODO update only dirty group */
 	if(!self->mesh) return;
 	int i;
+	SDL_SemWait(self->mesh->sem);
 	for(i = 0; i < self->groups_num; i++)
 	{
 		glg_t *group = &self->groups[i];
@@ -474,6 +474,7 @@ void c_mesh_gl_update(c_mesh_gl_t *self)
 		}
 
 	}
+	SDL_SemPost(self->mesh->sem);
 }
 
 int glg_draw(glg_t *self, shader_t *shader, int transparent)
