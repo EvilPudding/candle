@@ -7,7 +7,7 @@
 #include <candle.h>
 #include <dirent.h>
 
-char g_mats_path[256] = "resauces/mats";
+char g_mats_path[256] = "resauces/materials";
 
 mat_t *mat_new(const char *name)
 {
