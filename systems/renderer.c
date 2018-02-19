@@ -529,6 +529,7 @@ int c_renderer_global_menu(c_renderer_t *self, void *ctx)
 			g_update_id++;
 		}
 	nk_layout_row_end(ctx);
+#endif
 
 	char fps[12]; sprintf(fps, "%d", candle->fps);
 
@@ -539,14 +540,8 @@ int c_renderer_global_menu(c_renderer_t *self, void *ctx)
 		nk_label(ctx, fps, NK_TEXT_RIGHT);
 	nk_layout_row_end(ctx);
 
-	if (nk_button_label(ctx, "open gbuffer"))
-	{
-		c_editmode_open_texture(c_editmode(self),
-				c_renderer(self)->gbuffers[0].buffer);
-	}
 
 
-#endif
 	return 1;
 }
 
@@ -554,6 +549,13 @@ int c_renderer_component_menu(c_renderer_t *self, void *ctx)
 {
 	nk_layout_row_dynamic(ctx, 0, 1);
 	int i;
+
+	if (nk_button_label(ctx, "gbuffer"))
+	{
+		c_editmode_open_texture(c_editmode(self),
+				c_renderer(self)->gbuffers[0].buffer);
+	}
+
 	for(i = 0; i < self->passes_size; i++)
 	{
 		pass_t *pass = &self->passes[i];
