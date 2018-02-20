@@ -7,6 +7,7 @@
 
 void nk_candle_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
 		int max_element_buffer);
+static int c_editmode_activate_loader(c_editmode_t *self);
 
 DEC_CT(ct_editmode);
 
@@ -41,6 +42,9 @@ c_editmode_t *c_editmode_new()
 
 void c_editmode_activate(c_editmode_t *self)
 {
+	loader_push(candle->loader, (loader_cb)c_editmode_activate_loader, NULL,
+			(c_t*)self);
+
 	self->activated = 1;
 	self->control = 1;
 
@@ -65,7 +69,7 @@ void c_editmode_activate(c_editmode_t *self)
 
 }
 
-static int c_editmode_resize_loader(c_editmode_t *self)
+static int c_editmode_activate_loader(c_editmode_t *self)
 {
 	self->nk = nk_sdl_init(c_window(self)->window); 
 
@@ -97,17 +101,6 @@ static int c_editmode_resize_loader(c_editmode_t *self)
 	return 1;
 }
 
-static int c_editmode_resize(c_editmode_t *self)
-{
-	if(!self->nk)
-	{
-		loader_push(candle->loader, (loader_cb)c_editmode_resize_loader, NULL,
-				(c_t*)self);
-	}
-
-	return 1;
-}
-
 void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 {
 	c_renderer_t *renderer = c_renderer(self);
@@ -121,8 +114,6 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 	self->mouse_position = pos;
 
 	self->over = result;
-	/* c_spacial_set_pos(c_spacial(&p), vec3_add(self->mouse_position, vec3(0.0, 0.3f, 0.0))); */
-
 }
 
 int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
@@ -509,7 +500,7 @@ void c_editmode_register()
 
 	ct_listener(ct, WORLD, events_end, c_editmode_events_end);
 
-	ct_listener(ct, WORLD, window_resize, c_editmode_resize);
+	/* ct_listener(ct, WORLD, window_resize, c_editmode_resize); */
 
 }
 
