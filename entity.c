@@ -19,13 +19,13 @@ void _entity_new_pre(void)
 int filter_listener(listener_t *self)
 {
 	return 1;
-	unsigned long thr = SDL_ThreadID();
-	int is_render_thread = thr == candle->render_id;
-	if(is_render_thread)
-	{
-		return self->flags & RENDER_THREAD;
-	}
-	return !(self->flags & RENDER_THREAD);
+	/* unsigned long thr = SDL_ThreadID(); */
+	/* int is_render_thread = thr == candle->render_id; */
+	/* if(is_render_thread) */
+	/* { */
+	/* 	return self->flags & RENDER_THREAD; */
+	/* } */
+	/* return !(self->flags & RENDER_THREAD); */
 }
 
 entity_t _entity_new(int comp_num, ...)
@@ -83,7 +83,7 @@ int listener_signal(listener_t *self, entity_t ent, void *data)
 		for(j = 0; j < ct->pages[p].components_size; j++)
 		{
 			c_t *c = ct_get_at(ct, p, j);
-			if((self->flags & SAME_ENTITY) && c_entity(c) != ent)
+			if((self->flags & ENTITY) && c_entity(c) != ent)
 				continue;
 
 			if(self->cb(c, data) == 0) return 0;

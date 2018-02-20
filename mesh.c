@@ -1816,7 +1816,7 @@ void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 	for(step = 0; step < steps; step++)
 	{
 
-		/* mesh_lock(self); */
+		mesh_lock(self);
 
 		self->current_surface++;
 		printf("step %d %d %d\n", step, vector_count(editing->faces),
@@ -1877,7 +1877,7 @@ void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 				mesh_face_set_selection(self, f_id, SEL_EDITING);
 			}
 		}
-		/* mesh_unlock(self); */
+		mesh_unlock(self);
 
 	}
 

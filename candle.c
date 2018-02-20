@@ -198,11 +198,11 @@ static int render_loop(candle_t *self)
 
 void candle_register()
 {
-	ecm_register_signal(&world_update, sizeof(float));
-	ecm_register_signal(&world_draw, sizeof(void*));
-	ecm_register_signal(&event_handle, sizeof(void*));
-	ecm_register_signal(&events_end, sizeof(void*));
-	ecm_register_signal(&events_begin, sizeof(void*));
+	signal_init(&world_update, sizeof(float));
+	signal_init(&world_draw, sizeof(void*));
+	signal_init(&event_handle, sizeof(void*));
+	signal_init(&events_end, sizeof(void*));
+	signal_init(&events_begin, sizeof(void*));
 }
 
 static int ticker_loop(candle_t *self)

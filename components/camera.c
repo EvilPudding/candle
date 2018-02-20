@@ -53,11 +53,11 @@ int c_camera_changed(c_camera_t *self)
 
 void c_camera_register()
 {
-	ct_t *ct = ecm_register("Camera", &ct_camera, sizeof(c_camera_t),
+	ct_t *ct = ct_new("c_camera", &ct_camera, sizeof(c_camera_t),
 			(init_cb)c_camera_init, 2, ct_spacial, ct_node);
 
-	ct_register_listener(ct, SAME_ENTITY, spacial_changed, (signal_cb)c_camera_changed);
-	ct_register_listener(ct, WORLD, window_resize, (signal_cb)c_camera_update);
+	ct_listener(ct, ENTITY, spacial_changed, c_camera_changed);
+	ct_listener(ct, WORLD, window_resize, c_camera_update);
 
 }
 

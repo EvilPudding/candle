@@ -90,11 +90,10 @@ void c_node_add(c_node_t *self, int num, ...)
 
 void c_node_register()
 {
-	ct_t *ct = ecm_register("Node", &ct_node, sizeof(c_node_t),
+	ct_t *ct = ct_new("c_node", &ct_node, sizeof(c_node_t),
 			(init_cb)c_node_init, 1, ct_spacial);
 
-	ct_register_listener(ct, SAME_ENTITY, spacial_changed,
-			(signal_cb)c_node_changed);
+	ct_listener(ct, ENTITY, spacial_changed, c_node_changed);
 }
 
 void c_node_update_model(c_node_t *self)

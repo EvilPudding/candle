@@ -163,24 +163,19 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 
 void c_editlook_register()
 {
-	ct_t *ct = ecm_register("EditLook", &ct_editlook,
+	ct_t *ct = ct_new("c_editLook", &ct_editlook,
 			sizeof(c_editlook_t), (init_cb)c_editlook_init,
 			1, ct_spacial);
 
-	ct_register_listener(ct, WORLD, mouse_wheel,
-			(signal_cb)c_editlook_mouse_wheel);
+	ct_listener(ct, WORLD, mouse_wheel, c_editlook_mouse_wheel);
 
-	ct_register_listener(ct, WORLD, mouse_move,
-			(signal_cb)c_editlook_mouse_move);
+	ct_listener(ct, WORLD, mouse_move, c_editlook_mouse_move);
 
-	ct_register_listener(ct, WORLD, window_resize,
-			(signal_cb)c_editlook_window_resize);
+	ct_listener(ct, WORLD, window_resize, c_editlook_window_resize);
 
-	ct_register_listener(ct, WORLD, mouse_press,
-			(signal_cb)c_editlook_mouse_press);
+	ct_listener(ct, WORLD, mouse_press, c_editlook_mouse_press);
 
-	ct_register_listener(ct, WORLD, mouse_release,
-			(signal_cb)c_editlook_mouse_release);
+	ct_listener(ct, WORLD, mouse_release, c_editlook_mouse_release);
 
 }
 

@@ -31,13 +31,12 @@ c_spacial_t *c_spacial_new()
 
 void c_spacial_register()
 {
-	ct_t *ct = ecm_register("Spacial", &ct_spacial,
+	ct_t *ct = ct_new("c_spacial", &ct_spacial,
 			sizeof(c_spacial_t), (init_cb)c_spacial_init, 0);
 
-	ecm_register_signal(&spacial_changed, sizeof(entity_t));
+	signal_init(&spacial_changed, sizeof(entity_t));
 
-	ct_register_listener(ct, WORLD|RENDER_THREAD, component_menu,
-			(signal_cb)c_spacial_menu);
+	ct_listener(ct, WORLD, component_menu, c_spacial_menu);
 }
 
 void c_spacial_unlock(c_spacial_t *self)

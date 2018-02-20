@@ -83,16 +83,13 @@ static int c_freelook_mouse_move(c_freelook_t *self, mouse_move_data *event)
 
 void c_freelook_register()
 {
-	ct_t *ct = ecm_register("Freelook", &ct_freelook, sizeof(c_freelook_t),
+	ct_t *ct = ct_new("c_freelook", &ct_freelook, sizeof(c_freelook_t),
 			(init_cb)c_freelook_init, 1, ct_spacial);
 
-	ct_register_listener(ct, WORLD, mouse_move,
-			(signal_cb)c_freelook_mouse_move);
+	ct_listener(ct, WORLD, mouse_move, c_freelook_mouse_move);
 
-	ct_register_listener(ct, SAME_ENTITY, entity_created,
-			(signal_cb)c_freelook_update);
+	ct_listener(ct, ENTITY, entity_created, c_freelook_update);
 
-	ct_register_listener(ct, WORLD, window_resize,
-			(signal_cb)c_freelook_window_resize);
+	ct_listener(ct, WORLD, window_resize, c_freelook_window_resize);
 }
 

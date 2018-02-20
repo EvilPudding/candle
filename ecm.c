@@ -62,14 +62,14 @@ void ecm_init()
 
 	/* ecm_register("C_T", &g_ecm->global, sizeof(c_t), NULL, 0); */
 
-	ecm_register_signal(&entity_created, 0);
+	signal_init(&entity_created, 0);
 
 	ecm_new_entity(); // entity_null
 
 	sem = SDL_CreateSemaphore(1);
 }
 
-void ct_register_listener(ct_t *self, int flags, uint signal,
+void _ct_listener(ct_t *self, int flags, uint signal,
 	signal_cb cb)
 {
 	if(!self) return;
@@ -96,7 +96,7 @@ void ct_register_listener(ct_t *self, int flags, uint signal,
 	sig->listeners[i] = lis;
 }
 
-void ecm_register_signal(uint *target, uint size)
+void signal_init(uint *target, uint size)
 {
 	if(!g_ecm) return;
 	if(*target != IDENT_NULL) return;
@@ -132,14 +132,6 @@ entity_t ecm_new_entity()
 
 	return i;
 }
-
-/* uint ecm_register_system(ecm_t *self, void *system) */
-/* { */
-/* 	uint i = self->systems_size++; */
-/* 	self->systems = realloc(self->systems, sizeof(*self->systems) * i); */
-/* 	self->systems[i] = system; */
-/* 	return i; */
-/* } */
 
 void ct_add_interaction(ct_t *ct, ct_t *dep)
 {
@@ -195,7 +187,7 @@ struct comp_page *ct_add_page(ct_t *self)
 
 }
 
-ct_t *ecm_register(const char *name, uint *target, uint size,
+ct_t *ct_new(const char *name, uint *target, uint size,
 		init_cb init, int depend_size, ...)
 {
 	if(*target != IDENT_NULL) return ecm_get(*target);

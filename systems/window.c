@@ -121,11 +121,10 @@ void c_window_rect(c_window_t *self, int x, int y, int width, int height,
 
 void c_window_register()
 {
-	ct_t *ct = ecm_register("Window", &ct_window,
+	ct_t *ct = ct_new("c_window", &ct_window,
 			sizeof(c_window_t), (init_cb)c_window_init, 0);
 
-	ct_register_listener(ct, SAME_ENTITY|RENDER_THREAD, entity_created,
-			(signal_cb)c_window_created);
+	ct_listener(ct, ENTITY, entity_created, c_window_created);
 
-	ecm_register_signal(&window_resize, sizeof(window_resize_data));
+	signal_init(&window_resize, sizeof(window_resize_data));
 }

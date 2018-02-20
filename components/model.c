@@ -229,26 +229,20 @@ int c_model_scene_changed(c_model_t *self, entity_t *entity)
 
 void c_model_register()
 {
-	ecm_register_signal(&mesh_changed, sizeof(mesh_t));
+	signal_init(&mesh_changed, sizeof(mesh_t));
 
-	ct_t *ct = ecm_register("Model", &ct_model, sizeof(c_model_t),
+	ct_t *ct = ct_new("c_model", &ct_model, sizeof(c_model_t),
 			(init_cb)c_model_init, 2, ct_spacial, ct_node);
 
-	ct_register_listener(ct, SAME_ENTITY, entity_created,
-			(signal_cb)c_model_created);
+	ct_listener(ct, ENTITY, entity_created, c_model_created);
 
-	ct_register_listener(ct, WORLD|RENDER_THREAD, component_menu,
-			(signal_cb)c_model_menu);
+	ct_listener(ct, WORLD, component_menu, c_model_menu);
 
-	ct_register_listener(ct, SAME_ENTITY, spacial_changed,
-			(signal_cb)c_model_scene_changed);
+	ct_listener(ct, ENTITY, spacial_changed, c_model_scene_changed);
 
-	ct_register_listener(ct, WORLD|RENDER_THREAD, render_visible,
-			(signal_cb)c_model_render_visible);
+	ct_listener(ct, WORLD, render_visible, c_model_render_visible);
 
-	ct_register_listener(ct, WORLD|RENDER_THREAD, render_transparent,
-			(signal_cb)c_model_render_transparent);
+	ct_listener(ct, WORLD, render_transparent, c_model_render_transparent);
 
-	ct_register_listener(ct, WORLD|RENDER_THREAD, render_shadows,
-			(signal_cb)c_model_render_shadows);
+	ct_listener(ct, WORLD, render_shadows, c_model_render_shadows);
 }

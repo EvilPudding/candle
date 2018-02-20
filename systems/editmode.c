@@ -19,20 +19,7 @@ DEC_SIG(component_menu);
 
 void c_editmode_init(c_editmode_t *self)
 {
-	self->control = 0;
-	self->visible = 0;
-	self->dragging = 0;
-	self->pressing = 0;
-	self->activated = 0;
-	self->open_entities_count = 0;
-	self->open_textures_count = 0;
-	self->mouse_position = vec3(0.0f);
-	/* self->outside = 0; */
-	self->nk = NULL;
 	self->spawn_pos = vec2(25, 25);
-	self->selected = entity_null;
-	self->over = entity_null;
-	self->camera = entity_null;
 }
 
 vec3_t c_editmode_bind_selected(entity_t caller)
@@ -48,11 +35,6 @@ vec3_t c_editmode_bind_selected(entity_t caller)
 c_editmode_t *c_editmode_new()
 {
 	c_editmode_t *self = component_new(ct_editmode);
-
-	/* mesh_t *cube = sauces_mesh("cube.ply"); */
-	/* p = entity_new( */
-			/* c_model_paint(c_model_new(cube, 1), 0, sauces_mat("pack1/white"))); */
-	/* c_spacial_scale(c_spacial(&p), vec3(0.2)); */
 
 	return self;
 }
@@ -503,41 +485,31 @@ int c_editmode_event(c_editmode_t *self, SDL_Event *event)
 
 void c_editmode_register()
 {
-	ct_t *ct = ecm_register("EditMode", &ct_editmode,
+	ct_t *ct = ct_new("c_editmode", &ct_editmode,
 			sizeof(c_editmode_t), (init_cb)c_editmode_init, 0);
 
-	ecm_register_signal(&global_menu, sizeof(struct nk_context*));
-	ecm_register_signal(&component_menu, sizeof(struct nk_context*));
+	signal_init(&global_menu, sizeof(struct nk_context*));
+	signal_init(&component_menu, sizeof(struct nk_context*));
 
-	ct_register_listener(ct, WORLD, key_up, (signal_cb)c_editmode_key_up);
+	ct_listener(ct, WORLD, key_up, c_editmode_key_up);
 
-	ct_register_listener(ct, WORLD, key_down, (signal_cb)c_editmode_key_down);
+	ct_listener(ct, WORLD, key_down, c_editmode_key_down);
 
-	/* ct_register_listener(ct, WORLD, world_update, */
-	/*		 (signal_cb)c_editmode_update); */
+	ct_listener(ct, WORLD, mouse_move, c_editmode_mouse_move);
 
-	ct_register_listener(ct, WORLD, mouse_move,
-			(signal_cb)c_editmode_mouse_move);
+	ct_listener(ct, WORLD, world_draw, c_editmode_draw);
 
-	ct_register_listener(ct, WORLD|RENDER_THREAD, world_draw,
-			(signal_cb)c_editmode_draw);
+	ct_listener(ct, WORLD, mouse_press, c_editmode_mouse_press);
 
-	ct_register_listener(ct, WORLD, mouse_press,
-			(signal_cb)c_editmode_mouse_press);
+	ct_listener(ct, WORLD, mouse_release, c_editmode_mouse_release);
 
-	ct_register_listener(ct, WORLD, mouse_release,
-			(signal_cb)c_editmode_mouse_release);
+	ct_listener(ct, WORLD, event_handle, c_editmode_event);
 
-	ct_register_listener(ct, WORLD|RENDER_THREAD, event_handle,
-			(signal_cb)c_editmode_event);
+	ct_listener(ct, WORLD, events_begin, c_editmode_events_begin);
 
-	ct_register_listener(ct, WORLD|RENDER_THREAD, events_begin,
-			(signal_cb)c_editmode_events_begin);
+	ct_listener(ct, WORLD, events_end, c_editmode_events_end);
 
-	ct_register_listener(ct, WORLD|RENDER_THREAD, events_end,
-			(signal_cb)c_editmode_events_end);
+	ct_listener(ct, WORLD, window_resize, c_editmode_resize);
 
-	ct_register_listener(ct, WORLD, window_resize,
-			(signal_cb)c_editmode_resize);
 }
 

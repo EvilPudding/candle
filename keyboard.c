@@ -7,7 +7,7 @@ DEC_SIG(key_down);
 
 void keyboard_register()
 {
-	ecm_register_signal(&key_up, sizeof(char));
-	ecm_register_signal(&key_down, sizeof(char));
+	signal_init(&key_up, sizeof(char));
+	signal_init(&key_down, sizeof(char));
 }
 

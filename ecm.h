@@ -23,8 +23,8 @@ typedef void(*c_reg_cb)(void);
 typedef int(*before_draw_cb)(c_t *self);
 
 #define WORLD 0x00
-#define SAME_ENTITY 0x01
-#define RENDER_THREAD 0x02
+#define ENTITY 0x01
+/* #define RENDER_THREAD 0x02 */
 
 typedef struct
 {
@@ -142,8 +142,10 @@ static inline c_t *ct_get(ct_t *self, entity_t entity)
 	return (c_t*)&(self->pages[page].components[offset]);
 }
 
-void ct_register_listener(ct_t *self, int flags,
+void _ct_listener(ct_t *self, int flags,
 		uint signal, signal_cb cb);
+#define ct_listener(self, flags, signal, cb) \
+	(_ct_listener(self, flags, signal, (signal_cb)cb))
 
 listener_t *ct_get_listener(ct_t *self, uint signal);
 
@@ -154,12 +156,12 @@ c_t *ct_add(ct_t *self, entity_t entity);
 extern ecm_t *g_ecm;
 void ecm_init(void);
 entity_t ecm_new_entity(void);
-void ecm_register_signal(uint *target, uint size);
+void signal_init(uint *target, uint size);
 
 void ecm_add_entity(entity_t *entity);
 /* uint ecm_register_system(ecm_t *self, void *system); */
 
-ct_t *ecm_register(const char *name, uint *target, uint size,
+ct_t *ct_new(const char *name, uint *target, uint size,
 		init_cb init, int depend_size, ...);
 
 void ct_add_dependency(ct_t *ct, ct_t *dep);

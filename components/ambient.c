@@ -46,14 +46,12 @@ int c_ambient_render(c_ambient_t *self)
 
 void c_ambient_register()
 {
-	ct_t *ct = ecm_register("Ambient", &ct_ambient,
+	ct_t *ct = ct_new("c_ambient", &ct_ambient,
 			sizeof(c_ambient_t), (init_cb)c_ambient_init, 1, ct_spacial);
 
-	ct_register_listener(ct, SAME_ENTITY, entity_created,
-			(signal_cb)c_ambient_created);
+	ct_listener(ct, ENTITY, entity_created, c_ambient_created);
 
-	ct_register_listener(ct, WORLD|RENDER_THREAD, offscreen_render,
-			(signal_cb)c_ambient_render);
+	ct_listener(ct, WORLD, offscreen_render, c_ambient_render);
 }
 
 

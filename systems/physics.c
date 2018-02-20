@@ -246,12 +246,11 @@ c_physics_t *c_physics_new()
 
 void c_physics_register()
 {
-	ct_t *ct = ecm_register("Physics", &ct_physics,
+	ct_t *ct = ct_new("Physics", &ct_physics,
 			sizeof(c_physics_t), (init_cb)c_physics_init, 0);
 
-	ct_register_listener(ct, WORLD, world_update,
-			(signal_cb)c_physics_update);
+	ct_listener(ct, WORLD, world_update, c_physics_update);
 
-	ecm_register_signal(&collider_callback, 0);
+	signal_init(&collider_callback, 0);
 }
 

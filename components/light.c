@@ -48,14 +48,12 @@ int c_light_render(c_light_t *self)
 
 void c_light_register()
 {
-	ct_t *ct = ecm_register("Light", &ct_light,
+	ct_t *ct = ct_new("c_light", &ct_light,
 			sizeof(c_light_t), (init_cb)c_light_init, 1, ct_spacial);
 
-	ct_register_listener(ct, SAME_ENTITY, entity_created,
-			(signal_cb)c_light_created);
+	ct_listener(ct, ENTITY, entity_created, c_light_created);
 
-	ct_register_listener(ct, WORLD|RENDER_THREAD, offscreen_render,
-			(signal_cb)c_light_render);
+	ct_listener(ct, WORLD, offscreen_render, c_light_render);
 
-	ecm_register_signal(&render_shadows, sizeof(shader_t*));
+	signal_init(&render_shadows, sizeof(shader_t*));
 }

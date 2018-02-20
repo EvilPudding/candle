@@ -7,8 +7,8 @@ DEC_SIG(mouse_wheel);
 
 void mouse_register()
 {
-	ecm_register_signal(&mouse_move, sizeof(mouse_move_data));
-	ecm_register_signal(&mouse_press, sizeof(mouse_button_data));
-	ecm_register_signal(&mouse_release, sizeof(mouse_button_data));
-	ecm_register_signal(&mouse_wheel, sizeof(mouse_button_data));
+	signal_init(&mouse_move, sizeof(mouse_move_data));
+	signal_init(&mouse_press, sizeof(mouse_button_data));
+	signal_init(&mouse_release, sizeof(mouse_button_data));
+	signal_init(&mouse_wheel, sizeof(mouse_button_data));
 }

@@ -111,14 +111,14 @@ static int c_freemove_key_down(c_freemove_t *self, char *key)
 
 void c_freemove_register()
 {
-	ct_t *ct = ecm_register("Freemove", &ct_freemove,
+	ct_t *ct = ct_new("c_freemove", &ct_freemove,
 			sizeof(c_freemove_t), (init_cb)c_freemove_init,
 			2, ct_spacial, ct_velocity);
-	ct_register_listener(ct, WORLD, key_up, (signal_cb)c_freemove_key_up);
 
-	ct_register_listener(ct, WORLD, key_down, (signal_cb)c_freemove_key_down);
+	ct_listener(ct, WORLD, key_up, c_freemove_key_up);
 
-	ct_register_listener(ct, WORLD, world_update,
-			(signal_cb)c_freemove_update);
+	ct_listener(ct, WORLD, key_down, c_freemove_key_down);
+
+	ct_listener(ct, WORLD, world_update, c_freemove_update);
 }
 

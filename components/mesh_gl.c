@@ -692,15 +692,15 @@ void c_mesh_gl_destroy(c_mesh_gl_t *self)
 
 void c_mesh_gl_register()
 {
-	ct_t *ct = ecm_register("Mesh gl", &ct_mesh_gl,
+	ct_t *ct = ct_new("c_mesh_gl", &ct_mesh_gl,
 			sizeof(c_mesh_gl_t), (init_cb)c_mesh_gl_init, 0);
-	ct_register_listener(ct, SAME_ENTITY, mesh_changed,
-			(signal_cb)c_mesh_gl_on_mesh_changed);
+
+	ct_listener(ct, ENTITY, mesh_changed, c_mesh_gl_on_mesh_changed);
 
 	ct_add_interaction(ecm_get(ct_model), ct);
 
-	/* ct_register_listener(ct, WORLD|RENDER_THREAD, component_menu, */
+	/* ct_listener(ct, WORLD|RENDER_THREAD, component_menu, */
 			/* (signal_cb)c_mesh_gl_menu); */
 
-	/* ct_register_listener(ct, WORLD, collider_callback, c_grid_collider); */
+	/* ct_listener(ct, WORLD, collider_callback, c_grid_collider); */
 }

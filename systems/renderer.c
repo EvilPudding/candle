@@ -572,28 +572,22 @@ int c_renderer_component_menu(c_renderer_t *self, void *ctx)
 
 void c_renderer_register()
 {
-	ct_t *ct = ecm_register("Renderer", &ct_renderer,
+	ct_t *ct = ct_new("c_renderer", &ct_renderer,
 			sizeof(c_renderer_t), (init_cb)c_renderer_init, 1, ct_window);
 
-	ct_register_listener(ct, WORLD, window_resize,
-			(signal_cb)c_renderer_resize);
+	ct_listener(ct, WORLD, window_resize, c_renderer_resize);
 
-	ct_register_listener(ct, WORLD|RENDER_THREAD, world_draw,
-			(signal_cb)c_renderer_draw);
+	ct_listener(ct, WORLD, world_draw, c_renderer_draw);
 
-	ct_register_listener(ct, SAME_ENTITY, entity_created,
-			(signal_cb)c_renderer_created);
+	ct_listener(ct, ENTITY, entity_created, c_renderer_created);
 
-	ct_register_listener(ct, WORLD|RENDER_THREAD, component_menu,
-			(signal_cb)c_renderer_component_menu);
+	ct_listener(ct, WORLD, component_menu, c_renderer_component_menu);
 
-	ct_register_listener(ct, WORLD|RENDER_THREAD, global_menu,
-			(signal_cb)c_renderer_global_menu);
+	ct_listener(ct, WORLD, global_menu, c_renderer_global_menu);
 
-
-	ecm_register_signal(&offscreen_render, 0);
-	ecm_register_signal(&render_visible, sizeof(shader_t));
-	ecm_register_signal(&render_transparent, sizeof(shader_t));
+	signal_init(&offscreen_render, 0);
+	signal_init(&render_visible, sizeof(shader_t));
+	signal_init(&render_transparent, sizeof(shader_t));
 }
 
 
