@@ -343,6 +343,7 @@ int c_mesh_gl_on_mesh_changed(c_mesh_gl_t *self)
 	return 1;
 }
 
+#ifdef MESH4
 vec4_t get_cell_normal(mesh_t *mesh, cell_t *cell)
 {
 	face_t *f = c_face(cell, 0, mesh);
@@ -362,6 +363,7 @@ vec4_t get_cell_normal(mesh_t *mesh, cell_t *cell)
 	return n;
 
 }
+#endif
 
 int glg_update_ram(glg_t *self)
 {

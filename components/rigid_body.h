@@ -14,6 +14,7 @@ typedef struct
 {
 	c_t super; /* extends c_t */
 
+	float offset;
 	collider_cb costum;
 } c_rigid_body_t;
 

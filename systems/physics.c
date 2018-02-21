@@ -125,6 +125,7 @@ static void c_physics_handle_collisions(c_rigid_body_t *c1,
 	{
 		const float width = 0.20;
 		c_velocity_t *vc = c_velocity(d);
+		c_rigid_body_t *rb = c_rigid_body(d);
 		/* if(!vc) return; */
 
 		vec3_t offsets[] = {
@@ -132,10 +133,10 @@ static void c_physics_handle_collisions(c_rigid_body_t *c1,
 			vec3( width, 0.0, -width),
 			vec3(-width, 0.0,  width),
 			vec3(-width, 0.0, -width),
-			vec3( width, 0.8,  width),
-			vec3( width, 0.8, -width),
-			vec3(-width, 0.8,  width),
-			vec3(-width, 0.8, -width)
+			vec3( width, rb->offset,  width),
+			vec3( width, rb->offset, -width),
+			vec3(-width, rb->offset,  width),
+			vec3(-width, rb->offset, -width)
 		};
 		int o;
 		float friction = 0.0;

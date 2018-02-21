@@ -144,6 +144,7 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 	float sinx = sinf(inc_x);
 
 	float oldx = sc->rot.x;
+
 	c_spacial_rotate_X(sc, -oldx);
 	c_spacial_rotate_Y(sc, inc_y);
 
