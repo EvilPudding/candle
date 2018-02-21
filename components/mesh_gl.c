@@ -340,6 +340,14 @@ int c_mesh_gl_on_mesh_changed(c_mesh_gl_t *self)
 		loader_push(candle->loader, (loader_cb)c_mesh_gl_new_loader, NULL,
 				(c_t*)self);
 	}
+
+	int i;
+	for(i = 0; i < self->groups_num; i++)
+	{
+		glg_t *group = &self->groups[i];
+		group->update_id = -1;
+	}
+
 	return 1;
 }
 
