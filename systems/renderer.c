@@ -510,7 +510,8 @@ entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
 {
 	entity_t result;
 	if(!self->gbuffers[0].buffer) return entity_null;
-	result = texture_get_pixel(self->gbuffers[0].buffer, 7, x, y, depth);
+	result = texture_get_pixel(self->gbuffers[0].buffer, 7,
+			x * self->resolution, y * self->resolution, depth);
 
 	return result;
 }
