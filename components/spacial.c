@@ -103,9 +103,9 @@ void c_spacial_rotate_axis(c_spacial_t *self, vec3_t axis, float angle)
 	float s = sinf(angle);
 	float c = cosf(angle);
 
-	self->sideways = vec3_rotate(self->sideways, axis, c, s);
-	self->upwards = vec3_rotate(self->upwards, axis, c, s);
-	self->forward = vec3_rotate(self->forward, axis, c, s);
+	self->sideways = vec3_unit(vec3_rotate(self->sideways, axis, c, s));
+	self->upwards = vec3_unit(vec3_rotate(self->upwards, axis, c, s));
+	self->forward = vec3_unit(vec3_rotate(self->forward, axis, c, s));
 
 	self->rot_matrix = mat4_from_vecs(self->forward, self->upwards, self->sideways);
 
@@ -119,8 +119,8 @@ void c_spacial_rotate_X(c_spacial_t *self, float angle)
 	float c = cosf(angle);
 	c_spacial_lock(self);
 
-	self->sideways = vec3_rotate(self->sideways, self->forward, c, s);
-	self->upwards = vec3_rotate(self->upwards, self->forward, c, s);
+	self->sideways = vec3_unit(vec3_rotate(self->sideways, self->forward, c, s));
+	self->upwards = vec3_unit(vec3_rotate(self->upwards, self->forward, c, s));
 
 	self->rot_matrix = mat4_from_vecs(self->forward, self->upwards, self->sideways);
 
@@ -136,8 +136,8 @@ void c_spacial_rotate_Z(c_spacial_t *self, float angle)
 	float c = cosf(angle);
 	c_spacial_lock(self);
 
-	self->forward = vec3_rotate(self->forward, self->sideways, c, s);
-	self->upwards = vec3_rotate(self->upwards, self->sideways, c, s);
+	self->forward = vec3_unit(vec3_rotate(self->forward, self->sideways, c, s));
+	self->upwards = vec3_unit(vec3_rotate(self->upwards, self->sideways, c, s));
 
 	self->rot_matrix = mat4_from_vecs(self->forward, self->upwards, self->sideways);
 
@@ -153,8 +153,8 @@ void c_spacial_rotate_Y(c_spacial_t *self, float angle)
 	float c = cosf(angle);
 	c_spacial_lock(self);
 
-	self->sideways = vec3_rotate(self->sideways, self->upwards, c, s);
-	self->forward = vec3_rotate(self->forward, self->upwards, c, s);
+	self->sideways = vec3_unit(vec3_rotate(self->sideways, self->upwards, c, s));
+	self->forward = vec3_unit(vec3_rotate(self->forward, self->upwards, c, s));
 
 	self->rot_matrix = mat4_from_vecs(self->forward, self->upwards, self->sideways);
 	self->rot.y += angle;

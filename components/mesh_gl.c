@@ -343,6 +343,26 @@ int c_mesh_gl_on_mesh_changed(c_mesh_gl_t *self)
 	return 1;
 }
 
+vec4_t get_cell_normal(mesh_t *mesh, cell_t *cell)
+{
+	face_t *f = c_face(cell, 0, mesh);
+
+	edge_t *e0 = f_edge(f, 0, mesh);
+
+	vec4_t p0 = f_vert(f, 0, mesh)->pos;
+	vec4_t p1 = f_vert(f, 1, mesh)->pos;
+	vec4_t p2 = f_vert(f, 2, mesh)->pos;
+	vec4_t p3 = e_vert(e_prev(e_pair(e0, mesh), mesh), mesh)->pos;
+
+	vec4_t n = vec4_unit(vec4_cross(
+				vec4_sub(p0, p1),
+				vec4_sub(p2, p0),
+				vec4_sub(p0, p3)));
+
+	return n;
+
+}
+
 int glg_update_ram(glg_t *self)
 {
 	c_model_t *model = c_model(&self->entity);
@@ -371,6 +391,18 @@ int glg_update_ram(glg_t *self)
 		for(i = 0; i < vector_count(mesh->faces); i++)
 		{
 			face_t *face = m_face(mesh, i); if(!face) continue;
+			/* if(face->pair != -1) */
+			/* { */
+			/* 	cell_t *cell1 = f_cell(f_pair(face, mesh), mesh); */
+			/* 	cell_t *cell0 = f_cell(face, mesh); */
+			/* 	if(cell0 && cell1) */
+			/* 	{ */
+			/* 		vec4_t n0 = get_cell_normal(mesh, cell0); */
+			/* 		vec4_t n1 = get_cell_normal(mesh, cell1); */
+			/* 		float dot = vec4_dot(n1, n0); */
+			/* 		if(dot > 0.985) continue; */
+			/* 	} */
+			/* } */
 			if(selection != -1 && selection != face->selected) continue;
 			glg_face_to_gl(self, face);
 		}

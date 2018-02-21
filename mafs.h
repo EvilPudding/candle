@@ -321,6 +321,20 @@ static inline type##3_t type##3_cross(type##3_t const a, type##3_t const b) \
 	r.z = a.x*b.y - a.y*b.x; \
 	return r; \
 } \
+static inline type##4_t type##4_cross(type##4_t const a, type##4_t const b, \
+		type##4_t const c) \
+{ \
+	type##4_t r; \
+	r.x = -a.w*b.z*c.y + a.z*b.w*c.y + a.w*b.y*c.z \
+		  -a.y*b.w*c.z - a.z*b.y*c.w + a.y*b.z*c.w; \
+	r.y =  a.w*b.z*c.x - a.z*b.w*c.x - a.w*b.x*c.z \
+		  +a.x*b.w*c.z + a.z*b.x*c.w - a.x*b.z*c.w; \
+	r.z = -a.w*b.y*c.x + a.y*b.w*c.x + a.w*b.x*c.y \
+		  -a.x*b.w*c.y - a.y*b.x*c.w + a.x*b.y*c.w; \
+	r.w =  a.z*b.y*c.x - a.y*b.z*c.x - a.z*b.x*c.y \
+		  +a.x*b.z*c.y + a.y*b.x*c.z - a.x*b.y*c.z; \
+	return r; \
+} \
 static inline type##3_t type##3_double_cross(const type##3_t v1, const type##3_t v2) \
 { \
 	return type##3_cross(type##3_cross(v1, v2), v1); \
@@ -334,15 +348,15 @@ static inline type##3_t type##3_reflect(type##3_t const v, type##3_t const n) \
 		r._[i] = v._[i] - p*n._[i]; \
 	return r; \
 } \
-static inline type##4_t type##4_cross(type##4_t a, type##4_t b) \
-{ \
-	type##4_t r; \
-	r.x = a.y * b.z - a.z * b.y; \
-	r.y = a.z * b.x - a.x * b.z; \
-	r.z = a.x * b.y - a.y * b.x; \
-	r.w = 1.f; \
-	return r; \
-} \
+/* static inline type##4_t type##_cross(type##4_t a, type##4_t b) \ */ \
+/* { \ */ \
+/* 	type##4_t r; \ */ \
+/* 	r.x = a.y * b.z - a.z * b.y; \ */ \
+/* 	r.y = a.z * b.x - a.x * b.z; \ */ \
+/* 	r.z = a.x * b.y - a.y * b.x; \ */ \
+/* 	r.w = 1.f; \ */ \
+/* 	return r; \ */ \
+/* } \ */ \
 static inline type##4_t type##4_reflect(type##4_t v, type##4_t n) \
 { \
 	type##4_t r; \
@@ -364,6 +378,16 @@ static inline type##3_t type##3_perpendicular(const type##3_t v, const type##3_t
         return result; \
     } \
 	return v; \
+} \
+static inline type##4_t type##4_unit(const type##4_t v) \
+{ \
+    const n_t  vv = v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w; \
+    if(vv > 0.0) \
+	{ \
+        const n_t  d = sqrt(vv); \
+		return type##4( v.x / d, v.y / d, v.z / d, v.w / d ); \
+    } \
+	return type##4(0.0, 0.0, 0.0, 0.0); \
 } \
 static inline type##3_t type##3_unit(const type##3_t v) \
 { \
