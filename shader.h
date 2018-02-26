@@ -80,7 +80,6 @@ void shader_bind_screen(shader_t *self, texture_t *buffer, float sx, float sy);
 void shader_destroy(shader_t *self);
 void shader_bind_ambient(shader_t *self, texture_t *ambient);
 void shader_bind_probe(shader_t *self, entity_t probe);
-void shader_bind_projection(shader_t *self, mat4_t *projection_matrix);
 void shader_add_source(const char *name, unsigned char data[],
 		unsigned int len);
 void shaders_reg(void);

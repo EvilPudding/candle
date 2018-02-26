@@ -10,11 +10,23 @@ layout (location = 3) in vec3 TG;
 layout (location = 4) in vec3 BT;
 layout (location = 5) in vec4 COL;
 
+/* TODO make this included, not inline */
+struct camera_t
+{
+	vec3 pos;
+	float exposure;
+	mat4 projection;
+	mat4 view;
+#ifdef MESH4
+	float angle4;
+#endif
+};
+/* ----------------------------------- */
+
+
 uniform mat4 MVP;
 uniform mat4 M;
-uniform mat4 V;
-uniform mat4 projection;
-/* uniform mat3 MV3x3; */
+uniform camera_t camera;
 uniform vec3 id;
 
 out mat4 inv_projection;
@@ -38,15 +50,10 @@ out vec3 vertex_bitangent;
 out vec2 texcoord;
 out vec4 vertex_color;
 
-#ifdef MESH4
-uniform float angle4;
-#endif
-
 out mat3 TM;
 /* out vec3 lightDir; */
 
 uniform float ratio;
-uniform float started;
 uniform float has_tex;
 uniform vec3 light_pos;
 
@@ -65,7 +72,7 @@ void main()
 	vec4 mpos = M * pos;
 	worldspace_position = mpos.xyz;
 
-	cameraspace_vertex_pos = ( V * mpos).xyz;
+	cameraspace_vertex_pos = ( camera.view * mpos).xyz;
 
 	/* vec3 cameraspace_light_pos = ( V * vec4(light_pos, 1.0)).xyz; */
 	/* cameraspace_light_dir = cameraspace_light_pos - cameraspace_vertex_pos; */

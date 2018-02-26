@@ -84,16 +84,18 @@ vec3_t c_camera_real_pos(c_camera_t *self, float depth, vec2_t coord)
 
 void c_camera_update_view(c_camera_t *self)
 {
+	if(self->view_cached) return;
 	c_node_t *n = c_node(self);
 	c_node_update_model(n);
 	self->pos = mat4_mul_vec4(n->model, vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 	self->view_matrix = mat4_invert(n->model);
+
+	self->vp = mat4_mul(self->projection_matrix, self->view_matrix);
 }
 
 void c_camera_activate(c_camera_t *self)
 {
 	c_camera_update(self, NULL);
-	c_renderer(&candle->systems)->camera = c_entity(self);
 }
 
 int c_camera_update(c_camera_t *self, void *event)
@@ -108,6 +110,7 @@ int c_camera_update(c_camera_t *self, void *event)
 		/* ((float)event->width / 2) / event->height, */
 		self->near, self->far
 	);
+	self->view_cached = 0;
 	return 1;
 }
 

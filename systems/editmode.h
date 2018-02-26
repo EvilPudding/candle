@@ -49,6 +49,6 @@ void c_editmode_activate(c_editmode_t *self);
 void c_editmode_register(void);
 void c_editmode_update_mouse(c_editmode_t *self, float x, float y);
 void c_editmode_open_texture(c_editmode_t *self, texture_t *tex);
-vec3_t c_editmode_bind_selected(entity_t caller);
+vec3_t c_editmode_bind_selected(c_editmode_t *self);
 
 #endif /* !EDITMODE_H */

@@ -2,6 +2,7 @@
 #define MODEL_H
 
 #include <ecm.h>
+#include <systems/renderer.h>
 
 typedef struct
 {

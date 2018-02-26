@@ -8,12 +8,6 @@ layout (location = 2) in vec2 UV;
 layout (location = 3) in vec3 TG;
 layout (location = 4) in vec3 BT;
 
-uniform mat4 MVP;
-uniform mat4 M;
-uniform mat4 V;
-uniform mat4 projection;
-/* uniform mat3 MV3x3; */
-
 out vec2 texcoord;
 /* out vec3 lightDir; */
 
@@ -24,10 +18,6 @@ uniform vec3 light_pos;
 
 uniform float screen_scale_x;
 uniform float screen_scale_y;
-
-#ifdef MESH4
-uniform float angle4;
-#endif
 
 out vec3 tgspace_light_dir;
 out vec3 tgspace_eye_dir;
@@ -42,9 +32,6 @@ out vec3 cam_bitangent;
 out vec3 vertex_normal;
 out vec3 vertex_tangent;
 out vec3 vertex_bitangent;
-
-out mat3 TM;
-
 
 void main()
 {

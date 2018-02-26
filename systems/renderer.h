@@ -13,19 +13,21 @@ typedef struct pass_t pass_t;
 
 typedef struct uniform_t uniform_t;
 
-typedef struct
-{
-	char name[32];
-	texture_t *buffer;
-	unsigned int draw_filter;
-} gbuffer_t;
+/* typedef struct */
+/* { */
+/* 	char name[32]; */
+/* 	texture_t *buffer; */
+/* 	unsigned int draw_filter; */
+/* } gbuffer_t; */
 
 enum
 {
 	PASS_FOR_EACH_LIGHT    = 1 << 0,
 	PASS_MIPMAPED 		   = 1 << 1,
 	PASS_RECORD_BRIGHTNESS = 1 << 2,
-	PASS_SCREEN_SCALE	   = 1 << 3
+	PASS_SCREEN_SCALE	   = 1 << 3,
+	PASS_GBUFFER		   = 1 << 4,
+	PASS_CUBEMAP 		   = 1 << 5
 } pass_options;
 
 typedef enum
@@ -35,13 +37,15 @@ typedef enum
 	BIND_NUMBER,
 	BIND_VEC3,
 	BIND_INTEGER,
-	BIND_GBUFFER
+	BIND_GBUFFER,
+	BIND_CAMERA
 } bind_type_t;
 
-typedef vec3_t(*vec3_getter)(entity_t caller);
-typedef float(*number_getter)(entity_t caller);
-typedef int(*integer_getter)(entity_t caller);
-typedef void*(*ptr_getter)(entity_t caller);
+typedef vec3_t(*vec3_getter)(void *usrptr);
+typedef float(*number_getter)(void *usrptr);
+typedef int(*integer_getter)(void *usrptr);
+typedef void*(*getter_cb)(void *usrptr);
+typedef entity_t(*camera_getter)(void *usrptr);
 
 typedef struct
 {
@@ -67,6 +71,16 @@ typedef struct
 			int value;
 		} integer;
 		struct {
+			uint u_view;
+			uint u_pos;
+			uint u_exposure;
+			uint u_projection;
+#ifdef MESH4
+			uint u_angle4;
+#endif
+			entity_t entity;
+		} camera;
+		struct {
 			uint u_diffuse;
 			uint u_specular;
 			uint u_reflection;
@@ -79,8 +93,8 @@ typedef struct
 			char name[32];
 		} gbuffer;
 	};
-	ptr_getter getter;
-	entity_t entity;
+	getter_cb getter;
+	void *usrptr;
 } bind_t;
 
 typedef void(*bind_cb)(uniform_t *self, shader_t *shader);
@@ -94,6 +108,8 @@ typedef struct pass_t
 	float screen_scale_x;
 	float screen_scale_y;
 	char feed_name[32];
+	int gbuffer;
+	ulong draw_signal;
 
 	int binds_size;
 	bind_t binds[15];
@@ -101,6 +117,12 @@ typedef struct pass_t
 
 	int mipmaped;
 	int record_brightness;
+
+	/* TODO make this a ct_camera injected vertex modifier */
+	/* uint u_mvp; */ 
+	/* uint u_m; */ 
+	/* mat4_t vp; */
+	/* --------------------------------------------------- */
 } pass_t;
 
 typedef struct c_renderer_t
@@ -119,8 +141,8 @@ typedef struct c_renderer_t
 	texture_t *perlin;
 	int perlin_size;
 
-	int gbuffers_size;
-	gbuffer_t gbuffers[16];
+	/* int gbuffers_size; */
+	/* gbuffer_t gbuffers[16]; */
 
 	entity_t quad;
 	shader_t *quad_shader;
@@ -144,6 +166,7 @@ typedef struct c_renderer_t
 
 DEF_SIG(render_visible);
 DEF_SIG(render_transparent);
+DEF_SIG(render_quad);
 DEF_SIG(offscreen_render);
 
 DEF_CASTER(ct_renderer, c_renderer, c_renderer_t)
@@ -155,11 +178,17 @@ void c_renderer_register(void);
 void c_renderer_set_resolution(c_renderer_t *self, float resolution);
 void c_renderer_draw_to_texture(c_renderer_t *self, shader_t *shader,
 		texture_t *screen, float scale, texture_t *buffer);
+void c_renderer_add_camera(c_renderer_t *self, entity_t camera);
+
 void c_renderer_add_pass(c_renderer_t *self, const char *feed_name, int flags,
-		float wid, float hei, const char *shader_name, bind_t binds[]);
+		ulong draw_signal, float wid, float hei, const char *shader_name,
+		bind_t binds[]);
+
 void c_renderer_clear_shader(c_renderer_t *self, shader_t *shader);
 int c_renderer_scene_changed(c_renderer_t *self);
 entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
 		float *depth);
+
+void pass_set_model(pass_t *self, mat4_t model);
 
 #endif /* !RENDERER_H */

@@ -150,6 +150,7 @@ int c_model_render_visible(c_model_t *self, shader_t *shader)
 	if(node)
 	{
 		c_node_update_model(node);
+
 		shader_update(shader, &node->model);
 	}
 

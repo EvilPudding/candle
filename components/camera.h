@@ -10,6 +10,7 @@ typedef struct
 
 	mat4_t projection_matrix;
 	mat4_t view_matrix;
+	mat4_t vp;
 	vec3_t pos;
 	int view_cached;
 	float near, far, fov;

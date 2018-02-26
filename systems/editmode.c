@@ -23,10 +23,10 @@ void c_editmode_init(c_editmode_t *self)
 	self->spawn_pos = vec2(25, 25);
 }
 
-vec3_t c_editmode_bind_selected(entity_t caller)
+vec3_t c_editmode_bind_selected(c_editmode_t *self)
 {
 	/* if(!c_editmode(&caller)) return vec3(0.0f); */
-	vec3_t id_color = int_to_vec3(c_editmode(&caller)->over);
+	vec3_t id_color = int_to_vec3(self->over);
 
 	return id_color;
 }
@@ -89,11 +89,13 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 
 	c_renderer_add_pass(c_renderer(self), "hightlight",
 		PASS_SCREEN_SCALE,
+		render_quad,
 		1.0f, 1.0f, "highlight",
 		(bind_t[]){
-			{BIND_GBUFFER, "gbuffer", .gbuffer.name = "opaque"},
-			{BIND_VEC3, "id_color", .getter = (ptr_getter)c_editmode_bind_selected,
-			.entity = c_entity(self)},
+			{BIND_GBUFFER, "gbuffer", .gbuffer.name = "gbuffer"},
+			{BIND_VEC3, "id_color",
+				.getter = (getter_cb)c_editmode_bind_selected,
+				.usrptr = self},
 			{BIND_NONE}
 		}
 	);

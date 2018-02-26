@@ -25,8 +25,6 @@ uniform property_t specular;
 uniform property_t reflection;
 uniform property_t normal;
 uniform property_t transparency;
-uniform mat4 V;
-uniform mat4 MVP;
 
 struct gbuffer_t
 {
@@ -52,10 +50,23 @@ uniform samplerCube ambient_map;
 
 uniform sampler3D perlin_map;
 //uniform samplerCubeShadow shadow_map;
-
-uniform vec3 camera_pos;
-uniform float exposure;
 uniform vec3 light_pos;
+
+struct camera_t
+{
+	vec3 pos;
+	float exposure;
+	mat4 projection;
+	mat4 view;
+#ifdef MESH4
+	float angle4;
+#endif
+};
+
+uniform mat4 MVP;
+
+uniform camera_t camera;
+
 uniform float light_intensity;
 uniform float has_tex;
 
@@ -79,7 +90,6 @@ in vec2 texcoord;
 in vec4 vertex_color;
 
 in mat3 TM;
-uniform mat4 projection;
 
 
 vec4 pass_sample(pass_t pass, vec2 coord)
@@ -102,7 +112,7 @@ vec4 resolveProperty(property_t prop, vec2 coords)
 	return prop.color;
 }
 
-float ambient = 0.2;
+float ambient = 0.08;
 /* float ambient = 1.00; */
 
 float lookup_single(vec3 shadowCoord)
@@ -360,7 +370,7 @@ vec3 calcViewPosition(in vec2 TexCoord)
 
 vec3 get_proj_coord(vec3 hitCoord) // z = hitCoord.z - depth
 {
-	vec4 projectedCoord     = projection * vec4(hitCoord, 1.0); \
+	vec4 projectedCoord     = camera.projection * vec4(hitCoord, 1.0); \
 	projectedCoord.xy      /= projectedCoord.w; \
 	projectedCoord.xy       = projectedCoord.xy * 0.5 + 0.5;  \
 	float depth             = calcViewPosition(projectedCoord.xy).z; \
@@ -455,7 +465,7 @@ vec4 ssr(sampler2D screen)
 	if(specularAll.a > 0.9) return vec4(0.0);
 
 	vec3 w_pos = textureLod(gbuffer.wposition, texcoord, 0).rgb;
-	vec3 c_pos = camera_pos - w_pos;
+	vec3 c_pos = camera.pos - w_pos;
 	vec3 eye_dir = normalize(-c_pos);
 
 	float coef = clamp(1.5 * pow(1.0 + dot(eye_dir, nor), 1), 0.0, 1.0);
@@ -463,7 +473,7 @@ vec4 ssr(sampler2D screen)
 
 
 	// Reflection vector
-	vec3 view_normal = (V * vec4(nor, 0.0)).xyz;
+	vec3 view_normal = (camera.view * vec4(nor, 0.0)).xyz;
 	vec3 reflected = normalize(reflect(pos, view_normal));
 
 	// Ray cast

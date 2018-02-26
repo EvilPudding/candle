@@ -349,14 +349,9 @@ static int shader_new_loader(shader_t *self)
 	glBindAttribLocation(self->program, 5, "COL"); glerr();
 
 	self->u_mvp = glGetUniformLocation(self->program, "MVP"); glerr();
-	self->u_projection = glGetUniformLocation(self->program, "projection"); glerr();
 	self->u_m = glGetUniformLocation(self->program, "M"); glerr();
-	self->u_v = glGetUniformLocation(self->program, "V"); glerr();
 	/* self->u_mv = glGetUniformLocation(self->program, "MV"); glerr(); */
 
-#ifdef MESH4
-	self->u_angle4 = glGetUniformLocation(self->program, "angle4"); glerr();
-#endif
 	self->u_perlin_map = glGetUniformLocation(self->program, "perlin_map"); glerr();
 
 	self->u_shadow_map = glGetUniformLocation(self->program, "shadow_map"); glerr();
@@ -365,8 +360,14 @@ static int shader_new_loader(shader_t *self)
 	self->u_ambient_map = glGetUniformLocation(self->program, "ambient_map"); glerr();
 	self->u_probe_pos = glGetUniformLocation(self->program, "probe_pos"); glerr();
 
-	self->u_camera_pos = glGetUniformLocation(self->program, "camera_pos"); glerr();
-	self->u_exposure = glGetUniformLocation(self->program, "exposure"); glerr();
+	self->u_v = glGetUniformLocation(self->program, "camera.view"); glerr();
+	self->u_projection = glGetUniformLocation(self->program, "camera.projection"); glerr();
+	self->u_camera_pos = glGetUniformLocation(self->program, "camera.camera_pos"); glerr();
+	self->u_exposure = glGetUniformLocation(self->program, "camera.exposure"); glerr();
+#ifdef MESH4
+	self->u_angle4 = glGetUniformLocation(self->program, "angle4"); glerr();
+#endif
+
 	self->u_light_intensity = glGetUniformLocation(self->program, "light_intensity"); glerr();
 
 	self->u_has_tex = glGetUniformLocation(self->program, "has_tex"); glerr();
@@ -402,14 +403,6 @@ shader_t *shader_new(const char *filename)
 
 	return self;
 }
-
-void shader_bind_projection(shader_t *self, mat4_t *projection_matrix)
-{
-	glUniformMatrix4fv(self->u_projection, 1, GL_FALSE,
-			(void*)projection_matrix);
-	glerr();
-}
-
 
 void shader_bind_ambient(shader_t *self, texture_t *ambient)
 {
@@ -534,11 +527,13 @@ void shader_bind_mesh(shader_t *self, mesh_t *mesh, unsigned int id)
 
 GLuint shader_uniform(shader_t *self, const char *uniform, const char *member)
 {
-	char buffer[256];
-	snprintf(buffer, sizeof(buffer), "%s.%s", uniform, member);
-	GLuint res = glGetUniformLocation(self->program, buffer); glerr();
-
-	return res;
+	if(member)
+	{
+		char buffer[256];
+		snprintf(buffer, sizeof(buffer), "%s.%s", uniform, member);
+		return glGetUniformLocation(self->program, buffer); glerr();
+	}
+	return glGetUniformLocation(self->program, uniform); glerr();
 }
 
 void shader_destroy(shader_t *self)

@@ -23,16 +23,14 @@ DEC_CT(ct_renderer);
 DEC_SIG(offscreen_render);
 DEC_SIG(render_visible);
 DEC_SIG(render_transparent);
+DEC_SIG(render_quad);
 /* DEC_SIG(world_changed); */
 
 static int c_renderer_gbuffer(c_renderer_t *self, const char *name);
 
-static void c_renderer_add_gbuffer(c_renderer_t *self, const char *name,
-		unsigned int draw_filter);
-
 static void c_renderer_update_probes(c_renderer_t *self);
 
-static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_t camera);
+static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass);
 
 static int c_renderer_resize(c_renderer_t *self, window_resize_data *event);
 
@@ -65,6 +63,21 @@ static int c_renderer_bind_passes(c_renderer_t *self)
 				case BIND_PASS_OUTPUT:
 					printf("Passes as input should not be explicit!\n");
 					break;
+				case BIND_CAMERA:
+					bind->camera.u_view =
+						shader_uniform(pass->shader, bind->name, "view");
+					bind->camera.u_pos =
+						shader_uniform(pass->shader, bind->name, "pos");
+					bind->camera.u_exposure =
+						shader_uniform(pass->shader, bind->name, "exposure");
+					bind->camera.u_projection =
+						shader_uniform(pass->shader, bind->name, "projection");
+#ifdef MESH4
+					bind->camera.u_angle4 =
+						shader_uniform(pass->shader, bind->name, "angle4");
+#endif
+
+					break;
 				case BIND_GBUFFER:
 					bind->gbuffer.u_diffuse =
 						shader_uniform(pass->shader, bind->name, "diffuse");
@@ -85,8 +98,7 @@ static int c_renderer_bind_passes(c_renderer_t *self)
 					bind->gbuffer.id = c_renderer_gbuffer(self, bind->gbuffer.name);
 					break;
 				default:
-					bind->number.u = glGetUniformLocation(pass->shader->program,
-							bind->name);
+					bind->number.u = shader_uniform(pass->shader, bind->name, NULL);
 					if(bind->number.u >= 4294967295)
 					{
 						printf("Explicit bind '%s' is not present in shader '%s'!\n",
@@ -102,6 +114,10 @@ static int c_renderer_bind_passes(c_renderer_t *self)
 		pass_t *pass = &self->passes[i];
 		if(pass->cached == 2) continue;
 		pass->cached = 2;
+
+		/* pass->u_mvp = shader_uniform(pass->shader, "MVP", NULL); */
+		/* pass->u_m = shader_uniform(pass->shader, "M", NULL); */
+
 		for(j = i - 1; j >= 0; j--)
 		{
 			pass_t *pass_done = &self->passes[j];
@@ -130,54 +146,72 @@ static int c_renderer_bind_passes(c_renderer_t *self)
 
 static void c_renderer_init(c_renderer_t *self) { } 
 
+entity_t c_renderer_get_camera(c_renderer_t *self)
+{
+	return self->camera;
+}
+
 static int c_renderer_created(c_renderer_t *self)
 {
-	self->gbuffer_shader = shader_new("gbuffer");
 	self->quad_shader = shader_new("quad");
 
 	filter_blur_init();
 	filter_bloom_init();
-
-	c_renderer_add_gbuffer(self, "opaque", render_visible);
-	c_renderer_add_gbuffer(self, "transp", render_transparent);
 
 #ifdef MESH4
 	self->angle4 = 0.01f;
 	self->angle4 = M_PI * 0.45;
 #endif
 
+	c_renderer_add_pass(self, "gbuffer",
+			PASS_GBUFFER,
+			render_visible,
+			1.0f, 1.0f, "gbuffer",
+		(bind_t[]){
+			{BIND_CAMERA, "camera", .getter = (getter_cb)c_renderer_get_camera, .usrptr = self},
+			{BIND_NONE}
+		}
+	);
+
 	c_renderer_add_pass(self, "ssao",
 			PASS_SCREEN_SCALE,
+			render_quad,
 			1.0f, 1.0f, "ssao",
 		(bind_t[]){
-			{BIND_GBUFFER, "gbuffer", .gbuffer.name = "opaque"},
+			{BIND_GBUFFER, "gbuffer", .gbuffer.name = "gbuffer"},
+			{BIND_CAMERA, "camera", .getter = (getter_cb)c_renderer_get_camera, .usrptr = self},
 			{BIND_NONE}
 		}
 	);
 
 	c_renderer_add_pass(self, "phong",
 			PASS_FOR_EACH_LIGHT | PASS_SCREEN_SCALE,
+			render_quad,
 			1.0f, 1.0f, "phong",
 		(bind_t[]){
-			{BIND_GBUFFER, "gbuffer", .gbuffer.name = "opaque"},
+			{BIND_GBUFFER, "gbuffer", .gbuffer.name = "gbuffer"},
+			{BIND_CAMERA, "camera", .getter = (getter_cb)c_renderer_get_camera, .usrptr = self},
 			{BIND_NONE}
 		}
 	);
 
 	c_renderer_add_pass(self, "transp",
 			PASS_SCREEN_SCALE | (self->roughness * PASS_MIPMAPED),
+			render_quad,
 			1.0f, 1.0f, "transparency",
 		(bind_t[]){
-			{BIND_GBUFFER, "gbuffer", .gbuffer.name = "transp"},
+			{BIND_GBUFFER, "gbuffer", .gbuffer.name = "gbuffer"},
 			{BIND_NONE}
 		}
 	);
 
 	c_renderer_add_pass(self, "refl",
 			PASS_SCREEN_SCALE | (self->auto_exposure * PASS_RECORD_BRIGHTNESS),
+			render_quad,
 			1.0f, 1.0f, "ssr",
 		(bind_t[]){
-			{BIND_GBUFFER, "gbuffer", .gbuffer.name = "opaque"},
+		{BIND_GBUFFER, "gbuffer", .gbuffer.name = "gbuffer"},
+		{BIND_CAMERA, "camera", .getter = (getter_cb)c_renderer_get_camera, .usrptr = self},
 			{BIND_NONE}
 		}
 	);
@@ -201,52 +235,34 @@ static int c_renderer_gl_update_textures(c_renderer_t *self)
 	for(i = 0; i < self->passes_size; i++)
 	{
 		pass_t *pass = &self->passes[i];
-		if(pass->screen_scale)
-		{
-			int bound = 0;
-			if(pass->output)
-			{
-				bound = self->bound == pass->output;
 
-				texture_destroy(pass->output);
-			}
-			pass->output = texture_new_2D( w * pass->screen_scale_x,
-										   h * pass->screen_scale_y,
-										   32, GL_RGBA16F, 1, 0);
-			if(bound)
-			{
-				self->bound = pass->output;
-				texture_target(pass->output, 0);
-			}
+		if(pass->output)
+		{
+			texture_destroy(pass->output);
 		}
-	}
-
-	for(i = 0; i < self->gbuffers_size; i++)
-	{
-		gbuffer_t *gb = &self->gbuffers[i];
-		int bound = 0;
-
-		if(gb->buffer)
+		if(pass->gbuffer)
 		{
-			bound = self->bound == gb->buffer;
-			texture_destroy(gb->buffer);
+			pass->output = texture_new_2D(w, h, 32, GL_RGBA16F, 1, 0);
+			/* texture_add_buffer(pass->output, "diffuse", 1, 1, 0); */
+			texture_add_buffer(pass->output, "specular", 1, 1, 0);
+			texture_add_buffer(pass->output, "reflection", 1, 1, 0);
+			texture_add_buffer(pass->output, "normal", 1, 0, 0);
+			texture_add_buffer(pass->output, "transparency", 1, 1, 0);
+			texture_add_buffer(pass->output, "cameraspace position", 1, 0, 0);
+			texture_add_buffer(pass->output, "worldspace position", 1, 0, 0);
+			texture_add_buffer(pass->output, "id", 1, 0, 0);
+
+			texture_draw_id(pass->output, COLOR_TEX); /* DRAW DIFFUSE */
+
 		}
-		gb->buffer = texture_new_2D(w, h, 32, GL_RGBA16F, 1, 0);
-		/* texture_add_buffer(gb->buffer, "diffuse", 1, 1, 0); */
-		texture_add_buffer(gb->buffer, "specular", 1, 1, 0);
-		texture_add_buffer(gb->buffer, "reflection", 1, 1, 0);
-		texture_add_buffer(gb->buffer, "normal", 1, 0, 0);
-		texture_add_buffer(gb->buffer, "transparency", 1, 1, 0);
-		texture_add_buffer(gb->buffer, "cameraspace position", 1, 0, 0);
-		texture_add_buffer(gb->buffer, "worldspace position", 1, 0, 0);
-		texture_add_buffer(gb->buffer, "id", 1, 0, 0);
-
-		texture_draw_id(gb->buffer, COLOR_TEX); /* DRAW DIFFUSE */
-
-		if(bound)
+		else
 		{
-			self->bound = gb->buffer;
-			texture_target(gb->buffer, 0);
+			if(pass->screen_scale)
+			{
+				pass->output = texture_new_2D( w * pass->screen_scale_x,
+						h * pass->screen_scale_y,
+						32, GL_RGBA16F, 1, 0);
+			}
 		}
 	}
 
@@ -283,6 +299,7 @@ static void c_renderer_bind_pass_output(c_renderer_t *self, pass_t *pass,
 	glUniform1i(bind->pass_output.u_texture, 13 + i); glerr();
 	glActiveTexture(GL_TEXTURE0 + 13 + i); glerr();
 	texture_bind(bind->pass_output.pass->output, -1);
+	glerr();
 
 	if(bind->pass_output.pass->record_brightness)
 	{
@@ -292,12 +309,47 @@ static void c_renderer_bind_pass_output(c_renderer_t *self, pass_t *pass,
 
 }
 
+static void c_renderer_bind_camera(c_renderer_t *self, pass_t *pass,
+		bind_t *bind)
+{
+	if(bind->getter)
+	{
+		bind->camera.entity = ((camera_getter)bind->getter)(bind->usrptr);
+	}
+	if(!bind->camera.entity) return;
+
+	c_camera_t *cam = c_camera(&bind->camera.entity);
+	c_camera_update_view(cam);
+
+/* #ifdef MESH4 */
+/* 		shader_bind_camera(pass->shader, cam->pos, &cam->view_matrix, */
+/* 				&cam->projection_matrix, cam->exposure, self->angle4); */
+/* #else */
+/* 		shader_bind_camera(pass->shader, cam->pos, &cam->view_matrix, */
+/* 				&cam->projection_matrix, cam->exposure); */
+/* #endif */
+
+	pass->shader->vp = cam->vp;
+
+	glUniformMatrix4fv(bind->camera.u_view, 1, GL_FALSE,
+			(void*)cam->view_matrix._);
+	glUniform3f(bind->camera.u_pos, cam->pos.x, cam->pos.y, cam->pos.z);
+#ifdef MESH4
+	glUniform1f(bind->camera.u_angle4, self->angle4);
+#endif
+	glUniform1f(bind->camera.u_exposure, cam->exposure);
+
+	/* TODO unnecessary? */
+	glUniformMatrix4fv(bind->camera.u_projection, 1, GL_FALSE,
+			(void*)cam->projection_matrix._);
+}
+
 static void c_renderer_bind_gbuffer(c_renderer_t *self, pass_t *pass,
 		bind_t *bind)
 {
 	if(bind->gbuffer.id < 0) return;
 
-	texture_t *gbuffer = self->gbuffers[bind->gbuffer.id].buffer;
+	texture_t *gbuffer = self->passes[bind->gbuffer.id].output;
 	if(!gbuffer) return;
 
 	glUniform1f(pass->shader->u_screen_scale_x, 1.0f); glerr();
@@ -334,9 +386,35 @@ static void c_renderer_bind_gbuffer(c_renderer_t *self, pass_t *pass,
 	glUniform1i(bind->gbuffer.u_id, 8); glerr();
 	glActiveTexture(GL_TEXTURE0 + 8); glerr();
 	texture_bind(gbuffer, 8);
+	glerr();
 }
 
-static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_t camera)
+static inline void pass_draw_object(c_renderer_t *self, pass_t *pass)
+{
+	c_mesh_gl_t *quad = c_mesh_gl(&self->quad);
+	if(pass->draw_signal == render_quad)
+	{
+		c_mesh_gl_draw(quad, NULL, 0);
+	}
+	else
+	{
+		if(pass->gbuffer)
+		{
+			glEnable(GL_CULL_FACE); glerr();
+			glEnable(GL_DEPTH_TEST); glerr();
+		}
+
+		entity_signal(c_entity(self), pass->draw_signal, pass->shader);
+
+		if(pass->gbuffer)
+		{
+			glDisable(GL_CULL_FACE); glerr();
+			glDisable(GL_DEPTH_TEST); glerr();
+		}
+	}
+}
+
+static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 {
 	uint i;
 
@@ -348,15 +426,6 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 
 	shader_bind(pass->shader);
 
-	c_camera_t *cam = c_camera(&camera);
-#ifdef MESH4
-	shader_bind_camera(pass->shader, cam->pos, &cam->view_matrix,
-			&cam->projection_matrix, cam->exposure, self->angle4);
-#else
-	shader_bind_camera(pass->shader, cam->pos, &cam->view_matrix,
-			&cam->projection_matrix, cam->exposure);
-#endif
-
 	ct_t *ambients = ecm_get(ct_ambient);
 	c_ambient_t *ambient = (c_ambient_t*)ct_get_at(ambients, 0, 0);
 
@@ -365,6 +434,7 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 		c_probe_t *probe = c_probe(ambient);
 		if(probe) shader_bind_ambient(pass->shader, probe->map);
 	}
+	/* pass->shader.vp = mat4(); */
 
 	glerr();
 	for(i = 0; i < pass->binds_size; i++)
@@ -375,12 +445,11 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 		case BIND_NONE: printf("error\n"); break;
 		case BIND_PASS_OUTPUT:
 			c_renderer_bind_pass_output(self, pass, bind, i);
-			glerr();
 			break;
 		case BIND_NUMBER:
 			if(bind->getter)
 			{
-				bind->number.value = ((number_getter)bind->getter)(bind->entity);
+				bind->number.value = ((number_getter)bind->getter)(bind->usrptr);
 			}
 			glUniform1f(bind->number.u, bind->number.value); glerr();
 			glerr();
@@ -388,19 +457,17 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 		case BIND_INTEGER:
 			if(bind->getter)
 			{
-				bind->integer.value = ((integer_getter)bind->getter)(bind->entity);
+				bind->integer.value = ((integer_getter)bind->getter)(bind->usrptr);
 			}
 			glUniform1i(bind->integer.u, bind->integer.value); glerr();
 			glerr();
 			break;
-		case BIND_GBUFFER:
-			c_renderer_bind_gbuffer(self, pass, bind);
-			glerr();
-			break;
+		case BIND_CAMERA: c_renderer_bind_camera(self, pass, bind); break;
+		case BIND_GBUFFER: c_renderer_bind_gbuffer(self, pass, bind); break;
 		case BIND_VEC3:
 			if(bind->getter)
 			{
-				bind->vec3.value = ((vec3_getter)bind->getter)(bind->entity);
+				bind->vec3.value = ((vec3_getter)bind->getter)(bind->usrptr);
 			}
 			glUniform3f(bind->vec3.u, bind->vec3.value.r,
 					bind->vec3.value.g, bind->vec3.value.b);
@@ -410,7 +477,6 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 
 	}
 
-	c_mesh_gl_t *quad = c_mesh_gl(&self->quad);
 	if(pass->for_each_light)
 	{
 		int p;
@@ -426,13 +492,13 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 
 			shader_bind_light(pass->shader, c_entity(light));
 
-			c_mesh_gl_draw(quad, NULL, 0);
+			pass_draw_object(self, pass);
 		}
 		glDisable(GL_BLEND);
 	}
 	else
 	{
-		c_mesh_gl_draw(quad, NULL, 0);
+		pass_draw_object(self, pass);
 	}
 
 	if(pass->mipmaped || pass->record_brightness)
@@ -449,6 +515,7 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass, entity_
 			float targetExposure = 0.3 + 0.4 / brightness;
 			/* float targetExposure = fmax(0.4 - brightness, 0.0f); */
 
+			c_camera_t *cam = c_camera(&self->camera);
 			cam->exposure += (targetExposure - cam->exposure) / 100;
 		}
 	}
@@ -505,12 +572,17 @@ c_renderer_t *c_renderer_new(float resolution, int auto_exposure, int roughness,
 	return self;
 }
 
+void c_renderer_add_camera(c_renderer_t *self, entity_t camera)
+{
+	self->camera = camera;
+}
+
 entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
 		float *depth)
 {
 	entity_t result;
-	if(!self->gbuffers[0].buffer) return entity_null;
-	result = texture_get_pixel(self->gbuffers[0].buffer, 7,
+	if(!self->passes[0].output) return entity_null;
+	result = texture_get_pixel(self->passes[0].output, 7,
 			x * self->resolution, y * self->resolution, depth);
 
 	return result;
@@ -551,11 +623,11 @@ int c_renderer_component_menu(c_renderer_t *self, void *ctx)
 	nk_layout_row_dynamic(ctx, 0, 1);
 	int i;
 
-	if (nk_button_label(ctx, "gbuffer"))
-	{
-		c_editmode_open_texture(c_editmode(self),
-				c_renderer(self)->gbuffers[0].buffer);
-	}
+	/* if (nk_button_label(ctx, "gbuffer")) */
+	/* { */
+	/* 	c_editmode_open_texture(c_editmode(self), */
+	/* 			c_renderer(self)->passes[0].output); */
+	/* } */
 
 	for(i = 0; i < self->passes_size; i++)
 	{
@@ -589,6 +661,7 @@ void c_renderer_register()
 	signal_init(&offscreen_render, 0);
 	signal_init(&render_visible, sizeof(shader_t));
 	signal_init(&render_transparent, sizeof(shader_t));
+	signal_init(&render_quad, sizeof(shader_t));
 }
 
 
@@ -617,10 +690,10 @@ static int c_renderer_gbuffer(c_renderer_t *self, const char *name)
 {
 	int i;
 	if(!name) return -1;
-	for(i = 0; i < self->gbuffers_size; i++)
+	for(i = 0; i < self->passes_size; i++)
 	{
-		gbuffer_t *gb = &self->gbuffers[i];
-		if(!strncmp(gb->name, name, sizeof(gb->name)))
+		pass_t *gb = &self->passes[i];
+		if(!strncmp(gb->feed_name, name, sizeof(gb->feed_name)))
 		{
 			return i;
 		}
@@ -628,24 +701,16 @@ static int c_renderer_gbuffer(c_renderer_t *self, const char *name)
 	return -1;
 }
 
-static void c_renderer_add_gbuffer(c_renderer_t *self, const char *name,
-		unsigned int draw_filter)
-{
-	int i = self->gbuffers_size++;
-	gbuffer_t *gb = &self->gbuffers[i];
-
-	gb->draw_filter = draw_filter;
-	strncpy(gb->name, name, sizeof(gb->name));
-}
-
 void c_renderer_add_pass(c_renderer_t *self, const char *feed_name, int flags,
-		float wid, float hei, const char *shader_name, bind_t binds[])
+		ulong draw_signal, float wid, float hei, const char *shader_name,
+		bind_t binds[])
 {
-	shader_t *shader = shader_new(shader_name);
 	int i = self->passes_size++;
 	pass_t *pass = &self->passes[i];
-	pass->shader = shader;
+	pass->shader = shader_new(shader_name);
 	pass->cached = 0;
+	pass->draw_signal = draw_signal;
+	pass->gbuffer = flags & PASS_GBUFFER;
 	pass->for_each_light = flags & PASS_FOR_EACH_LIGHT;
 	pass->mipmaped = flags & PASS_MIPMAPED;
 	pass->record_brightness = flags & PASS_RECORD_BRIGHTNESS;
@@ -682,43 +747,56 @@ void c_renderer_clear_shaders(c_renderer_t *self, shader_t *shader)
 	self->passes_size = 0;
 }
 
-int c_renderer_update_gbuffers(c_renderer_t *self, entity_t camera)
-{
-	int i;
-	int res = 1;
-	for(i = 0; i < self->gbuffers_size; i++)
-	{
-		gbuffer_t *gb = &self->gbuffers[i];
-		if(!gb->buffer) continue;
+/* int c_renderer_update_gbuffers(c_renderer_t *self) */
+/* { */
+/* 	int i; */
+/* 	int res = 1; */
+/* 	for(i = 0; i < self->gbuffers_size; i++) */
+/* 	{ */
+/* 		gbuffer_t *gb = &self->gbuffers[i]; */
+/* 		if(!gb->buffer) continue; */
 
-		self->bound = gb->buffer;
-		texture_target(gb->buffer, 0);
+/* 		c_camera_t *cam = c_camera(&gb->camera); */
+/* 		c_camera_update_view(cam); */
 
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); glerr();
 
-		shader_bind(self->gbuffer_shader);
+/* 		self->bound = gb->buffer; */
+/* 		texture_target(gb->buffer, 0); */
 
-		c_camera_t *cam = c_camera(&camera);
-#ifdef MESH4
-		shader_bind_camera(self->gbuffer_shader, cam->pos, &cam->view_matrix,
-				&cam->projection_matrix, cam->exposure, self->angle4);
-#else
-		shader_bind_camera(self->gbuffer_shader, cam->pos, &cam->view_matrix,
-				&cam->projection_matrix, cam->exposure);
-#endif
+/* 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); glerr(); */
 
-		glEnable(GL_CULL_FACE); glerr();
-		glEnable(GL_DEPTH_TEST); glerr();
+/* 		shader_bind(self->gbuffer_shader); */
 
-		entity_signal(c_entity(self), gb->draw_filter, self->gbuffer_shader);
+/* #ifdef MESH4 */
+/* 		shader_bind_camera(self->gbuffer_shader, cam->pos, &cam->view_matrix, */
+/* 				&cam->projection_matrix, cam->exposure, self->angle4); */
+/* #else */
+/* 		shader_bind_camera(self->gbuffer_shader, cam->pos, &cam->view_matrix, */
+/* 				&cam->projection_matrix, cam->exposure); */
+/* #endif */
 
-		glDisable(GL_CULL_FACE); glerr();
-		glDisable(GL_DEPTH_TEST); glerr();
+/* 		glEnable(GL_CULL_FACE); glerr(); */
+/* 		glEnable(GL_DEPTH_TEST); glerr(); */
 
-	}
+/* 		entity_signal(c_entity(self), gb->draw_filter, self->gbuffer_shader); */
 
-	return res;
-}
+/* 		glDisable(GL_CULL_FACE); glerr(); */
+/* 		glDisable(GL_DEPTH_TEST); glerr(); */
+
+/* 	} */
+
+/* 	return res; */
+/* } */
+
+/* void pass_set_model(pass_t *self, mat4_t model) */
+/* { */
+/* 	mat4_t mvp = mat4_mul(self->shader->vp, model); */
+
+/* 	glUniformMatrix4fv(self->u_mvp, 1, GL_FALSE, (void*)mvp._); */
+/* 	glUniformMatrix4fv(self->u_m, 1, GL_FALSE, (void*)model._); */
+
+/* 	/1* shader_update(shader, &node->model); *1/ */
+/* } */
 
 void c_renderer_draw_to_texture(c_renderer_t *self, shader_t *shader,
 		texture_t *screen, float scale, texture_t *buffer)
@@ -748,15 +826,12 @@ int c_renderer_draw(c_renderer_t *self)
 	/* } */
 
 	if(self->camera == entity_null) return 1;
-	if(!self->gbuffer_shader) return 1;
-
-	c_camera_update_view(c_camera(&self->camera));
 
 	c_renderer_update_probes(self);
 
 	glerr();
 
-	c_renderer_update_gbuffers(self, self->camera);
+	/* c_renderer_update_gbuffers(self); */
 
 
 	/* -------------- */
@@ -767,7 +842,7 @@ int c_renderer_draw(c_renderer_t *self)
 
 	for(i = 0; i < self->passes_size; i++)
 	{
-		output = c_renderer_draw_pass(self, &self->passes[i], self->camera);
+		output = c_renderer_draw_pass(self, &self->passes[i]);
 	}
 
 	/* ----------------------- */

@@ -10,7 +10,7 @@ void main()
 	vec3 dif = textureLod(gbuffer.diffuse, texcoord, 0).rgb;
 	vec3 w_pos = textureLod(gbuffer.wposition, texcoord, 0).rgb;
 
-	vec3 c_pos = camera_pos - w_pos;
+	vec3 c_pos = camera.pos - w_pos;
 
 	vec3 nor = textureLod(gbuffer.normal, texcoord, 0).rgb;
 

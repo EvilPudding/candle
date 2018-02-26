@@ -14,7 +14,7 @@ void main()
 
 	vec3 w_pos = texture2D(gbuffer.wposition, texcoord).rgb;
 	vec3 v_pos = texture2D(gbuffer.cposition, texcoord).rgb;
-	vec3 c_pos = camera_pos - w_pos;
+	vec3 c_pos = camera.pos - w_pos;
 	vec4 refl = texture2D(gbuffer.reflection, texcoord);
 
 	if(n.a != 0.0f)
@@ -30,7 +30,7 @@ void main()
 		/* float k = 1.f - eta * eta * (1.f - N_dot_I * N_dot_I); */
 		/* vec3 hit = eta * v_pos - (eta * N_dot_I + sqrt(k)) * nor; */
 
-        vec4 projectedCoord     = projection * vec4(hit, 1.0f);
+        vec4 projectedCoord     = camera.projection * vec4(hit, 1.0f);
         projectedCoord.xy      /= projectedCoord.w;
         projectedCoord.xy       = projectedCoord.xy * 0.5 + 0.5; 
 		/* FragColor = vec4(projectedCoord.xy, 0.0, 1.0); */
