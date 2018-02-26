@@ -61,8 +61,8 @@ void main()
 {
 	/* mat3 MV3x3 = mat3(MV); */
 #ifdef MESH4
-	float Y = cos(angle4);
-	float W = sin(angle4);
+	float Y = cos(camera.angle4);
+	float W = sin(camera.angle4);
 	vec4 pos = vec4(vec3(P.x, P.y * Y + P.w * W, P.z), 1.0);
 #else
 	vec4 pos = vec4(P, 1.0);
