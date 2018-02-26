@@ -4,8 +4,8 @@
 #include "spacial.h"
 #include "node.h"
 #include <nk.h>
-#include<candle.h>
-#include<systems/renderer.h>
+#include <candle.h>
+#include <systems/renderer.h>
 
 
 DEC_CT(ct_camera);
@@ -20,7 +20,7 @@ c_camera_t *c_camera_new(float fov, float near, float far)
 
 	self->near = near;
 	self->far = far;
-	self->fov = fov * (M_PI / 180.0f);
+	self->fov = fov;
 	self->view_cached = 0;
 	self->exposure = 0.25f;
 
@@ -49,16 +49,6 @@ int c_camera_changed(c_camera_t *self)
 {
 	self->view_cached = 0;
 	return 1;
-}
-
-void c_camera_register()
-{
-	ct_t *ct = ct_new("c_camera", &ct_camera, sizeof(c_camera_t),
-			(init_cb)c_camera_init, 2, ct_spacial, ct_node);
-
-	ct_listener(ct, ENTITY, spacial_changed, c_camera_changed);
-	ct_listener(ct, WORLD, window_resize, c_camera_update);
-
 }
 
 vec3_t c_camera_real_pos(c_camera_t *self, float depth, vec2_t coord)
@@ -98,14 +88,38 @@ void c_camera_activate(c_camera_t *self)
 	c_camera_update(self, NULL);
 }
 
+int c_camera_component_menu(c_camera_t *self, void *ctx)
+{
+	float before = self->fov;
+	nk_property_float(ctx, "fov:", 1, &self->fov, 179, 1, 1);
+	if(self->fov != before)
+	{
+		c_camera_update(self, NULL);
+	}
+	before = self->near;
+	nk_property_float(ctx, "near:", 0.01, &self->near, self->far - 0.01, 0.01, 0.1);
+	if(self->near != before)
+	{
+		c_camera_update(self, NULL);
+	}
+	before = self->far;
+	nk_property_float(ctx, "far:", self->near + 0.01, &self->far, 10000, 0.01, 0.1);
+	if(self->far != before)
+	{
+		c_camera_update(self, NULL);
+	}
+	return 1;
+}
+
 int c_camera_update(c_camera_t *self, void *event)
 {
 	/* TODO: remove renderer reference, camera should update on render resize,
 	 * not window */
 	self->width = c_renderer(&candle->systems)->width;
 	self->height = c_renderer(&candle->systems)->height;
+	
 	self->projection_matrix = mat4_perspective(
-		self->fov,
+		self->fov * (M_PI / 180.0f),
 		((float)self->width) / self->height,
 		/* ((float)event->width / 2) / event->height, */
 		self->near, self->far
@@ -114,3 +128,13 @@ int c_camera_update(c_camera_t *self, void *event)
 	return 1;
 }
 
+void c_camera_register()
+{
+	ct_t *ct = ct_new("c_camera", &ct_camera, sizeof(c_camera_t),
+			(init_cb)c_camera_init, 2, ct_spacial, ct_node);
+
+	ct_listener(ct, ENTITY, spacial_changed, c_camera_changed);
+	ct_listener(ct, WORLD, window_resize, c_camera_update);
+
+	ct_listener(ct, WORLD, component_menu, c_camera_component_menu);
+}
