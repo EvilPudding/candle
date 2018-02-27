@@ -34,7 +34,6 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass);
 
 static int c_renderer_resize(c_renderer_t *self, window_resize_data *event);
 
-static void c_renderer_update_screen_texture(c_renderer_t *self);
 
 int c_renderer_scene_changed(c_renderer_t *self)
 {
@@ -151,7 +150,7 @@ static int c_renderer_bind_passes(c_renderer_t *self)
 	self->passes_bound = 1;
 	c_renderer_resize(self, &(window_resize_data){.width = c_window(self)->width,
 			.height = c_window(self)->height });
-	printf("PASSES BOUND\n\n");
+	printf("PASSES BOUND '%d' '%d'\n\n", c_window(self)->width, c_window(self)->height);
 	return 1;
 }
 
@@ -247,7 +246,7 @@ static int c_renderer_created(c_renderer_t *self)
 	return 1;
 }
 
-static int c_renderer_gl_update_textures(c_renderer_t *self)
+static int c_renderer_update_screen_texture(c_renderer_t *self)
 {
 	int w = self->width * self->resolution;
 	int h = self->height * self->resolution;
@@ -307,18 +306,12 @@ static int c_renderer_gl_update_textures(c_renderer_t *self)
 	return 1;
 }
 
-static void c_renderer_update_screen_texture(c_renderer_t *self)
-{
-	loader_push(candle->loader, (loader_cb)c_renderer_gl_update_textures, NULL,
-			(c_t*)self);
-}
-
 static int c_renderer_resize(c_renderer_t *self, window_resize_data *event)
 {
-	if(!self->passes_bound) return 1;
     self->width = event->width;
     self->height = event->height;
 
+	if(!self->passes_bound) return 1;
 	c_renderer_update_screen_texture(self);
 
 	return 1;
