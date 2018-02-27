@@ -3,15 +3,18 @@
 #line 4
 
 layout (location = 0) out vec4 FragColor;
+uniform pass_t phong;
 uniform pass_t transp;
 
 void main()
 {
-	vec4 color = pass_sample(transp, texcoord);
+	vec4 color = pass_sample(phong, texcoord);
+	vec4 trans = pass_sample(transp, texcoord);
+	color = mix(color, trans, trans.a);
 
 	/* vec4 color = vec4(0.0f); */
 	vec4 refl = textureLod(gbuffer.reflection, texcoord, 0);
-	vec4 ssred = ssr(transp.texture);
+	vec4 ssred = ssr(phong.texture);
 
 	/* vec3 final = mix(color.rgb, ssred.rgb, ssred.a); */
 	vec3 final = (color.rgb) + ssred.rgb * ssred.a * refl.rgb * refl.a;

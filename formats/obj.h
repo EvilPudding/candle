@@ -5,7 +5,7 @@
 #include "../mesh.h"
 #include <ecm.h>
 
-mesh_t *mesh_from_obj(const char *filename);
+void mesh_load_obj(mesh_t *self, const char *filename);
 
 
 #endif /* !OBJ_H */

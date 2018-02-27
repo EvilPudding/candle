@@ -48,6 +48,14 @@ void c_sauces_mesh_reg(c_sauces_t *self, const char *name, mesh_t *mesh)
 	strncpy(mesh->name, name, sizeof(mesh->name));
 }
 
+int load_mesh(mesh_t *mesh)
+{
+	char buffer[256];
+	strcpy(buffer, mesh->name);
+	mesh_load(mesh, buffer);
+	return 1;
+}
+
 mesh_t *c_sauces_mesh_get(c_sauces_t *self, const char *name)
 {
 	mesh_t *mesh;
@@ -57,7 +65,11 @@ mesh_t *c_sauces_mesh_get(c_sauces_t *self, const char *name)
 		mesh = self->meshes[i];
 		if(!strcmp(mesh->name, name)) return mesh;
 	}
-	mesh = mesh_from_file(name);
+	mesh = mesh_new();
+	strcpy(mesh->name, name);
+
+	SDL_CreateThread((int(*)(void*))load_mesh, "load_mesh", mesh);
+
 	c_sauces_mesh_reg(self, name, mesh);
 	return mesh;
 }

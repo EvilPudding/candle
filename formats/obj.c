@@ -150,12 +150,10 @@ static void readProperty(mesh_t *self, FILE * fp, vec3_t *tempNorm,
     }
 }
 
-mesh_t *mesh_from_obj(const char *filename)
+void mesh_load_obj(mesh_t *self, const char *filename)
 {
 	char buffer[2048];
 	snprintf(buffer, sizeof(buffer), "resauces/models/%s", filename);
-
-	mesh_t *self = mesh_new();
 
 	strncpy(self->name, filename, sizeof(self->name));
 
@@ -166,7 +164,7 @@ mesh_t *mesh_from_obj(const char *filename)
 	if(!fp)
 	{
 		printf("Could not find object '%s'\n", filename);
-		return 0;
+		return;
 	}
 
     count(fp, &v, &vt, &vn, &f);
@@ -203,7 +201,6 @@ mesh_t *mesh_from_obj(const char *filename)
 
     fclose(fp);
 
-	return self;
 }
 
 

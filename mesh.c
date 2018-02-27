@@ -2127,27 +2127,21 @@ mesh_t *mesh_cube(float size, float tex_scale, int inverted_normals)
 			vec3(-size, -size, -size));
 }
 
-mesh_t *mesh_from_file(const char *filename)
+void mesh_load(mesh_t *self, const char *filename)
 {
-	mesh_t *self = NULL;
 	char ext[16];
+	mesh_lock(self);
 
 	strncpy(ext, strrchr(filename, '.') + 1, sizeof(ext));
 	if(!strncmp(ext, "ply", sizeof(ext)))
 	{
-		self = mesh_from_ply(filename);
+		mesh_load_ply(self, filename);
 	}
 	else if(!strncmp(ext, "obj", sizeof(ext)))
 	{
-		self = mesh_from_obj(filename);
+		mesh_load_obj(self, filename);
 	}
-
-	if(self)
-	{
-		mesh_update(self);
-	}
-
-	return self;
+	mesh_unlock(self);
 }
 
 vertex_t *mesh_farthest(mesh_t *self, const vec3_t dir)

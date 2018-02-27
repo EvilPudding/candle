@@ -88,7 +88,7 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 	} 
 
 	c_renderer_add_pass(c_renderer(self), "hightlight",
-		PASS_SCREEN_SCALE,
+		0,
 		render_quad,
 		1.0f, 1.0f, "highlight",
 		(bind_t[]){

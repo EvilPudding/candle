@@ -207,7 +207,7 @@ typedef struct mesh_t
 mesh_t *mesh_new(void);
 void mesh_destroy(mesh_t *self);
 
-mesh_t *mesh_from_file(const char *filename);
+void mesh_load(mesh_t *self, const char *filename);
 mesh_t *mesh_quad(void);
 mesh_t *mesh_circle(float radius, int segments);
 mesh_t *mesh_torus(float radius, float inner_radius, int segments,

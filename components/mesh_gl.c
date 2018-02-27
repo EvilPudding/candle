@@ -505,7 +505,8 @@ void c_mesh_gl_update(c_mesh_gl_t *self)
 	/* TODO update only dirty group */
 	if(!self->mesh) return;
 	int i;
-	SDL_SemWait(self->mesh->sem);
+	if(self->mesh->update_locked) return;
+	/* SDL_SemWait(self->mesh->sem); */
 	for(i = 0; i < self->groups_num; i++)
 	{
 		glg_t *group = &self->groups[i];
@@ -518,7 +519,7 @@ void c_mesh_gl_update(c_mesh_gl_t *self)
 		}
 
 	}
-	SDL_SemPost(self->mesh->sem);
+	/* SDL_SemPost(self->mesh->sem); */
 }
 
 int glg_draw(glg_t *self, shader_t *shader, int transparent)

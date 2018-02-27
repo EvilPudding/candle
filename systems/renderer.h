@@ -25,9 +25,10 @@ enum
 	PASS_FOR_EACH_LIGHT    = 1 << 0,
 	PASS_MIPMAPED 		   = 1 << 1,
 	PASS_RECORD_BRIGHTNESS = 1 << 2,
-	PASS_SCREEN_SCALE	   = 1 << 3,
-	PASS_GBUFFER		   = 1 << 4,
-	PASS_CUBEMAP 		   = 1 << 5
+	PASS_GBUFFER		   = 1 << 3,
+	PASS_CUBEMAP 		   = 1 << 4,
+	PASS_CLEAR_COLOR	   = 1 << 5,
+	PASS_CLEAR_DEPTH	   = 1 << 6
 } pass_options;
 
 typedef enum
@@ -104,11 +105,11 @@ typedef struct pass_t
 	shader_t *shader;
 	texture_t *output;
 	int for_each_light;
-	int screen_scale;
-	float screen_scale_x;
-	float screen_scale_y;
+	float x;
+	float y;
 	char feed_name[32];
 	int gbuffer;
+	unsigned int clear;
 	ulong draw_signal;
 
 	int binds_size;
@@ -118,6 +119,7 @@ typedef struct pass_t
 	int mipmaped;
 	int record_brightness;
 
+	int output_from;
 	/* TODO make this a ct_camera injected vertex modifier */
 	/* uint u_mvp; */ 
 	/* uint u_m; */ 
@@ -132,7 +134,6 @@ typedef struct c_renderer_t
 	int width;
 	int height;
 	float resolution;
-	float percent_of_screen;
 
 	texture_t *bound;
 
@@ -162,6 +163,7 @@ typedef struct c_renderer_t
 #endif
 
 	int ready;
+	int passes_bound;
 } c_renderer_t;
 
 DEF_SIG(render_visible);
@@ -171,8 +173,8 @@ DEF_SIG(offscreen_render);
 
 DEF_CASTER(ct_renderer, c_renderer, c_renderer_t)
 
-c_renderer_t *c_renderer_new(float resolution, int auto_exposure, int roughness,
-		float percent_of_screen, int lock_fps);
+c_renderer_t *c_renderer_new(float resolution, int auto_exposure,
+		int roughness, int lock_fps);
 int c_renderer_draw(c_renderer_t *self);
 void c_renderer_register(void);
 void c_renderer_set_resolution(c_renderer_t *self, float resolution);

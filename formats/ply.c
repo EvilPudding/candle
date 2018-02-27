@@ -95,12 +95,10 @@ static int get_type(const char *name)
 	return -1;
 }
 
-mesh_t *mesh_from_ply(const char *filename)
+void mesh_load_ply(mesh_t *self, const char *filename)
 {
 	char buffer[2048];
 	snprintf(buffer, sizeof(buffer), "resauces/models/%s", filename);
-
-	mesh_t *self = mesh_new();
 
 	strncpy(self->name, filename, sizeof(self->name));
 
@@ -109,7 +107,7 @@ mesh_t *mesh_from_ply(const char *filename)
 	if(!fp)
 	{
 		printf("Could not find object '%s'\n", filename);
-		return 0;
+		return;
 	}
 
 	unsigned int i;
@@ -308,7 +306,5 @@ mesh_t *mesh_from_ply(const char *filename)
 	free(words);
 
     fclose(fp);
-
-	return self;
 }
 

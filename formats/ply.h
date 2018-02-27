@@ -5,7 +5,7 @@
 #include "../mesh.h"
 #include <ecm.h>
 
-mesh_t *mesh_from_ply(const char *filename);
+void mesh_load_ply(mesh_t *self, const char *filename);
 
 
 #endif /* !PLY_H */
