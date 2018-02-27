@@ -2127,9 +2127,16 @@ mesh_t *mesh_cube(float size, float tex_scale, int inverted_normals)
 			vec3(-size, -size, -size));
 }
 
+void mesh_wait(mesh_t *self)
+{
+	SDL_SemWait(self->sem);
+	SDL_SemPost(self->sem);
+}
+
 void mesh_load(mesh_t *self, const char *filename)
 {
 	char ext[16];
+	self->mid_load = 1;
 	mesh_lock(self);
 
 	strncpy(ext, strrchr(filename, '.') + 1, sizeof(ext));
@@ -2142,6 +2149,7 @@ void mesh_load(mesh_t *self, const char *filename)
 		mesh_load_obj(self, filename);
 	}
 	mesh_unlock(self);
+	self->mid_load = 0;
 }
 
 vertex_t *mesh_farthest(mesh_t *self, const vec3_t dir)

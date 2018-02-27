@@ -165,6 +165,18 @@ typedef struct
 #endif
 } mesh_selection_t;
 
+typedef struct
+{
+	enum {
+		MESH_EXTRUDE,
+		MESH_TRIANGULATE,
+		MESH_SELECT_FACES,
+		MESH_FOR_EACH,
+		MESH_CLEAN,
+		MESH_PAINT
+	} type;
+} mesh_command_t;
+
 typedef struct mesh_t
 {
 	vector_t *faces;
@@ -189,6 +201,7 @@ typedef struct mesh_t
 
 	char name[256];
 	int update_locked;
+	int mid_load;
 	int update_id;
 	int changes;
 	float smooth_max;
@@ -229,6 +242,7 @@ void mesh_translate_uv(mesh_t *self, vec2_t p);
 void mesh_scale_uv(mesh_t *self, float scale);
 
 void mesh_lock(mesh_t *self);
+void mesh_wait(mesh_t *self);
 void mesh_unlock(mesh_t *self);
 void mesh_update(mesh_t *self);
 void mesh_modified(mesh_t *self);

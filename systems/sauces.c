@@ -69,6 +69,7 @@ mesh_t *c_sauces_mesh_get(c_sauces_t *self, const char *name)
 	strcpy(mesh->name, name);
 
 	SDL_CreateThread((int(*)(void*))load_mesh, "load_mesh", mesh);
+	/* load_mesh(mesh); */
 
 	c_sauces_mesh_reg(self, name, mesh);
 	return mesh;
