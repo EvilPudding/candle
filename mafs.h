@@ -1044,7 +1044,7 @@ static inline float float_mix(float x, float y, float a)
 }
 
 /* TODO maybe this shouldn't be here */
-static inline vec3_t int_to_vec3(int id)
+static inline vec2_t int_to_vec2(int id)
 {
 	union {
 		unsigned int i;
@@ -1053,8 +1053,7 @@ static inline vec3_t int_to_vec3(int id)
 		};
 	} convert = {.i = id};
 
-	return vec3((float)convert.r / 255,
-			(float)convert.g / 255, (float)convert.b / 255);
+	return vec2((float)convert.r / 255, (float)convert.g / 255);
 }
 
 #define Z3 (vec3(0.0f))

@@ -81,7 +81,8 @@ in vec3 cam_normal;
 in vec3 cam_tangent;
 in vec3 cam_bitangent;
 
-in vec3 selection_id;
+in vec2 object_id;
+in vec2 poly_id;
 
 in vec3 vertex_normal;
 in vec3 vertex_tangent;

@@ -345,8 +345,8 @@ static int shader_new_loader(shader_t *self)
 	glBindAttribLocation(self->program, 3, "TG"); glerr();
 	/* BITANGENT */
 	glBindAttribLocation(self->program, 4, "BT"); glerr();
-	/* COLOR */
-	glBindAttribLocation(self->program, 5, "COL"); glerr();
+	/* ID */
+	glBindAttribLocation(self->program, 5, "ID"); glerr();
 
 	self->u_mvp = glGetUniformLocation(self->program, "MVP"); glerr();
 	self->u_m = glGetUniformLocation(self->program, "M"); glerr();
@@ -520,9 +520,9 @@ void shader_bind(shader_t *self)
 void shader_bind_mesh(shader_t *self, mesh_t *mesh, unsigned int id)
 {
 	glUniform1f(self->u_has_tex, (float)mesh->has_texcoords);
-	vec3_t id_color = int_to_vec3(id);
+	vec2_t id_color = int_to_vec2(id);
 
-	glUniform3f(self->u_id, id_color.r, id_color.g, id_color.b);
+	glUniform2f(self->u_id, id_color.x, id_color.y);
 }
 
 GLuint shader_uniform(shader_t *self, const char *uniform, const char *member)

@@ -23,12 +23,33 @@ void c_editmode_init(c_editmode_t *self)
 	self->spawn_pos = vec2(25, 25);
 }
 
-vec3_t c_editmode_bind_selected(c_editmode_t *self)
+int c_editmode_bind_mode(c_editmode_t *self)
 {
-	/* if(!c_editmode(&caller)) return vec3(0.0f); */
-	vec3_t id_color = int_to_vec3(self->over);
+	return self->mode;
+}
 
-	return id_color;
+vec2_t c_editmode_bind_over(c_editmode_t *self)
+{
+	if(self->mode == EDIT_OBJECT)
+	{
+		return int_to_vec2(self->over);
+	}
+	else
+	{
+		return int_to_vec2(self->over_poly);
+	}
+}
+
+vec2_t c_editmode_bind_selected(c_editmode_t *self)
+{
+	if(self->mode == EDIT_OBJECT)
+	{
+		return int_to_vec2(self->selected);
+	}
+	else
+	{
+		return int_to_vec2(self->selected_poly);
+	}
 }
 
 
@@ -93,7 +114,13 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 		1.0f, 1.0f, "highlight",
 		(bind_t[]){
 			{BIND_GBUFFER, "gbuffer", .gbuffer.name = "gbuffer"},
-			{BIND_VEC3, "id_color",
+			{BIND_INTEGER, "mode",
+				.getter = (getter_cb)c_editmode_bind_mode,
+				.usrptr = self},
+			{BIND_VEC2, "over_id",
+				.getter = (getter_cb)c_editmode_bind_over,
+				.usrptr = self},
+			{BIND_VEC2, "sel_id",
 				.getter = (getter_cb)c_editmode_bind_selected,
 				.usrptr = self},
 			{BIND_NONE}
@@ -115,31 +142,45 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 	vec3_t pos = c_camera_real_pos(cam, self->mouse_depth, vec2(px, py));
 	self->mouse_position = pos;
 
-	self->over = result;
+	if(self->mode == EDIT_OBJECT)
+	{
+		self->over = result & 0xFFFF;
+	}
+	else
+	{
+		self->over_poly = result >> 16;
+	}
 }
 
 int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 {
 	if(self->control && !candle->pressing)
 	{
-		if(self->pressing && self->selected)
+		if(self->mode == EDIT_OBJECT)
 		{
-			c_renderer_t *renderer = c_renderer(self);
-			c_camera_t *cam = c_camera(&renderer->camera);
-
-			c_spacial_t *sc = c_spacial(&self->selected);
-			if(!self->dragging)
+			if(self->pressing && self->selected)
 			{
-				self->dragging = 1;
-				self->drag_diff = vec3_sub(sc->pos, self->mouse_position);
+				c_renderer_t *renderer = c_renderer(self);
+				c_camera_t *cam = c_camera(&renderer->camera);
+
+				c_spacial_t *sc = c_spacial(&self->selected);
+				if(!self->dragging)
+				{
+					self->dragging = 1;
+					self->drag_diff = vec3_sub(sc->pos, self->mouse_position);
+				}
+				float px = event->x / renderer->width;
+				float py = 1.0f - event->y / renderer->height;
+
+				vec3_t pos = c_camera_real_pos(cam, self->mouse_depth, vec2(px, py));
+
+				vec3_t new_pos = vec3_add(self->drag_diff, pos);
+				c_spacial_set_pos(sc, new_pos);
 			}
-			float px = event->x / renderer->width;
-			float py = 1.0f - event->y / renderer->height;
-
-			vec3_t pos = c_camera_real_pos(cam, self->mouse_depth, vec2(px, py));
-
-			vec3_t new_pos = vec3_add(self->drag_diff, pos);
-			c_spacial_set_pos(sc, new_pos);
+			else
+			{
+				c_editmode_update_mouse(self, event->x, event->y);
+			}
 		}
 		else
 		{
@@ -154,10 +195,6 @@ int c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 	if(event->button == SDL_BUTTON_LEFT)
 	{
 		self->pressing = 1;
-
-		entity_t result = c_renderer_entity_at_pixel(c_renderer(self),
-				event->x, event->y, NULL);
-		self->selected = result;
 	}
 	return 1;
 }
@@ -195,13 +232,25 @@ int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 	if(self->dragging)
 	{
 		self->dragging = 0;
-		self->selected = entity_null;
+		/* self->selected = entity_null; */
 	}
 	else
 	{
 		if(self->pressing)
 		{
-			c_editmode_open_entity(self, self->selected);
+			entity_t result = c_renderer_entity_at_pixel(c_renderer(self),
+					event->x, event->y, NULL);
+
+			if(self->mode == EDIT_OBJECT)
+			{
+				self->selected = result & 0xFFFF;
+
+				c_editmode_open_entity(self, self->selected);
+			}
+			else
+			{
+				self->selected_poly = result >> 16;
+			}
 		}
 	}
 	self->pressing = 0;
@@ -213,6 +262,12 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 {
 	switch(*key)
 	{
+		case 'c':
+			if(self->control)
+			{
+				self->mode = !self->mode;
+			}
+			break;
 		case '`':
 			{
 				if(!self->control)

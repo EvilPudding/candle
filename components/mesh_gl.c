@@ -49,23 +49,23 @@ static int c_mesh_gl_new_loader(c_mesh_gl_t *self)
 }
 
 
-#ifdef MESH4
-static int glg_get_vert(glg_t *self, vec4_t p, vec3_t n, vec2_t t)
-#else
-static int glg_get_vert(glg_t *self, vec3_t p, vec3_t n, vec2_t t)
-#endif
-{
-#ifdef OPTIMIZE_DRAW_MESH
-	int i;
-	for(i = 0; i < self->vert_num; i++)
-	{
-		if(vec3_equals(self->pos[i], p) &&
-				vec3_equals(self->nor[i], n) &&
-				vec2_equals(self->tex[i], t)) return i;
-	}
-#endif
-	return -1;
-}
+/* #ifdef MESH4 */
+/* static int glg_get_vert(glg_t *self, vec4_t p, vec3_t n, vec2_t t) */
+/* #else */
+/* static int glg_get_vert(glg_t *self, vec3_t p, vec3_t n, vec2_t t) */
+/* #endif */
+/* { */
+/* #ifdef OPTIMIZE_DRAW_MESH */
+/* 	int i; */
+/* 	for(i = 0; i < self->vert_num; i++) */
+/* 	{ */
+/* 		if(vec3_equals(self->pos[i], p) && */
+/* 				vec3_equals(self->nor[i], n) && */
+/* 				vec2_equals(self->tex[i], t)) return i; */
+/* 	} */
+/* #endif */
+/* 	return -1; */
+/* } */
 
 
 static void glg_clear(glg_t *self)
@@ -92,7 +92,8 @@ void glg_vert_prealloc(glg_t *self, int size)
 	self->tex = realloc(self->tex, self->vert_alloc * sizeof(*self->tex));
 	self->tan = realloc(self->tan, self->vert_alloc * sizeof(*self->tan));
 	self->bit = realloc(self->bit, self->vert_alloc * sizeof(*self->bit));
-	self->col = realloc(self->col, self->vert_alloc * sizeof(*self->col));
+	/* self->col = realloc(self->col, self->vert_alloc * sizeof(*self->col)); */
+	self->id = realloc(self->id, self->vert_alloc * sizeof(*self->id));
 }
 
 void glg_vert_grow(glg_t *self)
@@ -123,15 +124,14 @@ void glg_ind_grow(glg_t *self)
 
 
 #ifdef MESH4
-static int glg_add_vert(glg_t *self, vec4_t p, vec3_t n, vec2_t t,
-		vec4_t c)
+static int glg_add_vert(glg_t *self, vec4_t p, vec3_t n, vec2_t t, int id)
 #else
-static int glg_add_vert(glg_t *self, vec3_t p, vec3_t n, vec2_t t,
-		vec4_t c)
+static int glg_add_vert(glg_t *self, vec3_t p, vec3_t n, vec2_t t, int id)
 #endif
 {
-	int i = glg_get_vert(self, p, n, t);
-	if(i >= 0) return i;
+	/* int i = glg_get_vert(self, p, n, t); */
+	/* if(i >= 0) return i; */
+	int i;
 
 	i = self->vert_num++;
 	glg_vert_grow(self);
@@ -139,7 +139,8 @@ static int glg_add_vert(glg_t *self, vec3_t p, vec3_t n, vec2_t t,
 	self->pos[i] = p;
 	self->nor[i] = n;
 	self->tex[i] = t;
-	self->col[i] = c;
+	/* self->col[i] = c; */
+	self->id[i] = int_to_vec2(id);
 
 	return i;
 }
@@ -164,6 +165,11 @@ void glg_add_triangle(glg_t *self, int v1, int v2, int v3)
 	self->ind[i + 0] = v1;
 	self->ind[i + 1] = v2;
 	self->ind[i + 2] = v3;
+
+	/* vec2_print(self->id[v1]); */
+	/* vec2_print(self->id[v2]); */
+	/* vec2_print(self->id[v3]); */
+	/* printf("\n"); */
 }
 
 void glg_edges_to_gl(glg_t *self)
@@ -182,25 +188,25 @@ void glg_edges_to_gl(glg_t *self)
 		if(!next_edge) continue;
 
 		int v1 = glg_add_vert(self, e_vert(curr_edge, mesh)->pos,
-				vec3(0.0f), vec2(0.0f), vec4(0.0f));
+				vec3(0.0f), vec2(0.0f), 0);
 		int v2 = glg_add_vert(self, e_vert(next_edge, mesh)->pos,
-				vec3(0.0f), vec2(0.0f), vec4(0.0f));
+				vec3(0.0f), vec2(0.0f), 0);
 
 		glg_add_line(self, v1, v2);
 
 	}
 }
 
-void glg_face_to_gl(glg_t *self, face_t *f)
+void glg_face_to_gl(glg_t *self, face_t *f, int id)
 {
 	mesh_t *mesh = c_model(&self->entity)->mesh;
 	int v[4], i;
 	for(i = 0; i < f->e_size; i++)
 	{
 		edge_t *hedge = f_edge(f, i, mesh);
-		vec4_t color = e_vert(hedge, mesh)->color;
+		/* vec4_t color = e_vert(hedge, mesh)->color; */
 		v[i] = glg_add_vert(self, e_vert(hedge, mesh)->pos, hedge->n,
-				hedge->t, color);
+				hedge->t, id);
 	}
 	if(f->e_size == 4)
 	{
@@ -416,7 +422,7 @@ int glg_update_ram(glg_t *self)
 			}
 #endif
 			if(selection != -1 && selection != face->selected) continue;
-			glg_face_to_gl(self, face);
+			glg_face_to_gl(self, face, i);
 		}
 		glg_get_tg_bt(self);
 	}
@@ -442,6 +448,7 @@ int c_mesh_gl_updated(c_mesh_gl_t *self)
 
 static int glg_update_buffers(glg_t *self)
 {
+	int i = 0;
 	glBindVertexArray(self->vao); glerr();
 
 	if(self->vert_num > self->gl_vert_num)
@@ -451,25 +458,34 @@ static int glg_update_buffers(glg_t *self)
 
 		/* VERTEX BUFFER */
 #ifdef MESH4
-		create_buffer(0, self->vbo[0], self->pos, 4, self->gl_vert_num);
+		create_buffer(i, self->vbo[i], self->pos, 4, self->gl_vert_num);
 #else
-		create_buffer(0, self->vbo[0], self->pos, 3, self->gl_vert_num);
+		create_buffer(i, self->vbo[i], self->pos, 3, self->gl_vert_num);
 #endif
+		i++;
 
 		/* NORMAL BUFFER */
-		create_buffer(1, self->vbo[1], self->nor, 3, self->gl_vert_num);
+		create_buffer(i, self->vbo[i], self->nor, 3, self->gl_vert_num);
+		i++;
 
 		/* TEXTURE COORDS BUFFER */
-		create_buffer(2, self->vbo[2], self->tex, 2, self->gl_vert_num);
+		create_buffer(i, self->vbo[i], self->tex, 2, self->gl_vert_num);
+		i++;
 
 		/* TANGENT BUFFER */
-		create_buffer(3, self->vbo[3], self->tan, 3, self->gl_vert_num);
+		create_buffer(i, self->vbo[i], self->tan, 3, self->gl_vert_num);
+		i++;
 
 		/* BITANGENT BUFFER */
-		create_buffer(4, self->vbo[4], self->bit, 3, self->gl_vert_num);
+		create_buffer(i, self->vbo[i], self->bit, 3, self->gl_vert_num);
+		i++;
 
 		/* COLOR BUFFER */
-		create_buffer(5, self->vbo[5], self->col, 4, self->gl_vert_num);
+		/* create_buffer(i, self->vbo[i], self->col, 4, self->gl_vert_num); */
+		/* i++; */
+
+		create_buffer(i, self->vbo[i], self->id, 2, self->gl_vert_num);
+		i++;
 	}
 
 	if(self->ind_num > self->gl_ind_num)
@@ -645,9 +661,9 @@ int c_mesh_gl_draw(c_mesh_gl_t *self, shader_t *shader, int transparent)
 	if(shader)
 	{
 		glUniform1f(shader->u_has_tex, (float)self->mesh->has_texcoords);
-		vec3_t id_color = int_to_vec3(c_entity(self));
+		vec2_t id_color = int_to_vec2(c_entity(self));
 
-		glUniform3f(shader->u_id, id_color.r, id_color.g, id_color.b);
+		glUniform2f(shader->u_id, id_color.x, id_color.y);
 		glerr();
 	}
 
@@ -661,29 +677,43 @@ int c_mesh_gl_draw(c_mesh_gl_t *self, shader_t *shader, int transparent)
 static void glg_update_vbos(glg_t *self)
 {
 	/* VERTEX BUFFER */
+	int i = 0;
 #ifdef MESH4
-	update_buffer(0, self->vbo[0], self->pos, 4, self->gl_vert_num);
+	update_buffer(i, self->vbo[i], self->pos, 4, self->gl_vert_num);
 #else
-	update_buffer(0, self->vbo[0], self->pos, 3, self->gl_vert_num);
+	update_buffer(i, self->vbo[i], self->pos, 3, self->gl_vert_num);
 #endif
+	i++;
 
 	/* NORMAL BUFFER */
-	update_buffer(1, self->vbo[1], self->nor, 3, self->gl_vert_num);
+	update_buffer(i, self->vbo[i], self->nor, 3, self->gl_vert_num);
+
+	i++;
 
 	/* TEXTURE COORDS BUFFER */
-	update_buffer(2, self->vbo[2], self->tex, 2, self->gl_vert_num);
+	update_buffer(i, self->vbo[i], self->tex, 2, self->gl_vert_num);
+
+	i++;
 
 	/* TANGENT BUFFER */
-	update_buffer(3, self->vbo[3], self->tan, 3, self->gl_vert_num);
+	update_buffer(i, self->vbo[i], self->tan, 3, self->gl_vert_num);
+	i++;
 
 	/* BITANGENT BUFFER */
-	update_buffer(4, self->vbo[4], self->bit, 3, self->gl_vert_num);
+	update_buffer(i, self->vbo[i], self->bit, 3, self->gl_vert_num);
+
+	i++;
 
 	/* COLOR BUFFER */
-	update_buffer(5, self->vbo[5], self->col, 4, self->gl_vert_num);
+	/* update_buffer(i, self->vbo[i], self->col, 4, self->gl_vert_num); */
+	/* i++; */
+
+	/* ID BUFFER */
+	update_buffer(i, self->vbo[i], self->id, 2, self->gl_vert_num);
+	i++;
 
 	/* INDEX BUFFER */
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self->vbo[6]);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self->vbo[i]);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
 			self->gl_ind_num * sizeof(*self->ind), self->ind);
 	glerr();
@@ -719,7 +749,8 @@ void glg_destroy(glg_t *self)
 	if(self->pos) free(self->pos);
 	if(self->tan) free(self->tan);
 	if(self->bit) free(self->bit);
-	if(self->col) free(self->col);
+	/* if(self->col) free(self->col); */
+	if(self->id) free(self->id);
 	if(self->ind) free(self->ind);
 
 }

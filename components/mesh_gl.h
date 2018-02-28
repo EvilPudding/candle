@@ -18,7 +18,7 @@ typedef struct
 #else
 	vec3_t *pos;
 #endif
-	vec4_t *col;
+	vec2_t *id;
 
 	int vert_num; int vert_alloc;
 	/* ----------- */

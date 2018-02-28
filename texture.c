@@ -53,10 +53,10 @@ struct pixel_request
 	float *depth;
 };
 
-int texture_get_pixel(texture_t *self, int buffer, int x, int y,
+uint texture_get_pixel(texture_t *self, int buffer, int x, int y,
 		float *depth)
 {
-	int data = 0;
+	uint data = 0;
 	y = self->height-y;
 	glFlush();
 	glFinish();
@@ -69,7 +69,7 @@ int texture_get_pixel(texture_t *self, int buffer, int x, int y,
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
 
-		glReadPixels(x, y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &data);
+		glReadPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &data);
 	}
 	if(depth)
 	{
@@ -85,6 +85,7 @@ int texture_get_pixel(texture_t *self, int buffer, int x, int y,
 	}
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+	glerr();
 	return data;
 }
 

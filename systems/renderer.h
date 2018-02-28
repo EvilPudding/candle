@@ -36,12 +36,14 @@ typedef enum
 	BIND_NONE,
 	BIND_PASS_OUTPUT,
 	BIND_NUMBER,
+	BIND_VEC2,
 	BIND_VEC3,
 	BIND_INTEGER,
 	BIND_GBUFFER,
 	BIND_CAMERA
 } bind_type_t;
 
+typedef vec2_t(*vec2_getter)(void *usrptr);
 typedef vec3_t(*vec3_getter)(void *usrptr);
 typedef float(*number_getter)(void *usrptr);
 typedef int(*integer_getter)(void *usrptr);
@@ -63,6 +65,10 @@ typedef struct
 			uint u;
 			float value;
 		} number;
+		struct {
+			uint u;
+			vec2_t value;
+		} vec2;
 		struct {
 			uint u;
 			vec3_t value;

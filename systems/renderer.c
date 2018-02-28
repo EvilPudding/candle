@@ -276,7 +276,7 @@ static int c_renderer_update_screen_texture(c_renderer_t *self)
 			texture_add_buffer(pass->output, "transparency", 1, 1, 0);
 			texture_add_buffer(pass->output, "cameraspace position", 1, 0, 0);
 			texture_add_buffer(pass->output, "worldspace position", 1, 0, 0);
-			texture_add_buffer(pass->output, "id", 1, 0, 0);
+			texture_add_buffer(pass->output, "id", 1, 1, 0);
 
 			texture_draw_id(pass->output, COLOR_TEX); /* DRAW DIFFUSE */
 
@@ -487,6 +487,14 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 			break;
 		case BIND_CAMERA: c_renderer_bind_camera(self, pass, bind); break;
 		case BIND_GBUFFER: c_renderer_bind_gbuffer(self, pass, bind); break;
+		case BIND_VEC2:
+			if(bind->getter)
+			{
+				bind->vec2.value = ((vec2_getter)bind->getter)(bind->usrptr);
+			}
+			glUniform2f(bind->vec2.u, bind->vec2.value.x, bind->vec2.value.y);
+			glerr();
+			break;
 		case BIND_VEC3:
 			if(bind->getter)
 			{
@@ -604,9 +612,10 @@ entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
 {
 	entity_t result;
 	if(!self->passes[0].output) return entity_null;
-	result = texture_get_pixel(self->passes[0].output, 7,
-			x * self->resolution, y * self->resolution, depth);
 
+	unsigned int res = texture_get_pixel(self->passes[0].output, 7,
+			x * self->resolution, y * self->resolution, depth);
+	result = res;
 	return result;
 }
 

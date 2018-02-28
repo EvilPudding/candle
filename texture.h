@@ -83,7 +83,7 @@ void texture_set_xyz(texture_t *self, int x, int y, int z,
 void texture_update_gl(texture_t *self);
 
 void texture_update_brightness(texture_t *self);
-int texture_get_pixel(texture_t *self, int buffer, int x, int y,
+uint texture_get_pixel(texture_t *self, int buffer, int x, int y,
 		float *depth);
 
 void texture_draw_id(texture_t *self, int tex);

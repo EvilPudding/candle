@@ -6,7 +6,7 @@ layout (location = 3) out vec3 NormalColor;
 layout (location = 4) out vec4 Transparency;
 layout (location = 5) out vec3 CPositionColor;
 layout (location = 6) out vec3 WPositionColor;
-layout (location = 7) out vec3 ID;
+layout (location = 7) out vec4 ID;
 
 #include "common.frag"
 
@@ -20,7 +20,7 @@ void main()
 
 	vec3 n = normalize(get_normal());
 
-	DiffuseColor = dif + vertex_color;
+	DiffuseColor = dif;
 	SpecularColor = resolveProperty(specular, texcoord) * 2;
 	/* SpecularColor.a *= 1.0 - clamp(abs(noi * n.y), 0.0f, 1.0f); */
 	/* DiffuseColor = vec4(vec3(SpecularColor.a), 1.0f); */
@@ -29,7 +29,8 @@ void main()
 	WPositionColor = worldspace_position;
 	CPositionColor = cameraspace_vertex_pos;
 
-	ID = selection_id;
+	/* ID = vec4(object_id.x, object_id.y, poly_id.x, poly_id.y); */
+	ID = vec4(object_id.x, object_id.y, poly_id.x, poly_id.y);
 
 	/* float up = max(n.y, 0.0); */
 	/* DiffuseColor = vec4(vec3(up), 1.0); */

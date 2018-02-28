@@ -28,6 +28,8 @@ typedef struct
 	vec2_t spawn_pos;
 	entity_t selected;
 	entity_t over;
+	int selected_poly;
+	int over_poly;
 
 	entity_t open_entities[16];
 	int open_entities_count;
@@ -35,7 +37,10 @@ typedef struct
 	texture_t *open_textures[16];
 	int open_textures_count;
 
-	geom_t mode;
+	enum {
+		EDIT_OBJECT,
+		EDIT_MESH,
+	} mode;
 
 } c_editmode_t;
 
@@ -49,6 +54,5 @@ void c_editmode_activate(c_editmode_t *self);
 void c_editmode_register(void);
 void c_editmode_update_mouse(c_editmode_t *self, float x, float y);
 void c_editmode_open_texture(c_editmode_t *self, texture_t *tex);
-vec3_t c_editmode_bind_selected(c_editmode_t *self);
 
 #endif /* !EDITMODE_H */

@@ -8,7 +8,8 @@ layout (location = 1) in vec3 N;
 layout (location = 2) in vec2 UV;
 layout (location = 3) in vec3 TG;
 layout (location = 4) in vec3 BT;
-layout (location = 5) in vec4 COL;
+/* layout (location = 5) in vec4 COL; */
+layout (location = 5) in vec2 ID;
 
 /* TODO make this included, not inline */
 struct camera_t
@@ -27,7 +28,7 @@ struct camera_t
 uniform mat4 MVP;
 uniform mat4 M;
 uniform camera_t camera;
-uniform vec3 id;
+uniform vec2 id;
 
 out mat4 inv_projection;
 
@@ -41,14 +42,15 @@ out vec3 cam_normal;
 out vec3 cam_tangent;
 out vec3 cam_bitangent;
 
-out vec3 selection_id;
+out vec2 poly_id;
+out vec2 object_id;
 
 out vec3 vertex_normal;
 out vec3 vertex_tangent;
 out vec3 vertex_bitangent;
 
 out vec2 texcoord;
-out vec4 vertex_color;
+/* out vec4 vertex_color; */
 
 out mat3 TM;
 /* out vec3 lightDir; */
@@ -79,13 +81,14 @@ void main()
 
 	vec3 rotated_N = (M * vec4(N, 0.0)).xyz;
 
-	vertex_color = COL;
+	/* vertex_color = COL; */
 	texcoord = vec2(-UV.y, UV.x);
 	vertex_tangent = TG;
 	vertex_bitangent = BT;
 	vertex_normal = rotated_N;
 
-	selection_id = id;
+	object_id = id;
+	poly_id = ID;
 
 	TM = mat3(TG, BT, rotated_N);
 
