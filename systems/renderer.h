@@ -82,6 +82,7 @@ typedef struct
 			entity_t entity;
 		} camera;
 		struct {
+			uint u_depth;
 			uint u_diffuse;
 			uint u_specular;
 			uint u_reflection;

@@ -1,2 +1,3 @@
-#include "quad.vert"
+//include "quad.vert"
+#include "noanimation.vert"
 // vim: set ft=c:

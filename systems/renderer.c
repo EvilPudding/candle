@@ -34,6 +34,7 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass);
 
 static int c_renderer_resize(c_renderer_t *self, window_resize_data *event);
 
+static int c_renderer_update_screen_texture(c_renderer_t *self);
 
 int c_renderer_scene_changed(c_renderer_t *self)
 {
@@ -78,6 +79,8 @@ static int c_renderer_bind_passes(c_renderer_t *self)
 
 					break;
 				case BIND_GBUFFER:
+					bind->gbuffer.u_depth =
+						shader_uniform(pass->shader, bind->name, "depth");
 					bind->gbuffer.u_diffuse =
 						shader_uniform(pass->shader, bind->name, "diffuse");
 					bind->gbuffer.u_specular =
@@ -131,7 +134,7 @@ static int c_renderer_bind_passes(c_renderer_t *self)
 				if(pass->output_from == i)
 				{
 					printf("%s reusing from %s\n", pass->feed_name, pass_done->feed_name);
-					pass->output_from = pass_done->output_from;
+					/* pass->output_from = pass_done->output_from; */
 				}
 				continue;
 			}
@@ -150,7 +153,7 @@ static int c_renderer_bind_passes(c_renderer_t *self)
 	self->passes_bound = 1;
 	c_renderer_resize(self, &(window_resize_data){.width = c_window(self)->width,
 			.height = c_window(self)->height });
-	printf("PASSES BOUND '%d' '%d'\n\n", c_window(self)->width, c_window(self)->height);
+	c_renderer_update_screen_texture(self);
 	return 1;
 }
 
@@ -195,7 +198,8 @@ static int c_renderer_created(c_renderer_t *self)
 	);
 
 	c_renderer_add_pass(self, "phong",
-			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR | PASS_FOR_EACH_LIGHT,
+			PASS_FOR_EACH_LIGHT | PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR |
+			(self->roughness * PASS_MIPMAPED),
 			render_quad,
 			1.0f, 1.0f, "phong",
 		(bind_t[]){
@@ -205,27 +209,16 @@ static int c_renderer_created(c_renderer_t *self)
 		}
 	);
 
-	c_renderer_add_pass(self, "transp",
-			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR | (self->roughness * PASS_MIPMAPED),
-			render_transparent,
-			1.0f, 1.0f, "transparency",
-		(bind_t[]){
-			{BIND_GBUFFER, "gbuffer", .gbuffer.name = "gbuffer"},
-			{BIND_CAMERA, "camera", .getter = (getter_cb)c_renderer_get_camera, .usrptr = self},
-			{BIND_NONE}
-		}
-	);
-
-	c_renderer_add_pass(self, "transp",
-			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR | (self->roughness * PASS_MIPMAPED),
-			render_transparent,
-			1.0f, 1.0f, "transparency",
-		(bind_t[]){
-			{BIND_GBUFFER, "gbuffer", .gbuffer.name = "gbuffer"},
-			{BIND_CAMERA, "camera", .getter = (getter_cb)c_renderer_get_camera, .usrptr = self},
-			{BIND_NONE}
-		}
-	);
+	/* c_renderer_add_pass(self, "transp", */
+	/* 		PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR, */
+	/* 		render_transparent, */
+	/* 		1.0f, 1.0f, "transparency", */
+	/* 	(bind_t[]){ */
+	/* 		{BIND_GBUFFER, "gbuffer", .gbuffer.name = "gbuffer"}, */
+	/* 		{BIND_CAMERA, "camera", .getter = (getter_cb)c_renderer_get_camera, .usrptr = self}, */
+	/* 		{BIND_NONE} */
+	/* 	} */
+	/* ); */
 
 	c_renderer_add_pass(self, "refl",
 			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR | self->auto_exposure * PASS_RECORD_BRIGHTNESS,
@@ -259,10 +252,8 @@ static int c_renderer_update_screen_texture(c_renderer_t *self)
 		if(pass->output_from != i)
 		{
 			pass->output = self->passes[pass->output_from].output;
-			printf("skipping\n");
 			continue;
 		}
-		printf("creating\n");
 		int W = w * pass->x;
 		int H = h * pass->y;
 		if(pass->output)
@@ -311,7 +302,6 @@ static int c_renderer_resize(c_renderer_t *self, window_resize_data *event)
     self->width = event->width;
     self->height = event->height;
 
-	if(!self->passes_bound) return 1;
 	c_renderer_update_screen_texture(self);
 
 	return 1;
@@ -380,6 +370,10 @@ static void c_renderer_bind_gbuffer(c_renderer_t *self, pass_t *pass,
 
 	glUniform1f(pass->shader->u_screen_scale_x, 1.0f); glerr();
 	glUniform1f(pass->shader->u_screen_scale_y, 1.0f); glerr();
+
+	glUniform1i(bind->gbuffer.u_depth, 0); glerr();
+	glActiveTexture(GL_TEXTURE0 + 0); glerr();
+	texture_bind(gbuffer, 0);
 
 	glUniform1i(bind->gbuffer.u_diffuse, 1); glerr();
 	glActiveTexture(GL_TEXTURE0 + 1); glerr();
