@@ -3,7 +3,6 @@
 #include <candle.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 
 void _check_gl_error(const char *file, int line)
@@ -14,7 +13,7 @@ void _check_gl_error(const char *file, int line)
 	GLenum err = glGetError();
 	while(err!=GL_NO_ERROR)
 	{
-		char *error;
+		char *error = NULL;
 		switch(err)
 		{
 			case GL_INVALID_OPERATION:      error="INVALID_OPERATION";      break;
