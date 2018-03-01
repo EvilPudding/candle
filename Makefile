@@ -7,8 +7,7 @@ SHAD = $(patsubst %.frag, $(DIR)/%.frag.o, $(wildcard shaders/*.frag)) \
 	   $(patsubst %.vert, $(DIR)/%.vert.o, $(wildcard shaders/*.vert)) \
 
 SRCS = $(wildcard *.c) $(wildcard components/*.c) $(wildcard systems/*.c) \
-	   $(wildcard formats/*.c) $(wildcard filters/*.c) \
-	   $(wildcard interactions/*.c)
+	   $(wildcard formats/*.c) $(wildcard filters/*.c)
 
 OBJS_REL = $(patsubst %.c, $(DIR)/%.o, $(SRCS))
 OBJS_DEB = $(patsubst %.c, $(DIR)/%.debug.o, $(SRCS))
@@ -62,7 +61,6 @@ $(DIR)/%.debug.o: %.c
 init:
 	mkdir -p $(DIR)
 	mkdir -p $(DIR)/components
-	mkdir -p $(DIR)/interactions
 	mkdir -p $(DIR)/systems
 	mkdir -p $(DIR)/formats
 	mkdir -p $(DIR)/filters

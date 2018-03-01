@@ -8,6 +8,27 @@
 //                                .OBJ LOADER                                 //
 ////////////////////////////////////////////////////////////////////////////////
 
+#ifdef WIN32
+static inline char* strsep(char** stringp, const char* delim)
+{
+  char* start = *stringp;
+  char* p;
+
+  p = (start != NULL) ? strpbrk(start, delim) : NULL;
+
+  if (p == NULL)
+  {
+    *stringp = NULL;
+  }
+  else
+  {
+    *p = '\0';
+    *stringp = p + 1;
+  }
+
+  return start;
+}
+
 struct vert {
 	int v, t, n;
 };
@@ -18,6 +39,7 @@ struct face {
 		int l[12];
 	};
 };
+#endif
 
 static void ignoreLine(FILE *fp)
 {

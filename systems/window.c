@@ -1,6 +1,9 @@
 #include "window.h"
 #include "../shader.h"
 #include "../candle.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
 DEC_CT(ct_window);
 DEC_SIG(window_resize);
@@ -13,8 +16,10 @@ extern SDL_Window *mainWindow;
 
 static void init_context_b(c_window_t *self)
 {
-	mainWindow = self->window = SDL_CreateWindow("clidian", 0, 0,
-			self->width, self->height, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN
+	mainWindow = self->window = SDL_CreateWindow("clidian",
+			SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+			self->width, self->height,
+			SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
 			| SDL_WINDOW_ALLOW_HIGHDPI);
 
 	context = self->context = SDL_GL_CreateContext(self->window);
