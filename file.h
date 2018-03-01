@@ -6,6 +6,7 @@
 #endif
 #include <dirent.h>
 
+#include <stdlib.h>
 
 void path_join(char *path, unsigned long size, const char *other);
 const char *path_relative(const char *path, const char *dir);

@@ -2,6 +2,8 @@
 #include "../loader.h"
 #include "model.h"
 #include <candle.h>
+#include <string.h>
+#include <stdlib.h>
 
 static int c_mesh_gl_new_loader(c_mesh_gl_t *self);
 static int glg_update_buffers(glg_t *self);

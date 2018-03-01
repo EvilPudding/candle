@@ -4,6 +4,7 @@
 #include <candle.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 static vec3_t mesh_support(mesh_t *self, const vec3_t dir);
 static int mesh_get_pair_edge(mesh_t *self, int e);

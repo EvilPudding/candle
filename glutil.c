@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <candle.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 
 
 void _check_gl_error(const char *file, int line)

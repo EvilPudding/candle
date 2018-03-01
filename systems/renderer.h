@@ -8,7 +8,6 @@
 #include "../shader.h"
 #include <ecm.h>
 
-
 typedef struct pass_t pass_t;
 
 typedef struct uniform_t uniform_t;

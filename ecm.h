@@ -11,6 +11,8 @@
 #define _GNU_SOURCE
 #include <search.h>
 
+typedef unsigned long ulong;
+
 typedef struct ecm_t ecm_t;
 
 typedef struct c_t c_t;

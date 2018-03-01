@@ -1,6 +1,9 @@
 #include "candle.h"
 #include "file.h"
 
+#include <string.h>
+#include <stdlib.h>
+
 #ifndef WIN32
 #include <unistd.h>
 #endif
@@ -133,8 +136,8 @@ static void candle_handle_events(candle_t *self)
 			/* has_events = 1; */
 			if(event.type == SDL_QUIT)
 			{
-				close(candle->events[0]);
-				close(candle->events[1]);
+				//close(candle->events[0]);
+				//close(candle->events[1]);
 				self->exit = 1;
 				return;
 			}
@@ -408,8 +411,8 @@ candle_t *candle_new(int comps_size, ...)
 
 	self->systems = entity_new(c_physics_new(), c_sauces_new());
 
-	int res = pipe(self->events);
-	if(res == -1) exit(1);
+	//int res = pipe(self->events);
+	//if(res == -1) exit(1);
 
 	/* self->candle_thr = SDL_CreateThread((int(*)(void*))candle_loop, "candle_loop", candle); */
 	self->sem = SDL_CreateSemaphore(0);

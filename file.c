@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ecm.h>
 
 void path_join(char *path, ulong size, const char *other)
 {
