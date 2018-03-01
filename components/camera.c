@@ -6,6 +6,9 @@
 #include <nk.h>
 #include <candle.h>
 #include <systems/renderer.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
 
 DEC_CT(ct_camera);

@@ -107,13 +107,7 @@ int handle_event(candle_t *self, SDL_Event event)
 			switch(event.window.event)
 			{
 				case SDL_WINDOWEVENT_RESIZED:
-
-					printf("window resize: %dx%d\n", event.window.data1,
-							event.window.data2);
-					entity_signal(entity_null, window_resize,
-							&(window_resize_data){
-							.width = event.window.data1,
-							.height = event.window.data2});
+				c_window_handle_resize(c_window(&self->systems), event);
 					break; 
 			}
 			break;

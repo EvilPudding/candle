@@ -653,6 +653,10 @@ int c_renderer_component_menu(c_renderer_t *self, void *ctx)
 {
 	nk_layout_row_dynamic(ctx, 0, 1);
 	int i;
+	if (nk_button_label(ctx, "Fullscreen"))
+	{
+		c_window_toggle_fullscreen(c_window(self));
+	}
 
 	for(i = 0; i < self->passes_size; i++)
 	{
@@ -730,6 +734,7 @@ void c_renderer_add_pass(c_renderer_t *self, const char *feed_name, int flags,
 		ulong draw_signal, float wid, float hei, const char *shader_name,
 		bind_t binds[])
 {
+	
 	int i = self->passes_size++;
 	pass_t *pass = &self->passes[i];
 	pass->shader = shader_new(shader_name);

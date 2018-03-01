@@ -9,7 +9,7 @@ DEC_CT(ct_window);
 DEC_SIG(window_resize);
 
 int window_width = 1360;
-int window_height = 740;
+int window_height = 765;
 
 extern SDL_GLContext *context;
 extern SDL_Window *mainWindow;
@@ -76,6 +76,47 @@ void c_window_init(c_window_t *self)
 	self->quad = entity_new(c_name_new("renderer_quad"),
 			c_model_new(mesh_quad(), NULL, 0));
 	c_model(&self->quad)->visible = 0;
+}
+
+int c_window_toggle_fullscreen_gl(c_window_t *self)
+{
+
+	self->fullscreen = !self->fullscreen;
+
+	SDL_DisplayMode dm;
+	if(SDL_GetDesktopDisplayMode(0, &dm) != 0)
+	{
+		SDL_Log("SDL_GetDesktopDisplayMode failed: %s", SDL_GetError());
+		return 1;
+	}
+	self->width = dm.w;
+	self->height = dm.h;
+
+	printf("window resize: %dx%d\n", self->width, self->height);
+	entity_signal(entity_null, window_resize,
+		&(window_resize_data){.width = self->width, .height = self->height});
+
+	SDL_SetWindowSize(self->window, self->width, self->height);
+
+	SDL_SetWindowFullscreen(self->window,
+		self->fullscreen?SDL_WINDOW_FULLSCREEN_DESKTOP:0);
+
+	return 1;
+}
+void c_window_toggle_fullscreen(c_window_t *self)
+{
+	loader_push(candle->loader, (loader_cb)c_window_toggle_fullscreen_gl,
+		NULL, (c_t*)self);
+}
+
+void c_window_handle_resize(c_window_t *self, const SDL_Event event)
+{
+	self->width = event.window.data1;
+	self->height = event.window.data2;
+	printf("window resize: %dx%d\n", self->width, self->height);
+
+	entity_signal(entity_null, window_resize,
+		&(window_resize_data){.width = self->width, .height = self->height});
 }
 
 int c_window_created(c_window_t *self)
