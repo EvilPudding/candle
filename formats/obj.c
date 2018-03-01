@@ -28,6 +28,7 @@ static inline char* strsep(char** stringp, const char* delim)
 
   return start;
 }
+#endif
 
 struct vert {
 	int v, t, n;
@@ -39,7 +40,6 @@ struct face {
 		int l[12];
 	};
 };
-#endif
 
 static void ignoreLine(FILE *fp)
 {
