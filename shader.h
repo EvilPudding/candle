@@ -38,6 +38,7 @@ typedef struct shader_t
 	GLuint u_camera_pos;
 	GLuint u_exposure;
 	GLuint u_light_intensity;
+	GLuint u_cameraspace_normals;
 
 	GLuint u_has_tex;
 	GLuint u_id;
@@ -48,7 +49,6 @@ typedef struct shader_t
 
 	u_prop_t u_diffuse;
 	u_prop_t u_specular;
-	u_prop_t u_reflection;
 	u_prop_t u_normal;
 	u_prop_t u_transparency;
 

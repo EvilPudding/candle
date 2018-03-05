@@ -14,8 +14,6 @@ mat_t *mat_new(const char *name)
 	mat_t *self = calloc(1, sizeof *self);
 	mat_set_normal(self, (prop_t){.color=vec4(0.5, 0.5, 1.0, 0.0)});
 
-	mat_set_reflection(self, (prop_t){.color=vec4(1.0, 1.0, 1.0, 0.8)});
-
 	strncpy(self->name, name, sizeof(self->name));
 
 	return self;
@@ -46,7 +44,6 @@ void mat_parse(mat_t *self, FILE *fd)
 
 		if(!strcmp(prop, "diffuse")) prp = &self->diffuse;
 		else if(!strcmp(prop, "normal")) prp = &self->normal;
-		else if(!strcmp(prop, "reflection")) prp = &self->reflection;
 		else if(!strcmp(prop, "specular")) prp = &self->specular;
 		else if(!strcmp(prop, "transparency")) prp = &self->transparency;
 		else return;
@@ -159,13 +156,6 @@ mat_t *mat_from_dir(const char *name, const char *dirname)
 	/* candle_texture_reg(candle, buffer, diffuse); */
 
 
-	/* texture_t *reflection = texture_from_file("reflection"); */
-	/* self->reflection.texture_blend = (self->reflection.texture = reflection) != NULL; */
-	/* self->reflection.texture_scale = 1.0; */ 
-
-	/* sprintf(buffer, "%s_reflection", name); */
-	/* candle_texture_reg(candle, buffer, reflection); */
-
 
 	/* texture_t *specular = texture_from_file("specular"); */
 	/* self->specular.texture_blend = (self->specular.texture = specular) != NULL; */
@@ -226,11 +216,6 @@ void mat_set_transparency(mat_t *self, prop_t transparency)
 	self->transparency = transparency;
 }
 
-void mat_set_reflection(mat_t *self, prop_t reflection)
-{
-	self->reflection = reflection;
-}
-
 void mat_set_normal(mat_t *self, prop_t normal)
 {
 	self->normal = normal;
@@ -250,9 +235,8 @@ void mat_bind(mat_t *self, shader_t *shader)
 {
 	mat_bind_prop(&shader->u_diffuse, &self->diffuse, 1);
 	mat_bind_prop(&shader->u_specular, &self->specular, 2);
-	mat_bind_prop(&shader->u_reflection, &self->reflection, 3);
-	mat_bind_prop(&shader->u_normal, &self->normal, 4);
-	mat_bind_prop(&shader->u_transparency, &self->transparency, 5);
+	mat_bind_prop(&shader->u_normal, &self->normal, 3);
+	mat_bind_prop(&shader->u_transparency, &self->transparency, 4);
 	/* mat_bind_prop(&shader->u_position, &self->position, 5); */
 	/* mat_bind_prop(&shader->u_position, &self->position, 6); */
 

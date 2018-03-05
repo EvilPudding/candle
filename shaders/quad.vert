@@ -37,12 +37,12 @@ void main()
 {
 	/* texcoord = vec2(UV.x * (screen_width / texture_width), */
 			/* UV.y * (screen_height / texture_height)); */
-	texcoord = vec2(
-			UV.x * screen_scale_x,
-			UV.y * screen_scale_y);
 	/* texcoord = vec2(UV.x, UV.y); */
 	/* gl_Position = vec4(P * 0.25, 1.0); */
 	gl_Position = vec4(P.xyz, 1.0);
+	texcoord = vec2(
+			UV.x * screen_scale_x,
+			UV.y * screen_scale_y);
 }  
 
 // vim: set ft=c:

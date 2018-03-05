@@ -4,21 +4,24 @@
 
 layout (location = 0) out vec4 FragColor;
 uniform pass_t phong;
-/* uniform pass_t transp; */
+uniform pass_t transp;
 
 void main()
 {
 	vec4 color = pass_sample(phong, texcoord);
-	/* vec4 trans = pass_sample(transp, texcoord); */
+	vec4 trans = pass_sample(transp, texcoord);
+	if(trans.a > 0)
+		color = trans;
 	/* color = mix(color, trans, trans.a); */
 
 	/* vec4 color = vec4(0.0f); */
-	vec4 refl = textureLod(gbuffer.reflection, texcoord, 0);
+	vec4 refl = textureLod(gbuffer.specular, texcoord, 0);
 	vec4 ssred = ssr(phong.texture);
 
 	/* vec3 final = mix(color.rgb, ssred.rgb, ssred.a); */
-	vec3 final = (color.rgb) + ssred.rgb * ssred.a * refl.rgb * refl.a;
+	vec3 final = (color.rgb) + ssred.rgb * ssred.a * refl.rgb;
 
+	/* FragColor = vec4(trans.xyz, 1.0f); return; */
 	/* FragColor = vec4(ssred.rgb, 1.0f); return; */
 	/* FragColor = vec4(color.rgb, 1.0f); return; */
 	/* FragColor = vec4(textureLod(gbuffer.transparency, texcoord, 0).rgb, 1.0f); return; */

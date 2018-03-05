@@ -24,6 +24,7 @@ DEC_SIG(offscreen_render);
 DEC_SIG(render_visible);
 DEC_SIG(render_transparent);
 DEC_SIG(render_quad);
+DEC_SIG(render_decals);
 /* DEC_SIG(world_changed); */
 
 static int c_renderer_gbuffer(c_renderer_t *self, const char *name);
@@ -85,8 +86,6 @@ static int c_renderer_bind_passes(c_renderer_t *self)
 						shader_uniform(pass->shader, bind->name, "diffuse");
 					bind->gbuffer.u_specular =
 						shader_uniform(pass->shader, bind->name, "specular");
-					bind->gbuffer.u_reflection =
-						shader_uniform(pass->shader, bind->name, "reflection");
 					bind->gbuffer.u_normal =
 						shader_uniform(pass->shader, bind->name, "normal");
 					bind->gbuffer.u_transparency =
@@ -96,8 +95,13 @@ static int c_renderer_bind_passes(c_renderer_t *self)
 					bind->gbuffer.u_wposition =
 						shader_uniform(pass->shader, bind->name, "wposition");
 					bind->gbuffer.u_id =
-						shader_uniform(pass->shader, bind->name, "id"); glerr();
-					bind->gbuffer.id = c_renderer_gbuffer(self, bind->gbuffer.name);
+						shader_uniform(pass->shader, bind->name, "id");
+					bind->gbuffer.u_cnormal =
+						shader_uniform(pass->shader, bind->name, "cnormal");
+					glerr();
+
+					bind->gbuffer.id = c_renderer_gbuffer(self,
+							bind->gbuffer.name);
 					break;
 				default:
 					bind->number.u = shader_uniform(pass->shader, bind->name, NULL);
@@ -186,6 +190,18 @@ static int c_renderer_created(c_renderer_t *self)
 		}
 	);
 
+	/* DECAL PASS */
+	c_renderer_add_pass(self, "gbuffer",
+			0, render_decals,
+			1.0f, 1.0f, "gbuffer",
+		(bind_t[]){
+			{BIND_GBUFFER, "gbuffer", .gbuffer.name = "gbuffer"},
+			{BIND_CAMERA, "camera", .getter = (getter_cb)c_renderer_get_camera, .usrptr = self},
+			{BIND_NONE}
+		}
+	);
+
+
 	c_renderer_add_pass(self, "ssao",
 			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR,
 			render_quad,
@@ -209,16 +225,28 @@ static int c_renderer_created(c_renderer_t *self)
 		}
 	);
 
-	/* c_renderer_add_pass(self, "transp", */
-	/* 		PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR, */
-	/* 		render_transparent, */
-	/* 		1.0f, 1.0f, "transparency", */
-	/* 	(bind_t[]){ */
-	/* 		{BIND_GBUFFER, "gbuffer", .gbuffer.name = "gbuffer"}, */
-	/* 		{BIND_CAMERA, "camera", .getter = (getter_cb)c_renderer_get_camera, .usrptr = self}, */
-	/* 		{BIND_NONE} */
-	/* 	} */
-	/* ); */
+	c_renderer_add_pass(self, "gbuffer",
+			PASS_GBUFFER,
+			render_transparent,
+			1.0f, 1.0f, "gbuffer",
+		(bind_t[]){
+			{BIND_CAMERA, "camera", .getter = (getter_cb)c_renderer_get_camera,
+				.usrptr = self},
+			{BIND_NONE}
+		}
+	);
+
+	c_renderer_add_pass(self, "transp",
+			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR,
+			render_quad,
+			1.0f, 1.0f, "transparency",
+		(bind_t[]){
+			{BIND_GBUFFER, "gbuffer", .gbuffer.name = "gbuffer"},
+			{BIND_CAMERA, "camera", .getter = (getter_cb)c_renderer_get_camera,
+				.usrptr = self},
+				{BIND_NONE}
+		}
+	);
 
 	c_renderer_add_pass(self, "refl",
 			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR | self->auto_exposure * PASS_RECORD_BRIGHTNESS,
@@ -271,12 +299,12 @@ static int c_renderer_update_screen_texture(c_renderer_t *self)
 		{
 			/* texture_add_buffer(pass->output, "diffuse", 1, 1, 0); */
 			texture_add_buffer(pass->output, "specular", 1, 1, 0);
-			texture_add_buffer(pass->output, "reflection", 1, 1, 0);
 			texture_add_buffer(pass->output, "normal", 1, 0, 0);
 			texture_add_buffer(pass->output, "transparency", 1, 1, 0);
 			texture_add_buffer(pass->output, "cameraspace position", 1, 0, 0);
 			texture_add_buffer(pass->output, "worldspace position", 1, 0, 0);
 			texture_add_buffer(pass->output, "id", 1, 1, 0);
+			texture_add_buffer(pass->output, "cnormal", 1, 0, 0);
 
 			texture_draw_id(pass->output, COLOR_TEX); /* DRAW DIFFUSE */
 
@@ -383,27 +411,27 @@ static void c_renderer_bind_gbuffer(c_renderer_t *self, pass_t *pass,
 	glActiveTexture(GL_TEXTURE0 + 2); glerr();
 	texture_bind(gbuffer, 2);
 
-	glUniform1i(bind->gbuffer.u_reflection, 3); glerr();
+	glUniform1i(bind->gbuffer.u_normal, 3); glerr();
 	glActiveTexture(GL_TEXTURE0 + 3); glerr();
 	texture_bind(gbuffer, 3);
 
-	glUniform1i(bind->gbuffer.u_normal, 4); glerr();
+	glUniform1i(bind->gbuffer.u_transparency, 4); glerr();
 	glActiveTexture(GL_TEXTURE0 + 4); glerr();
 	texture_bind(gbuffer, 4);
 
-	glUniform1i(bind->gbuffer.u_transparency, 5); glerr();
+	glUniform1i(bind->gbuffer.u_cposition, 5); glerr();
 	glActiveTexture(GL_TEXTURE0 + 5); glerr();
 	texture_bind(gbuffer, 5);
 
-	glUniform1i(bind->gbuffer.u_cposition, 6); glerr();
+	glUniform1i(bind->gbuffer.u_wposition, 6); glerr();
 	glActiveTexture(GL_TEXTURE0 + 6); glerr();
 	texture_bind(gbuffer, 6);
 
-	glUniform1i(bind->gbuffer.u_wposition, 7); glerr();
+	glUniform1i(bind->gbuffer.u_id, 7); glerr();
 	glActiveTexture(GL_TEXTURE0 + 7); glerr();
 	texture_bind(gbuffer, 7);
 
-	glUniform1i(bind->gbuffer.u_id, 8); glerr();
+	glUniform1i(bind->gbuffer.u_cnormal, 8); glerr();
 	glActiveTexture(GL_TEXTURE0 + 8); glerr();
 	texture_bind(gbuffer, 8);
 	glerr();
@@ -448,6 +476,8 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 	}
 
 	shader_bind(pass->shader);
+	
+	glUniform1f(pass->shader->u_cameraspace_normals, pass->cameraspace_normals);
 
 	ct_t *ambients = ecm_get(ct_ambient);
 	c_ambient_t *ambient = (c_ambient_t*)ct_get_at(ambients, 0, 0);
@@ -613,7 +643,7 @@ entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
 	entity_t result;
 	if(!self->passes[0].output) return entity_null;
 
-	unsigned int res = texture_get_pixel(self->passes[0].output, 7,
+	unsigned int res = texture_get_pixel(self->passes[0].output, 6,
 			x * self->resolution, y * self->resolution, depth);
 	result = res;
 	return result;
@@ -691,6 +721,7 @@ void c_renderer_register()
 	signal_init(&render_visible, sizeof(shader_t));
 	signal_init(&render_transparent, sizeof(shader_t));
 	signal_init(&render_quad, sizeof(shader_t));
+	signal_init(&render_decals, sizeof(shader_t));
 }
 
 
@@ -734,12 +765,14 @@ void c_renderer_add_pass(c_renderer_t *self, const char *feed_name, int flags,
 		ulong draw_signal, float wid, float hei, const char *shader_name,
 		bind_t binds[])
 {
+	int prev_with_same_name = c_renderer_gbuffer(self, feed_name);
 	
 	int i = self->passes_size++;
 	pass_t *pass = &self->passes[i];
 	pass->shader = shader_new(shader_name);
 	pass->cached = 0;
 
+	pass->cameraspace_normals = flags & PASS_CS_NORMALS;
 	pass->clear = 0;
 	if(flags & PASS_CLEAR_COLOR)
 	{
@@ -750,7 +783,8 @@ void c_renderer_add_pass(c_renderer_t *self, const char *feed_name, int flags,
 		pass->clear |= GL_DEPTH_BUFFER_BIT;
 	}
 
-	pass->output_from = i;
+	pass->output_from = prev_with_same_name > -1 ? prev_with_same_name : i;
+
 	pass->draw_signal = draw_signal;
 	pass->gbuffer = flags & PASS_GBUFFER;
 	pass->for_each_light = flags & PASS_FOR_EACH_LIGHT;

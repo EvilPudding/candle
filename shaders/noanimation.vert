@@ -29,6 +29,7 @@ uniform mat4 MVP;
 uniform mat4 M;
 uniform camera_t camera;
 uniform vec2 id;
+uniform float cameraspace_normals;
 
 out mat4 inv_projection;
 
@@ -39,6 +40,7 @@ out vec3 cameraspace_vertex_pos;
 out vec3 cameraspace_light_dir;
 
 out vec3 cam_normal;
+out vec3 cam_cnormal;
 out vec3 cam_tangent;
 out vec3 cam_bitangent;
 
@@ -46,6 +48,7 @@ out vec2 poly_id;
 out vec2 object_id;
 
 out vec3 vertex_normal;
+out vec3 vertex_cnormal;
 out vec3 vertex_tangent;
 out vec3 vertex_bitangent;
 
@@ -53,6 +56,7 @@ out vec2 texcoord;
 /* out vec4 vertex_color; */
 
 out mat3 TM;
+out mat3 C_TM;
 /* out vec3 lightDir; */
 
 uniform float ratio;
@@ -74,26 +78,31 @@ void main()
 	vec4 mpos = M * pos;
 	worldspace_position = mpos.xyz;
 
-	cameraspace_vertex_pos = ( camera.view * mpos).xyz;
+	cameraspace_vertex_pos = (camera.view * mpos).xyz;
 
 	/* vec3 cameraspace_light_pos = ( V * vec4(light_pos, 1.0)).xyz; */
 	/* cameraspace_light_dir = cameraspace_light_pos - cameraspace_vertex_pos; */
 
-	vec3 rotated_N = (M * vec4(N, 0.0)).xyz;
+	vec4 rotated_N = M * vec4(N, 0.0f);
+	vec4 rotated_CN = camera.view * rotated_N;
 
 	/* vertex_color = COL; */
 	texcoord = vec2(-UV.y, UV.x);
 	vertex_tangent = TG;
 	vertex_bitangent = BT;
-	vertex_normal = rotated_N;
+	vertex_normal = rotated_N.xyz;
+	vertex_cnormal = rotated_CN.xyz;
 
 	object_id = id;
 	poly_id = ID;
 
-	TM = mat3(TG, BT, rotated_N);
+	TM = mat3(TG, BT, rotated_N.xyz);
+
+	C_TM = mat3(TG, BT, rotated_CN.xyz);
 
 	{
-		cam_normal = rotated_N;
+		cam_normal = rotated_N.xyz;
+		cam_cnormal = rotated_CN.xyz;
 		/* cam_tangent = (M * vec4(TG, 0.0)).xyz; */
 		/* cam_bitangent = (M * vec4(BT, 0.0)).xyz; */
 	}

@@ -22,6 +22,7 @@ void shaders_common_frag_reg(void);
 void shaders_ambient_vert_reg(void); void shaders_ambient_frag_reg(void);
 void shaders_depth_vert_reg(void); void shaders_depth_frag_reg(void);
 void shaders_gbuffer_vert_reg(void); void shaders_gbuffer_frag_reg(void);
+void shaders_decals_vert_reg(void); void shaders_decals_frag_reg(void);
 void shaders_ambient_vert_reg(void); void shaders_ambient_frag_reg(void);
 void shaders_bright_vert_reg(void); void shaders_bright_frag_reg(void);
 void shaders_normal_vert_reg(void); void shaders_normal_frag_reg(void);
@@ -47,6 +48,7 @@ void shaders_reg()
 	shaders_bright_vert_reg();shaders_bright_frag_reg();
 	shaders_depth_vert_reg();shaders_depth_frag_reg();
 	shaders_gbuffer_vert_reg();shaders_gbuffer_frag_reg();
+	shaders_decals_vert_reg();shaders_decals_frag_reg();
 	shaders_gooch_vert_reg();shaders_gooch_frag_reg();
 	shaders_phong_vert_reg();shaders_phong_frag_reg();
 	shaders_quad_vert_reg();shaders_quad_frag_reg();
@@ -368,6 +370,9 @@ static int shader_new_loader(shader_t *self)
 	self->u_angle4 = glGetUniformLocation(self->program, "angle4"); glerr();
 #endif
 
+	self->u_cameraspace_normals = glGetUniformLocation(self->program,
+			"cameraspace_normals"); glerr();
+
 	self->u_light_intensity = glGetUniformLocation(self->program, "light_intensity"); glerr();
 
 	self->u_has_tex = glGetUniformLocation(self->program, "has_tex"); glerr();
@@ -387,7 +392,6 @@ static int shader_new_loader(shader_t *self)
 	/* MATERIALS */
 	shader_get_prop_uniforms(self, &self->u_diffuse, "diffuse");
 	shader_get_prop_uniforms(self, &self->u_specular, "specular");
-	shader_get_prop_uniforms(self, &self->u_reflection, "reflection");
 	shader_get_prop_uniforms(self, &self->u_normal, "normal");
 	shader_get_prop_uniforms(self, &self->u_transparency, "transparency");
 
@@ -406,8 +410,8 @@ shader_t *shader_new(const char *filename)
 
 void shader_bind_ambient(shader_t *self, texture_t *ambient)
 {
-	glUniform1i(self->u_ambient_map, 8); glerr();
-	glActiveTexture(GL_TEXTURE0 + 8); glerr();
+	glUniform1i(self->u_ambient_map, 11); glerr();
+	glActiveTexture(GL_TEXTURE0 + 11); glerr();
 	texture_bind(ambient, COLOR_TEX);
 
 	glerr();

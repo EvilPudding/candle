@@ -22,21 +22,21 @@ uniform vec3 ambient_light;
 
 uniform property_t diffuse;
 uniform property_t specular;
-uniform property_t reflection;
 uniform property_t normal;
 uniform property_t transparency;
+uniform property_t cnormal;
 
 struct gbuffer_t
 {
 	sampler2D depth;
 	sampler2D diffuse;
 	sampler2D specular;
-	sampler2D reflection;
 	sampler2D normal;
 	sampler2D transparency;
 	sampler2D wposition;
 	sampler2D cposition;
 	sampler2D id;
+	sampler2D cnormal;
 };
 
 uniform gbuffer_t gbuffer;
@@ -70,6 +70,7 @@ uniform camera_t camera;
 
 uniform float light_intensity;
 uniform float has_tex;
+uniform float cameraspace_normals;
 
 in vec3 tgspace_light_dir;
 in vec3 tgspace_eye_dir;
@@ -78,6 +79,7 @@ in vec3 cameraspace_vertex_pos;
 in vec3 cameraspace_light_dir;
 
 in vec3 cam_normal;
+in vec3 cam_cnormal;
 in vec3 cam_tangent;
 in vec3 cam_bitangent;
 
@@ -85,6 +87,7 @@ in vec2 object_id;
 in vec2 poly_id;
 
 in vec3 vertex_normal;
+in vec3 vertex_cnormal;
 in vec3 vertex_tangent;
 in vec3 vertex_bitangent;
 
@@ -92,6 +95,7 @@ in vec2 texcoord;
 in vec4 vertex_color;
 
 in mat3 TM;
+in mat3 C_TM;
 
 
 vec4 pass_sample(pass_t pass, vec2 coord)
@@ -130,6 +134,17 @@ float lookup(vec3 shadowCoord, vec3 offset)
 	float dist = length(coord);
 	float dist2 = lookup_single(coord) - dist;
 	return (dist2 > -0.05) ? 1.0 : 0.0;
+}
+
+vec3 get_cnormal()
+{
+	if(has_tex > 0.5)
+	{
+		vec3 normalColor = resolveProperty(normal, texcoord).rgb * 2.0 - 1.0;
+		normalColor = vec3(normalColor.y, -normalColor.x, normalColor.z);
+		return normalize(C_TM * normalColor);
+	}
+	return normalize(cam_cnormal);
 }
 
 vec3 get_normal()
@@ -361,11 +376,11 @@ const float searchDistInv = 1.0f / searchDist;
 vec3 calcViewPosition(in vec2 TexCoord)
 {
 	return textureLod(gbuffer.cposition, TexCoord, 0).xyz;
-	/* vec3 rawPosition                = vec3(TexCoord, texture(gbuffer.cposition, TexCoord).z); */
+	/* vec3 rawPosition                = vec3(TexCoord, texture(gbuffer.wposition, TexCoord).z); */
 
     /* vec4 ScreenSpacePosition        = vec4( rawPosition * 2 - 1, 1); */
 
-    /* vec4 ViewPosition               = inv_projection * ScreenSpacePosition; */
+    /* vec4 ViewPosition               = inverse(camera.projection) * ScreenSpacePosition; */
 
     /* return                          ViewPosition.xyz / ViewPosition.w; */
 }

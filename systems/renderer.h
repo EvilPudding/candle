@@ -27,7 +27,8 @@ enum
 	PASS_GBUFFER		   = 1 << 3,
 	PASS_CUBEMAP 		   = 1 << 4,
 	PASS_CLEAR_COLOR	   = 1 << 5,
-	PASS_CLEAR_DEPTH	   = 1 << 6
+	PASS_CLEAR_DEPTH	   = 1 << 6,
+	PASS_CS_NORMALS		   = 1 << 7
 } pass_options;
 
 typedef enum
@@ -96,6 +97,7 @@ typedef struct
 			uint u_wposition;
 			uint u_cposition;
 			uint u_id;
+			uint u_cnormal;
 			int id;
 			char name[32];
 		} gbuffer;
@@ -126,11 +128,8 @@ typedef struct pass_t
 	int record_brightness;
 
 	int output_from;
-	/* TODO make this a ct_camera injected vertex modifier */
-	/* uint u_mvp; */ 
-	/* uint u_m; */ 
-	/* mat4_t vp; */
-	/* --------------------------------------------------- */
+
+	int cameraspace_normals;
 } pass_t;
 
 typedef struct c_renderer_t
@@ -174,6 +173,7 @@ typedef struct c_renderer_t
 
 DEF_SIG(render_visible);
 DEF_SIG(render_transparent);
+DEF_SIG(render_decals);
 DEF_SIG(render_quad);
 DEF_SIG(offscreen_render);
 
