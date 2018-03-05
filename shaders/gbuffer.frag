@@ -13,6 +13,7 @@ layout (location = 7) out vec3 CNormal;
 void main()
 {
 	vec4 dif  = resolveProperty(diffuse, texcoord);
+	if(dif.a == 0.0f) discard;
 
 	float noi = (textureLod(perlin_map, (worldspace_position + 1) / 14, 0).r) * 4 - 3.5f;
 
