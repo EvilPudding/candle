@@ -2,6 +2,7 @@
 #define WINDOW_H
 
 #include <ecm.h>
+#include <shader.h>
 
 extern int window_width;
 extern int window_height;
@@ -27,13 +28,12 @@ typedef struct c_window_t
 
 	const unsigned char *key_state;
 
-	entity_t quad;
-	shader_t *quad_shader;
 } c_window_t;
 
 DEF_CASTER(ct_window, c_window, c_window_t)
 
 int c_window_draw(c_window_t *self);
+int c_window_render_quad(c_window_t *self, texture_t *texture);
 void c_window_rect(c_window_t *self, int x, int y, int width, int height,
 		texture_t *texture);
 

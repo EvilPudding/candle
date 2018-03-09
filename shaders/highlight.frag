@@ -29,7 +29,7 @@ float filtered(vec2 c, vec2 filter)
 	return 1;
 }
 
-uniform pass_t refl;
+uniform pass_t final;
 
 void main()
 {
@@ -43,7 +43,7 @@ void main()
 	const vec3 sel_color = vec3(0.03f, 0.05f, 0.1f);
 	const vec3 over_color = vec3(0.08);
 
-	vec4 color = pass_sample(refl, texcoord);
+	vec4 color = pass_sample(final, texcoord);
 
 	vec3 final = color.rgb + (sel_color * selected + over_color * over);
 

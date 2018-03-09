@@ -6,6 +6,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
+
+static void checkShaderError(GLuint shader, const char *errorMessage,
+		const char *name);
 
 struct source
 {
@@ -14,54 +18,196 @@ struct source
 	char *src;
 };
 
+vs_t g_vs[16];
+int g_vs_num = 0;
+
+fs_t g_fs[16];
+int g_fs_num = 0;
+
 static struct source *g_sources = NULL;
 
 static int g_sources_num = 0;
 
 void shaders_common_frag_reg(void);
-void shaders_ambient_vert_reg(void); void shaders_ambient_frag_reg(void);
-void shaders_depth_vert_reg(void); void shaders_depth_frag_reg(void);
-void shaders_gbuffer_vert_reg(void); void shaders_gbuffer_frag_reg(void);
-void shaders_decals_vert_reg(void); void shaders_decals_frag_reg(void);
-void shaders_ambient_vert_reg(void); void shaders_ambient_frag_reg(void);
-void shaders_bright_vert_reg(void); void shaders_bright_frag_reg(void);
-void shaders_normal_vert_reg(void); void shaders_normal_frag_reg(void);
-void shaders_quad_vert_reg(void); void shaders_quad_frag_reg(void);
-void shaders_ssr_vert_reg(void); void shaders_ssr_frag_reg(void);
-void shaders_blinn_phong_vert_reg(void); void shaders_blinn_phong_frag_reg(void);
-void shaders_blur_vert_reg(void); void shaders_blur_frag_reg(void);
-void shaders_diffuse_vert_reg(void); void shaders_diffuse_frag_reg(void);
-void shaders_gooch_vert_reg(void); void shaders_gooch_frag_reg(void);
-void shaders_noanimation_vert_reg(void);
-void shaders_phong_vert_reg(void); void shaders_phong_frag_reg(void);
-void shaders_position_vert_reg(void); void shaders_position_frag_reg(void);
-void shaders_shadow_vert_reg(void); void shaders_shadow_frag_reg(void);
-void shaders_ssao_vert_reg(void); void shaders_ssao_frag_reg(void);
-void shaders_transparency_vert_reg(void); void shaders_transparency_frag_reg(void);
-void shaders_highlight_vert_reg(void); void shaders_highlight_frag_reg(void);
+ void shaders_ambient_frag_reg(void);
+ void shaders_depth_frag_reg(void);
+ void shaders_gbuffer_frag_reg(void);
+ void shaders_decals_frag_reg(void);
+ void shaders_ambient_frag_reg(void);
+ void shaders_bright_frag_reg(void);
+ void shaders_normal_frag_reg(void);
+ void shaders_quad_frag_reg(void);
+ void shaders_sprite_frag_reg(void);
+ void shaders_ssr_frag_reg(void);
+ void shaders_blinn_phong_frag_reg(void);
+ void shaders_blur_frag_reg(void);
+ void shaders_diffuse_frag_reg(void);
+ void shaders_gooch_frag_reg(void);
+
+ void shaders_phong_frag_reg(void);
+ void shaders_position_frag_reg(void);
+ void shaders_shadow_frag_reg(void);
+ void shaders_ssao_frag_reg(void);
+ void shaders_transparency_frag_reg(void);
+ void shaders_highlight_frag_reg(void);
 
 void shaders_reg()
 {
 	shaders_common_frag_reg();
-	shaders_ambient_vert_reg();shaders_ambient_frag_reg();
-	shaders_blinn_phong_vert_reg();shaders_blinn_phong_frag_reg();
-	shaders_bright_vert_reg();shaders_bright_frag_reg();
-	shaders_depth_vert_reg();shaders_depth_frag_reg();
-	shaders_gbuffer_vert_reg();shaders_gbuffer_frag_reg();
-	shaders_decals_vert_reg();shaders_decals_frag_reg();
-	shaders_gooch_vert_reg();shaders_gooch_frag_reg();
-	shaders_phong_vert_reg();shaders_phong_frag_reg();
-	shaders_quad_vert_reg();shaders_quad_frag_reg();
-	shaders_shadow_vert_reg();shaders_shadow_frag_reg();
-	shaders_ssr_vert_reg();shaders_ssr_frag_reg();
-	shaders_transparency_vert_reg();shaders_transparency_frag_reg();
-	shaders_highlight_vert_reg();shaders_highlight_frag_reg();
-	shaders_blur_vert_reg();shaders_blur_frag_reg();
-	shaders_diffuse_vert_reg();shaders_diffuse_frag_reg();
-	shaders_noanimation_vert_reg();
-	shaders_normal_vert_reg();shaders_normal_frag_reg();
-	shaders_position_vert_reg();shaders_position_frag_reg();
-	shaders_ssao_vert_reg();shaders_ssao_frag_reg();
+	shaders_ambient_frag_reg();
+	shaders_blinn_phong_frag_reg();
+	shaders_bright_frag_reg();
+	shaders_depth_frag_reg();
+	shaders_gbuffer_frag_reg();
+	shaders_decals_frag_reg();
+	shaders_gooch_frag_reg();
+	shaders_phong_frag_reg();
+	shaders_quad_frag_reg();
+	shaders_sprite_frag_reg();
+	shaders_shadow_frag_reg();
+	shaders_ssr_frag_reg();
+	shaders_transparency_frag_reg();
+	shaders_highlight_frag_reg();
+	shaders_blur_frag_reg();
+	shaders_diffuse_frag_reg();
+
+	shaders_normal_frag_reg();
+	shaders_position_frag_reg();
+	shaders_ssao_frag_reg();
+}
+
+vertex_modifier_t vertex_modifier_new(const char *code)
+{
+	vertex_modifier_t self;
+	self.code = strdup(code);
+	return self;
+}
+
+int vs_new_loader(vs_t *self)
+{
+	int i;
+	int size = 0;
+
+	for(i = 0; i < self->modifier_num; i++)
+	{
+		size += strlen(self->modifiers[i].code) + 1;
+	}
+
+	self->code = malloc(size);
+	self->code[0] = '\0';
+
+	for(i = 0; i < self->modifier_num; i++)
+	{
+		strcat(self->code, self->modifiers[i].code);
+	}
+
+	self->program = glCreateShader(GL_VERTEX_SHADER); glerr();
+
+	glShaderSource(self->program, 1, (const GLchar**)&self->code, NULL);
+	glerr();
+	glCompileShader(self->program); glerr();
+
+	checkShaderError(self->program, "Error compiling vertex shader!", NULL);
+	self->ready = 1;
+	printf("vs ready %s\n", self->name);
+
+	return 1;
+}
+
+vs_t *vs_new(const char *name, int num_modifiers, ...)
+{
+	int i = g_vs_num++;
+	vs_t *self = &g_vs[i];
+	self->index = i;
+	self->name = strdup(name);
+
+	self->ready = 0;
+	va_list va;
+
+	self->modifier_num = num_modifiers + 2;
+
+	self->modifiers[0] = vertex_modifier_new(
+			"#version 400\n"
+#ifdef MESH4
+			"#define MESH4\n"
+#endif
+			"#ifdef MESH4\n"
+			"layout (location = 0) in vec4 P;\n"
+			"#else\n"
+			"layout (location = 0) in vec3 P;\n"
+			"#endif\n"
+			"layout (location = 1) in vec3 N;\n"
+			"layout (location = 2) in vec2 UV;\n"
+			"layout (location = 3) in vec3 TG;\n"
+			"layout (location = 4) in vec3 BT;\n"
+			"/* layout (location = 5) in vec4 COL; */\n"
+			"layout (location = 5) in vec2 ID;\n"
+			"\n"
+			"struct camera_t\n"
+			"{\n"
+			"	vec3 pos;\n"
+			"	float exposure;\n"
+			"	mat4 projection;\n"
+			"	mat4 view;\n"
+			"#ifdef MESH4\n"
+			"	float angle4;\n"
+			"#endif\n"
+			"};\n"
+			"\n"
+			"\n"
+			"uniform mat4 MVP;\n"
+			"uniform mat4 M;\n"
+			"uniform camera_t camera;\n"
+			"uniform vec2 id;\n"
+			"uniform float cameraspace_normals;\n"
+			"\n"
+			"out mat4 inv_projection;\n"
+			"\n"
+			"out vec3 tgspace_light_dir;\n"
+			"out vec3 tgspace_eye_dir;\n"
+			"out vec3 worldspace_position;\n"
+			"out vec3 cameraspace_vertex_pos;\n"
+			"out vec3 cameraspace_light_dir;\n"
+			"\n"
+			"uniform float screen_scale_x;\n"
+			"uniform float screen_scale_y;\n"
+			"\n"
+			"out vec2 poly_id;\n"
+			"out vec2 object_id;\n"
+			"\n"
+			"out vec3 vertex_normal;\n"
+			"out vec3 vertex_cnormal;\n"
+			"out vec3 vertex_tangent;\n"
+			"out vec3 vertex_bitangent;\n"
+			"\n"
+			"out vec2 texcoord;\n"
+			"/* out vec4 vertex_color; */\n"
+			"\n"
+			"out mat3 TM;\n"
+			"out mat3 C_TM;\n"
+			"\n"
+			"uniform float ratio;\n"
+			"uniform float has_tex;\n"
+			"uniform vec3 light_pos;\n"
+			"\n"
+			"void main()\n"
+			"{\n"
+			"	vec4 pos = vec4(P.xyz, 1.0f);\n");
+
+
+	va_start(va, num_modifiers);
+	for(i = 0; i < num_modifiers; i++)
+	{
+		vertex_modifier_t vst = va_arg(va, vertex_modifier_t);
+		self->modifiers[i + 1] = vst;
+	}
+	va_end(va);
+
+	self->modifiers[i + 1] = vertex_modifier_new( "\n\tgl_Position = pos; }");
+
+	loader_push_wait(candle->loader, (loader_cb)vs_new_loader, self, NULL);
+
+	return self;
 }
 
 void shader_add_source(const char *name, unsigned char data[],
@@ -148,7 +294,7 @@ static char *shader_preprocess(struct source source, int defines)
 		}
 	}
 
-	buffer = malloc(lsize + 8);
+	buffer = malloc(lsize + 9);
 	buffer[0] = '\0';
 
 	if(defines)
@@ -246,92 +392,11 @@ static void shader_get_prop_uniforms(shader_t *self, u_prop_t *prop,
 
 static int shader_new_loader(shader_t *self)
 {
-	self->frag_shader = 0;
-	self->vert_shader = 0;
-	self->geom_shader = 0;
-
-	char buffer[256];
-	snprintf(buffer, sizeof(buffer), "%s.frag", self->filename);
-
-	char *frag_src = shader_preprocess(shader_source(buffer), 1);
-
-	snprintf(buffer, sizeof(buffer), "%s.vert", self->filename);
-	char *vert_src = shader_preprocess(shader_source(buffer), 1);
-
-	snprintf(buffer, sizeof(buffer), "%s.geom", self->filename);
-	char *geom_src = shader_preprocess(shader_source(buffer), 1);
-
-	if(frag_src)
-	{
-		self->frag_shader = glCreateShader(GL_FRAGMENT_SHADER); glerr();
-	}
-	if(vert_src)
-	{
-		self->vert_shader = glCreateShader(GL_VERTEX_SHADER); glerr();
-	}
-	if(geom_src)
-	{
-		self->geom_shader = glCreateShader(GL_GEOMETRY_SHADER); glerr();
-	}
-
-	if(!frag_src || !vert_src)
-	{
-		exit(1);
-	}
-
-	self->frag_shader = glCreateShader(GL_FRAGMENT_SHADER); glerr();
-	self->vert_shader = glCreateShader(GL_VERTEX_SHADER); glerr();
-	self->geom_shader = glCreateShader(GL_GEOMETRY_SHADER); glerr();
-
-	if(frag_src)
-	{
-		glShaderSource(self->frag_shader, 1, (const GLchar**)&frag_src, NULL);
-		glerr();
-		free(frag_src);
-
-		glCompileShader(self->frag_shader); glerr();
-
-		checkShaderError(self->frag_shader,
-				"Error compiling fragment shader!", self->filename);
-	}
-
-	if(vert_src)
-	{
-		glShaderSource(self->vert_shader, 1, (const GLchar**)&vert_src, NULL);
-		glerr();
-		free(vert_src);
-		glCompileShader(self->vert_shader);
-
-		checkShaderError(self->vert_shader,
-				"Error compiling vertex shader!", self->filename);
-
-	}
-
-	if(geom_src)
-	{
-		glShaderSource(self->geom_shader, 1, (const GLchar**)&geom_src, NULL);
-		glerr();
-		free(geom_src);
-
-		glCompileShader(self->geom_shader);
-		checkShaderError(self->geom_shader,
-				"Error compiling geometry shader!", self->filename);
-	}
-
 	self->program = glCreateProgram(); glerr();
 
-	if(frag_src)
-	{
-		glAttachShader(self->program, self->frag_shader); glerr();
-	}
-	if(vert_src)
-	{
-		glAttachShader(self->program, self->vert_shader); glerr();
-	}
-	if(geom_src)
-	{
-		glAttachShader(self->program, self->geom_shader); glerr();
-	}
+	glAttachShader(self->program, self->fs->program); glerr();
+
+	glAttachShader(self->program, g_vs[self->index].program); glerr();
 
 	glLinkProgram(self->program); glerr();
 
@@ -395,16 +460,67 @@ static int shader_new_loader(shader_t *self)
 	shader_get_prop_uniforms(self, &self->u_normal, "normal");
 	shader_get_prop_uniforms(self, &self->u_transparency, "transparency");
 
+	self->ready = 1;
+	printf("shader ready f:%s v:%s\n", self->fs->filename, g_vs[self->index].name);
 	return 1;
 }
 
-shader_t *shader_new(const char *filename)
+static int fs_new_loader(fs_t *self)
 {
-	shader_t *self = calloc(1, sizeof *self);
+	self->program = 0;
+
+	char buffer[256];
+	snprintf(buffer, sizeof(buffer), "%s.frag", self->filename);
+
+	self->code  = shader_preprocess(shader_source(buffer), 1);
+
+	if(!self->code) exit(1);
+
+	self->program = glCreateShader(GL_FRAGMENT_SHADER); glerr();
+
+	glShaderSource(self->program, 1, (const GLchar**)&self->code, NULL);
+	glerr();
+	glCompileShader(self->program); glerr();
+
+	checkShaderError(self->program, "Error compiling fragment shader!", self->filename);
+	self->ready = 1;
+	printf("fs ready %s\n", buffer);
+
+	return 1;
+}
+
+fs_t *fs_new(const char *filename)
+{
+	int i;
+	for(i = 0; i < g_fs_num; i++)
+	{
+		if(!strcmp(filename, g_fs[i].filename)) return &g_fs[i];
+	}
+
+	fs_t *self = &g_fs[g_fs_num++];
+
+	self->program = 0;
+	self->ready = 0;
+
+	for(i = 0; i < 16; i++)
+	{
+		self->combinations[i] = NULL;
+	}
+
 	self->filename = strdup(filename);
 
-	loader_push(candle->loader, (loader_cb)shader_new_loader, self, NULL);
+	loader_push_wait(candle->loader, (loader_cb)fs_new_loader, self, NULL);
+	return self;
+}
 
+shader_t *shader_new(fs_t *fs, vs_t *vs)
+{
+	shader_t *self = calloc(1, sizeof *self);
+	self->fs = fs;
+	self->index = vs->index;
+
+	self->ready = 0;
+	loader_push_wait(candle->loader, (loader_cb)shader_new_loader, self, NULL);
 	return self;
 }
 
@@ -419,6 +535,7 @@ void shader_bind_ambient(shader_t *self, texture_t *ambient)
 
 void shader_bind_probe(shader_t *self, entity_t probe)
 {
+	/* shader_t *self = c_renderer(&candle->systems)->shader; */
 	const vec3_t lpos = c_spacial(&probe)->pos;
 
 	glUniform3f(self->u_probe_pos, lpos.x, lpos.y, lpos.z);
@@ -465,14 +582,10 @@ void shader_bind_light(shader_t *self, entity_t light)
 
 }
 
-#ifdef MESH4
 void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
 		mat4_t *projection, float exposure, float angle4)
-#else
-void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
-		mat4_t *projection, float exposure)
-#endif
 {
+	/* shader_t *self = c_renderer(&candle->systems)->shader; */
 	self->vp = mat4_mul(*projection, *view);
 
 	glUniformMatrix4fv(self->u_v, 1, GL_FALSE, (void*)view->_);
@@ -490,6 +603,7 @@ void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
 
 void shader_update(shader_t *self, mat4_t *model_matrix)
 {
+	/* shader_t *self = c_renderer(&candle->systems)->shader; */
 	mat4_t mvp = mat4_mul(self->vp, *model_matrix);
 
 	glUniformMatrix4fv(self->u_mvp, 1, GL_FALSE, (void*)mvp._);
@@ -507,6 +621,8 @@ void shader_update(shader_t *self, mat4_t *model_matrix)
 
 void shader_bind_screen(shader_t *self, texture_t *buffer, float sx, float sy)
 {
+	/* shader_t *self = c_renderer(&candle->systems)->shader; */
+
 	glUniform1f(self->u_screen_scale_x, sx); glerr();
 	glUniform1f(self->u_screen_scale_y, sy); glerr();
 
@@ -518,6 +634,7 @@ void shader_bind_screen(shader_t *self, texture_t *buffer, float sx, float sy)
 
 void shader_bind(shader_t *self)
 {
+	/* printf("shader bound f:%s v:%s\n", self->fs->filename, g_vs[self->index].name); */
 	glUseProgram(self->program);
 }
 
@@ -540,24 +657,22 @@ GLuint shader_uniform(shader_t *self, const char *uniform, const char *member)
 	return glGetUniformLocation(self->program, uniform); glerr();
 }
 
+void fs_destroy(fs_t *self)
+{
+	int i;
+	for(i = 0; i < g_vs_num; i++)
+	{
+		shader_destroy(self->combinations[i]);
+	}
+
+	glDeleteShader(self->program); glerr();
+}
 void shader_destroy(shader_t *self)
 {
+	glDetachShader(self->program, self->fs->program); glerr();
+	glDetachShader(self->program, g_vs[self->index].program); glerr();
+	/* glDeleteShader(self->vs->program); glerr(); */
 
-	if(self->frag_shader)
-	{
-		glDetachShader(self->program, self->frag_shader); glerr();
-		glDeleteShader(self->frag_shader); glerr();
-	}
-	if(self->vert_shader)
-	{
-		glDetachShader(self->program, self->vert_shader); glerr();
-		glDeleteShader(self->vert_shader); glerr();
-	}
-	if(self->geom_shader)
-	{
-		glDetachShader(self->program, self->geom_shader); glerr();
-		glDeleteShader(self->geom_shader); glerr();
-	}
 	glDeleteProgram(self->program); glerr();
 
 	free(self);

@@ -376,6 +376,7 @@ candle_t *candle_new(int comps_size, ...)
 		c_ambient_register();
 		c_name_register();
 		c_editlook_register();
+		c_decal_register();
 
 		/* OpenGL mesh plugin */
 		c_mesh_gl_register();

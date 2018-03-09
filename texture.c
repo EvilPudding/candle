@@ -323,7 +323,7 @@ texture_t *texture_new_2D
 
 	uint imageSize = (bytesPerPixel * width * height);
 
-	self->imageData	= calloc(imageSize, 1);
+	self->imageData = calloc(imageSize, 1);
 	
 	loader_push(candle->loader, (loader_cb)texture_new_2D_loader, self, NULL);
 
@@ -482,7 +482,10 @@ static void texture_frame_buffer(texture_t *self)
 int texture_target_sub(texture_t *self, int width, int height,
 		int id) 
 {
-	if(!self->ready) return 0;
+	if(!self->ready)
+	{
+		return 0;
+	}
 
 	if(!self->framebuffer_ready) texture_frame_buffer(self);
 
@@ -774,7 +777,7 @@ int LoadTGA(texture_t *self, const char * filename)
 	uint bytesPerPixel = self->bpp / 8;
 	uint imageSize;
 	imageSize		= (bytesPerPixel * self->width * self->height);
-	self->imageData	= malloc(imageSize);
+	self->imageData = malloc(imageSize);
 
 	if(self->imageData == NULL)
 	{

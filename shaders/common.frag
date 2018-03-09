@@ -14,6 +14,7 @@ struct pass_t
 {
 	float brightness;
 	sampler2D texture;
+	sampler2D depth;
 };
 
 uniform vec2 output_size;
@@ -78,11 +79,6 @@ in vec3 worldspace_position;
 in vec3 cameraspace_vertex_pos;
 in vec3 cameraspace_light_dir;
 
-in vec3 cam_normal;
-in vec3 cam_cnormal;
-in vec3 cam_tangent;
-in vec3 cam_bitangent;
-
 in vec2 object_id;
 in vec2 poly_id;
 
@@ -102,6 +98,12 @@ vec4 pass_sample(pass_t pass, vec2 coord)
 {
 	return textureLod(pass.texture, coord, 0);
 }
+
+vec4 pass_depth(pass_t pass, vec2 coord)
+{
+	return textureLod(pass.depth, coord, 0);
+}
+
 
 vec4 resolveProperty(property_t prop, vec2 coords)
 {
@@ -144,7 +146,7 @@ vec3 get_cnormal()
 		normalColor = vec3(normalColor.y, -normalColor.x, normalColor.z);
 		return normalize(C_TM * normalColor);
 	}
-	return normalize(cam_cnormal);
+	return normalize(vertex_cnormal);
 }
 
 vec3 get_normal()
@@ -155,7 +157,7 @@ vec3 get_normal()
 		normalColor = vec3(normalColor.y, -normalColor.x, normalColor.z);
 		return normalize(TM * normalColor);
 	}
-	return normalize(cam_normal);
+	return normalize(vertex_normal);
 }
 
 vec3 get_light_dir()
@@ -525,7 +527,8 @@ vec4 ssr(sampler2D screen)
 
 	vec3 reflect_color = textureLod(screen, coords.xy, mipChannel).rgb;
 
-	vec3 fallback_color = texture(ambient_map, reflect(eye_dir, nor)).rgb / (mipChannel+1);
+	vec3 fallback_color = vec3(0.0f);
+	/* vec3 fallback_color = texture(ambient_map, reflect(eye_dir, nor)).rgb / (mipChannel+1); */
 	/* vec3 fallback_color = vec3(0.0f); */
 
 

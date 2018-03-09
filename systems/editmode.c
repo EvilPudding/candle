@@ -63,7 +63,7 @@ c_editmode_t *c_editmode_new()
 
 void c_editmode_activate(c_editmode_t *self)
 {
-	loader_push(candle->loader, (loader_cb)c_editmode_activate_loader, NULL,
+	loader_push_wait(candle->loader, (loader_cb)c_editmode_activate_loader, NULL,
 			(c_t*)self);
 
 	self->activated = 1;
@@ -108,21 +108,14 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 		/* nk_style_set_font(self->nk, &roboto->handle); */
 	} 
 
-	c_renderer_add_pass(c_renderer(self), "hightlight",
-		0,
-		render_quad,
-		1.0f, 1.0f, "highlight",
+	c_renderer_add_pass(c_renderer(self), "rendered", "highlight",
+			render_quad, 0,
 		(bind_t[]){
-			{BIND_GBUFFER, "gbuffer", .gbuffer.name = "gbuffer"},
-			{BIND_INTEGER, "mode",
-				.getter = (getter_cb)c_editmode_bind_mode,
-				.usrptr = self},
-			{BIND_VEC2, "over_id",
-				.getter = (getter_cb)c_editmode_bind_over,
-				.usrptr = self},
-			{BIND_VEC2, "sel_id",
-				.getter = (getter_cb)c_editmode_bind_selected,
-				.usrptr = self},
+			{BIND_GBUFFER, "gbuffer"},
+			{BIND_PASS_OUTPUT, "final"},
+			{BIND_INTEGER, "mode", (getter_cb)c_editmode_bind_mode, self},
+			{BIND_VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
+			{BIND_VEC2, "sel_id", (getter_cb)c_editmode_bind_selected, self},
 			{BIND_NONE}
 		}
 	);

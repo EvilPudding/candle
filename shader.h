@@ -7,6 +7,33 @@
 
 typedef struct
 {
+	char *code;
+} vertex_modifier_t;
+
+typedef struct
+{
+	char *name;
+	int index;
+	vertex_modifier_t modifiers[16];
+	int modifier_num;
+	GLuint program;
+	int ready;
+	char *code;
+} vs_t;
+
+typedef struct
+{
+	char *code;
+	GLuint program;
+
+	shader_t *combinations[16];
+
+	char *filename;
+	int ready;
+} fs_t;
+
+typedef struct
+{
 	GLuint texture_blend;
 	GLuint texture_scale;
 	GLuint texture;
@@ -16,9 +43,10 @@ typedef struct
 typedef struct light_t light_t;
 typedef struct shader_t
 {
-	GLuint frag_shader;
-	GLuint vert_shader;
-	GLuint geom_shader;
+	fs_t *fs;
+	int index;
+	int bound_textures;
+	int frame_bind;
 
 	GLuint program;
 	GLuint u_mvp;
@@ -59,19 +87,21 @@ typedef struct shader_t
 
 	mat4_t vp;
 
-	char *filename;
+	int ready;
 } shader_t;
 
-shader_t *shader_new(const char *filename);
+shader_t *vs_bind(vs_t *vs);
+void fs_bind(fs_t *fs);
+
+vs_t *vs_new(const char *name, int num_modifiers, ...);
+fs_t *fs_new(const char *filename);
+vertex_modifier_t vertex_modifier_new(const char *code);
+
+shader_t *shader_new(fs_t *fs, vs_t *vs);
 void shader_update(shader_t *self, mat4_t *model_matrix);
 void shader_bind(shader_t *self);
-#ifdef MESH4
 void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
 		mat4_t *projection, float exposure, float angle4);
-#else
-void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
-		mat4_t *projection, float exposure);
-#endif
 GLuint shader_uniform(shader_t *self, const char *uniform, const char *member);
 void shader_bind_light(shader_t *self, entity_t light);
 void shader_bind_mesh(shader_t *self, mesh_t *mesh, unsigned int id);
@@ -83,5 +113,9 @@ void shader_bind_probe(shader_t *self, entity_t probe);
 void shader_add_source(const char *name, unsigned char data[],
 		unsigned int len);
 void shaders_reg(void);
+
+/* TODO this should not be shared */
+extern vs_t g_vs[16];
+extern fs_t g_fs[16];
 
 #endif /* !SHADER_H */

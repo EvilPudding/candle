@@ -33,6 +33,7 @@ void _check_gl_error(const char *file, int line)
 			printf("%s\n", message);
 			strncpy(last_error, message, sizeof(last_error));
 		}
+		exit(1);
 
 		err=glGetError();
 	}

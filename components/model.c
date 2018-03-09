@@ -5,6 +5,7 @@
 #include "spacial.h"
 #include "light.h"
 #include <nk.h>
+#include <candle.h>
 #include <systems/renderer.h>
 #include "shader.h"
 #include <systems/editmode.h>
@@ -14,6 +15,7 @@ DEC_CT(ct_model);
 DEC_SIG(mesh_changed);
 
 static mat_t *g_missing_mat = NULL;
+static vs_t *g_model_vs = NULL;
 
 int c_model_menu(c_model_t *self, void *ctx);
 int g_update_id = 0;
@@ -27,11 +29,38 @@ static void c_model_init(c_model_t *self)
 
 	}
 
-	self->cast_shadow = 0;
+	self->sprite = 0;
 	self->visible = 1;
-	self->mesh = NULL;
-	self->before_draw = NULL;
 	self->layers = malloc(sizeof(*self->layers) * 16);
+
+	if(!g_model_vs)
+	{
+		g_model_vs = vs_new("model", 1, vertex_modifier_new(
+			"	{\n"
+			"#ifdef MESH4\n"
+			"		float Y = cos(camera.angle4);\n"
+			"		float W = sin(camera.angle4);\n"
+			"		pos = vec4(vec3(P.x, P.y * Y + P.w * W, P.z), 1.0);\n"
+			"#endif\n"
+			"		vec4 mpos = M * pos;\n"
+			"		worldspace_position = mpos.xyz;\n"
+			"		cameraspace_vertex_pos = (camera.view * mpos).xyz;\n"
+			"		pos = MVP * pos;\n"
+			"		vec4 rotated_N = M * vec4(N, 0.0f);\n"
+			"		vec4 rotated_CN = camera.view * rotated_N;\n"
+			"		/* vertex_color = COL; */\n"
+			"		texcoord = vec2(-UV.y, UV.x);\n"
+			"		vertex_tangent = TG;\n"
+			"		vertex_bitangent = BT;\n"
+			"		vertex_normal = rotated_N.xyz;\n"
+			"		vertex_cnormal = rotated_CN.xyz;\n"
+			"		object_id = id;\n"
+			"		poly_id = ID;\n"
+			"		TM = mat3(TG, BT, rotated_N.xyz);\n"
+			"		C_TM = mat3(TG, BT, rotated_CN.xyz);\n"
+			"	}\n"
+		));
+	}
 }
 
 void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset)
@@ -119,17 +148,19 @@ int c_model_created(c_model_t *self)
 }
 
 /* #include "components/name.h" */
-int c_model_render_shadows(c_model_t *self, shader_t *shader)
+int c_model_render_shadows(c_model_t *self)
 {
-	if(self->cast_shadow) c_model_render_visible(self, shader);
+	if(self->cast_shadow) c_model_render_visible(self);
 	return 1;
 }
 
-int c_model_render_transparent(c_model_t *self, shader_t *shader)
+int c_model_render_transparent(c_model_t *self)
 {
 	if(!self->mesh || !self->visible) return 1;
 	if(self->before_draw) if(!self->before_draw((c_t*)self)) return 1;
 
+	shader_t *shader = vs_bind(g_model_vs);
+	if(!shader) return 0;
 	c_node_t *node = c_node(self);
 	if(node)
 	{
@@ -137,15 +168,17 @@ int c_model_render_transparent(c_model_t *self, shader_t *shader)
 		shader_update(shader, &node->model);
 	}
 
-	c_mesh_gl_draw(c_mesh_gl(self), shader, 1);
+	c_mesh_gl_draw(c_mesh_gl(self), 1);
 	return 1;
 }
 
-int c_model_render_visible(c_model_t *self, shader_t *shader)
+int c_model_render_visible(c_model_t *self)
 {
 	if(!self->mesh || !self->visible) return 1;
 	if(self->before_draw) if(!self->before_draw((c_t*)self)) return 1;
 
+	shader_t *shader = vs_bind(g_model_vs);
+	if(!shader) return 0;
 	c_node_t *node = c_node(self);
 	if(node)
 	{
@@ -154,13 +187,12 @@ int c_model_render_visible(c_model_t *self, shader_t *shader)
 		shader_update(shader, &node->model);
 	}
 
-	c_mesh_gl_draw(c_mesh_gl(self), shader, 0);
+	c_mesh_gl_draw(c_mesh_gl(self), 0);
 	return 1;
 }
 
 int c_model_menu(c_model_t *self, void *ctx)
 {
-
 	int i;
 	int new_value;
 

@@ -18,11 +18,13 @@ void main()
 	/* FragColor = clamp(vec4((nor+1.0f)/2.0f, 1.0),0,1); return; */
 
 	vec3 color = ambient * dif;
+
 	if(light_intensity > 0.01)
 	{
 		vec3 vec = light_pos - w_pos;
 
 		float point_to_light = length(vec);
+		/* FragColor = vec4(texture(shadow_map, -vec).rgb, 1.0f); return; */
 
 		/* FragColor = vec4(vec3(nor) * 0.5 + 0.5, 1.0); return; */
 
@@ -31,6 +33,7 @@ void main()
 
 		/* FragColor = vec4(vec3(sd), 1.0); return; */
 		/* FragColor = vec4(vec3(lookup_single(-vec)) / 100, 1.0); return; */
+
 		if(sd < 0.95)
 		{
 

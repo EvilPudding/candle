@@ -565,6 +565,7 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 
 		mat_bind(layer->mat, shader);
 	}
+	/* printf("GLG_DRAW\n"); */
 
 	{
 		if(layer->cull_front)
@@ -643,11 +644,12 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 
 	glerr();
 	glEnable(GL_CULL_FACE);
+	/* printf("/GLG_DRAW\n"); */
 	return 1;
 
 }
 
-int c_mesh_gl_draw(c_mesh_gl_t *self, shader_t *shader, int transparent)
+int c_mesh_gl_draw(c_mesh_gl_t *self, int transparent)
 {
 	int i;
 	int res = 1;
@@ -660,6 +662,7 @@ int c_mesh_gl_draw(c_mesh_gl_t *self, shader_t *shader, int transparent)
 
 	c_mesh_gl_update(self);
 
+	shader_t *shader = c_renderer(&candle->systems)->shader;
 	if(shader)
 	{
 		glUniform1f(shader->u_has_tex, (float)self->mesh->has_texcoords);

@@ -3,7 +3,7 @@
 #line 4
 
 layout (location = 0) out vec4 FragColor;
-uniform pass_t phong;
+uniform pass_t rendered;
 
 void main()
 {
@@ -39,7 +39,7 @@ void main()
 		/* pos.s = clamp(pos.s, 0.0, 1.0); */
 		/* pos.t = clamp(pos.t, 0.0, 1.0); */
 
-		vec3 color = pass_sample(phong, projectedCoord.xy).rgb;
+		vec3 color = pass_sample(rendered, projectedCoord.xy).rgb;
 
 		FragColor = vec4(color * trans.rgb, 1.0);
 	}

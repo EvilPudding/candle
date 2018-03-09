@@ -15,14 +15,14 @@ void loader_push_wait(loader_t *self, loader_cb cb, void *usrptr, c_t *c)
 {
 	if(SDL_ThreadID() == self->threadId)
 	{
-		if(usrptr)
-		{
-			cb(usrptr);
-		}
-		else
+		if(c)
 		{
 			cb(ct_get(ecm_get(c->comp_type),
 					c->entity));
+		}
+		else
+		{
+			cb(usrptr);
 		}
 	}
 	else

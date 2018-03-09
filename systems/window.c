@@ -11,6 +11,9 @@ DEC_SIG(window_resize);
 int window_width = 1360;
 int window_height = 765;
 
+static vs_t *g_quad_vs = NULL;
+static fs_t *g_quad_fs = NULL;
+
 extern SDL_GLContext *context;
 extern SDL_Window *mainWindow;
 
@@ -72,10 +75,6 @@ void c_window_init(c_window_t *self)
 
 	self->key_state = SDL_GetKeyboardState(NULL);
 
-	self->quad_shader = shader_new("quad");
-	self->quad = entity_new(c_name_new("renderer_quad"),
-			c_model_new(mesh_quad(), NULL, 0));
-	c_model(&self->quad)->visible = 0;
 }
 
 int c_window_toggle_fullscreen_gl(c_window_t *self)
@@ -123,10 +122,24 @@ int c_window_created(c_window_t *self)
 {
 	init_context_b(self);
 
+
+	if(!g_quad_vs)
+	{
+		g_quad_vs = vs_new("quad", 1, vertex_modifier_new(
+			"texcoord = vec2(UV.x * screen_scale_x, UV.y * screen_scale_y);\n"
+		));
+		g_quad_fs = fs_new("quad");
+	}
+
+	entity_add_component(c_entity(self), c_model_new(mesh_quad(), NULL, 0));
+	c_model(self)->visible = 0;
+
+
 	entity_signal(c_entity(self), window_resize,
 			&(window_resize_data){
 			.width = self->width,
 			.height = self->height});
+
 	return 1;
 }
 
@@ -144,26 +157,51 @@ int c_window_draw(c_window_t *self)
 	return 1;
 }
 
+int c_window_render_quad(c_window_t *self, texture_t *texture)
+{
+
+	/* fs_bind(g_quad_fs); */
+	shader_t *shader = vs_bind(g_quad_vs);
+	if(!shader || !shader->ready) return 0;
+
+	if(texture)
+	{
+		shader_bind_screen(shader, texture, 1, 1);
+	}
+	c_node_t *node = c_node(self);
+	if(node)
+	{
+		c_node_update_model(node);
+
+		shader_update(shader, &node->model);
+	}
+
+	c_mesh_gl_draw(c_mesh_gl(self), 0);
+	return 1;
+}
+
 void c_window_rect(c_window_t *self, int x, int y, int width, int height,
 		texture_t *texture)
 {
-	if(!texture)
+	glBindFramebuffer(GL_FRAMEBUFFER, 0); glerr();
+	if(!texture) return;
+	fs_bind(g_quad_fs);
+	shader_t *shader = vs_bind(g_quad_vs);
+	if(!shader || !shader->ready)
 	{
 		exit(1);
 	}
 
 	/* Draw to opengl context */
-	glBindFramebuffer(GL_FRAMEBUFFER, 0); glerr();
 
-	glViewport(x, y, width, height);
+	glViewport(x, y, width, height); glerr();
 
-	shader_bind(self->quad_shader);
+	shader_bind_screen(shader, texture, 1, 1);
 
-	shader_bind_screen(self->quad_shader, texture, 1, 1);
-
-	c_mesh_gl_draw(c_mesh_gl(&self->quad), NULL, 0);
+	c_mesh_gl_draw(c_mesh_gl(self), 0);
 
 }
+
 
 void c_window_register()
 {
@@ -173,4 +211,6 @@ void c_window_register()
 	ct_listener(ct, ENTITY, entity_created, c_window_created);
 
 	signal_init(&window_resize, sizeof(window_resize_data));
+
+	ct_listener(ct, WORLD, render_quad, c_window_render_quad);
 }

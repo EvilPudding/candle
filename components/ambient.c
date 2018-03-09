@@ -6,7 +6,7 @@
 
 DEC_CT(ct_ambient);
 
-static shader_t *g_shader;
+static fs_t *g_shader;
 
 void c_ambient_init(c_ambient_t *self)
 {
@@ -18,16 +18,12 @@ c_ambient_t *c_ambient_new(int map_size)
 
 	self->map_size = map_size;
 
-	if(!g_shader) g_shader = shader_new("ambient");
+	if(!g_shader) g_shader = fs_new("ambient");
+
+	entity_add_component(c_entity(self),
+			(c_t*)c_probe_new(self->map_size));
 
 	return self;
-}
-
-int c_ambient_created(c_ambient_t *self)
-{
-	entity_add_component(c_entity(self),
-			(c_t*)c_probe_new(self->map_size, g_shader));
-	return 1;
 }
 
 void c_ambient_destroy(c_ambient_t *self)
@@ -39,7 +35,9 @@ int c_ambient_render(c_ambient_t *self)
 {
 	c_probe_t *probe = c_probe(self);
 
-	c_probe_render(probe, render_visible, g_shader);
+	fs_bind(g_shader);
+
+	c_probe_render(probe, render_visible);
 
 	return 1;
 }
@@ -48,8 +46,6 @@ void c_ambient_register()
 {
 	ct_t *ct = ct_new("c_ambient", &ct_ambient,
 			sizeof(c_ambient_t), (init_cb)c_ambient_init, 1, ct_spacial);
-
-	ct_listener(ct, ENTITY, entity_created, c_ambient_created);
 
 	ct_listener(ct, WORLD, offscreen_render, c_ambient_render);
 }

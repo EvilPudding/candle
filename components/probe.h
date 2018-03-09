@@ -14,14 +14,14 @@ typedef struct c_probe_t
 	mat4_t views[6];
 	texture_t *map;
 	int last_update;
-	shader_t *shader;
 } c_probe_t;
 
 DEF_CASTER(ct_probe, c_probe, c_probe_t)
 
-c_probe_t *c_probe_new(int map_size, shader_t *shader);
+c_probe_t *c_probe_new(int map_size);
 void c_probe_destroy(c_probe_t *self);
 void c_probe_register(void);
-int c_probe_render(c_probe_t *self, uint signal, shader_t *shader);
+int c_probe_update_position(c_probe_t *self);
+int c_probe_render(c_probe_t *self, uint signal);
 
 #endif /* !PROBE_H */
