@@ -19,6 +19,7 @@
 #include <components/light.h>
 #include <components/ambient.h>
 #include <components/decal.h>
+#include <components/sprite.h>
 #include <components/editlook.h>
 #include <systems/renderer.h>
 #include <systems/physics.h>

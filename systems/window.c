@@ -126,13 +126,14 @@ int c_window_created(c_window_t *self)
 	if(!g_quad_vs)
 	{
 		g_quad_vs = vs_new("quad", 1, vertex_modifier_new(
-			"texcoord = vec2(UV.x * screen_scale_x, UV.y * screen_scale_y);\n"
+			"texcoord *= vec2(screen_scale_x, screen_scale_y);\n"
 		));
 		g_quad_fs = fs_new("quad");
 	}
 
 	entity_add_component(c_entity(self), c_model_new(mesh_quad(), NULL, 0));
 	c_model(self)->visible = 0;
+	c_model_cull_face(c_model(self), 0, 2);
 
 
 	entity_signal(c_entity(self), window_resize,

@@ -8,10 +8,9 @@
 #include <systems/renderer.h>
 #include "shader.h"
 #include <systems/editmode.h>
+#include <candle.h>
 
 DEC_CT(ct_sprite);
-
-DEC_SIG(mesh_changed);
 
 vs_t *g_sprite_vs = NULL;
 
@@ -20,7 +19,7 @@ static int c_sprite_render_visible(c_sprite_t *self);
 static mat_t *g_missing_mat = NULL;
 static mesh_t *g_sprite_mesh = NULL;
 
-int c_sprite_menu(c_sprite_t *self, void *ctx);
+/* int c_sprite_menu(c_sprite_t *self, void *ctx); */
 
 static void c_sprite_init(c_sprite_t *self)
 {
@@ -33,6 +32,13 @@ static void c_sprite_init(c_sprite_t *self)
 	if(!g_sprite_mesh)
 	{
 		g_sprite_mesh = mesh_quad();
+		g_sprite_vs = vs_new("sprite", 1, vertex_modifier_new(
+			"	{\n"
+			"		pos = MVP * vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
+			"		pos = vec4(pos.xyz + P.xyz * 0.5, pos.w);\n"
+			"		\n"
+			"	}\n"
+		));
 	}
 
 	self->visible = 1;
@@ -43,6 +49,10 @@ c_sprite_t *c_sprite_new(mat_t *mat, int cast_shadow)
 	c_sprite_t *self = component_new(ct_sprite);
 
 	self->cast_shadow = cast_shadow;
+
+	entity_add_component(c_entity(self),
+			c_model_new(g_sprite_mesh, mat, 0));
+	c_model(self)->visible = 0;
 
 	return self;
 }
@@ -66,9 +76,11 @@ static int c_sprite_render_transparent(c_sprite_t *self)
 	if(!self->visible) return 1;
 
 	shader_t *shader = vs_bind(g_sprite_vs);
+	if(!shader) return 0;
 	c_node_t *node = c_node(self);
 	if(node)
 	{
+		c_node_update_model(node);
 		shader_update(shader, &node->model);
 	}
 
@@ -81,9 +93,11 @@ static int c_sprite_render_visible(c_sprite_t *self)
 	if(!self->visible) return 1;
 
 	shader_t *shader = vs_bind(g_sprite_vs);
+	if(!shader) return 0;
 	c_node_t *node = c_node(self);
 	if(node)
 	{
+		c_node_update_model(node);
 		shader_update(shader, &node->model);
 	}
 
@@ -103,14 +117,13 @@ int c_sprite_scene_changed(c_sprite_t *self, entity_t *entity)
 
 void c_sprite_register()
 {
-	signal_init(&mesh_changed, sizeof(mesh_t));
 
 	ct_t *ct = ct_new("c_sprite", &ct_sprite, sizeof(c_sprite_t),
 			(init_cb)c_sprite_init, 2, ct_spacial, ct_node);
 
 	ct_listener(ct, ENTITY, entity_created, c_sprite_created);
 
-	ct_listener(ct, WORLD, component_menu, c_sprite_menu);
+	/* ct_listener(ct, WORLD, component_menu, c_sprite_menu); */
 
 	ct_listener(ct, ENTITY, spacial_changed, c_sprite_scene_changed);
 

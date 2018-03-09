@@ -192,7 +192,8 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"\n"
 			"void main()\n"
 			"{\n"
-			"	vec4 pos = vec4(P.xyz, 1.0f);\n");
+			"	vec4 pos = vec4(P.xyz, 1.0f);\n"
+			"	texcoord = UV;\n");
 
 
 	va_start(va, num_modifiers);
