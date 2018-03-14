@@ -9,20 +9,17 @@ void main()
 {
 	vec3 dif = texture2D(gbuffer.diffuse, texcoord).rgb;
 	vec4 trans = texture2D(gbuffer.transparency, texcoord);
-	vec3 nor = texture2D(gbuffer.cnormal, texcoord).xyz;
+	vec3 nor = decode(texture2D(gbuffer.normal, texcoord).xyz);
 
-	vec3 w_pos = texture2D(gbuffer.wposition, texcoord).rgb;
-	vec3 v_pos = texture2D(gbuffer.cposition, texcoord).rgb;
-	vec3 c_pos = camera.pos - w_pos;
+	vec3 c_pos = texture2D(gbuffer.position, texcoord).rgb;
 	nor.z = 0;
 
 	if(trans.a != 0.0f)
 	{
 		/* FragColor = vec4(nor, 1.0f); return; */
-		vec3 eye_dir = normalize(-c_pos);
 		float dist_to_eye = length(c_pos);
 		/* vec3 hit = v_pos - nor / (dist_to_eye + 2.0); */
-		vec3 hit = v_pos + nor * 0.08;
+		vec3 hit = c_pos + nor * 0.08;
 
 		/* float eta = 1.3f; */
 		/* float N_dot_I = dot(nor, v_pos); */

@@ -80,6 +80,8 @@ void c_camera_update_view(c_camera_t *self)
 	if(self->view_cached) return;
 	c_node_t *n = c_node(self);
 	c_node_update_model(n);
+	self->model_matrix = n->model;
+
 	self->pos = mat4_mul_vec4(n->model, vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 	self->view_matrix = mat4_invert(n->model);
 

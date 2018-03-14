@@ -64,9 +64,9 @@ typedef struct shader_t
 	GLuint u_probe_pos;
 
 	GLuint u_camera_pos;
+	GLuint u_camera_model;
 	GLuint u_exposure;
 	GLuint u_light_intensity;
-	GLuint u_cameraspace_normals;
 
 	GLuint u_has_tex;
 	GLuint u_id;
@@ -101,7 +101,7 @@ shader_t *shader_new(fs_t *fs, vs_t *vs);
 void shader_update(shader_t *self, mat4_t *model_matrix);
 void shader_bind(shader_t *self);
 void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
-		mat4_t *projection, float exposure, float angle4);
+		mat4_t *projection, mat4_t *model, float exposure, float angle4);
 GLuint shader_uniform(shader_t *self, const char *uniform, const char *member);
 void shader_bind_light(shader_t *self, entity_t light);
 void shader_bind_mesh(shader_t *self, mesh_t *mesh, unsigned int id);

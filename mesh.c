@@ -1482,7 +1482,7 @@ mesh_t *mesh_quad()
 {
 	mesh_t *self = mesh_new();
 
-	vec3_t n = vec3(0,-1,0);
+	vec3_t n = vec3(0,0,1);
 	mesh_add_regular_quad(self,
 			VEC3(-1.0, -1.0, 0.0), n, vec2(0, 0),
 			VEC3( 1.0, -1.0, 0.0), n, vec2(1, 0),

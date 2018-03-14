@@ -35,18 +35,13 @@ void shaders_common_frag_reg(void);
  void shaders_decals_frag_reg(void);
  void shaders_ambient_frag_reg(void);
  void shaders_bright_frag_reg(void);
- void shaders_normal_frag_reg(void);
  void shaders_quad_frag_reg(void);
  void shaders_sprite_frag_reg(void);
  void shaders_ssr_frag_reg(void);
- void shaders_blinn_phong_frag_reg(void);
  void shaders_blur_frag_reg(void);
  void shaders_diffuse_frag_reg(void);
- void shaders_gooch_frag_reg(void);
 
  void shaders_phong_frag_reg(void);
- void shaders_position_frag_reg(void);
- void shaders_shadow_frag_reg(void);
  void shaders_ssao_frag_reg(void);
  void shaders_transparency_frag_reg(void);
  void shaders_highlight_frag_reg(void);
@@ -55,24 +50,19 @@ void shaders_reg()
 {
 	shaders_common_frag_reg();
 	shaders_ambient_frag_reg();
-	shaders_blinn_phong_frag_reg();
 	shaders_bright_frag_reg();
 	shaders_depth_frag_reg();
 	shaders_gbuffer_frag_reg();
 	shaders_decals_frag_reg();
-	shaders_gooch_frag_reg();
 	shaders_phong_frag_reg();
 	shaders_quad_frag_reg();
 	shaders_sprite_frag_reg();
-	shaders_shadow_frag_reg();
 	shaders_ssr_frag_reg();
 	shaders_transparency_frag_reg();
 	shaders_highlight_frag_reg();
 	shaders_blur_frag_reg();
 	shaders_diffuse_frag_reg();
 
-	shaders_normal_frag_reg();
-	shaders_position_frag_reg();
 	shaders_ssao_frag_reg();
 }
 
@@ -149,6 +139,7 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"	float exposure;\n"
 			"	mat4 projection;\n"
 			"	mat4 view;\n"
+			"	mat4 model;\n"
 			"#ifdef MESH4\n"
 			"	float angle4;\n"
 			"#endif\n"
@@ -166,7 +157,7 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"out vec3 tgspace_light_dir;\n"
 			"out vec3 tgspace_eye_dir;\n"
 			"out vec3 worldspace_position;\n"
-			"out vec3 cameraspace_vertex_pos;\n"
+			"out vec3 c_position;\n"
 			"out vec3 cameraspace_light_dir;\n"
 			"\n"
 			"uniform float screen_scale_x;\n"
@@ -184,7 +175,6 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"/* out vec4 vertex_color; */\n"
 			"\n"
 			"out mat3 TM;\n"
-			"out mat3 C_TM;\n"
 			"\n"
 			"uniform float ratio;\n"
 			"uniform float has_tex;\n"
@@ -430,14 +420,12 @@ static int shader_new_loader(shader_t *self)
 
 	self->u_v = glGetUniformLocation(self->program, "camera.view"); glerr();
 	self->u_projection = glGetUniformLocation(self->program, "camera.projection"); glerr();
-	self->u_camera_pos = glGetUniformLocation(self->program, "camera.camera_pos"); glerr();
+	self->u_camera_pos = glGetUniformLocation(self->program, "camera.pos"); glerr();
+	self->u_camera_model = glGetUniformLocation(self->program, "camera.model"); glerr();
 	self->u_exposure = glGetUniformLocation(self->program, "camera.exposure"); glerr();
 #ifdef MESH4
 	self->u_angle4 = glGetUniformLocation(self->program, "angle4"); glerr();
 #endif
-
-	self->u_cameraspace_normals = glGetUniformLocation(self->program,
-			"cameraspace_normals"); glerr();
 
 	self->u_light_intensity = glGetUniformLocation(self->program, "light_intensity"); glerr();
 
@@ -584,12 +572,13 @@ void shader_bind_light(shader_t *self, entity_t light)
 }
 
 void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
-		mat4_t *projection, float exposure, float angle4)
+		mat4_t *projection, mat4_t *model, float exposure, float angle4)
 {
 	/* shader_t *self = c_renderer(&candle->systems)->shader; */
 	self->vp = mat4_mul(*projection, *view);
 
 	glUniformMatrix4fv(self->u_v, 1, GL_FALSE, (void*)view->_);
+	glUniformMatrix4fv(self->u_v, 1, GL_FALSE, (void*)model->_);
 	glUniform3f(self->u_camera_pos, pos.x, pos.y, pos.z);
 #ifdef MESH4
 	glUniform1f(self->u_angle4, angle4);

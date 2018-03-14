@@ -25,19 +25,16 @@ uniform property_t diffuse;
 uniform property_t specular;
 uniform property_t normal;
 uniform property_t transparency;
-uniform property_t cnormal;
 
 struct gbuffer_t
 {
 	sampler2D depth;
 	sampler2D diffuse;
 	sampler2D specular;
-	sampler2D normal;
 	sampler2D transparency;
-	sampler2D wposition;
-	sampler2D cposition;
+	sampler2D position;
 	sampler2D id;
-	sampler2D cnormal;
+	sampler2D normal;
 };
 
 uniform gbuffer_t gbuffer;
@@ -60,6 +57,7 @@ struct camera_t
 	float exposure;
 	mat4 projection;
 	mat4 view;
+	mat4 model;
 #ifdef MESH4
 	float angle4;
 #endif
@@ -76,14 +74,13 @@ uniform float cameraspace_normals;
 in vec3 tgspace_light_dir;
 in vec3 tgspace_eye_dir;
 in vec3 worldspace_position;
-in vec3 cameraspace_vertex_pos;
+in vec3 c_position;
 in vec3 cameraspace_light_dir;
 
 in vec2 object_id;
 in vec2 poly_id;
 
 in vec3 vertex_normal;
-in vec3 vertex_cnormal;
 in vec3 vertex_tangent;
 in vec3 vertex_bitangent;
 
@@ -91,7 +88,6 @@ in vec2 texcoord;
 in vec4 vertex_color;
 
 in mat3 TM;
-in mat3 C_TM;
 
 
 vec4 pass_sample(pass_t pass, vec2 coord)
@@ -144,17 +140,6 @@ vec3 get_cnormal()
 	{
 		vec3 normalColor = resolveProperty(normal, texcoord).rgb * 2.0 - 1.0;
 		normalColor = vec3(normalColor.y, -normalColor.x, normalColor.z);
-		return normalize(C_TM * normalColor);
-	}
-	return normalize(vertex_cnormal);
-}
-
-vec3 get_normal()
-{
-	if(has_tex > 0.5)
-	{
-		vec3 normalColor = resolveProperty(normal, texcoord).rgb * 2.0 - 1.0;
-		normalColor = vec3(normalColor.y, -normalColor.x, normalColor.z);
 		return normalize(TM * normalColor);
 	}
 	return normalize(vertex_normal);
@@ -175,7 +160,7 @@ vec3 get_half_dir()
 	{
 		return normalize(tgspace_light_dir + tgspace_eye_dir);
 	}
-	return normalize(cameraspace_light_dir - cameraspace_vertex_pos);
+	return normalize(cameraspace_light_dir - c_position);
 }
 
 vec3 get_eye_dir()
@@ -184,7 +169,7 @@ vec3 get_eye_dir()
 	{
 		return normalize(tgspace_eye_dir);
 	}
-	return normalize(-cameraspace_vertex_pos);
+	return normalize(-c_position);
 }
 
 float shadow_at_dist_no_tan(vec3 vec, float i)
@@ -272,7 +257,7 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye)
 /* 		{ */
 /* 			float i; */
 
-/* 			float dist_to_eye = length(cameraspace_vertex_pos); */
+/* 			float dist_to_eye = length(c_position); */
 
 /* 			float count = 1; */
 /* 			float iters = floor(clamp(shadow_len / (dist_to_eye * */
@@ -322,7 +307,7 @@ float rand(vec2 co)
 float doAmbientOcclusion(vec2 tcoord, vec2 uv, vec3 p, vec3 cnorm)
 {
     float scale = 1.2, bias = 0.01, intensity = 5; 
-    vec3 diff = textureLod(gbuffer.wposition, tcoord + uv, 0).xyz - p;
+    vec3 diff = textureLod(gbuffer.position, tcoord + uv, 0).xyz - p;
     vec3 v = normalize(diff);
 	float dist = length(diff);
 	/* if(dist > 0.7) return 0.0f; */
@@ -377,14 +362,13 @@ const float searchDistInv = 1.0f / searchDist;
 
 vec3 calcViewPosition(in vec2 TexCoord)
 {
-	return textureLod(gbuffer.cposition, TexCoord, 0).xyz;
-	/* vec3 rawPosition                = vec3(TexCoord, texture(gbuffer.wposition, TexCoord).z); */
+	return textureLod(gbuffer.position, TexCoord, 0).xyz;
+}
 
-    /* vec4 ScreenSpacePosition        = vec4( rawPosition * 2 - 1, 1); */
-
-    /* vec4 ViewPosition               = inverse(camera.projection) * ScreenSpacePosition; */
-
-    /* return                          ViewPosition.xyz / ViewPosition.w; */
+vec3 decode(vec3 n)
+{
+	return n;
+	return vec3(n.x, sqrt(1.0f-dot(n.xz, n.xz)), n.z);
 }
 
 vec3 get_proj_coord(vec3 hitCoord) // z = hitCoord.z - depth
@@ -476,27 +460,26 @@ float isoscelesTriangleInRadius(float a, float h)
 
 vec4 ssr(sampler2D screen)
 {
-	vec3 nor = textureLod(gbuffer.normal, texcoord, 0).xyz;
-	vec3 pos = textureLod(gbuffer.cposition, texcoord, 0).xyz;
-	vec3 camPos = calcViewPosition(texcoord);
+	vec3 nor = decode(textureLod(gbuffer.normal, texcoord, 0).rgb);
+	vec3 pos = textureLod(gbuffer.position, texcoord, 0).xyz;
 
 	vec4 specularAll = textureLod(gbuffer.specular, texcoord, 0);
 	if(specularAll.a > 0.9) return vec4(0.0);
 
-	vec3 w_pos = textureLod(gbuffer.wposition, texcoord, 0).rgb;
+	vec3 w_pos = (camera.model * vec4(pos, 1.0f)).xyz;
+	vec3 w_nor = (camera.model * vec4(nor, 0.0f)).xyz;
 	vec3 c_pos = camera.pos - w_pos;
 	vec3 eye_dir = normalize(-c_pos);
 
-	float coef = clamp(1.5 * pow(1.0 + dot(eye_dir, nor), 1), 0.0, 1.0);
+	float coef = clamp(1.5 * pow(1.0 + dot(eye_dir, w_nor), 1), 0.0, 1.0);
 	if(coef < 0.01f) return vec4(0.0f);
 
 
 	// Reflection vector
-	vec3 view_normal = (camera.view * vec4(nor, 0.0)).xyz;
-	vec3 reflected = normalize(reflect(pos, view_normal));
+	vec3 reflected = normalize(reflect(pos, nor));
 
 	// Ray cast
-	vec3 hitPos = camPos.xyz; // + vec3(0.0, 0.0, rand(camPos.xz) * 0.2 - 0.1);
+	vec3 hitPos = pos.xyz; // + vec3(0.0, 0.0, rand(camPos.xz) * 0.2 - 0.1);
 
 
 	vec3 coords = RayCast(reflected, hitPos);

@@ -42,22 +42,18 @@ static void c_model_init(c_model_t *self)
 			"		float W = sin(camera.angle4);\n"
 			"		pos = vec4(vec3(P.x, P.y * Y + P.w * W, P.z), 1.0);\n"
 			"#endif\n"
-			"		vec4 mpos = M * pos;\n"
-			"		worldspace_position = mpos.xyz;\n"
-			"		cameraspace_vertex_pos = (camera.view * mpos).xyz;\n"
-			"		pos = MVP * pos;\n"
-			"		vec4 rotated_N = M * vec4(N, 0.0f);\n"
-			"		vec4 rotated_CN = camera.view * rotated_N;\n"
-			"		/* vertex_color = COL; */\n"
+			"		c_position = (camera.view * M * pos).xyz;\n"
+
+			"		vertex_normal    = (camera.view * M * vec4( N, 0.0f)).xyz;\n"
+			"		vertex_tangent   = (camera.view * M * vec4(TG, 0.0f)).xyz;\n"
+			"		vertex_bitangent = (camera.view * M * vec4(BT, 0.0f)).xyz;\n"
 			"		texcoord = vec2(-UV.y, UV.x);\n"
-			"		vertex_tangent = TG;\n"
-			"		vertex_bitangent = BT;\n"
-			"		vertex_normal = rotated_N.xyz;\n"
-			"		vertex_cnormal = rotated_CN.xyz;\n"
+
 			"		object_id = id;\n"
 			"		poly_id = ID;\n"
-			"		TM = mat3(TG, BT, rotated_N.xyz);\n"
-			"		C_TM = mat3(TG, BT, rotated_CN.xyz);\n"
+			"		TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
+
+			"		pos = MVP * pos;\n"
 			"	}\n"
 		));
 	}

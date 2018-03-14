@@ -88,6 +88,9 @@ static void c_renderer_bind_camera(c_renderer_t *self, pass_t *pass,
 
 	self->shader->vp = cam->vp;
 
+	glUniformMatrix4fv(sb->camera.u_model, 1, GL_FALSE,
+			(void*)cam->model_matrix._);
+
 	glUniformMatrix4fv(sb->camera.u_view, 1, GL_FALSE,
 			(void*)cam->view_matrix._);
 	glUniform3f(sb->camera.u_pos, cam->pos.x, cam->pos.y, cam->pos.z);
@@ -113,41 +116,42 @@ static void c_renderer_bind_gbuffer(c_renderer_t *self, pass_t *pass,
 	glUniform1f(self->shader->u_screen_scale_x, 1.0f); glerr();
 	glUniform1f(self->shader->u_screen_scale_y, 1.0f); glerr();
 
-	glUniform1i(sb->gbuffer.u_depth, 0); glerr();
-	glActiveTexture(GL_TEXTURE0 + 0); glerr();
-	texture_bind(gbuffer, 0);
+	int i = 0;
 
-	glUniform1i(sb->gbuffer.u_diffuse, 1); glerr();
-	glActiveTexture(GL_TEXTURE0 + 1); glerr();
-	texture_bind(gbuffer, 1);
+	glUniform1i(sb->gbuffer.u_depth, i); glerr();
+	glActiveTexture(GL_TEXTURE0 + i); glerr();
+	texture_bind(gbuffer, i);
+	i++;
 
-	glUniform1i(sb->gbuffer.u_specular, 2); glerr();
-	glActiveTexture(GL_TEXTURE0 + 2); glerr();
-	texture_bind(gbuffer, 2);
+	glUniform1i(sb->gbuffer.u_diffuse, i); glerr();
+	glActiveTexture(GL_TEXTURE0 + i); glerr();
+	texture_bind(gbuffer, i);
+	i++;
 
-	glUniform1i(sb->gbuffer.u_normal, 3); glerr();
-	glActiveTexture(GL_TEXTURE0 + 3); glerr();
-	texture_bind(gbuffer, 3);
+	glUniform1i(sb->gbuffer.u_specular, i); glerr();
+	glActiveTexture(GL_TEXTURE0 + i); glerr();
+	texture_bind(gbuffer, i);
+	i++;
 
-	glUniform1i(sb->gbuffer.u_transparency, 4); glerr();
-	glActiveTexture(GL_TEXTURE0 + 4); glerr();
-	texture_bind(gbuffer, 4);
+	glUniform1i(sb->gbuffer.u_transparency, i); glerr();
+	glActiveTexture(GL_TEXTURE0 + i); glerr();
+	texture_bind(gbuffer, i);
+	i++;
 
-	glUniform1i(sb->gbuffer.u_cposition, 5); glerr();
-	glActiveTexture(GL_TEXTURE0 + 5); glerr();
-	texture_bind(gbuffer, 5);
+	glUniform1i(sb->gbuffer.u_position, i); glerr();
+	glActiveTexture(GL_TEXTURE0 + i); glerr();
+	texture_bind(gbuffer, i);
+	i++;
 
-	glUniform1i(sb->gbuffer.u_wposition, 6); glerr();
-	glActiveTexture(GL_TEXTURE0 + 6); glerr();
-	texture_bind(gbuffer, 6);
+	glUniform1i(sb->gbuffer.u_id, i); glerr();
+	glActiveTexture(GL_TEXTURE0 + i); glerr();
+	texture_bind(gbuffer, i);
+	i++;
 
-	glUniform1i(sb->gbuffer.u_id, 7); glerr();
-	glActiveTexture(GL_TEXTURE0 + 7); glerr();
-	texture_bind(gbuffer, 7);
-
-	glUniform1i(sb->gbuffer.u_cnormal, 8); glerr();
-	glActiveTexture(GL_TEXTURE0 + 8); glerr();
-	texture_bind(gbuffer, 8);
+	glUniform1i(sb->gbuffer.u_normal, i); glerr();
+	glActiveTexture(GL_TEXTURE0 + i); glerr();
+	texture_bind(gbuffer, i);
+	i++;
 	glerr();
 }
 
@@ -167,6 +171,8 @@ void c_renderer_bind_get_uniforms(c_renderer_t *self, bind_t *bind,
 				shader_uniform(self->shader, bind->name, "pos");
 			sb->camera.u_exposure =
 				shader_uniform(self->shader, bind->name, "exposure");
+			sb->camera.u_model =
+				shader_uniform(self->shader, bind->name, "model");
 			sb->camera.u_projection =
 				shader_uniform(self->shader, bind->name, "projection");
 #ifdef MESH4
@@ -182,18 +188,14 @@ void c_renderer_bind_get_uniforms(c_renderer_t *self, bind_t *bind,
 				shader_uniform(self->shader, bind->name, "diffuse");
 			sb->gbuffer.u_specular =
 				shader_uniform(self->shader, bind->name, "specular");
-			sb->gbuffer.u_normal =
-				shader_uniform(self->shader, bind->name, "normal");
 			sb->gbuffer.u_transparency =
 				shader_uniform(self->shader, bind->name, "transparency");
-			sb->gbuffer.u_cposition =
-				shader_uniform(self->shader, bind->name, "cposition");
-			sb->gbuffer.u_wposition =
-				shader_uniform(self->shader, bind->name, "wposition");
+			sb->gbuffer.u_position =
+				shader_uniform(self->shader, bind->name, "position");
 			sb->gbuffer.u_id =
 				shader_uniform(self->shader, bind->name, "id");
-			sb->gbuffer.u_cnormal =
-				shader_uniform(self->shader, bind->name, "cnormal");
+			sb->gbuffer.u_normal =
+				shader_uniform(self->shader, bind->name, "normal");
 			glerr();
 
 			bind->gbuffer.id = c_renderer_pass(self, bind->name);
@@ -227,8 +229,10 @@ void c_renderer_bind_pass(c_renderer_t *self, pass_t *pass)
 	if(self->bound_probe)
 	{
 		shader_bind_probe(self->shader, self->bound_probe);
-		shader_bind_camera(self->shader, self->bound_camera_pos, self->bound_view,
-				self->bound_projection, self->bound_exposure, self->bound_angle4);
+		shader_bind_camera(self->shader, self->bound_camera_pos,
+				self->bound_view, self->bound_projection,
+				self->bound_camera_model, self->bound_exposure,
+				self->bound_angle4);
 	}
 	if(self->bound_light)
 	{
@@ -464,12 +468,10 @@ static int c_renderer_update_screen_texture(c_renderer_t *self)
 		{
 			/* texture_add_buffer(pass->output, "diffuse", 1, 1, 0); */
 			texture_add_buffer(pass->output, "specular", 1, 1, 0);
-			texture_add_buffer(pass->output, "normal", 1, 0, 0);
 			texture_add_buffer(pass->output, "transparency", 1, 1, 0);
-			texture_add_buffer(pass->output, "cameraspace position", 1, 0, 0);
-			texture_add_buffer(pass->output, "worldspace position", 1, 0, 0);
+			texture_add_buffer(pass->output, "position", 1, 0, 0);
 			texture_add_buffer(pass->output, "id", 1, 1, 0);
-			texture_add_buffer(pass->output, "cnormal", 1, 0, 0);
+			texture_add_buffer(pass->output, "normal", 1, 0, 0);
 
 			texture_draw_id(pass->output, COLOR_TEX); /* DRAW DIFFUSE */
 
@@ -653,7 +655,7 @@ entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
 	entity_t result;
 	if(!self->passes[0].output) return entity_null;
 
-	unsigned int res = texture_get_pixel(self->passes[0].output, 6,
+	unsigned int res = texture_get_pixel(self->passes[0].output, 4,
 			x * self->resolution, y * self->resolution, depth);
 	result = res;
 	return result;

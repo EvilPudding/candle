@@ -8,7 +8,8 @@ layout (location = 0) out vec4 FragColor;
 
 void main()
 {
-	float dist = length(probe_pos - worldspace_position);
+	vec3 pp = (camera.view * vec4(probe_pos, 1.0f)).xyz;
+	float dist = length(pp - c_position);
     /* FragColor = vec4(vec3(0.0, 1.0, 0.0f), dist); */
     FragColor = vec4(vec3(0.0), dist);
 }  

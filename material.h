@@ -21,8 +21,8 @@ typedef struct
 
 	prop_t diffuse;
 	prop_t specular;
-	prop_t normal;
 	prop_t transparency;
+	prop_t normal;
 	/* prop_t position; */
 	/* prop_t position; */
 	/* prop_t cnormal; */

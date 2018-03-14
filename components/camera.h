@@ -9,6 +9,7 @@ typedef struct
 	c_t super; /* extends c_t */
 
 	mat4_t projection_matrix;
+	mat4_t model_matrix;
 	mat4_t view_matrix;
 	mat4_t vp;
 	vec3_t pos;

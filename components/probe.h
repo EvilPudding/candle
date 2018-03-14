@@ -12,6 +12,7 @@ typedef struct c_probe_t
 	c_t super;
 	mat4_t projection;
 	mat4_t views[6];
+	mat4_t models[6];
 	texture_t *map;
 	int last_update;
 } c_probe_t;

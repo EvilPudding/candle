@@ -8,11 +8,10 @@ uniform pass_t ssao;
 void main()
 {
 	vec3 dif = textureLod(gbuffer.diffuse, texcoord, 0).rgb;
-	vec3 w_pos = textureLod(gbuffer.wposition, texcoord, 0).rgb;
+	vec3 c_pos = textureLod(gbuffer.position, texcoord, 0).rgb;
+	vec3 w_pos = (camera.model * vec4(c_pos, 1.0f)).xyz;
 
-	vec3 c_pos = camera.pos - w_pos;
-
-	vec3 nor = textureLod(gbuffer.normal, texcoord, 0).rgb;
+	vec3 c_nor = decode(textureLod(gbuffer.normal, texcoord, 0).rgb);
 
 	float dist_to_eye = length(c_pos);
 	/* FragColor = clamp(vec4((nor+1.0f)/2.0f, 1.0),0,1); return; */
@@ -21,15 +20,18 @@ void main()
 
 	if(light_intensity > 0.01)
 	{
-		vec3 vec = light_pos - w_pos;
+		vec3 c_light = (camera.view * vec4(light_pos, 1.0f)).xyz;
 
-		float point_to_light = length(vec);
+		vec3 c_light_dir = c_light - c_pos;
+		vec3 w_light_dir = light_pos - w_pos;
+
+		float point_to_light = length(w_light_dir);
 		/* FragColor = vec4(texture(shadow_map, -vec).rgb, 1.0f); return; */
 
 		/* FragColor = vec4(vec3(nor) * 0.5 + 0.5, 1.0); return; */
 
 
-		float sd = get_shadow(vec, point_to_light, dist_to_eye);
+		float sd = get_shadow(w_light_dir, point_to_light, dist_to_eye);
 
 		/* FragColor = vec4(vec3(sd), 1.0); return; */
 		/* FragColor = vec4(vec3(lookup_single(-vec)) / 100, 1.0); return; */
@@ -43,9 +45,10 @@ void main()
 
 			float lightAtt = 0.01;
 
-			vec3 light_dir = normalize(-w_pos + light_pos);
 
-			float diffuseCoefficient = max(0.0, dot(nor, light_dir));
+			float diffuseCoefficient = max(0.0, dot(c_nor, normalize(c_light_dir)));
+			/* FragColor = vec4(vec3(diffuseCoefficient / 10), 1.0f); return; */
+
 			vec3 frag_diffuse = light_intensity * diffuseCoefficient * dif;
 
 			float attenuation = 1.0 / (1.0 + lightAtt * pow(point_to_light, 2));

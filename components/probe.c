@@ -28,21 +28,27 @@ int c_probe_update_position(c_probe_t *self)
 
 	self->views[0] = mat4_look_at(pos, vec3_add(pos, vec3(1.0, 0.0, 0.0)),
 			vec3(0.0,-1.0,0.0));
+	self->models[0] = mat4_invert(self->views[0]);
 
 	self->views[1] = mat4_look_at(pos, vec3_add(pos, vec3(-1.0, 0.0, 0.0)),
 			vec3(0.0, -1.0, 0.0));
+	self->models[1] = mat4_invert(self->views[0]);
 
 	self->views[2] = mat4_look_at(pos, vec3_add(pos, vec3(0.0, 1.0, 0.0)),
 			vec3(0.0, 0.0, 1.0));
+	self->models[2] = mat4_invert(self->views[0]);
 
 	self->views[3] = mat4_look_at(pos, vec3_add(pos, vec3(0.0, -1.0, 0.0)),
 			vec3(0.0, 0.0, -1.0));
+	self->models[3] = mat4_invert(self->views[0]);
 
 	self->views[4] = mat4_look_at(pos, vec3_add(pos, vec3(0.0, 0.0, 1.0)),
 			vec3(0.0, -1.0, 0.0));
+	self->models[4] = mat4_invert(self->views[0]);
 
 	self->views[5] = mat4_look_at(pos, vec3_add(pos, vec3(0.0, 0.0, -1.0)),
 			vec3(0.0, -1.0, 0.0));
+	self->models[5] = mat4_invert(self->views[0]);
 
 	self->last_update = -1;
 
@@ -71,6 +77,7 @@ int c_probe_render(c_probe_t *self, uint signal)
 		glClear(GL_DEPTH_BUFFER_BIT);
 
 		renderer->bound_view = &self->views[face];
+		renderer->bound_camera_model = &self->models[face];
 		renderer->bound_exposure = 1.0f;
 
 		int res = entity_signal(c_entity(self), signal, NULL);

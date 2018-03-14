@@ -74,6 +74,7 @@ typedef struct
 		} integer;
 		struct {
 			uint u_view;
+			uint u_model;
 			uint u_pos;
 			uint u_exposure;
 			uint u_projection;
@@ -85,12 +86,10 @@ typedef struct
 			uint u_depth;
 			uint u_diffuse;
 			uint u_specular;
-			uint u_normal;
 			uint u_transparency;
-			uint u_wposition;
-			uint u_cposition;
+			uint u_position;
 			uint u_id;
-			uint u_cnormal;
+			uint u_normal;
 		} gbuffer;
 	};
 } shader_bind_t;
@@ -175,6 +174,7 @@ typedef struct c_renderer_t
 	vec3_t bound_camera_pos;
 	mat4_t *bound_view;
 	mat4_t *bound_projection;
+	mat4_t *bound_camera_model;
 	float bound_exposure;
 	float bound_angle4;
 	entity_t bound_light;
