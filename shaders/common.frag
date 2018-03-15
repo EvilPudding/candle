@@ -89,6 +89,7 @@ in vec4 vertex_color;
 
 in mat3 TM;
 
+uniform vec2 screen_size;
 
 vec4 pass_sample(pass_t pass, vec2 coord)
 {
@@ -98,6 +99,11 @@ vec4 pass_sample(pass_t pass, vec2 coord)
 vec4 pass_depth(pass_t pass, vec2 coord)
 {
 	return textureLod(pass.depth, coord, 0);
+}
+
+vec2 pixel_pos()
+{
+	return gl_FragCoord.xy / screen_size;
 }
 
 
@@ -156,9 +162,34 @@ vec3 decode_normal(vec2 enc)
 
 /* ------------------- */
 
+vec4 get_specular(gbuffer_t gbuffer)
+{
+	return textureLod(gbuffer.specular, pixel_pos(), 0);
+}
+
+vec4 get_transparency(gbuffer_t gbuffer)
+{
+	return textureLod(gbuffer.transparency, pixel_pos(), 0);
+}
+
+vec2 get_id(gbuffer_t gbuffer)
+{
+	return textureLod(gbuffer.id, pixel_pos(), 0).rg;
+}
+
+vec3 get_diffuse(gbuffer_t gbuffer)
+{
+	return textureLod(gbuffer.diffuse, pixel_pos(), 0).rgb;
+}
+
+vec3 get_position(gbuffer_t gbuffer)
+{
+	return texture2D(gbuffer.position, pixel_pos()).rgb;
+}
+
 vec3 get_normal(gbuffer_t gbuffer)
 {
-	return decode_normal(texture2D(gbuffer.normal, texcoord).rg);
+	return decode_normal(texture2D(gbuffer.normal, pixel_pos()).rg);
 }
 
 vec3 get_normal()
@@ -482,9 +513,9 @@ float isoscelesTriangleInRadius(float a, float h)
 vec4 ssr(sampler2D screen)
 {
 	vec3 nor = get_normal(gbuffer);
-	vec3 pos = textureLod(gbuffer.position, texcoord, 0).xyz;
+	vec3 pos = get_position(gbuffer);
 
-	vec4 specularAll = textureLod(gbuffer.specular, texcoord, 0);
+	vec4 specularAll = get_specular(gbuffer);
 	if(specularAll.a > 0.9) return vec4(0.0);
 
 	vec3 w_pos = (camera.model * vec4(pos, 1.0f)).xyz;

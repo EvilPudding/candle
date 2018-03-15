@@ -32,6 +32,7 @@ void shaders_common_frag_reg(void);
  void shaders_ambient_frag_reg(void);
  void shaders_depth_frag_reg(void);
  void shaders_gbuffer_frag_reg(void);
+ void shaders_gbuffer_editmode_frag_reg(void);
  void shaders_decals_frag_reg(void);
  void shaders_ambient_frag_reg(void);
  void shaders_bright_frag_reg(void);
@@ -53,6 +54,7 @@ void shaders_reg()
 	shaders_bright_frag_reg();
 	shaders_depth_frag_reg();
 	shaders_gbuffer_frag_reg();
+	shaders_gbuffer_editmode_frag_reg();
 	shaders_decals_frag_reg();
 	shaders_phong_frag_reg();
 	shaders_quad_frag_reg();
@@ -160,8 +162,7 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"out vec3 c_position;\n"
 			"out vec3 cameraspace_light_dir;\n"
 			"\n"
-			"uniform float screen_scale_x;\n"
-			"uniform float screen_scale_y;\n"
+			"uniform vec2 screen_size;\n"
 			"\n"
 			"out vec2 poly_id;\n"
 			"out vec2 object_id;\n"
@@ -434,8 +435,7 @@ static int shader_new_loader(shader_t *self)
 	self->u_id = glGetUniformLocation(self->program, "id"); glerr();
 	self->u_id_filter = glGetUniformLocation(self->program, "id_filter"); glerr();
 
-	self->u_screen_scale_x = glGetUniformLocation(self->program, "screen_scale_x"); glerr();
-	self->u_screen_scale_y = glGetUniformLocation(self->program, "screen_scale_y"); glerr();
+	self->u_screen_size = glGetUniformLocation(self->program, "screen_size"); glerr();
 
 	self->u_ambient_light = glGetUniformLocation(self->program, "ambient_light"); glerr();
 
@@ -613,8 +613,8 @@ void shader_bind_screen(shader_t *self, texture_t *buffer, float sx, float sy)
 {
 	/* shader_t *self = c_renderer(&candle->systems)->shader; */
 
-	glUniform1f(self->u_screen_scale_x, sx); glerr();
-	glUniform1f(self->u_screen_scale_y, sy); glerr();
+	glUniform2f(self->u_screen_size, sx * buffer->width, sy * buffer->height);
+	glerr();
 
 	glUniform1i(self->u_diffuse.texture, 1); glerr();
 	glActiveTexture(GL_TEXTURE0 + 1); glerr();

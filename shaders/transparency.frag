@@ -7,11 +7,11 @@ uniform pass_t rendered;
 
 void main()
 {
-	vec3 dif = texture2D(gbuffer.diffuse, texcoord).rgb;
-	vec4 trans = texture2D(gbuffer.transparency, texcoord);
+	vec3 dif = get_diffuse(gbuffer);
+	vec4 trans = get_transparency(gbuffer);
 	vec3 nor = get_normal(gbuffer);
 
-	vec3 c_pos = texture2D(gbuffer.position, texcoord).rgb;
+	vec3 c_pos = get_position(gbuffer);
 	nor.z = 0;
 
 	if(trans.a != 0.0f)

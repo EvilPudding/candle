@@ -7,8 +7,8 @@ uniform pass_t ssao;
 
 void main()
 {
-	vec3 dif = textureLod(gbuffer.diffuse, texcoord, 0).rgb;
-	vec3 c_pos = textureLod(gbuffer.position, texcoord, 0).rgb;
+	vec3 dif = get_diffuse(gbuffer);
+	vec3 c_pos = get_position(gbuffer);
 	vec3 w_pos = (camera.model * vec4(c_pos, 1.0f)).xyz;
 
 	vec3 c_nor = get_normal(gbuffer);
@@ -19,6 +19,7 @@ void main()
 	/* FragColor = clamp(vec4((nor+1.0f)/2.0f, 1.0),0,1); return; */
 
 	vec3 color = ambient * dif;
+	/* FragColor = vec4(texcoord - gl_FragCoord.xy / screen_size, 0, 1); return; */
 
 	if(light_intensity > 0.01)
 	{
@@ -60,7 +61,7 @@ void main()
 
 			/* if(specul_smudge > 0.0 && diffuseCoefficient > 0.005 && attenuation > 0.01) */
 			/* { */
-			/* 	vec4 spe = textureLod(gbuffer.specular, texcoord, 0); */
+			/* 	vec4 spe = get_specular(gbuffer); */
 
 			/* 	vec3 eye_dir = normalize(-c_pos); */
 

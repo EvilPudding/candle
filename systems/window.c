@@ -126,7 +126,8 @@ int c_window_created(c_window_t *self)
 	if(!g_quad_vs)
 	{
 		g_quad_vs = vs_new("quad", 1, vertex_modifier_new(
-			"texcoord *= vec2(screen_scale_x, screen_scale_y);\n"
+			/* "texcoord *= screen_size;\n" */
+			""
 		));
 		g_quad_fs = fs_new("quad");
 	}
@@ -198,6 +199,9 @@ void c_window_rect(c_window_t *self, int x, int y, int width, int height,
 	glViewport(x, y, width, height); glerr();
 
 	shader_bind_screen(shader, texture, 1, 1);
+	glUniform2f(shader->u_screen_size,
+			self->width,
+			self->height); glerr();
 
 	c_mesh_gl_draw(c_mesh_gl(self), 0);
 

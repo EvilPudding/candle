@@ -108,6 +108,18 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 		/* nk_style_set_font(self->nk, &roboto->handle); */
 	} 
 
+	c_renderer_replace_pass(c_renderer(self), "gbuffer", "gbuffer_editmode", render_visible,
+			PASS_GBUFFER | PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR,
+		(bind_t[]){
+			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, c_renderer(self)},
+			{BIND_INTEGER, "mode", (getter_cb)c_editmode_bind_mode, self},
+			{BIND_VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
+			{BIND_VEC2, "sel_id", (getter_cb)c_editmode_bind_selected, self},
+			{BIND_NONE}
+		}
+	);
+
+
 	c_renderer_add_pass(c_renderer(self), "rendered", "highlight",
 			render_quad, 0,
 		(bind_t[]){
@@ -137,11 +149,11 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 
 	if(self->mode == EDIT_OBJECT)
 	{
-		self->over = result & 0xFFFF;
+		self->over = result;
 	}
 	else
 	{
-		self->over_poly = result >> 16;
+		self->over_poly = result;
 	}
 }
 

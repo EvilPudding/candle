@@ -72,8 +72,7 @@ typedef struct shader_t
 	GLuint u_id;
 	GLuint u_id_filter;
 
-	GLuint u_screen_scale_x;
-	GLuint u_screen_scale_y;
+	GLuint u_screen_size;
 
 	u_prop_t u_diffuse;
 	u_prop_t u_specular;

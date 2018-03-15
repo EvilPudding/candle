@@ -57,7 +57,7 @@ uint texture_get_pixel(texture_t *self, int buffer, int x, int y,
 		float *depth)
 {
 	uint data = 0;
-	y = self->height-y;
+	y = self->height - y;
 	glFlush();
 	glFinish();
 

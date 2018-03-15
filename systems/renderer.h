@@ -215,6 +215,9 @@ void c_renderer_add_camera(c_renderer_t *self, entity_t camera);
 
 void c_renderer_add_pass(c_renderer_t *self, const char *feed_name,
 		const char *shader_name, ulong draw_signal, int flags, bind_t binds[]);
+void c_renderer_replace_pass(c_renderer_t *self, const char *feed_name,
+		const char *shader_name, ulong draw_signal, int flags, bind_t binds[]);
+entity_t c_renderer_get_camera(c_renderer_t *self);
 
 void c_renderer_clear_shader(c_renderer_t *self, shader_t *shader);
 int c_renderer_scene_changed(c_renderer_t *self);

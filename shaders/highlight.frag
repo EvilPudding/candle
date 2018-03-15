@@ -10,19 +10,16 @@ uniform bool horizontal;
 
 uniform vec2 over_id;
 uniform vec2 sel_id;
-uniform bool mode;
 
-vec4 get_unfiltered(vec2 offset)
-{
-	return textureLod(gbuffer.id, offset, 0);
-}
+#define EDIT_OBJECT 0
+#define EDIT_MESH 1
 
 float filtered(vec2 c, vec2 filter)
 {
 
 	c = abs(c.xy - filter);
 
-	if(c.x > 0.0001 || c.y > 0.0001)
+	if(c.x > 0.000001 || c.y > 0.000001)
 	{
 		return 0;
 	}
@@ -34,11 +31,10 @@ uniform pass_t final;
 void main()
 {
 	/* vec2 tex_offset = 1.0f / textureSize(gbuffer.id, 0); */
-	vec4 c = textureLod(gbuffer.id, texcoord, 0);
-	vec2 mode_c = mode?c.zw:c.xy;
+	vec2 c = get_id(gbuffer);
 
-	float over = filtered(mode_c, over_id);
-	float selected = filtered(mode_c, sel_id);
+	float over = filtered(c, over_id);
+	float selected = filtered(c, sel_id);
 
 	const vec3 sel_color = vec3(0.03f, 0.05f, 0.1f);
 	const vec3 over_color = vec3(0.08);
@@ -49,7 +45,7 @@ void main()
 
 
 	FragColor = vec4(final, 1.0f);
-	/* FragColor = vec4(mode_c * 30, 0.0f, 1.0f); */
+	/* FragColor = vec4(c * 30, 0.0f, 1.0f); */
 }
 
 // vim: set ft=c:

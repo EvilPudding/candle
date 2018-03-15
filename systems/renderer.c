@@ -113,8 +113,9 @@ static void c_renderer_bind_gbuffer(c_renderer_t *self, pass_t *pass,
 	texture_t *gbuffer = self->passes[bind->gbuffer.id].output;
 	if(!gbuffer) return;
 
-	glUniform1f(self->shader->u_screen_scale_x, 1.0f); glerr();
-	glUniform1f(self->shader->u_screen_scale_y, 1.0f); glerr();
+	glUniform2f(self->shader->u_screen_size,
+			pass->output->width,
+			pass->output->height); glerr();
 
 	int i = 0;
 
@@ -240,6 +241,10 @@ void c_renderer_bind_pass(c_renderer_t *self, pass_t *pass)
 	}
 
 	if(!pass) return;
+
+	glUniform2f(self->shader->u_screen_size,
+			pass->output->width,
+			pass->output->height); glerr();
 
 	if(self->shader->frame_bind == self->frame) return;
 	self->shader->frame_bind = self->frame;
@@ -471,7 +476,7 @@ static int c_renderer_update_screen_texture(c_renderer_t *self)
 			texture_add_buffer(pass->output, "specular", 1, 4, 0);
 			texture_add_buffer(pass->output, "transparency", 1, 4, 0);
 			texture_add_buffer(pass->output, "position", 1, 3, 0);
-			texture_add_buffer(pass->output, "id", 1, 4, 0);
+			texture_add_buffer(pass->output, "id", 1, 2, 0);
 			texture_add_buffer(pass->output, "normal", 1, 2, 0);
 
 			texture_draw_id(pass->output, COLOR_TEX); /* DRAW DIFFUSE */
@@ -533,6 +538,7 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 		printf("failed to target\n");
 		return NULL;
 	}
+
 	if(pass->clear)
 	{
 		glClear(pass->clear); glerr();
@@ -775,12 +781,11 @@ static int c_renderer_pass(c_renderer_t *self, const char *name)
 	return -1;
 }
 
-void c_renderer_add_pass(c_renderer_t *self, const char *feed_name,
+void _c_renderer_add_pass(c_renderer_t *self, int i, const char *feed_name,
 		const char *shader_name, ulong draw_signal, int flags, bind_t binds[])
 {
 	int prev_with_same_name = c_renderer_pass(self, feed_name);
 	
-	int i = self->passes_size++;
 	pass_t *pass = &self->passes[i];
 	pass->shader = fs_new(shader_name);
 
@@ -826,6 +831,21 @@ void c_renderer_add_pass(c_renderer_t *self, const char *feed_name,
 	}
 	self->passes_bound = 0;
 	self->ready = 0;
+}
+
+void c_renderer_replace_pass(c_renderer_t *self, const char *feed_name,
+		const char *shader_name, ulong draw_signal, int flags, bind_t binds[])
+{
+	int prev = c_renderer_pass(self, feed_name);
+	_c_renderer_add_pass(self, prev, feed_name, shader_name,
+			draw_signal, flags, binds);
+}
+
+void c_renderer_add_pass(c_renderer_t *self, const char *feed_name,
+		const char *shader_name, ulong draw_signal, int flags, bind_t binds[])
+{
+	_c_renderer_add_pass(self, self->passes_size++, feed_name, shader_name,
+			draw_signal, flags, binds);
 }
 
 void c_renderer_clear_shaders(c_renderer_t *self, shader_t *shader)

@@ -15,7 +15,7 @@ void main()
 	/* col = mix(col, trans, trans.a); */
 
 	/* vec4 col = vec4(0.0f); */
-	vec4 refl = textureLod(gbuffer.specular, texcoord, 0);
+	vec4 refl = get_specular(gbuffer);
 	vec4 ssred = ssr(rendered.texture);
 
 	/* vec3 final = mix(color.rgb, ssred.rgb, ssred.a); */
@@ -23,12 +23,10 @@ void main()
 
 	/* FragColor = vec4(trans.xyz, 1.0f); return; */
 	/* FragColor = vec4(ssred.rgb, 1.0f); return; */
-	/* FragColor = vec4(col.rgb, 1.0f); return; */
-	/* FragColor = vec4(textureLod(gbuffer.transparency, texcoord, 0).rgb, 1.0f); return; */
 
 	/* final = clamp(final * 1.6f - 0.10f, 0.0, 3.0); */
 	final = final * pow(2.0f, camera.exposure);
-	float dist = length(textureLod(gbuffer.position, texcoord, 0).xyz);
+	float dist = length(get_position(gbuffer));
 	final.b += (clamp(dist - 5, 0, 1)) / 70;
 
 	FragColor = vec4(final, 1.0f);

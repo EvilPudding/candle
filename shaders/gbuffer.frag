@@ -3,7 +3,7 @@ layout (location = 0) out vec4 DiffuseColor;
 layout (location = 1) out vec4 SpecularColor;
 layout (location = 2) out vec4 Transparency;
 layout (location = 3) out vec3 PositionColor;
-layout (location = 4) out vec4 ID;
+layout (location = 4) out vec2 ID;
 layout (location = 5) out vec2 Normal;
 
 #include "common.frag"
@@ -26,8 +26,7 @@ void main()
 
 	PositionColor = c_position;
 
-	/* ID = vec4(object_id.x, object_id.y, poly_id.x, poly_id.y); */
-	ID = vec4(object_id.x, object_id.y, poly_id.x, poly_id.y);
+	ID = vec2(0.0f);
 
 	/* float up = max(n.y, 0.0); */
 	/* DiffuseColor = vec4(vec3(up), 1.0); */
