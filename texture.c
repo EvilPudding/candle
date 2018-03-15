@@ -245,7 +245,7 @@ static void texture_new_2D_loader(texture_t *self)
 }
 
 int texture_add_buffer(texture_t *self, const char *name, int is_float,
-		int alpha, int mipmaped)
+		int dims, int mipmaped)
 {
 	GLuint targ = self->target;
 	glActiveTexture(GL_TEXTURE15);
@@ -263,15 +263,20 @@ int texture_add_buffer(texture_t *self, const char *name, int is_float,
 
 	GLuint internal;
 	GLuint format;
-	if(alpha)
+	if(dims == 4)
 	{
 		internal = GL_RGBA16F;
 		format = GL_RGBA;
 	}
+	else if(dims == 3)
+	{
+		internal = GL_RGB16F;
+		format = GL_RGB;
+	}
 	else
 	{
-		internal = GL_RGBA16F;
-		format = GL_RGB;
+		internal = GL_RG16F;
+		format = GL_RG;
 	}
 
 	glTexImage2D(targ, 0, internal, self->width, self->height, 0, format,
@@ -296,8 +301,7 @@ texture_t *texture_new_2D
 (
 	uint width,
 	uint height,
-	uint bpp,
-	uint internal,
+	uint dims,
 	uint depth_buffer,
 	uint repeat
 )
@@ -308,9 +312,22 @@ texture_t *texture_new_2D
 	self->target = GL_TEXTURE_2D;
 
 	self->repeat = repeat;
-	self->bpp = bpp;
-	self->format	= bpp == 24 ? GL_RGB : GL_RGBA;
-	self->internal = internal;
+	self->bpp = dims * 8;
+	if(dims == 4)
+	{
+		self->format	= GL_RGBA;
+		self->internal = GL_RGBA16F;
+	}
+	else if(dims == 3)
+	{
+		self->format	= GL_RGB;
+		self->internal = GL_RGB16F;
+	}
+	else
+	{
+		self->format	= GL_RG;
+		self->internal = GL_RG16F;
+	}
 	self->width = width;
 	self->height = height;
 	self->depth_buffer = depth_buffer;
@@ -319,7 +336,7 @@ texture_t *texture_new_2D
 	self->draw_id = COLOR_TEX;
 	self->prev_id = COLOR_TEX;
 
-	uint bytesPerPixel = (self->bpp / 8);
+	uint bytesPerPixel = dims;
 
 	uint imageSize = (bytesPerPixel * width * height);
 
@@ -360,7 +377,7 @@ texture_t *texture_new_3D
 	uint width,
 	uint height,
 	uint depth,
-	uint bpp
+	uint dims
 )
 {
 	texture_t *self = calloc(1, sizeof *self);
@@ -368,15 +385,29 @@ texture_t *texture_new_3D
 
 	self->target = GL_TEXTURE_3D;
 
-	self->bpp = bpp;
-	self->format	= bpp == 24 ? GL_RGB : GL_RGBA;
+	self->bpp = dims * 8;
+	if(dims == 4)
+	{
+		self->format	= GL_RGBA;
+		self->internal = GL_RGBA16F;
+	}
+	else if(dims == 3)
+	{
+		self->format	= GL_RGB;
+		self->internal = GL_RGB16F;
+	}
+	else
+	{
+		self->format	= GL_RG;
+		self->internal = GL_RG16F;
+	}
 	self->width = width;
 	self->height = height;
 	self->depth = depth;
 	self->draw_id = COLOR_TEX;
 	self->prev_id = COLOR_TEX;
 
-	self->imageData	= calloc((self->bpp / 8) * width * height * depth, 1);
+	self->imageData	= calloc(dims * width * height * depth, 1);
 
 	/* float x, y, z; */
 	/* for(x = 0; x < width; x++) */

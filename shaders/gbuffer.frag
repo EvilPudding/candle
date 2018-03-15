@@ -4,7 +4,7 @@ layout (location = 1) out vec4 SpecularColor;
 layout (location = 2) out vec4 Transparency;
 layout (location = 3) out vec3 PositionColor;
 layout (location = 4) out vec4 ID;
-layout (location = 5) out vec3 Normal;
+layout (location = 5) out vec2 Normal;
 
 #include "common.frag"
 
@@ -22,7 +22,7 @@ void main()
 	/* SpecularColor.a *= 1.0 - clamp(abs(noi * n.y), 0.0f, 1.0f); */
 	/* DiffuseColor = vec4(vec3(SpecularColor.a), 1.0f); */
 
-	Normal = normalize(get_cnormal());
+	Normal = encode_normal(get_normal());
 
 	PositionColor = c_position;
 

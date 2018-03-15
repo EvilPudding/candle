@@ -23,12 +23,13 @@ c_light_t *c_light_new(float intensity, vec4_t color, int shadow_size)
 
 	if(!g_depth_fs) g_depth_fs = fs_new("depth");
 
+	entity_add_component(c_entity(self), (c_t*)c_probe_new(self->shadow_size));
+
 	return self;
 }
 
 int c_light_created(c_light_t *self)
 {
-	entity_add_component(c_entity(self), (c_t*)c_probe_new(self->shadow_size));
 	c_probe_update_position(c_probe(self));
 
 	return 1;
@@ -43,6 +44,7 @@ void c_light_destroy(c_light_t *self)
 int c_light_render(c_light_t *self)
 {
 	c_probe_t *probe = c_probe(self);
+	if(!probe) return 0;
 	if(!g_depth_fs) return 0;
 
 	fs_bind(g_depth_fs);

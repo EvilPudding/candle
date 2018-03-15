@@ -326,6 +326,7 @@ shader_t *vs_bind(vs_t *vs)
 	{
 		shader_bind(renderer->shader);
 		c_renderer_bind_pass(renderer, renderer->current_pass);
+		renderer->shader->bound_textures = 0;
 		return renderer->shader;
 	}
 	/* printf("vs_bind %s\n", vs->name); */
@@ -462,16 +463,16 @@ static int c_renderer_update_screen_texture(c_renderer_t *self)
 			texture_destroy(pass->output);
 		}
 
-		pass->output = texture_new_2D( W, H, 32, GL_RGBA16F, 1, 0);
+		pass->output = texture_new_2D( W, H, 4, 1, 0);
 
 		if(pass->gbuffer)
 		{
 			/* texture_add_buffer(pass->output, "diffuse", 1, 1, 0); */
-			texture_add_buffer(pass->output, "specular", 1, 1, 0);
-			texture_add_buffer(pass->output, "transparency", 1, 1, 0);
-			texture_add_buffer(pass->output, "position", 1, 0, 0);
-			texture_add_buffer(pass->output, "id", 1, 1, 0);
-			texture_add_buffer(pass->output, "normal", 1, 0, 0);
+			texture_add_buffer(pass->output, "specular", 1, 4, 0);
+			texture_add_buffer(pass->output, "transparency", 1, 4, 0);
+			texture_add_buffer(pass->output, "position", 1, 3, 0);
+			texture_add_buffer(pass->output, "id", 1, 4, 0);
+			texture_add_buffer(pass->output, "normal", 1, 2, 0);
 
 			texture_draw_id(pass->output, COLOR_TEX); /* DRAW DIFFUSE */
 
@@ -484,10 +485,10 @@ static int c_renderer_update_screen_texture(c_renderer_t *self)
 
 	if(self->temp_buffers[0]) texture_destroy(self->temp_buffers[0]);
 	if(self->temp_buffers[1]) texture_destroy(self->temp_buffers[1]);
-	self->temp_buffers[0] = texture_new_2D(w * self->resolution * bloom_scale,
-			h * self->resolution * bloom_scale, 32, GL_RGBA16F, 1, 0);
-	self->temp_buffers[1] = texture_new_2D(w * self->resolution * bloom_scale,
-			h * self->resolution * bloom_scale, 32, GL_RGBA16F, 1, 0);
+	self->temp_buffers[0] = texture_new_2D(w * bloom_scale, h * bloom_scale,
+			4, 1, 0);
+	self->temp_buffers[1] = texture_new_2D(w * bloom_scale, h * bloom_scale,
+			4, 1, 0);
 
 	self->ready = 1;
 	return 1;
@@ -606,7 +607,7 @@ int init_perlin(c_renderer_t *self)
 {
 	int texes = 8;
 	int m = self->perlin_size * texes;
-	self->perlin = texture_new_3D(m, m, m, 32);
+	self->perlin = texture_new_3D(m, m, m, 4);
 	loader_wait(candle->loader);
 
 	int x, y, z;

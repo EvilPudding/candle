@@ -11,7 +11,9 @@ void main()
 	vec3 c_pos = textureLod(gbuffer.position, texcoord, 0).rgb;
 	vec3 w_pos = (camera.model * vec4(c_pos, 1.0f)).xyz;
 
-	vec3 c_nor = decode(textureLod(gbuffer.normal, texcoord, 0).rgb);
+	vec3 c_nor = get_normal(gbuffer);
+	/* FragColor = vec4(abs(textureLod(gbuffer.normal, texcoord, 0).rgb - c_nor), 1.0f); */
+	/* return; */
 
 	float dist_to_eye = length(c_pos);
 	/* FragColor = clamp(vec4((nor+1.0f)/2.0f, 1.0),0,1); return; */

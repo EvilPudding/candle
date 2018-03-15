@@ -134,11 +134,38 @@ float lookup(vec3 shadowCoord, vec3 offset)
 	return (dist2 > -0.05) ? 1.0 : 0.0;
 }
 
-vec3 get_cnormal()
+/* SPHEREMAP TRANSFORM */
+/* https://aras-p.info/texts/CompactNormalStorage.html */
+
+vec2 encode_normal(vec3 n)
+{
+    float p = sqrt(n.z * 8.0f + 8.0f);
+    return vec2(n.xy/p + 0.5f);
+}
+
+vec3 decode_normal(vec2 enc)
+{
+    vec2 fenc = enc * 4.0f - 2.0f;
+    float f = dot(fenc,fenc);
+    float g = sqrt(1.0f - f / 4.0f);
+    vec3 n;
+    n.xy = fenc * g;
+    n.z = 1.0f - f / 2.0f;
+    return n;
+}
+
+/* ------------------- */
+
+vec3 get_normal(gbuffer_t gbuffer)
+{
+	return decode_normal(texture2D(gbuffer.normal, texcoord).rg);
+}
+
+vec3 get_normal()
 {
 	if(has_tex > 0.5)
 	{
-		vec3 normalColor = resolveProperty(normal, texcoord).rgb * 2.0 - 1.0;
+		vec3 normalColor = resolveProperty(normal, texcoord).rgb * 2.0f - 1.0f;
 		normalColor = vec3(normalColor.y, -normalColor.x, normalColor.z);
 		return normalize(TM * normalColor);
 	}
@@ -365,12 +392,6 @@ vec3 calcViewPosition(in vec2 TexCoord)
 	return textureLod(gbuffer.position, TexCoord, 0).xyz;
 }
 
-vec3 decode(vec3 n)
-{
-	return n;
-	return vec3(n.x, sqrt(1.0f-dot(n.xz, n.xz)), n.z);
-}
-
 vec3 get_proj_coord(vec3 hitCoord) // z = hitCoord.z - depth
 {
 	vec4 projectedCoord     = camera.projection * vec4(hitCoord, 1.0); \
@@ -460,7 +481,7 @@ float isoscelesTriangleInRadius(float a, float h)
 
 vec4 ssr(sampler2D screen)
 {
-	vec3 nor = decode(textureLod(gbuffer.normal, texcoord, 0).rgb);
+	vec3 nor = get_normal(gbuffer);
 	vec3 pos = textureLod(gbuffer.position, texcoord, 0).xyz;
 
 	vec4 specularAll = textureLod(gbuffer.specular, texcoord, 0);

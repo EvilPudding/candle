@@ -9,7 +9,7 @@ void main()
 {
 	vec3 dif = texture2D(gbuffer.diffuse, texcoord).rgb;
 	vec4 trans = texture2D(gbuffer.transparency, texcoord);
-	vec3 nor = decode(texture2D(gbuffer.normal, texcoord).xyz);
+	vec3 nor = get_normal(gbuffer);
 
 	vec3 c_pos = texture2D(gbuffer.position, texcoord).rgb;
 	nor.z = 0;

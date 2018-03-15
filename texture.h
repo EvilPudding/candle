@@ -49,8 +49,7 @@ texture_t *texture_new_2D
 (
 	uint width,
 	uint height,
-	uint bpp,
-	uint internal,
+	uint dims,
 	uint depth_buffer,
 	uint repeat
 );
@@ -60,7 +59,7 @@ texture_t *texture_new_3D
 	uint width,
 	uint height,
 	uint depth,
-	uint bpp
+	uint dims
 );
 
 texture_t *texture_cubemap
@@ -88,7 +87,7 @@ uint texture_get_pixel(texture_t *self, int buffer, int x, int y,
 
 void texture_draw_id(texture_t *self, int tex);
 
-int texture_add_buffer(texture_t *self, const char *name,
-		int is_float, int alpha, int mipmaped);
+int texture_add_buffer(texture_t *self, const char *name, int is_float,
+		int dims, int mipmaped);
 
 #endif /* !TEXTURE_H */
