@@ -51,7 +51,8 @@ texture_t *texture_new_2D
 	uint height,
 	uint dims,
 	uint depth_buffer,
-	uint repeat
+	uint repeat,
+	uint is_float
 );
 
 texture_t *texture_new_3D

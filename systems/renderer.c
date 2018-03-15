@@ -463,7 +463,7 @@ static int c_renderer_update_screen_texture(c_renderer_t *self)
 			texture_destroy(pass->output);
 		}
 
-		pass->output = texture_new_2D( W, H, 4, 1, 0);
+		pass->output = texture_new_2D( W, H, 4, 1, 0, 1);
 
 		if(pass->gbuffer)
 		{
@@ -486,9 +486,9 @@ static int c_renderer_update_screen_texture(c_renderer_t *self)
 	if(self->temp_buffers[0]) texture_destroy(self->temp_buffers[0]);
 	if(self->temp_buffers[1]) texture_destroy(self->temp_buffers[1]);
 	self->temp_buffers[0] = texture_new_2D(w * bloom_scale, h * bloom_scale,
-			4, 1, 0);
+			4, 1, 0, 1);
 	self->temp_buffers[1] = texture_new_2D(w * bloom_scale, h * bloom_scale,
-			4, 1, 0);
+			4, 1, 0, 1);
 
 	self->ready = 1;
 	return 1;

@@ -92,7 +92,7 @@ void c_editmode_activate(c_editmode_t *self)
 
 static int c_editmode_activate_loader(c_editmode_t *self)
 {
-	self->nk = nk_sdl_init(c_window(self)->window); 
+	self->nk = nk_candle_init(c_window(self)->window); 
 
 	{ 
 		struct nk_font_atlas *atlas; 

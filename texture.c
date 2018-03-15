@@ -265,18 +265,18 @@ int texture_add_buffer(texture_t *self, const char *name, int is_float,
 	GLuint format;
 	if(dims == 4)
 	{
-		internal = GL_RGBA16F;
-		format = GL_RGBA;
+		format   = GL_RGBA;
+		internal = is_float ? GL_RGBA16F : GL_RGBA;
 	}
 	else if(dims == 3)
 	{
-		internal = GL_RGB16F;
-		format = GL_RGB;
+		format   = GL_RGB;
+		internal = is_float ? GL_RGB16F : GL_RGB;
 	}
 	else
 	{
-		internal = GL_RG16F;
-		format = GL_RG;
+		format   = GL_RG;
+		internal = is_float ? GL_RG16F : GL_RG;
 	}
 
 	glTexImage2D(targ, 0, internal, self->width, self->height, 0, format,
@@ -303,7 +303,8 @@ texture_t *texture_new_2D
 	uint height,
 	uint dims,
 	uint depth_buffer,
-	uint repeat
+	uint repeat,
+	uint is_float
 )
 {
 	texture_t *self = calloc(1, sizeof *self);
@@ -315,18 +316,18 @@ texture_t *texture_new_2D
 	self->bpp = dims * 8;
 	if(dims == 4)
 	{
-		self->format	= GL_RGBA;
-		self->internal = GL_RGBA16F;
+		self->format   = GL_RGBA;
+		self->internal = is_float ? GL_RGBA16F : GL_RGBA;
 	}
 	else if(dims == 3)
 	{
-		self->format	= GL_RGB;
-		self->internal = GL_RGB16F;
+		self->format   = GL_RGB;
+		self->internal = is_float ? GL_RGB16F : GL_RGB;
 	}
 	else
 	{
-		self->format	= GL_RG;
-		self->internal = GL_RG16F;
+		self->format   = GL_RG;
+		self->internal = is_float ? GL_RG16F : GL_RG;
 	}
 	self->width = width;
 	self->height = height;

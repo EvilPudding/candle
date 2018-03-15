@@ -12,6 +12,8 @@
 #include "nuklear/nuklear.h"
 #include "nuklear/demo/sdl_opengl3/nuklear_sdl_gl3.h"
 
+NK_API struct nk_context* nk_candle_init(SDL_Window *win);
+
 void nk_candle_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
 		int max_element_buffer);
 void nk_draw_image_ext(struct nk_command_buffer *b, struct nk_rect r,
