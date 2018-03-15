@@ -12,6 +12,9 @@
 #include "nuklear/nuklear.h"
 #include "nuklear/demo/sdl_opengl3/nuklear_sdl_gl3.h"
 
+#undef NK_SHADER_VERSION 
+#define NK_SHADER_VERSION "#version 400\n"
+
 NK_API void
 nk_candle_device_create(void)
 {
