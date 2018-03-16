@@ -2,8 +2,8 @@ layout (location = 0) out vec4 DiffuseColor;
 layout (location = 1) out vec4 SpecularColor;
 layout (location = 2) out vec4 Transparency;
 layout (location = 3) out vec3 PositionColor;
-layout (location = 4) out vec2 ID;
-layout (location = 5) out vec2 Normal;
+layout (location = 4) out vec2 Normal;
+layout (location = 5) out vec2 ID;
 
 #include "common.frag"
 
@@ -32,7 +32,6 @@ void main()
 
 	PositionColor = c_position;
 
-	ID = vec2(1000000.0f);
 	/* ID = vec4(object_id.x, object_id.y, poly_id.x, poly_id.y); */
 	if(mode == EDIT_MESH)
 	{

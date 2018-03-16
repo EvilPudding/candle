@@ -4,12 +4,9 @@
 
 layout (location = 0) out vec4 FragColor;
 
-uniform bool horizontal;
-
-/* uniform float weight[3] = float[] (0.38774, 0.24477, 0.06136); */
-
 uniform vec2 over_id;
 uniform vec2 sel_id;
+uniform int mode;
 
 #define EDIT_OBJECT 0
 #define EDIT_MESH 1
@@ -42,7 +39,6 @@ void main()
 	vec4 color = pass_sample(final, texcoord);
 
 	vec3 final = color.rgb + (sel_color * selected + over_color * over);
-
 
 	FragColor = vec4(final, 1.0f);
 	/* FragColor = vec4(c * 30, 0.0f, 1.0f); */

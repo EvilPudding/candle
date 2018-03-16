@@ -142,7 +142,7 @@ static int glg_add_vert(glg_t *self, vec3_t p, vec3_t n, vec2_t t, int id)
 	self->nor[i] = n;
 	self->tex[i] = t;
 	/* self->col[i] = c; */
-	self->id[i] = int_to_vec2(id);
+	self->id[i] = int_to_vec2(id + 1);
 
 	return i;
 }
@@ -666,7 +666,7 @@ int c_mesh_gl_draw(c_mesh_gl_t *self, int transparent)
 	if(shader)
 	{
 		glUniform1f(shader->u_has_tex, (float)self->mesh->has_texcoords);
-		vec2_t id_color = int_to_vec2(c_entity(self));
+		vec2_t id_color = int_to_vec2(c_entity(self) + 1);
 
 		glUniform2f(shader->u_id, id_color.x, id_color.y);
 		glerr();

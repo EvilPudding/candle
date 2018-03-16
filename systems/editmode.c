@@ -32,11 +32,11 @@ vec2_t c_editmode_bind_over(c_editmode_t *self)
 {
 	if(self->mode == EDIT_OBJECT)
 	{
-		return int_to_vec2(self->over);
+		return int_to_vec2(self->over + 1);
 	}
 	else
 	{
-		return int_to_vec2(self->over_poly);
+		return int_to_vec2(self->over_poly + 1);
 	}
 }
 
@@ -44,11 +44,11 @@ vec2_t c_editmode_bind_selected(c_editmode_t *self)
 {
 	if(self->mode == EDIT_OBJECT)
 	{
-		return int_to_vec2(self->selected);
+		return int_to_vec2(self->selected + 1);
 	}
 	else
 	{
-		return int_to_vec2(self->selected_poly);
+		return int_to_vec2(self->selected_poly + 1);
 	}
 }
 
@@ -254,7 +254,7 @@ int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 			}
 			else
 			{
-				self->selected_poly = result >> 16;
+				self->selected_poly = result & 0xFFFF;
 			}
 		}
 	}

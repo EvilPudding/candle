@@ -144,15 +144,16 @@ static void c_renderer_bind_gbuffer(c_renderer_t *self, pass_t *pass,
 	texture_bind(gbuffer, i);
 	i++;
 
+	glUniform1i(sb->gbuffer.u_normal, i); glerr();
+	glActiveTexture(GL_TEXTURE0 + i); glerr();
+	texture_bind(gbuffer, i);
+	i++;
+
 	glUniform1i(sb->gbuffer.u_id, i); glerr();
 	glActiveTexture(GL_TEXTURE0 + i); glerr();
 	texture_bind(gbuffer, i);
 	i++;
 
-	glUniform1i(sb->gbuffer.u_normal, i); glerr();
-	glActiveTexture(GL_TEXTURE0 + i); glerr();
-	texture_bind(gbuffer, i);
-	i++;
 	glerr();
 }
 
@@ -476,17 +477,13 @@ static int c_renderer_update_screen_texture(c_renderer_t *self)
 			texture_add_buffer(pass->output, "specular", 1, 4, 0);
 			texture_add_buffer(pass->output, "transparency", 1, 4, 0);
 			texture_add_buffer(pass->output, "position", 1, 3, 0);
-			texture_add_buffer(pass->output, "id", 1, 2, 0);
 			texture_add_buffer(pass->output, "normal", 1, 2, 0);
+			texture_add_buffer(pass->output, "id", 1, 2, 0);
 
 			texture_draw_id(pass->output, COLOR_TEX); /* DRAW DIFFUSE */
 
 		}
 	}
-	/* for(i = 0; i < self->passes_size; i++) */
-	/* { */
-	/* 	if(!self->passes[i].output) exit(1); */
-	/* } */
 
 	if(self->temp_buffers[0]) texture_destroy(self->temp_buffers[0]);
 	if(self->temp_buffers[1]) texture_destroy(self->temp_buffers[1]);
@@ -662,9 +659,9 @@ entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
 	entity_t result;
 	if(!self->passes[0].output) return entity_null;
 
-	unsigned int res = texture_get_pixel(self->passes[0].output, 4,
+	unsigned int res = texture_get_pixel(self->passes[0].output, 5,
 			x * self->resolution, y * self->resolution, depth);
-	result = res;
+	result = res - 1;
 	return result;
 }
 
