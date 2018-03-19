@@ -161,10 +161,18 @@ void mesh_update_smooth_normals(mesh_t *self)
 {
 	int i;
 	for(i = 0; i < vector_count(self->edges); i++)
+	{
+		edge_t *ee = m_edge(self, i);
+		if(!ee) continue;
+		ee->extrude_flip = 0;
+	}
+	for(i = 0; i < vector_count(self->edges); i++)
 	/* for(i = 0; i < vector_count(self->verts); i++) */
 	{
 		edge_t *ee = m_edge(self, i);
 		if(!ee) continue;
+		if(ee->extrude_flip) continue;
+		ee->extrude_flip = 1;
 		/* vertex_t *v = e_vert(ee, self); */
 		
 		/* vertex_t *v = vector_get(self->verts, i); */
@@ -204,6 +212,7 @@ void mesh_update_smooth_normals(mesh_t *self)
 		{
 			edge = m_edge(self, e);
 			if(!edge) break;
+			edge->extrude_flip = 1;
 
 			edge->n = smooth_normal;
 
