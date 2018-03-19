@@ -203,33 +203,6 @@ vec3 get_normal()
 	return normalize(vertex_normal);
 }
 
-vec3 get_light_dir()
-{
-	if(has_tex > 0.5)
-	{
-		return normalize(tgspace_light_dir);
-	}
-	return normalize(cameraspace_light_dir);
-}
-
-vec3 get_half_dir()
-{
-	if(has_tex > 0.5)
-	{
-		return normalize(tgspace_light_dir + tgspace_eye_dir);
-	}
-	return normalize(cameraspace_light_dir - c_position);
-}
-
-vec3 get_eye_dir()
-{
-	if(has_tex > 0.5)
-	{
-		return normalize(tgspace_eye_dir);
-	}
-	return normalize(-c_position);
-}
-
 float shadow_at_dist_no_tan(vec3 vec, float i)
 {
 	vec3 x = vec3(1.0, 0.0, 0.0) * i;
@@ -299,63 +272,6 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye)
 	sd = 0.0;
 	return sd;
 }
-
-/* float get_shadow_bak(vec3 vec, float point_to_light) */
-/* { */
-/* 	float ocluder_to_light = lookup_single(-vec); */
-
-/* 	float sd = ((ocluder_to_light - point_to_light) > -0.05) ? 0.0 : 1.0; */
-
-/* 	float breaked = 0.0; */
-/* 	if(sd > 0.5) */
-/* 	{ */
-/* 		/1* sd = 0.5; *1/ */
-/* 		float shadow_len = min(0.8 * max(0.05, point_to_light / ocluder_to_light - 1), 10); */
-/* 		if(shadow_len > 0.0001) */
-/* 		{ */
-/* 			float i; */
-
-/* 			float dist_to_eye = length(c_position); */
-
-/* 			float count = 1; */
-/* 			float iters = floor(clamp(shadow_len / (dist_to_eye * */
-/* 							dist_to_eye / 385), 2, 8)); */
-/* 			float inc = shadow_len / iters; */
-
-/* 			float frac = 0.0; */
-/* 			for (i = shadow_len ; i >= inc; i -= inc) */
-/* 			{ */
-/* 				float pl = 0; */
-/* 				vec3 x = vertex_tangent * i; */
-/* 				vec3 y = vertex_bitangent * i; */
-/* 				pl += lookup(-vec, x + 0); */
-/* 				pl += lookup(-vec, 0 + y); */
-/* 				pl += lookup(-vec, (x + y)); */
-/* 				pl += lookup(-vec, (x - y)); */
-
-/* 				pl += lookup(-vec, -x + 0); */
-/* 				pl += lookup(-vec, 0 - y); */
-/* 				pl += lookup(-vec, (-x - y)); */
-/* 				pl += lookup(-vec, (-x + y)); */
-/* 				count += 4; */
-
-/* 				if(pl < 1) */
-/* 				{ */
-/* 					breaked += inc * 2; */
-/* 					/1* break; *1/ */
-/* 				} */
-/* 				if(breaked >= 1.0) */
-/* 				{ */
-/* 					break; */
-/* 				} */
-/* 				frac += pl; */
-/* 			} */
-/* 			frac /= count; */
-/* 			sd = clamp(sd - frac, 0.0, 1.0); */
-/* 		} */
-/* 	} */
-/* 	return sd; */
-/* } */
 
 float rand(vec2 co)
 {

@@ -56,7 +56,7 @@ int c_light_render(c_light_t *self)
 void c_light_register()
 {
 	ct_t *ct = ct_new("c_light", &ct_light,
-			sizeof(c_light_t), (init_cb)c_light_init, 1, ct_spacial);
+			sizeof(c_light_t), (init_cb)c_light_init, 2, ct_spacial, ct_node);
 
 	ct_listener(ct, ENTITY, entity_created, c_light_created);
 

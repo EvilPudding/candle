@@ -20,10 +20,11 @@ typedef struct vector_t
 	int data_size;
 	int elem_size;
 	struct element *elements;
+	void *fallback;
 } vector_t;
 
 
-vector_t *vector_new(int size, int index_matters)
+vector_t *vector_new(int size, int index_matters, void *fallback)
 {
 	vector_t *self = malloc(sizeof(*self));
 
@@ -36,6 +37,12 @@ vector_t *vector_new(int size, int index_matters)
 	self->count = 0;
 	self->alloc = 0;
 	self->elements = NULL;
+	self->fallback = NULL;
+	if(fallback)
+	{
+		self->fallback = malloc(size);
+		memcpy(self->fallback, fallback, size);
+	}
 
 	return self;
 }
@@ -52,6 +59,14 @@ void *vector_get(vector_t *self, int i)
 	if(element && element->set) return &element->data;
 	return NULL;
 }
+
+void *_vector_value(vector_t *self, int i)
+{
+	struct element *element = _vector_get(self, i);
+	if(element && element->set) return &element->data;
+	return self->fallback;
+}
+
 
 void vector_remove_item(vector_t *self, void *item)
 {
@@ -124,7 +139,13 @@ int vector_count(vector_t *self)
 	return self->count;
 }
 
-int vector_add(vector_t *self)
+void vector_add(vector_t *self, void *value)
+{
+	int si = vector_reserve(self);
+	memcpy(vector_get(self, si), value, self->data_size);
+}
+
+int vector_reserve(vector_t *self)
 {
 	int i;
 	if(!self->free_count)

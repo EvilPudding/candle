@@ -58,7 +58,7 @@ typedef struct vertex_t
 {
 	vecN_t pos;
 	vec4_t color;
-	int halves[16]; /* for pair creation */
+	int halves[32]; /* for pair creation */
 
 	int tmp;
 	
@@ -276,7 +276,7 @@ void mesh_extrude_edges(mesh_t *self, int steps, vecN_t offset,
 		float scale, modifier_cb modifier);
 void mesh_triangulate(mesh_t *self);
 void mesh_invert_normals(mesh_t *self);
-int c_mesh_edge_rotate_to_unpaired(mesh_t *self, int edge_id);
+int mesh_edge_rotate_to_unpaired(mesh_t *self, int edge_id);
 
 void mesh_add_quad(mesh_t *self,
 		int v1, vec3_t v1n, vec2_t v1t,

@@ -21,32 +21,14 @@ void mesh_modified(mesh_t *self)
 	self->changes++;
 }
 
-void vector_add_int(vector_t *self, int value)
-{
-	int si = vector_add(self);
-	int *i = vector_get(self, si);
-	if(!i)
-	{
-		printf("Failed to add for some reason\n");
-		exit(1);
-	}
-	*i = value;
-}
-
-int vector_get_int(vector_t *self, int id)
-{
-	int *i = vector_get(self, id);
-	if(i) return *i;
-	return -1;
-}
-
 void mesh_selection_init(mesh_selection_t *self)
 {
-	self->faces = vector_new(sizeof(int), 0);
-	self->edges = vector_new(sizeof(int), 0);
-	self->verts = vector_new(sizeof(int), 0);
+	int fallback = -1;
+	self->faces = vector_new(sizeof(int), 0, &fallback);
+	self->edges = vector_new(sizeof(int), 0, &fallback);
+	self->verts = vector_new(sizeof(int), 0, &fallback);
 #ifdef MESH4
-	self->cells = vector_new(sizeof(int), 0);
+	self->cells = vector_new(sizeof(int), 0, &fallback);
 #endif
 
 }
@@ -76,12 +58,11 @@ mesh_t *mesh_new()
 
 	self->support = (support_cb)mesh_support;
 
-	self->verts = vector_new(sizeof(vertex_t), 1);
-	self->faces = vector_new(sizeof(face_t), 1);
-	self->edges = vector_new(sizeof(edge_t), 1);
-
+	self->verts = vector_new(sizeof(vertex_t), 1, NULL);
+	self->faces = vector_new(sizeof(face_t), 1, NULL);
+	self->edges = vector_new(sizeof(edge_t), 1, NULL);
 #ifdef MESH4
-	self->cells = vector_new(sizeof(cell_t), 1);
+	self->cells = vector_new(sizeof(cell_t), 1, NULL);
 
 	vector_alloc(self->cells, 10);
 #endif
@@ -99,7 +80,7 @@ static void vert_init(vertex_t *self)
 	self->color = vec4(0.0f);
 	self->tmp = -1;
 	int i;
-	for(i = 0; i < 16; i++) self->halves[i] = -1;
+	for(i = 0; i < 32; i++) self->halves[i] = -1;
 }
 
 
@@ -179,46 +160,55 @@ static vec3_t get_normal(vec3_t p1, vec3_t p2, vec3_t p3)
 void mesh_update_smooth_normals(mesh_t *self)
 {
 	int i;
-	for(i = 0; i < vector_count(self->verts); i++)
+	for(i = 0; i < vector_count(self->edges); i++)
+	/* for(i = 0; i < vector_count(self->verts); i++) */
 	{
-		vertex_t *v = vector_get(self->verts, i);
-		if(!v) continue;
+		edge_t *ee = m_edge(self, i);
+		if(!ee) continue;
+		/* vertex_t *v = e_vert(ee, self); */
+		
+		/* vertex_t *v = vector_get(self->verts, i); */
+		/* if(!v) continue; */
 
-		int start = mesh_vert_get_half(self, v);
+		/* int start = mesh_vert_get_half(self, v); */
+		/* start = mesh_edge_rotate_to_unpaired(self, start); */
+		int start = i;
 
-		edge_t *hedge = m_edge(self, start);
-		if(!hedge) continue;
+		edge_t *edge = m_edge(self, start);
+		if(!edge) continue;
+		vec3_t start_n = edge->n;
+		vec3_t smooth_normal = start_n;
+		edge_t *pair = e_pair(edge, self);
+		if(!pair) continue;
 
-		vec3_t smooth_normal = hedge->n;
+		int e = pair->next;
 
-		edge_t *E;
-		int e, n;
-		int limit = 16;
-		for(e = hedge->pair; e >= 0; e = E->pair)
+
+		for(; e != start; e = pair->next)
 		{
-			E = m_edge(self, e); if(!E) break;
-			n = E->next;
-			if(n == start || n < 0) break;
-			if(!limit--) break;
-			E = m_edge(self, n);
-			if(fabs(vec3_dot(E->n, hedge->n)) >= self->smooth_max)
+			edge = m_edge(self, e);
+			if(!edge) break;
+
+			if(fabs(vec3_dot(edge->n, start_n)) >= self->smooth_max)
 			{
-				smooth_normal = vec3_add(smooth_normal, E->n);
+				smooth_normal = vec3_add(smooth_normal, edge->n);
 			}
+
+			pair = e_pair(edge, self);
+			if(!pair) break;
 		}
-		hedge->n = smooth_normal = vec3_norm(smooth_normal);
-		limit = 16;
-		for(e = hedge->pair; e >= 0; e = E->pair)
+
+		m_edge(self, start)->n = smooth_normal = vec3_norm(smooth_normal);
+
+		for(; e != start; e = pair->next)
 		{
-			E = m_edge(self, e); if(!E) break;
-			n = m_edge(self, e)->next;
-			if(!limit--) break;
-			if(n == start || n < 0) break;
-			E = m_edge(self, n);
-			if(fabs(vec3_dot(E->n, hedge->n)) > self->smooth_max)
-			{
-				E->n = smooth_normal;
-			}
+			edge = m_edge(self, e);
+			if(!edge) break;
+
+			edge->n = smooth_normal;
+
+			pair = e_pair(edge, self);
+			if(!pair) break;
 		}
 	}
 }
@@ -292,7 +282,7 @@ void mesh_invert_normals(mesh_t *self)
 	int si;
 	for(si = 0; si < vector_count(selected_faces); si++)
 	{
-		int f_id = vector_get_int(selected_faces, si);
+		int f_id = vector_value(selected_faces, si, int);
 		face_t *f = m_face(self, f_id); if(!f) continue;
 
 		edge_t *e0 = f_edge(f, 0, self),
@@ -397,7 +387,7 @@ int mesh_update_flips(mesh_t *self)
 
 	for(si = 0; si < vector_count(selected_faces); si++)
 	{
-		int f_id = vector_get_int(selected_faces, si);
+		int f_id = vector_value(selected_faces, si, int);
 		face_t *face = m_face(self, f_id);
 		if(!face) continue;
 
@@ -419,7 +409,7 @@ int mesh_update_flips(mesh_t *self)
 		int si;
 		for(si = 0; si < vector_count(selected_edges); si++)
 		{
-			int e = vector_get_int(selected_edges, si);
+			int e = vector_value(selected_edges, si, int);
 			edge_t *edge = m_edge(self, e); if(!edge) continue;
 
 			/* int cpair = mesh_edge_cell_pair(self, edge); */
@@ -495,9 +485,9 @@ void mesh_select(mesh_t *self, int selection, geom_t geom, int id)
 			face_t *face = m_face(self, id); if(!face) return;
 			for(e = 0; e < face->e_size; e++)
 			{
-				vector_add_int(sel->edges, face->e[e]);
+				vector_add(sel->edges, &face->e[e]);
 			}
-			vector_add_int(sel->faces, id);
+			vector_add(sel->faces, &id);
 		}
 		else /* SELECT ALL FACES */
 		{
@@ -507,9 +497,9 @@ void mesh_select(mesh_t *self, int selection, geom_t geom, int id)
 				face_t *face = m_face(self, id); if(!face) continue;
 				for(e = 0; e < face->e_size; e++)
 				{
-					vector_add_int(sel->edges, face->e[e]);
+					vector_add(sel->edges, &face->e[e]);
 				}
-				vector_add_int(sel->faces, id);
+				vector_add(sel->faces, &id);
 			}
 		}
 	}
@@ -518,14 +508,14 @@ void mesh_select(mesh_t *self, int selection, geom_t geom, int id)
 		if(id >= 0) /* SELECT SINGLE EDGE */
 		{
 			edge_t *edge = m_edge(self, id); if(!edge) return;
-			vector_add_int(sel->edges, id);
+			vector_add(sel->edges, &id);
 		}
 		else /* SELECT ALL EDGES */
 		{
 			for(id = 0; id < vector_count(self->edges); id++)
 			{
 				edge_t *edge = m_edge(self, id); if(!edge) return;
-				vector_add_int(sel->edges, id);
+				vector_add(sel->edges, &id);
 			}
 		}
 	}
@@ -540,7 +530,7 @@ void mesh_weld(mesh_t *self, geom_t geom)
 		int si;
 		for(si = 0; si < vector_count(selected_edges); si++)
 		{
-			int e_id = vector_get_int(selected_edges, si);
+			int e_id = vector_value(selected_edges, si, int);
 			edge_t *e = m_edge(self, e_id); if(!e) continue;
 
 			/* mesh_edge_select(self, e_id, SEL_EDITING); */
@@ -554,7 +544,7 @@ void mesh_weld(mesh_t *self, geom_t geom)
 		int si;
 		for(si = 0; si < vector_count(selected_faces); si++)
 		{
-			int f_id = vector_get_int(selected_faces, si);
+			int f_id = vector_value(selected_faces, si, int);
 
 			face_t *face = m_face(self, f_id); if(!face) continue;
 
@@ -576,7 +566,7 @@ void mesh_for_each_selected(mesh_t *self, geom_t geom, iter_cb cb)
 
 		for(si = 0; si < vector_count(selected_faces); si++)
 		{
-			int f_id = vector_get_int(selected_faces, si);
+			int f_id = vector_value(selected_faces, si, int);
 
 			face_t *face = m_face(self, f_id); if(!face) continue;
 			if(!cb(self, face)) break;
@@ -588,7 +578,7 @@ void mesh_for_each_selected(mesh_t *self, geom_t geom, iter_cb cb)
 
 		for(si = 0; si < vector_count(selected_edges); si++)
 		{
-			int e_id = vector_get_int(selected_edges, si);
+			int e_id = vector_value(selected_edges, si, int);
 			edge_t *e = m_edge(self, e_id); if(!e) continue;
 			int res;
 			if(geom == MESH_EDGE)
@@ -611,7 +601,7 @@ void mesh_paint(mesh_t *self, vec4_t color)
 
 	for(si = 0; si < vector_count(selected_edges); si++)
 	{
-		int e_id = vector_get_int(selected_edges, si);
+		int e_id = vector_value(selected_edges, si, int);
 		edge_t *e = m_edge(self, e_id); if(!e) continue;
 		e_vert(e, self)->color = color;
 	}
@@ -651,7 +641,7 @@ static void mesh_sphere_1_subdivide(mesh_t *self)
 
 	for(si = 0; si < vector_count(selected_faces); si++)
 	{
-		int f_id = vector_get_int(selected_faces, si);
+		int f_id = vector_value(selected_faces, si, int);
 
 		face_t *face = m_face(self, f_id); if(!face) continue;
 
@@ -743,9 +733,10 @@ void mesh_clear(mesh_t *self)
 	mesh_unlock(self);
 }
 
-int c_mesh_edge_rotate_to_unpaired(mesh_t *self, int edge_id)
+int mesh_edge_rotate_to_unpaired(mesh_t *self, int edge_id)
 {
 	edge_t *edge = m_edge(self, edge_id);
+	if(!edge) return -1;
 	int last_working = edge_id;
 	edge_t *prev = e_prev(edge, self);
 	int e = prev->pair;
@@ -765,7 +756,7 @@ int c_mesh_edge_rotate_to_unpaired(mesh_t *self, int edge_id)
 int mesh_vert_has_face(mesh_t *self, vertex_t *vert, int face_id)
 {
 	int edge_id = mesh_vert_get_half(self, vert);
-	edge_id = c_mesh_edge_rotate_to_unpaired(self, edge_id);
+	edge_id = mesh_edge_rotate_to_unpaired(self, edge_id);
 
 	edge_t *edge = m_edge(self, edge_id);
 	edge_t *pair = e_pair(edge, self);
@@ -775,9 +766,9 @@ int mesh_vert_has_face(mesh_t *self, vertex_t *vert, int face_id)
 	for(; e != edge_id; e = pair->next)
 	{
 		edge = m_edge(self, e);
+		if(!edge) return 0;
 		if(edge->face == face_id) return 1;
 
-		if(!edge) return 0;
 		pair = e_pair(edge, self);
 		if(!pair) return 0;
 	}
@@ -787,12 +778,13 @@ int mesh_vert_has_face(mesh_t *self, vertex_t *vert, int face_id)
 int mesh_vert_get_half(mesh_t *self, vertex_t *vert)
 {
 	int i;
-	for(i = 0; i < 16; i++)
+	for(i = 0; i < 32; i++)
 	{
 		int e = vert->halves[i];
 		edge_t *edge = m_edge(self, e);
 		if(edge) return e;
 	}
+	printf("lone vert?\n");
 	return -1;
 }
 
@@ -863,7 +855,7 @@ void mesh_update(mesh_t *self)
 
 int mesh_add_vert(mesh_t *self, vecN_t pos)
 {
-	int i = vector_add(self->verts);
+	int i = vector_reserve(self->verts);
 
 	vertex_t *vert = vector_get(self->verts, i);
 	vert_init(vert);
@@ -901,7 +893,7 @@ int mesh_add_edge_s(mesh_t *self, int v, int prev)
 static void vert_remove_half(mesh_t *self, vertex_t *vert, int half)
 {
 	int i;
-	for(i = 0; i < 16; i++)
+	for(i = 0; i < 32; i++)
 	{
 		int *h = &vert->halves[i];
 		if(*h == half)
@@ -915,7 +907,8 @@ static void vert_remove_half(mesh_t *self, vertex_t *vert, int half)
 static void vert_add_half(mesh_t *self, vertex_t *vert, int half)
 {
 	int i;
-	for(i = 0; i < 16; i++)
+	/* vert_remove_half(self, vert, half); */
+	for(i = 0; i < 32; i++)
 	{
 		int h = vert->halves[i];
 		edge_t *edge = m_edge(self, h);
@@ -937,7 +930,7 @@ static void vert_add_half(mesh_t *self, vertex_t *vert, int half)
 
 int mesh_add_edge(mesh_t *self, int v, int next, int prev, vec3_t vn, vec2_t vt)
 {
-	int i = vector_add(self->edges);
+	int i = vector_reserve(self->edges);
 
 	edge_t *edge = vector_get(self->edges, i);
 	edge_init(edge);
@@ -991,7 +984,7 @@ int mesh_get_face_from_verts(mesh_t *self,
 
 	for(si = 0; si < vector_count(unpaired_faces); si++)
 	{
-		int f_id = vector_get_int(unpaired_faces, si);
+		int f_id = vector_value(unpaired_faces, si, int);
 
 		face_t *try = m_face(self, f_id); if(!try) continue;
 #ifdef MESH4
@@ -1036,7 +1029,7 @@ static int mesh_get_pair_face(mesh_t *self, int f)
 
 	for(si = 0; si < vector_count(unpaired_faces); si++)
 	{
-		int f_id = vector_get_int(unpaired_faces, si);
+		int f_id = vector_value(unpaired_faces, si, int);
 
 		face_t *try = m_face(self, f_id); if(!try) continue;
 
@@ -1075,7 +1068,7 @@ static int mesh_get_pair_face(mesh_t *self, int f)
 		}
 	}
 
-	vector_add_int(unpaired_faces, f);
+	vector_add(unpaired_faces, &f);
 
 	return -1;
 }
@@ -1093,7 +1086,7 @@ static int mesh_get_cell_pair(mesh_t *self, int e)
 
 	for(si = 0; si < vector_count(selected_edges); si++)
 	{
-		int e_id = vector_get_int(selected_edges, si);
+		int e_id = vector_value(selected_edges, si, int);
 
 		if(e_id == e) continue;
 
@@ -1121,7 +1114,7 @@ static void mesh_update_cell_pairs(mesh_t *self)
 
 	for(si = 0; si < vector_count(selected_edges); si++)
 	{
-		int e_id = vector_get_int(selected_edges, si);
+		int e_id = vector_value(selected_edges, si, int);
 		edge_t *edge = m_edge(self, e_id);
 		if(!edge || edge->cell_pair != -1) continue;
 		mesh_get_cell_pair(self, e_id);
@@ -1152,7 +1145,7 @@ int mesh_get_pair_edge(mesh_t *self, int edge_id)
 	vertex_t *vert = e_vert(next, self); if(!vert) goto end;
 
 	int i;
-	for(i = 0; i < 16; i++)
+	for(i = 0; i < 32; i++)
 	{
 		int e = vert->halves[i];
 		edge_t *try = m_edge(self, e); if(!try) continue;
@@ -1184,7 +1177,7 @@ void mesh_add_quad(mesh_t *self,
 
 	self->triangulated = 0;
 
-	int face_id = vector_add(self->faces);
+	int face_id = vector_reserve(self->faces);
 	face_t *face = vector_get(self->faces, face_id);
 	face_init(face);
 
@@ -1194,10 +1187,10 @@ void mesh_add_quad(mesh_t *self,
 #endif
 	face->e_size = 4;
 	
-	int ie0 = vector_add(self->edges);
-	int ie1 = vector_add(self->edges);
-	int ie2 = vector_add(self->edges);
-	int ie3 = vector_add(self->edges);
+	int ie0 = vector_reserve(self->edges);
+	int ie1 = vector_reserve(self->edges);
+	int ie2 = vector_reserve(self->edges);
+	int ie3 = vector_reserve(self->edges);
 
 	edge_t *e0 = vector_get(self->edges, ie0); edge_init(e0);
 	edge_t *e1 = vector_get(self->edges, ie1); edge_init(e1);
@@ -1331,7 +1324,7 @@ int mesh_add_triangle(mesh_t *self,
 		int v2, vec3_t v2n, vec2_t v2t,
 		int v3, vec3_t v3n, vec2_t v3t, int pair_up)
 {
-	int face_id = vector_add(self->faces);
+	int face_id = vector_reserve(self->faces);
 	face_t *face = vector_get(self->faces, face_id);
 	face_init(face);
 
@@ -1342,9 +1335,9 @@ int mesh_add_triangle(mesh_t *self,
 
 	face->e_size = 3;
 
-	int ie0 = vector_add(self->edges);
-	int ie1 = vector_add(self->edges);
-	int ie2 = vector_add(self->edges);
+	int ie0 = vector_reserve(self->edges);
+	int ie1 = vector_reserve(self->edges);
+	int ie2 = vector_reserve(self->edges);
 
 	edge_t *e0 = vector_get(self->edges, ie0); edge_init(e0);
 	edge_t *e1 = vector_get(self->edges, ie1); edge_init(e1);
@@ -1542,6 +1535,7 @@ void mesh_triangulate(mesh_t *self)
 mesh_t *mesh_circle(float radius, int segments)
 {
 	mesh_t *self = mesh_new();
+	mesh_lock(self);
 
 	int prev_e, first_e;
 
@@ -1565,9 +1559,13 @@ mesh_t *mesh_circle(float radius, int segments)
 	}
 	self->has_texcoords = 0;
 
-	if(prev_e != first_e) m_edge(self, prev_e)->next = first_e;
+	if(prev_e != first_e)
+	{
+		m_edge(self, prev_e)->next = first_e;
+		m_edge(self, first_e)->prev = prev_e;
+	}
 
-	mesh_update(self);
+	mesh_unlock(self);
 
 	return self;
 }
@@ -1582,7 +1580,7 @@ vecN_t mesh_get_selection_center(mesh_t *self)
 
 	for(si = 0; si < vector_count(selected_edges); si++)
 	{
-		int e_id = vector_get_int(selected_edges, si);
+		int e_id = vector_value(selected_edges, si, int);
 		edge_t *e = m_edge(self, e_id); if(!e) continue;
 		count++;
 		center = vecN_(add)(center, e_vert(e, self)->pos);
@@ -1599,7 +1597,7 @@ int mesh_add_tetrahedron(mesh_t *self, int v0, int v1, int v2, int v3)
 
 	self->has_texcoords = 0;
 
-	int cell_id = vector_add(self->cells);
+	int cell_id = vector_reserve(self->cells);
 	cell_t *cell = vector_get(self->cells, cell_id);
 	cell_init(cell);
 
@@ -1733,7 +1731,7 @@ void mesh_vert_dup_and_modify(mesh_t *self, vecN_t pivot,
 
 	for(si = 0; si < vector_count(selected_edges); si++)
 	{
-		int e_id = vector_get_int(selected_edges, si);
+		int e_id = vector_value(selected_edges, si, int);
 		edge_t *e = m_edge(self, e_id); if(!e) continue;
 		if(e_vert(e, self)->tmp >= 0) continue;
 
@@ -1803,7 +1801,7 @@ void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 
 		for(si = 0; si < vector_count(editing->faces); si++)
 		{
-			int f_id = vector_get_int(editing->faces, si);
+			int f_id = vector_value(editing->faces, si, int);
 
 			face_t *f = m_face(self, f_id); if(!f) continue;
 
@@ -1862,7 +1860,7 @@ void mesh_extrude_edges(mesh_t *self, int steps, vecN_t offset,
 
 		for(si = 0; si < vector_count(editing->edges); si++)
 		{
-			int e_id = vector_get_int(editing->edges, si);
+			int e_id = vector_value(editing->edges, si, int);
 
 			edge_t *e = m_edge(self, e_id); if(!e) continue;
 
