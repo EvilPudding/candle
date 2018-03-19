@@ -226,8 +226,8 @@ void mesh_update_smooth_normals(mesh_t *self)
 			if(edge->extrude_flip & 2)
 			{
 				edge->n = smooth_normal;
+				edge->extrude_flip = 1;
 			}
-			edge->extrude_flip &= ~2;
 
 			pair = e_pair(edge, self);
 			if(!pair) break;
