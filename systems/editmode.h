@@ -38,8 +38,10 @@ typedef struct
 	int open_textures_count;
 
 	enum {
-		EDIT_OBJECT,
-		EDIT_MESH,
+		EDIT_VERT,
+		EDIT_EDGE,
+		EDIT_FACE,
+		EDIT_OBJECT
 	} mode;
 
 } c_editmode_t;

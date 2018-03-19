@@ -21,6 +21,7 @@ DEC_SIG(component_menu);
 void c_editmode_init(c_editmode_t *self)
 {
 	self->spawn_pos = vec2(25, 25);
+	self->mode = EDIT_OBJECT;
 }
 
 int c_editmode_bind_mode(c_editmode_t *self)

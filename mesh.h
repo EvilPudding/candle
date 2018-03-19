@@ -41,11 +41,17 @@ typedef int(*iter_cb)(mesh_t *mesh, void *selection);
 #define vecN_(eq) CAT2(vecN, _##eq)
 #define dN_(eq) CAT2(dN, _##eq)
 
+
+#define SEL_UNSELECTED 0
+#define SEL_EDITING 1
+#define SEL_UNPAIRED 2
+
 typedef enum
 {
 	MESH_VERT,
 	MESH_EDGE,
-	MESH_FACE
+	MESH_FACE,
+	MESH_ANY
 } geom_t;
 
 typedef struct vertex_t
@@ -54,7 +60,6 @@ typedef struct vertex_t
 	vec4_t color;
 	int halves[16]; /* for pair creation */
 
-	int selected;
 	int tmp;
 	
 } vertex_t;
@@ -74,8 +79,6 @@ typedef struct edge_t /* Half edge */
 	int cell_pair; /* edge_t id		for triangle meshes only */
 
 	int extrude_flip;
-
-	int selected;
 
 } edge_t;
 
@@ -112,7 +115,6 @@ typedef struct face_t /* Half face */
 	int surface;
 #endif
 
-	int selected;
 } face_t;
 
 #define f_edge(f, i, m) (m_edge(m, f->e[i]))
@@ -134,7 +136,6 @@ typedef struct cell_t /* Cell */
 	int f_size;
 	int f[5]; /* face_t[f_size] id */
 
-	int selected;
 } cell_t;
 
 #define c_face(c, i, m)		(m_face(m, c->f[i]))
@@ -155,13 +156,6 @@ typedef struct
 	vector_t *verts;
 #ifdef MESH4
 	vector_t *cells;
-#endif
-
-	int faces_modified;
-	int edges_modified;
-	int verts_modified;
-#ifdef MESH4
-	int cells_modified;
 #endif
 } mesh_selection_t;
 
@@ -271,11 +265,10 @@ int mesh_remove_lone_edges(mesh_t *self);
 void mesh_remove_face(mesh_t *self, int face_i);
 void mesh_remove_edge(mesh_t *self, int edge_i);
 void mesh_remove_vert(mesh_t *self, int vert_i);
-void mesh_select_edges(mesh_t *self);
-void mesh_select_faces(mesh_t *self);
-void mesh_unselect_faces(mesh_t *self);
-void mesh_unselect_edges(mesh_t *self);
+void mesh_select(mesh_t *self, int selection, geom_t geom, int id);
+void mesh_unselect(mesh_t *self, int selection, geom_t geom, int id);
 void mesh_paint(mesh_t *self, vec4_t color);
+void mesh_weld(mesh_t *self, geom_t geom);
 void mesh_for_each_selected(mesh_t *self, geom_t geom, iter_cb cb);
 void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 		float scale, modifier_cb modifier);
@@ -283,7 +276,6 @@ void mesh_extrude_edges(mesh_t *self, int steps, vecN_t offset,
 		float scale, modifier_cb modifier);
 void mesh_triangulate(mesh_t *self);
 void mesh_invert_normals(mesh_t *self);
-void mesh_face_set_selection(mesh_t *self, int face_id, int selection);
 int c_mesh_edge_rotate_to_unpaired(mesh_t *self, int edge_id);
 
 void mesh_add_quad(mesh_t *self,

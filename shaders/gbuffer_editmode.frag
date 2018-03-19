@@ -11,8 +11,10 @@ uniform vec2 over_id;
 uniform vec2 sel_id;
 uniform int mode;
 
-#define EDIT_OBJECT 0
-#define EDIT_MESH 1
+#define EDIT_VERT	0
+#define EDIT_EDGE	1
+#define EDIT_FACE	2
+#define EDIT_OBJECT	3
 
 void main()
 {
@@ -33,17 +35,17 @@ void main()
 	PositionColor = c_position;
 
 	/* ID = vec4(object_id.x, object_id.y, poly_id.x, poly_id.y); */
-	if(mode == EDIT_MESH)
+	if(mode == EDIT_OBJECT)
+	{
+		ID = object_id;
+	}
+	else
 	{
 		vec2 c = abs(sel_id - object_id);
 		if(c.x < 0.000001 || c.y < 0.000001)
 		{
 			ID = poly_id;
 		}
-	}
-	else
-	{
-		ID = object_id;
 	}
 
 	/* float up = max(n.y, 0.0); */

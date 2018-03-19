@@ -44,9 +44,10 @@ static void c_model_init(c_model_t *self)
 			"#endif\n"
 			"		c_position = (camera.view * M * pos).xyz;\n"
 
-			"		vertex_normal    = (camera.view * M * vec4( N, 0.0f)).xyz;\n"
-			"		vertex_tangent   = (camera.view * M * vec4(TG, 0.0f)).xyz;\n"
-			"		vertex_bitangent = (camera.view * M * vec4(BT, 0.0f)).xyz;\n"
+			"		mat4 MV    = camera.view * M;\n"
+			"		vertex_normal    = (MV * vec4( N, 0.0f)).xyz;\n"
+			"		vertex_tangent   = (MV * vec4(TG, 0.0f)).xyz;\n"
+			"		vertex_bitangent = (MV * vec4(BT, 0.0f)).xyz;\n"
 			"		texcoord = vec2(-UV.y, UV.x);\n"
 
 			"		object_id = id;\n"

@@ -399,7 +399,7 @@ int glg_update_ram(glg_t *self)
 		for(i = 0; i < vector_count(mesh->faces); i++)
 		{
 			face_t *face = m_face(mesh, i); if(!face) continue;
-			if(selection != -1 && selection != face->selected) continue;
+			if(selection != -1) continue;
 
 			if(face->e_size == 3) triangle_count++;
 			else triangle_count += 2;
@@ -423,7 +423,7 @@ int glg_update_ram(glg_t *self)
 				}
 			}
 #endif
-			if(selection != -1 && selection != face->selected) continue;
+			if(selection != -1) continue;
 			glg_face_to_gl(self, face, i);
 		}
 		glg_get_tg_bt(self);

@@ -8,8 +8,11 @@ uniform vec2 over_id;
 uniform vec2 sel_id;
 uniform int mode;
 
-#define EDIT_OBJECT 0
-#define EDIT_MESH 1
+#define EDIT_VERT	0
+#define EDIT_EDGE	1
+#define EDIT_FACE	2
+#define EDIT_OBJECT	3
+
 
 float filtered(vec2 c, vec2 filter)
 {
