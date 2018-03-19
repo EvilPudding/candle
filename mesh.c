@@ -199,22 +199,35 @@ void mesh_update_smooth_normals(mesh_t *self)
 
 			if(fabs(vec3_dot(edge->n, start_n)) >= self->smooth_max)
 			{
+				edge->extrude_flip |= 2;
 				smooth_normal = vec3_add(smooth_normal, edge->n);
+			}
+			else
+			{
+				edge->extrude_flip &= ~2;
 			}
 
 			pair = e_pair(edge, self);
 			if(!pair) break;
 		}
 
-		m_edge(self, start)->n = smooth_normal = vec3_norm(smooth_normal);
+		edge = m_edge(self, start);
+		edge->n = smooth_normal = vec3_norm(smooth_normal);
+
+		pair = e_pair(edge, self);
+
+		e = pair->next;
 
 		for(; e != start; e = pair->next)
 		{
 			edge = m_edge(self, e);
 			if(!edge) break;
-			edge->extrude_flip = 1;
 
-			edge->n = smooth_normal;
+			if(edge->extrude_flip & 2)
+			{
+				edge->n = smooth_normal;
+			}
+			edge->extrude_flip &= ~2;
 
 			pair = e_pair(edge, self);
 			if(!pair) break;
