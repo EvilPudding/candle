@@ -119,8 +119,8 @@ int c_camera_update(c_camera_t *self, void *event)
 {
 	/* TODO: remove renderer reference, camera should update on render resize,
 	 * not window */
-	self->width = c_renderer(&candle->systems)->width;
-	self->height = c_renderer(&candle->systems)->height;
+	self->width = c_window(&candle->systems)->width;
+	self->height = c_window(&candle->systems)->height;
 	
 	self->projection_matrix = mat4_perspective(
 		self->fov * (M_PI / 180.0f),
