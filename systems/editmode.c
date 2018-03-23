@@ -556,7 +556,7 @@ DEC_CT(ct_editmode)
 
 	ct_listener(ct, WORLD, mouse_move, c_editmode_mouse_move);
 
-	ct_listener(ct, WORLD, world_draw, c_editmode_draw);
+	ct_listener(ct, WORLD, ui_draw, c_editmode_draw);
 
 	ct_listener(ct, WORLD, mouse_press, c_editmode_mouse_press);
 

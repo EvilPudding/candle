@@ -13,6 +13,7 @@
 
 DEF_SIG(world_update);
 DEF_SIG(world_draw);
+DEF_SIG(ui_draw);
 DEF_SIG(event_handle);
 DEF_SIG(events_begin);
 DEF_SIG(events_end);

@@ -18,6 +18,7 @@
 
 DEC_SIG(world_update);
 DEC_SIG(world_draw);
+DEC_SIG(ui_draw);
 
 DEC_SIG(events_begin);
 DEC_SIG(event_handle);
@@ -177,6 +178,7 @@ static int render_loop(candle_t *self)
 			/* candle_handle_events(self); */
 			/* printf("\t%ld\n", self->render_id); */
 			entity_signal(entity_null, world_draw, NULL);
+			entity_signal(entity_null, ui_draw, NULL);
 
 			c_window_draw(c_window(&self->systems));
 
@@ -206,6 +208,9 @@ void candle_register()
 	signal_init(&event_handle, sizeof(void*));
 	signal_init(&events_end, sizeof(void*));
 	signal_init(&events_begin, sizeof(void*));
+
+	/* TODO remove ui_draw in favour of sorted by priority listeners */
+	signal_init(&ui_draw, sizeof(void*));
 }
 
 static int ticker_loop(candle_t *self)
