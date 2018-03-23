@@ -1,6 +1,7 @@
 #include "../ext.h"
 #include "sprite.h"
 #include "mesh_gl.h"
+#include "model.h"
 #include "node.h"
 #include "spacial.h"
 #include "light.h"

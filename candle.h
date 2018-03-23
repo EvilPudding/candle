@@ -4,6 +4,7 @@
 #include <glutil.h>
 
 #include <loader.h>
+#include <systems/sauces.h>
 
 #include <texture.h>
 

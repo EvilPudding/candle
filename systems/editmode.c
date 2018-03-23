@@ -1,5 +1,9 @@
 #include "editmode.h"
 #include <components/editlook.h>
+#include <components/name.h>
+#include <components/node.h>
+#include <components/camera.h>
+#include <systems/window.h>
 #include <candle.h>
 #include <keyboard.h>
 #include <stdlib.h>

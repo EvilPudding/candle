@@ -2,6 +2,7 @@
 #include "spacial.h"
 #include "candle.h"
 #include <stdlib.h>
+#include <components/model.h>
 
 
 void c_probe_init(c_probe_t *self) { }

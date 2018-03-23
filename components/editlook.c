@@ -2,7 +2,9 @@
 #include <candle.h>
 #include <systems/window.h>
 #include <systems/editmode.h>
+#include <systems/renderer.h>
 #include <components/spacial.h>
+#include <components/camera.h>
 /* #include <components/camera.h> */
 #include <mouse.h>
 #include <keyboard.h>

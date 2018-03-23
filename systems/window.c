@@ -1,6 +1,9 @@
 #include "window.h"
-#include "../shader.h"
-#include "../candle.h"
+#include <shader.h>
+#include <candle.h>
+#include <components/model.h>
+#include <components/mesh_gl.h>
+#include <components/node.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

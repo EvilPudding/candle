@@ -1,6 +1,9 @@
 #include "decal.h"
 #include "spacial.h"
 #include "candle.h"
+#include <components/mesh_gl.h>
+#include <components/model.h>
+#include <components/node.h>
 #include <stdlib.h>
 
 

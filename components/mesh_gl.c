@@ -2,6 +2,7 @@
 #include "../loader.h"
 #include "model.h"
 #include <candle.h>
+#include <components/spacial.h>
 #include <string.h>
 #include <stdlib.h>
 

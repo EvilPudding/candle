@@ -3,11 +3,12 @@
 #include <string.h>
 #include <candle.h>
 #include "physics.h"
-#include "../components/spacial.h"
-#include "../components/force.h"
-#include "../components/velocity.h"
-#include "../components/rigid_body.h"
-#include "../components/light.h"
+#include <components/spacial.h>
+#include <components/force.h>
+#include <components/velocity.h>
+#include <components/rigid_body.h>
+#include <components/light.h>
+#include <components/node.h>
 
 DEC_SIG(collider_callback);
 

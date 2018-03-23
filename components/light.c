@@ -1,7 +1,9 @@
 #include "light.h"
+#include "node.h"
 #include "probe.h"
 #include "spacial.h"
 #include "candle.h"
+#include "../systems/renderer.h"
 #include <stdlib.h>
 
 DEC_SIG(render_shadows);

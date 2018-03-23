@@ -3,6 +3,7 @@
 #include "spacial.h"
 #include "candle.h"
 #include <stdlib.h>
+#include <systems/renderer.h>
 
 
 static fs_t *g_shader;
