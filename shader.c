@@ -36,6 +36,7 @@ void shaders_common_frag_reg(void);
  void shaders_decals_frag_reg(void);
  void shaders_ambient_frag_reg(void);
  void shaders_bright_frag_reg(void);
+ void shaders_copy_frag_reg(void);
  void shaders_quad_frag_reg(void);
  void shaders_sprite_frag_reg(void);
  void shaders_ssr_frag_reg(void);
@@ -52,6 +53,7 @@ void shaders_reg()
 	shaders_common_frag_reg();
 	shaders_ambient_frag_reg();
 	shaders_bright_frag_reg();
+	shaders_copy_frag_reg();
 	shaders_depth_frag_reg();
 	shaders_gbuffer_frag_reg();
 	shaders_gbuffer_editmode_frag_reg();

@@ -28,13 +28,15 @@ enum
 	PASS_CUBEMAP 		   = 1 << 4,
 	PASS_CLEAR_COLOR	   = 1 << 5,
 	PASS_CLEAR_DEPTH	   = 1 << 6,
-	PASS_DISABLE_DEPTH	   = 1 << 7
+	PASS_DISABLE_DEPTH	   = 1 << 7,
+	PASS_ADDITIVE		   = 1 << 8
 } pass_options;
 
 typedef enum
 {
 	BIND_NONE,
 	BIND_PASS_OUTPUT,
+	BIND_PREV_PASS_OUTPUT,
 	BIND_NUMBER,
 	BIND_VEC2,
 	BIND_VEC3,
@@ -104,25 +106,14 @@ typedef struct
 	{
 		struct {
 			pass_t *pass;
+			char name[32];
 		} pass_output;
-		struct {
-			float value;
-		} number;
-		struct {
-			vec2_t value;
-		} vec2;
-		struct {
-			vec3_t value;
-		} vec3;
-		struct {
-			int value;
-		} integer;
-		struct {
-			entity_t entity;
-		} camera;
-		struct {
-			int id;
-		} gbuffer;
+		float number;
+		vec2_t vec2;
+		vec3_t vec3;
+		int integer;
+		entity_t camera;
+		int gbuffer;
 	};
 	shader_bind_t vs_uniforms[16];
 } bind_t;
@@ -134,14 +125,14 @@ typedef struct pass_t
 	fs_t *shader;
 	texture_t *output;
 	int for_each_light;
-	float x;
-	float y;
 	char feed_name[32];
 	int gbuffer;
+	int additive;
 	int disable_depth;
 	unsigned int clear;
 	ulong draw_signal;
 
+	float resolution;
 	int binds_size;
 	bind_t *binds;
 
@@ -149,6 +140,7 @@ typedef struct pass_t
 	int record_brightness;
 
 	int output_from;
+	int id;
 
 } pass_t;
 
@@ -160,8 +152,6 @@ typedef struct c_renderer_t
 	int width;
 	int height;
 	float resolution;
-
-	texture_t *temp_buffers[2];
 
 	texture_t *perlin;
 	int perlin_size;
@@ -180,7 +170,9 @@ typedef struct c_renderer_t
 	entity_t bound_light;
 
 	int passes_size;
-	pass_t passes[16];
+	pass_t passes[32];
+	char output[32];
+	int output_id;
 
 	pass_t *current_pass;
 	fs_t *frag_bound;
@@ -213,10 +205,15 @@ void c_renderer_register(void);
 void c_renderer_set_resolution(c_renderer_t *self, float resolution);
 void c_renderer_add_camera(c_renderer_t *self, entity_t camera);
 
+void c_renderer_set_output(c_renderer_t *self, const char *name);
+
 void c_renderer_add_pass(c_renderer_t *self, const char *feed_name,
-		const char *shader_name, ulong draw_signal, int flags, bind_t binds[]);
+		const char *shader_name, ulong draw_signal, float resolution,
+		int flags, bind_t binds[]);
 void c_renderer_replace_pass(c_renderer_t *self, const char *feed_name,
-		const char *shader_name, ulong draw_signal, int flags, bind_t binds[]);
+		const char *shader_name, ulong draw_signal, float resolution,
+		int flags, bind_t binds[]);
+
 entity_t c_renderer_get_camera(c_renderer_t *self);
 
 void c_renderer_clear_shader(c_renderer_t *self, shader_t *shader);

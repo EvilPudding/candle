@@ -109,7 +109,8 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 		/* nk_style_set_font(self->nk, &roboto->handle); */
 	} 
 
-	c_renderer_replace_pass(c_renderer(self), "gbuffer", "gbuffer_editmode", render_visible,
+	c_renderer_replace_pass(c_renderer(self), "gbuffer", "gbuffer_editmode",
+			render_visible, 1.0f,
 			PASS_GBUFFER | PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR,
 		(bind_t[]){
 			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, c_renderer(self)},
@@ -122,16 +123,17 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 
 
 	c_renderer_add_pass(c_renderer(self), "rendered", "highlight",
-			render_quad, 0,
+			render_quad, 1.0f, 0,
 		(bind_t[]){
 			{BIND_GBUFFER, "gbuffer"},
-			{BIND_PASS_OUTPUT, "final"},
+			{BIND_PREV_PASS_OUTPUT, "final"},
 			{BIND_INTEGER, "mode", (getter_cb)c_editmode_bind_mode, self},
 			{BIND_VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
 			{BIND_VEC2, "sel_id", (getter_cb)c_editmode_bind_selected, self},
 			{BIND_NONE}
 		}
 	);
+	c_renderer_set_output(c_renderer(self), "rendered");
 
 	return 1;
 }
