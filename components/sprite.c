@@ -10,7 +10,6 @@
 #include <systems/editmode.h>
 #include <candle.h>
 
-DEC_CT(ct_sprite);
 
 vs_t *g_sprite_vs = NULL;
 
@@ -125,7 +124,7 @@ int c_sprite_scene_changed(c_sprite_t *self, entity_t *entity)
 }
 
 
-void c_sprite_register()
+DEC_CT(ct_sprite)
 {
 
 	ct_t *ct = ct_new("c_sprite", &ct_sprite, sizeof(c_sprite_t),

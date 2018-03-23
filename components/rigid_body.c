@@ -5,7 +5,6 @@
 #include "spacial.h"
 #include <float.h>
 
-DEC_CT(ct_rigid_body);
 int gjk_intersects(c_rigid_body_t *self, c_rigid_body_t *other,
 		contact_t *contact);
 
@@ -51,7 +50,7 @@ int c_rigid_body_intersects(c_rigid_body_t *self, c_rigid_body_t *other,
 	return c_rigid_body_narrow(self, other, contact);
 }
 
-void c_rigid_body_register()
+DEC_CT(ct_rigid_body)
 {
 	ct_new("c_rigid_body", &ct_rigid_body, sizeof(c_rigid_body_t),
 			(init_cb)c_rigid_body_init, 0);

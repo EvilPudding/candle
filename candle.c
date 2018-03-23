@@ -4,6 +4,12 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <systems/renderer.h>
+#include <systems/physics.h>
+#include <systems/window.h>
+#include <systems/sauces.h>
+
+
 #ifndef WIN32
 #include <unistd.h>
 #endif
@@ -341,7 +347,8 @@ void candle_grab_mouse(candle_t *self, entity_t ent, int visibility)
 	SDL_SetRelativeMouseMode(!visibility);
 }
 
-candle_t *candle_new(int comps_size, ...)
+__attribute__((constructor (CONSTR_BEFORE_REG)))
+void candle_init(void)
 {
 	candle_t *self = calloc(1, sizeof *self);
 	candle = self;
@@ -353,73 +360,73 @@ candle_t *candle_new(int comps_size, ...)
 
 	shaders_reg();
 
+	candle_register();
 
-	int i;
-	for(i = 0; i < 4; i++)
-	{
-		candle_register();
+}
 
-		keyboard_register();
-		mouse_register();
+__attribute__((constructor (CONSTR_AFTER_REG)))
+void candle_init2(void)
+{
 
-		c_spacial_register();
-		c_node_register();
-		c_velocity_register();
-		c_force_register();
-		c_freemove_register();
-		c_freelook_register();
-		c_model_register();
-		c_rigid_body_register();
-		c_aabb_register();
-		c_probe_register();
-		c_light_register();
-		c_ambient_register();
-		c_name_register();
-		c_editlook_register();
-		c_decal_register();
-		c_sprite_register();
+	ecm_register_all();
 
-		/* OpenGL mesh plugin */
-		c_mesh_gl_register();
+		/* keyboard_register(); */
+		/* mouse_register(); */
 
-		c_physics_register();
-		c_window_register();
-		c_renderer_register();
-		c_editmode_register();
-		c_camera_register();
-		c_sauces_register();
+		/* c_spacial_register(); */
+		/* c_node_register(); */
+		/* c_velocity_register(); */
+		/* c_force_register(); */
+		/* c_freemove_register(); */
+		/* c_freelook_register(); */
+		/* c_model_register(); */
+		/* c_rigid_body_register(); */
+		/* c_aabb_register(); */
+		/* c_probe_register(); */
+		/* c_ambient_register(); */
+		/* c_name_register(); */
+		/* c_editlook_register(); */
+		/* c_decal_register(); */
+		/* c_sprite_register(); */
 
-		va_list comps;
-		va_start(comps, comps_size);
-		int i;
-		for(i = 0; i < comps_size; i++)
-		{
-			c_reg_cb cb = va_arg(comps, c_reg_cb);
-			cb();
-		}
-		va_end(comps);
-	}
-	/* ecm_generate_hashes(); */
+		/* /1* OpenGL mesh plugin *1/ */
+		/* c_mesh_gl_register(); */
+
+		/* c_physics_register(); */
+		/* c_window_register(); */
+		/* c_renderer_register(); */
+		/* c_editmode_register(); */
+		/* c_camera_register(); */
+		/* c_sauces_register(); */
+
+		/* va_list comps; */
+		/* va_start(comps, comps_size); */
+		/* int i; */
+		/* for(i = 0; i < comps_size; i++) */
+		/* { */
+		/* 	c_reg_cb cb = va_arg(comps, c_reg_cb); */
+		/* 	cb(); */
+		/* } */
+		/* va_end(comps); */
+	/* } */
 
 
-	self->mouse_owners[0] = entity_null;
-	self->mouse_visible[0] = 1;
+	candle->mouse_owners[0] = entity_null;
+	candle->mouse_visible[0] = 1;
 
-	self->systems = entity_new(c_physics_new(), c_sauces_new());
+	candle->systems = entity_new(c_physics_new(), c_sauces_new());
 
-	//int res = pipe(self->events);
+	//int res = pipe(candle->events);
 	//if(res == -1) exit(1);
 
-	/* self->candle_thr = SDL_CreateThread((int(*)(void*))candle_loop, "candle_loop", candle); */
-	self->sem = SDL_CreateSemaphore(0);
-	self->render_thr = SDL_CreateThread((int(*)(void*))render_loop, "render_loop", candle);
-	self->ticker_thr = SDL_CreateThread((int(*)(void*))ticker_loop, "ticker_loop", candle);
-	SDL_SemWait(self->sem);
+	/* candle->candle_thr = SDL_CreateThread((int(*)(void*))candle_loop, "candle_loop", candle); */
+	candle->sem = SDL_CreateSemaphore(0);
+	candle->render_thr = SDL_CreateThread((int(*)(void*))render_loop, "render_loop", candle);
+	candle->ticker_thr = SDL_CreateThread((int(*)(void*))ticker_loop, "ticker_loop", candle);
+	SDL_SemWait(candle->sem);
 	/* SDL_Delay(500); */
 
-	/* candle_import_dir(self, entity_null, "./"); */
-
-	return self;
+	/* candle_import_dir(candle, entity_null, "./"); */
 }
 
 candle_t *candle;

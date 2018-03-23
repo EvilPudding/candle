@@ -5,7 +5,6 @@
 #include <keyboard.h>
 #include <math.h>
 
-DEC_CT(ct_freemove);
 extern int window_width, window_height;
 
 #define friction 0.1
@@ -109,7 +108,7 @@ static int c_freemove_key_down(c_freemove_t *self, char *key)
 	return 1;
 }
 
-void c_freemove_register()
+DEC_CT(ct_freemove)
 {
 	ct_t *ct = ct_new("c_freemove", &ct_freemove,
 			sizeof(c_freemove_t), (init_cb)c_freemove_init,

@@ -1,7 +1,6 @@
 #include "name.h"
 #include <string.h>
 
-DEC_CT(ct_name);
 
 static void c_name_init(c_name_t *self)
 {
@@ -18,7 +17,7 @@ c_name_t *c_name_new(const char *name)
 	return self;
 }
 
-void c_name_register()
+DEC_CT(ct_name)
 {
 	ct_new("c_name", &ct_name, sizeof(c_name_t), (init_cb)c_name_init, 0);
 }

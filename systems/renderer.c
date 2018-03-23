@@ -15,7 +15,6 @@
 #include "noise.h"
 #include <nk.h>
 
-DEC_CT(ct_renderer);
 
 DEC_SIG(offscreen_render);
 DEC_SIG(render_visible);
@@ -781,7 +780,7 @@ int c_renderer_component_menu(c_renderer_t *self, void *ctx)
 	return 1;
 }
 
-void c_renderer_register()
+DEC_CT(ct_renderer)
 {
 	ct_t *ct = ct_new("c_renderer", &ct_renderer,
 			sizeof(c_renderer_t), (init_cb)c_renderer_init, 1, ct_window);

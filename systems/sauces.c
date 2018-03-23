@@ -5,7 +5,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-DEC_CT(ct_sauces);
 
 void c_sauces_init(c_sauces_t *self)
 {
@@ -164,7 +163,7 @@ int c_sauces_component_menu(c_sauces_t *self, void *ctx)
 }
 
 
-void c_sauces_register()
+DEC_CT(ct_sauces)
 {
 	ct_t *ct = ct_new("c_sauces", &ct_sauces,
 			sizeof(c_sauces_t), (init_cb)c_sauces_init, 0);

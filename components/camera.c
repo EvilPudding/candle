@@ -11,7 +11,6 @@
 #include <stdlib.h>
 
 
-DEC_CT(ct_camera);
 
 static void c_camera_init(c_camera_t *self)
 {
@@ -133,7 +132,7 @@ int c_camera_update(c_camera_t *self, void *event)
 	return 1;
 }
 
-void c_camera_register()
+DEC_CT(ct_camera)
 {
 	ct_t *ct = ct_new("c_camera", &ct_camera, sizeof(c_camera_t),
 			(init_cb)c_camera_init, 2, ct_spacial, ct_node);

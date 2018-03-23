@@ -4,7 +4,6 @@
 #include "candle.h"
 #include <stdlib.h>
 
-DEC_CT(ct_ambient);
 
 static fs_t *g_shader;
 
@@ -44,7 +43,7 @@ int c_ambient_render(c_ambient_t *self)
 	return 1;
 }
 
-void c_ambient_register()
+DEC_CT(ct_ambient)
 {
 	ct_t *ct = ct_new("c_ambient", &ct_ambient,
 			sizeof(c_ambient_t), (init_cb)c_ambient_init, 1, ct_spacial);

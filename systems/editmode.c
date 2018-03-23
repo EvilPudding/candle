@@ -9,7 +9,6 @@ void nk_candle_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
 		int max_element_buffer);
 static int c_editmode_activate_loader(c_editmode_t *self);
 
-DEC_CT(ct_editmode);
 
 DEC_SIG(global_menu);
 DEC_SIG(component_menu);
@@ -539,7 +538,7 @@ int c_editmode_event(c_editmode_t *self, SDL_Event *event)
 	return 1;
 }
 
-void c_editmode_register()
+DEC_CT(ct_editmode)
 {
 	ct_t *ct = ct_new("c_editmode", &ct_editmode,
 			sizeof(c_editmode_t), (init_cb)c_editmode_init, 0);

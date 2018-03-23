@@ -6,7 +6,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-DEC_CT(ct_node);
 
 static void c_node_init(c_node_t *self)
 {
@@ -91,7 +90,7 @@ void c_node_add(c_node_t *self, int num, ...)
 	va_end(children);
 }
 
-void c_node_register()
+DEC_CT(ct_node)
 {
 	ct_t *ct = ct_new("c_node", &ct_node, sizeof(c_node_t),
 			(init_cb)c_node_init, 1, ct_spacial);

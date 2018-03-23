@@ -3,7 +3,6 @@
 #include <nk.h>
 #include <systems/editmode.h>
 
-DEC_CT(ct_spacial);
 DEC_SIG(spacial_changed);
 
 int c_spacial_menu(c_spacial_t *self, void *ctx);
@@ -29,7 +28,7 @@ c_spacial_t *c_spacial_new()
 	return self;
 }
 
-void c_spacial_register()
+DEC_CT(ct_spacial)
 {
 	ct_t *ct = ct_new("c_spacial", &ct_spacial,
 			sizeof(c_spacial_t), (init_cb)c_spacial_init, 0);

@@ -3,7 +3,6 @@
 #include "spacial.h"
 #include "node.h"
 
-DEC_CT(ct_aabb);
 
 static void c_aabb_init(c_aabb_t *self)
 {
@@ -92,7 +91,7 @@ int c_aabb_intersects(c_aabb_t *self, c_aabb_t *other)
 		(min1.z <= max2.z && max1.z >= min2.z);
 }
 
-void c_aabb_register()
+DEC_CT(ct_aabb)
 {
 	ct_t *ct = ct_new("c_aabb", &ct_aabb, sizeof(c_aabb_t),
 			(init_cb)c_aabb_init, 1, ct_spacial);

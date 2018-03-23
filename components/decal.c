@@ -3,7 +3,6 @@
 #include "candle.h"
 #include <stdlib.h>
 
-DEC_CT(ct_decal);
 
 void c_decal_init(c_decal_t *self) { } 
 
@@ -46,7 +45,7 @@ int c_decal_render(c_decal_t *self, shader_t *shader)
 	return 1;
 }
 
-void c_decal_register()
+DEC_CT(ct_decal)
 {
 	ct_t *ct = ct_new("c_decal", &ct_decal, sizeof(c_decal_t),
 			(init_cb)c_decal_init, 1, ct_spacial);

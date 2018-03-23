@@ -63,11 +63,33 @@ void ecm_init()
 
 	/* ecm_register("C_T", &g_ecm->global, sizeof(c_t), NULL, 0); */
 
+	self->regs_size = 0;
+	self->regs = malloc(sizeof(*self->regs) * 256);
+
 	signal_init(&entity_created, 0);
 
 	ecm_new_entity(); // entity_null
 
 	sem = SDL_CreateSemaphore(1);
+}
+
+
+void ecm_add_reg(c_reg_cb reg)
+{
+	g_ecm->regs[g_ecm->regs_size++] = reg;
+}
+
+void ecm_register_all()
+{
+	int i, j;
+	for(i = 0; i < 4; i++)
+	{
+		for(j = 0; j < g_ecm->regs_size; j++)
+		{
+			g_ecm->regs[j]();
+		}
+	}
+	free(g_ecm->regs[j]);
 }
 
 void _ct_listener(ct_t *self, int flags, uint signal,
@@ -134,8 +156,10 @@ entity_t ecm_new_entity()
 	return i;
 }
 
-void ct_add_interaction(ct_t *ct, ct_t *dep)
+void ct_add_interaction(ct_t *dep, uint target)
 {
+	if(target == IDENT_NULL) return;
+	ct_t * ct = ecm_get(target);
 	if(!ct) return;
 	if(!dep) return;
 
@@ -146,8 +170,10 @@ void ct_add_interaction(ct_t *ct, ct_t *dep)
 	ct->depends[i].is_interaction = 1;
 }
 
-void ct_add_dependency(ct_t *ct, ct_t *dep)
+void ct_add_dependency(ct_t *dep, uint target)
 {
+	if(target == IDENT_NULL) return;
+	ct_t * ct = ecm_get(target);
 	if(!ct) return;
 	if(!dep) return;
 	int i = ct->depends_size++;

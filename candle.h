@@ -3,30 +3,6 @@
 
 #include <glutil.h>
 
-#include <components/camera.h>
-#include <components/freelook.h>
-#include <components/freemove.h>
-#include <components/rigid_body.h>
-#include <components/aabb.h>
-#include <components/spacial.h>
-#include <components/velocity.h>
-#include <components/force.h>
-#include <components/name.h>
-#include <components/node.h>
-#include <components/model.h>
-#include <components/mesh_gl.h>
-#include <components/probe.h>
-#include <components/light.h>
-#include <components/ambient.h>
-#include <components/decal.h>
-#include <components/sprite.h>
-#include <components/editlook.h>
-#include <systems/renderer.h>
-#include <systems/physics.h>
-#include <systems/window.h>
-#include <systems/editmode.h>
-#include <systems/sauces.h>
-
 #include <loader.h>
 
 #include <texture.h>
@@ -81,9 +57,9 @@ typedef struct candle_t
 	int fps;
 	SDL_threadID render_id;
 	SDL_sem *sem;
+
 } candle_t;
 
-candle_t *candle_new(int comps_size, ...);
 void candle_wait(candle_t *self);
 void candle_reset_dir(candle_t *self);
 

@@ -1,7 +1,6 @@
 #include "velocity.h"
 #include "spacial.h"
 
-DEC_CT(ct_velocity);
 DEC_SIG(velocity_changed);
 
 void c_velocity_init(c_velocity_t *self)
@@ -20,7 +19,7 @@ c_velocity_t *c_velocity_new(float x, float y, float z)
 	return self;
 }
 
-void c_velocity_register()
+DEC_CT(ct_velocity)
 {
 	ct_new("c_velocity", &ct_velocity, sizeof(c_velocity_t),
 			(init_cb)c_velocity_init, 1, ct_spacial);

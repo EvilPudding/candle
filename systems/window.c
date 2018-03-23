@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 
-DEC_CT(ct_window);
 DEC_SIG(window_resize);
 
 int window_width = 1360;
@@ -208,7 +207,7 @@ void c_window_rect(c_window_t *self, int x, int y, int width, int height,
 }
 
 
-void c_window_register()
+DEC_CT(ct_window)
 {
 	ct_t *ct = ct_new("c_window", &ct_window,
 			sizeof(c_window_t), (init_cb)c_window_init, 0);

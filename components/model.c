@@ -10,8 +10,6 @@
 #include "shader.h"
 #include <systems/editmode.h>
 
-DEC_CT(ct_model);
-
 DEC_SIG(mesh_changed);
 
 static mat_t *g_missing_mat = NULL;
@@ -257,7 +255,7 @@ int c_model_scene_changed(c_model_t *self, entity_t *entity)
 }
 
 
-void c_model_register()
+DEC_CT(ct_model)
 {
 	signal_init(&mesh_changed, sizeof(mesh_t));
 

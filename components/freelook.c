@@ -6,7 +6,6 @@
 #include <mouse.h>
 #include <math.h>
 
-DEC_CT(ct_freelook);
 
 static void c_freelook_init(c_freelook_t *self)
 {
@@ -81,7 +80,7 @@ static int c_freelook_mouse_move(c_freelook_t *self, mouse_move_data *event)
 	return 1;
 }
 
-void c_freelook_register()
+DEC_CT(ct_freelook)
 {
 	ct_t *ct = ct_new("c_freelook", &ct_freelook, sizeof(c_freelook_t),
 			(init_cb)c_freelook_init, 1, ct_spacial);

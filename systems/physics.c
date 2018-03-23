@@ -9,7 +9,6 @@
 #include "../components/rigid_body.h"
 #include "../components/light.h"
 
-DEC_CT(ct_physics);
 DEC_SIG(collider_callback);
 
 static vec3_t c_physics_handle_forces(c_physics_t *self, vec3_t vel, float *dt)
@@ -245,7 +244,7 @@ c_physics_t *c_physics_new()
 	return self;
 }
 
-void c_physics_register()
+DEC_CT(ct_physics)
 {
 	ct_t *ct = ct_new("Physics", &ct_physics,
 			sizeof(c_physics_t), (init_cb)c_physics_init, 0);

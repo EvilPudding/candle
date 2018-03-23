@@ -4,7 +4,6 @@
 #include "candle.h"
 #include <stdlib.h>
 
-DEC_CT(ct_light);
 DEC_SIG(render_shadows);
 
 static fs_t *g_depth_fs = NULL;
@@ -53,7 +52,7 @@ int c_light_render(c_light_t *self)
 	return 1;
 }
 
-void c_light_register()
+DEC_CT(ct_light)
 {
 	ct_t *ct = ct_new("c_light", &ct_light,
 			sizeof(c_light_t), (init_cb)c_light_init, 2, ct_spacial, ct_node);

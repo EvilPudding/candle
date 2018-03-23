@@ -5,7 +5,7 @@ DEC_SIG(mouse_press);
 DEC_SIG(mouse_release);
 DEC_SIG(mouse_wheel);
 
-void mouse_register()
+DEC_CT(mouse)
 {
 	signal_init(&mouse_move, sizeof(mouse_move_data));
 	signal_init(&mouse_press, sizeof(mouse_button_data));

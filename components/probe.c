@@ -3,11 +3,8 @@
 #include "candle.h"
 #include <stdlib.h>
 
-DEC_CT(ct_probe);
 
-void c_probe_init(c_probe_t *self)
-{
-}
+void c_probe_init(c_probe_t *self) { }
 
 c_probe_t *c_probe_new(int map_size)
 {
@@ -59,6 +56,7 @@ int c_probe_render(c_probe_t *self, uint signal)
 {
 	int face;
 
+	if(!self->map) return 0;
 	c_spacial_t *ps = c_spacial(self);
 
 	if(self->last_update == g_update_id) return 0;
@@ -96,11 +94,10 @@ void c_probe_destroy(c_probe_t *self)
 	free(self);
 }
 
-void c_probe_register()
+DEC_CT(ct_probe)
 {
 	ct_t *ct = ct_new("c_probe", &ct_probe, sizeof(c_probe_t),
-			(init_cb)c_probe_init,
-			1, ct_spacial);
+			(init_cb)c_probe_init, 1, ct_spacial);
 
 	ct_listener(ct, ENTITY, spacial_changed, c_probe_update_position);
 }

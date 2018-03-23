@@ -9,7 +9,6 @@ static int c_mesh_gl_new_loader(c_mesh_gl_t *self);
 static int glg_update_buffers(glg_t *self);
 static void glg_update_vbos(glg_t *self);
 
-DEC_CT(ct_mesh_gl);
 
 static void c_mesh_gl_init(c_mesh_gl_t *self)
 {
@@ -772,14 +771,14 @@ void c_mesh_gl_destroy(c_mesh_gl_t *self)
 			(c_t*)self);
 }
 
-void c_mesh_gl_register()
+DEC_CT(ct_mesh_gl)
 {
 	ct_t *ct = ct_new("c_mesh_gl", &ct_mesh_gl,
 			sizeof(c_mesh_gl_t), (init_cb)c_mesh_gl_init, 0);
 
 	ct_listener(ct, ENTITY, mesh_changed, c_mesh_gl_on_mesh_changed);
 
-	ct_add_interaction(ecm_get(ct_model), ct);
+	ct_add_interaction(ct, ct_model);
 
 	/* ct_listener(ct, WORLD|RENDER_THREAD, component_menu, */
 			/* (signal_cb)c_mesh_gl_menu); */

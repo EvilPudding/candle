@@ -8,7 +8,6 @@
 #include <keyboard.h>
 #include <math.h>
 
-DEC_CT(ct_editlook);
 
 void c_editlook_init(c_editlook_t *self)
 {
@@ -162,7 +161,7 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 	return 0;
 }
 
-void c_editlook_register()
+DEC_CT(ct_editlook)
 {
 	ct_t *ct = ct_new("c_editLook", &ct_editlook,
 			sizeof(c_editlook_t), (init_cb)c_editlook_init,

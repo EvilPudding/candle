@@ -6,7 +6,7 @@
 #include "../texture.h"
 #include "../material.h"
 
-typedef struct c_light_t
+typedef struct
 {
 	c_t super;
 
@@ -22,6 +22,5 @@ DEF_CASTER(ct_light, c_light, c_light_t)
 
 c_light_t *c_light_new(float intensity, vec4_t color, int shadow_size);
 void c_light_destroy(c_light_t *self);
-void c_light_register(void);
 
 #endif /* !LIGHT_H */
