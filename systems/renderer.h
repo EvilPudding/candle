@@ -29,7 +29,8 @@ enum
 	PASS_CLEAR_COLOR	   = 1 << 5,
 	PASS_CLEAR_DEPTH	   = 1 << 6,
 	PASS_DISABLE_DEPTH	   = 1 << 7,
-	PASS_ADDITIVE		   = 1 << 8
+	PASS_INVERT_DEPTH	   = 1 << 8,
+	PASS_ADDITIVE		   = 1 << 9
 } pass_options;
 
 typedef enum
@@ -129,6 +130,7 @@ typedef struct pass_t
 	int gbuffer;
 	int additive;
 	int disable_depth;
+	int invert_depth;
 	unsigned int clear;
 	ulong draw_signal;
 

@@ -413,7 +413,7 @@ static int c_renderer_created(c_renderer_t *self)
 
 	/* DECAL PASS */
 	c_renderer_add_pass(self, "gb2", "decals", render_decals, 1.0f,
-			PASS_GBUFFER | PASS_DISABLE_DEPTH,
+			PASS_GBUFFER | PASS_DISABLE_DEPTH | PASS_INVERT_DEPTH,
 		(bind_t[]){
 			{BIND_GBUFFER, "gbuffer"},
 			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, self},
@@ -615,6 +615,7 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 	glerr();
 
 	glDepthMask(!pass->disable_depth);
+	glDepthFunc(pass->invert_depth?GL_GREATER:GL_LESS);
 
 	if(pass->additive)
 	{
@@ -865,6 +866,7 @@ void _c_renderer_add_pass(c_renderer_t *self, int i, const char *feed_name,
 		pass->clear |= GL_COLOR_BUFFER_BIT;
 	}
 	pass->disable_depth = !!(flags & PASS_DISABLE_DEPTH);
+	pass->invert_depth = flags & PASS_INVERT_DEPTH;
 
 	if(flags & PASS_CLEAR_DEPTH)
 	{
