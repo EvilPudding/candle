@@ -40,7 +40,7 @@ static void c_model_init(c_model_t *self)
 			"		float W = sin(camera.angle4);\n"
 			"		pos = vec4(vec3(P.x, P.y * Y + P.w * W, P.z), 1.0);\n"
 			"#endif\n"
-			"		c_position = (camera.view * M * pos).xyz;\n"
+			"		vertex_position = (camera.view * M * pos).xyz;\n"
 
 			"		mat4 MV    = camera.view * M;\n"
 			"		vertex_normal    = (MV * vec4( N, 0.0f)).xyz;\n"
@@ -167,11 +167,8 @@ int c_model_render_transparent(c_model_t *self)
 	return 1;
 }
 
-int c_model_render_visible(c_model_t *self)
+int c_model_render(c_model_t *self)
 {
-	if(!self->mesh || !self->visible) return 1;
-	if(self->before_draw) if(!self->before_draw((c_t*)self)) return 1;
-
 	shader_t *shader = vs_bind(g_model_vs);
 	if(!shader) return 0;
 	c_node_t *node = c_node(self);
@@ -184,6 +181,14 @@ int c_model_render_visible(c_model_t *self)
 
 	c_mesh_gl_draw(c_mesh_gl(self), 0);
 	return 1;
+}
+
+int c_model_render_visible(c_model_t *self)
+{
+	if(!self->mesh || !self->visible) return 1;
+	if(self->before_draw) if(!self->before_draw((c_t*)self)) return 1;
+
+	return c_model_render(self);
 }
 
 int c_model_menu(c_model_t *self, void *ctx)

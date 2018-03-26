@@ -74,12 +74,12 @@ uniform float cameraspace_normals;
 in vec3 tgspace_light_dir;
 in vec3 tgspace_eye_dir;
 in vec3 worldspace_position;
-in vec3 c_position;
 in vec3 cameraspace_light_dir;
 
 in vec2 object_id;
 in vec2 poly_id;
 
+in vec3 vertex_position;
 in vec3 vertex_normal;
 in vec3 vertex_tangent;
 in vec3 vertex_bitangent;
@@ -87,6 +87,7 @@ in vec3 vertex_bitangent;
 in vec2 texcoord;
 in vec4 vertex_color;
 
+in mat4 model;
 in mat3 TM;
 
 uniform vec2 screen_size;
@@ -162,34 +163,39 @@ vec3 decode_normal(vec2 enc)
 
 /* ------------------- */
 
-vec4 get_specular(gbuffer_t gbuffer)
+float get_depth(gbuffer_t buffer)
 {
-	return textureLod(gbuffer.specular, pixel_pos(), 0);
+	return textureLod(buffer.depth, pixel_pos(), 0).r;
 }
 
-vec4 get_transparency(gbuffer_t gbuffer)
+vec4 get_specular(gbuffer_t buffer)
 {
-	return textureLod(gbuffer.transparency, pixel_pos(), 0);
+	return textureLod(buffer.specular, pixel_pos(), 0);
 }
 
-vec2 get_id(gbuffer_t gbuffer)
+vec4 get_transparency(gbuffer_t buffer)
 {
-	return textureLod(gbuffer.id, pixel_pos(), 0).rg;
+	return textureLod(buffer.transparency, pixel_pos(), 0);
 }
 
-vec3 get_diffuse(gbuffer_t gbuffer)
+vec2 get_id(gbuffer_t buffer)
 {
-	return textureLod(gbuffer.diffuse, pixel_pos(), 0).rgb;
+	return textureLod(buffer.id, pixel_pos(), 0).rg;
 }
 
-vec3 get_position(gbuffer_t gbuffer)
+vec3 get_diffuse(gbuffer_t buffer)
 {
-	return texture2D(gbuffer.position, pixel_pos()).rgb;
+	return textureLod(buffer.diffuse, pixel_pos(), 0).rgb;
 }
 
-vec3 get_normal(gbuffer_t gbuffer)
+vec3 get_position(gbuffer_t buffer)
 {
-	return decode_normal(texture2D(gbuffer.normal, pixel_pos()).rg);
+	return textureLod(buffer.position, pixel_pos(), 0).rgb;
+}
+
+vec3 get_normal(gbuffer_t buffer)
+{
+	return decode_normal(textureLod(buffer.normal, pixel_pos(), 0).rg);
 }
 
 vec3 get_normal()

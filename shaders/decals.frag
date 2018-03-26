@@ -3,53 +3,36 @@ layout (location = 0) out vec4 DiffuseColor;
 layout (location = 1) out vec4 SpecularColor;
 layout (location = 2) out vec4 Transparency;
 layout (location = 3) out vec3 PositionColor;
-layout (location = 4) out vec2 ID;
-layout (location = 5) out vec2 Normal;
+layout (location = 4) out vec2 Normal;
 
 #include "common.frag"
+#line 10
 
 void main()
 {
 
-	/* float noi = (textureLod(perlin_map, (worldspace_position + 1) / 14, 0).r) * 4 - 3.5f; */
-
-	/* dif = vec4(dif.rgb * (1 - (noi / 10.0)), dif.a); */
-	float sw = 891.0f * 0.66f;
-	float sh = 945.0f * 0.66f;
-	vec2 pos = vec2(gl_FragCoord.x / sh, gl_FragCoord.y / sw);
-	return;
+	/* vec2 pos = pixel_pos(); */
 	/* vec3 pos3 = textureLod(gbuffer.wposition, pos, 0).rgb ; */
-	vec3 pos3 = vec3(0.0f);
+	vec4 w_pos = (camera.model*vec4(get_position(gbuffer), 1.0f));
+	vec3 m_pos = (inverse(model) * w_pos).xyz;
 
-	vec3 diff = abs(pos3 - vec3(10, 6, 5));
-	if(diff.x > 0.6) discard;
-	if(diff.y > 0.6) discard;
-	if(diff.z > 0.6) discard;
-	
-	vec2 TC = pos3.xz;
 
-	vec4 dif  = resolveProperty(diffuse, TC);
-	DiffuseColor = dif;
+	vec3 diff = abs(m_pos);
+	if(diff.x > 1) discard;
+	if(diff.y > 1) discard;
+	if(diff.z > 1) discard;
+	vec2 tc = m_pos.xy - 0.5;
 
-	/* float depth = (length(pos3)-0.1f)/50.0f; */
+	vec3 vnorm = resolveProperty(normal, tc).rgb * 2.0f - 1.0f;
+	/* vnorm = vec3(0.0f, 0.0f, 1.0f); */
 
-	SpecularColor = resolveProperty(specular, TC) * 2;
-	/* SpecularColor.a *= 1.0 - clamp(abs(noi * n.y), 0.0f, 1.0f); */
-	/* DiffuseColor = vec4(vec3(SpecularColor.a), 1.0f); */
+	vec3 norm = ((camera.view * model) * vec4(vnorm, 0.0f)).xyz;
 
-	Normal = encode_normal(get_normal());
-
-	PositionColor = c_position;
-
-	/* ID = vec4(object_id.x, object_id.y, poly_id.x, poly_id.y); */
-	ID = vec4(object_id.x, object_id.y, poly_id.x, poly_id.y);
-
-	/* float up = max(n.y, 0.0); */
-	/* DiffuseColor = vec4(vec3(up), 1.0); */
-	Transparency = resolveProperty(transparency, TC);
-
-	/* float mipmapLevel = textureQueryLod(diffuse.texture, TC).x; */
-	/* Transparency = vec4(vec3(mipmapLevel/10), 1.0f); return; */
+	PositionColor = get_position(gbuffer);
+	DiffuseColor = resolveProperty(diffuse, tc);
+	SpecularColor = resolveProperty(specular, tc);
+	Transparency = vec4(0.0f);
+	Normal = encode_normal(norm);
 
 }
 

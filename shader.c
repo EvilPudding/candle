@@ -161,7 +161,6 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"out vec3 tgspace_light_dir;\n"
 			"out vec3 tgspace_eye_dir;\n"
 			"out vec3 worldspace_position;\n"
-			"out vec3 c_position;\n"
 			"out vec3 cameraspace_light_dir;\n"
 			"\n"
 			"uniform vec2 screen_size;\n"
@@ -169,14 +168,15 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"out vec2 poly_id;\n"
 			"out vec2 object_id;\n"
 			"\n"
+			"out vec3 vertex_position;\n"
 			"out vec3 vertex_normal;\n"
-			"out vec3 vertex_cnormal;\n"
 			"out vec3 vertex_tangent;\n"
 			"out vec3 vertex_bitangent;\n"
 			"\n"
 			"out vec2 texcoord;\n"
 			"/* out vec4 vertex_color; */\n"
 			"\n"
+			"out mat4 model;\n"
 			"out mat3 TM;\n"
 			"\n"
 			"uniform float ratio;\n"
@@ -186,6 +186,7 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"void main()\n"
 			"{\n"
 			"	vec4 pos = vec4(P.xyz, 1.0f);\n"
+			"	model = M;\n"
 			"	texcoord = UV;\n");
 
 

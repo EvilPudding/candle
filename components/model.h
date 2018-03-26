@@ -44,7 +44,7 @@ c_model_t *c_model_wireframe(c_model_t *self, int layer, int wireframe);
 c_model_t *c_model_paint(c_model_t *self, int layer, mat_t *mat);
 int c_model_render_transparent(c_model_t *self);
 int c_model_render_visible(c_model_t *self);
-int c_model_render(c_model_t *self, int transparent);
+int c_model_render(c_model_t *self);
 void c_model_register(void);
 void c_model_set_mesh(c_model_t *self, mesh_t *mesh);
 

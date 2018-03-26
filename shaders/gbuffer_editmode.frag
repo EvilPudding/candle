@@ -32,7 +32,7 @@ void main()
 
 	Normal = encode_normal(get_normal());
 
-	PositionColor = c_position;
+	PositionColor = vertex_position;
 
 	/* ID = vec4(object_id.x, object_id.y, poly_id.x, poly_id.y); */
 	if(mode == EDIT_OBJECT)

@@ -33,19 +33,9 @@ c_decal_t *c_decal_new(mat_t *mat)
 	return self;
 }
 
-int c_decal_render(c_decal_t *self, shader_t *shader)
+int c_decal_render(c_decal_t *self)
 {
-	if(!self->visible) return 1;
-
-	c_node_t *node = c_node(self);
-	if(node)
-	{
-		c_node_update_model(node);
-		shader_update(shader, &node->model);
-	}
-
-	c_mesh_gl_draw(c_mesh_gl(self), 0);
-	return 1;
+	return c_model_render(c_model(self));
 }
 
 DEC_CT(ct_decal)

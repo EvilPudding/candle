@@ -233,10 +233,10 @@ void mat_set_ambient_light(mat_t *self, vec4_t light)
 
 void mat_bind(mat_t *self, shader_t *shader)
 {
-	mat_bind_prop(&shader->u_diffuse, &self->diffuse, 1);
-	mat_bind_prop(&shader->u_specular, &self->specular, 2);
-	mat_bind_prop(&shader->u_normal, &self->normal, 3);
-	mat_bind_prop(&shader->u_transparency, &self->transparency, 4);
+	mat_bind_prop(&shader->u_diffuse, &self->diffuse, shader->bound_textures++);
+	mat_bind_prop(&shader->u_specular, &self->specular, shader->bound_textures++);
+	mat_bind_prop(&shader->u_normal, &self->normal, shader->bound_textures++);
+	mat_bind_prop(&shader->u_transparency, &self->transparency, shader->bound_textures++);
 	/* mat_bind_prop(&shader->u_position, &self->position, 5); */
 	/* mat_bind_prop(&shader->u_position, &self->position, 6); */
 
