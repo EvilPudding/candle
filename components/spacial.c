@@ -71,11 +71,18 @@ void c_spacial_look_at(c_spacial_t *self, vec3_t eye, vec3_t center, vec3_t up)
 	c_spacial_unlock(self);
 }
 
+void c_spacial_set_scale(c_spacial_t *self, vec3_t scale)
+{
+	self->scale = scale;
+	c_spacial_update_model_matrix(self);
+}
+
 void c_spacial_scale(c_spacial_t *self, vec3_t scale)
 {
 	self->scale = vec3_mul(self->scale, scale);
 	c_spacial_update_model_matrix(self);
 }
+
 void c_spacial_set_rot2(c_spacial_t *self, vec3_t rot)
 {
 	c_spacial_lock(self);

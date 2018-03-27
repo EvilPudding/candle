@@ -122,7 +122,7 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 	} 
 
 	c_renderer_add_pass(c_renderer(self), "rendered", "highlight",
-			render_quad, 1.0f, 0,
+			render_quad, 1.0f, PASS_DISABLE_DEPTH,
 		(bind_t[]){
 			{BIND_GBUFFER, "gb2"},
 			{BIND_PREV_PASS_OUTPUT, "final"},

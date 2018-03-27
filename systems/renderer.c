@@ -21,6 +21,7 @@ DEC_SIG(offscreen_render);
 DEC_SIG(render_visible);
 DEC_SIG(render_transparent);
 DEC_SIG(render_quad);
+DEC_SIG(render_lights);
 DEC_SIG(render_decals);
 /* DEC_SIG(world_changed); */
 
@@ -421,7 +422,7 @@ static int c_renderer_created(c_renderer_t *self)
 
 	/* DECAL PASS */
 	c_renderer_add_pass(self, "gb2", "decals", render_decals, 1.0f,
-			PASS_GBUFFER | PASS_DISABLE_DEPTH | PASS_INVERT_DEPTH,
+			PASS_GBUFFER | PASS_DISABLE_DEPTH_UPDATE | PASS_INVERT_DEPTH,
 		(bind_t[]){
 			{BIND_GBUFFER, "gbuffer"},
 			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, self},
@@ -432,7 +433,7 @@ static int c_renderer_created(c_renderer_t *self)
 	/* c_renderer_set_output(self, "gb2"); */
 
 	c_renderer_add_pass(self, "ssao", "ssao", render_quad, 1.0f,
-			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR,
+			PASS_DISABLE_DEPTH,
 		(bind_t[]){
 			{BIND_GBUFFER, "gb2"},
 			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, self},
@@ -440,8 +441,9 @@ static int c_renderer_created(c_renderer_t *self)
 		}
 	);
 
-	c_renderer_add_pass(self, "rendered", "phong", render_quad, 1.0f,
-			PASS_FOR_EACH_LIGHT | PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR |
+	c_renderer_add_pass(self, "rendered", "phong", render_lights, 1.0f,
+			PASS_DISABLE_DEPTH | PASS_ADDITIVE | PASS_CLEAR_COLOR |
+			PASS_DISABLE_DEPTH_UPDATE |
 			(self->roughness * PASS_MIPMAPED),
 		(bind_t[]){
 			{BIND_GBUFFER, "gb2"},
@@ -461,7 +463,7 @@ static int c_renderer_created(c_renderer_t *self)
 
 
 	c_renderer_add_pass(self, "transp", "transparency", render_quad, 1.0f,
-			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR,
+			PASS_DISABLE_DEPTH | PASS_CLEAR_COLOR,
 		(bind_t[]){
 			{BIND_GBUFFER, "gb2"},
 			{BIND_PASS_OUTPUT, "rendered"},
@@ -471,7 +473,8 @@ static int c_renderer_created(c_renderer_t *self)
 	);
 
 	c_renderer_add_pass(self, "final", "ssr", render_quad, 1.0f,
-			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR | self->auto_exposure * PASS_RECORD_BRIGHTNESS,
+			PASS_DISABLE_DEPTH | PASS_CLEAR_COLOR |
+			self->auto_exposure * PASS_RECORD_BRIGHTNESS,
 		(bind_t[]){
 			{BIND_GBUFFER, "gb2"},
 			{BIND_PASS_OUTPUT, "rendered"},
@@ -486,20 +489,23 @@ static int c_renderer_created(c_renderer_t *self)
 	int i;
 	for(i = 0; i < 6; i++)
 	{
-		c_renderer_add_pass(self, "pre_bloom", i?"copy":"bright", render_quad, 1.0f, 0,
+		c_renderer_add_pass(self, "pre_bloom", i?"copy":"bright", render_quad, 1.0f,
+				PASS_DISABLE_DEPTH,
 			(bind_t[]){
 				{BIND_PREV_PASS_OUTPUT, "buf"},
 				{BIND_NONE}
 			}
 		);
-		c_renderer_add_pass(self, "bloom_x", "blur", render_quad, bloom_scale, 0,
+		c_renderer_add_pass(self, "bloom_x", "blur", render_quad, bloom_scale,
+				PASS_DISABLE_DEPTH,
 			(bind_t[]){
 				{BIND_PREV_PASS_OUTPUT, "buf"},
 				{BIND_INTEGER, "horizontal", .integer = 1},
 				{BIND_NONE}
 			}
 		);
-		c_renderer_add_pass(self, "bloom_xy", "blur", render_quad, bloom_scale, 0,
+		c_renderer_add_pass(self, "bloom_xy", "blur", render_quad, bloom_scale,
+				PASS_DISABLE_DEPTH,
 			(bind_t[]){
 				{BIND_PREV_PASS_OUTPUT, "buf"},
 				{BIND_INTEGER, "horizontal", .integer = 0},
@@ -509,7 +515,7 @@ static int c_renderer_created(c_renderer_t *self)
 	}
 
 	c_renderer_add_pass(self, "final", "copy", render_quad, 1.0f,
-			PASS_ADDITIVE,
+			PASS_DISABLE_DEPTH | PASS_ADDITIVE,
 		(bind_t[]){
 			{BIND_PREV_PASS_OUTPUT, "buf"},
 			{BIND_NONE}
@@ -585,7 +591,6 @@ static inline void pass_draw_object(c_renderer_t *self, pass_t *pass)
 	if(pass->gbuffer)
 	{
 		glEnable(GL_CULL_FACE); glerr();
-		glEnable(GL_DEPTH_TEST); glerr();
 	}
 
 	entity_signal(c_entity(self), pass->draw_signal, NULL);
@@ -593,14 +598,12 @@ static inline void pass_draw_object(c_renderer_t *self, pass_t *pass)
 	if(pass->gbuffer)
 	{
 		glDisable(GL_CULL_FACE); glerr();
-		glDisable(GL_DEPTH_TEST); glerr();
 	}
 }
 
 static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 {
 	self->frame++;
-	uint i;
 
 	if(!pass->output) return NULL;
 
@@ -623,38 +626,25 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 	/* pass->shader.vp = mat4(); */
 	glerr();
 
-	glDepthMask(!pass->disable_depth);
-	glDepthFunc(pass->invert_depth?GL_GREATER:GL_LESS);
-
 	if(pass->additive)
 	{
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	}
 
-	if(pass->for_each_light)
+	if(!pass->disable_depth)
 	{
-		int p;
-		ct_t *lights = ecm_get(ct_light);
-		c_light_t *light;
-
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-		for(p = 0; p < lights->pages_size; p++)
-		for(i = 0; i < lights->pages[p].components_size; i++)
-		{
-			light = (c_light_t*)ct_get_at(lights, p, i);
-
-			self->bound_light = c_entity(light);
-
-			pass_draw_object(self, pass);
-		}
-		self->bound_light = entity_null;
+		glEnable(GL_DEPTH_TEST);
+		glDepthMask(!pass->disable_depth_update);
+		glDepthFunc(pass->invert_depth?GL_GREATER:GL_LESS);
 	}
-	else
-	{
-		pass_draw_object(self, pass);
-	}
+
+	self->bound_light = entity_null;
+
+	pass_draw_object(self, pass);
+	
+	glDisable(GL_DEPTH_TEST);
+
 
 	glDisable(GL_BLEND);
 
@@ -829,6 +819,7 @@ DEC_CT(ct_renderer)
 
 	signal_init(&offscreen_render, 0);
 	signal_init(&render_visible, sizeof(shader_t));
+	signal_init(&render_lights, sizeof(shader_t));
 	signal_init(&render_transparent, sizeof(shader_t));
 	signal_init(&render_quad, sizeof(shader_t));
 	signal_init(&render_decals, sizeof(shader_t));
@@ -886,7 +877,8 @@ void _c_renderer_add_pass(c_renderer_t *self, int i, const char *feed_name,
 	{
 		pass->clear |= GL_COLOR_BUFFER_BIT;
 	}
-	pass->disable_depth = !!(flags & PASS_DISABLE_DEPTH);
+	pass->disable_depth_update = !!(flags & PASS_DISABLE_DEPTH_UPDATE);
+	pass->disable_depth = (flags & PASS_DISABLE_DEPTH);
 	pass->invert_depth = flags & PASS_INVERT_DEPTH;
 
 	if(flags & PASS_CLEAR_DEPTH)
@@ -899,7 +891,6 @@ void _c_renderer_add_pass(c_renderer_t *self, int i, const char *feed_name,
 	pass->draw_signal = draw_signal;
 	pass->gbuffer = flags & PASS_GBUFFER;
 	pass->additive = flags & PASS_ADDITIVE;
-	pass->for_each_light = flags & PASS_FOR_EACH_LIGHT;
 	pass->mipmaped = flags & PASS_MIPMAPED;
 	pass->record_brightness = flags & PASS_RECORD_BRIGHTNESS;
 	strncpy(pass->feed_name, feed_name, sizeof(pass->feed_name));

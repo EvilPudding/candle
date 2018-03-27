@@ -19,11 +19,17 @@ void main()
 	float dist_to_eye = length(c_pos);
 	/* FragColor = clamp(vec4((nor+1.0f)/2.0f, 1.0),0,1); return; */
 
-	vec3 color = light_color * light_ambient * dif;
+	vec3 color = vec3(0.0f);
 	/* FragColor = vec4(texcoord - gl_FragCoord.xy / screen_size, 0, 1); return; */
 
-	if(light_intensity > 0.01)
+	if(light_radius < 0.0f)
 	{
+		color = light_color * light_intensity * dif;
+	}
+	else if(light_intensity > 0.01)
+	{
+		if(dist_to_eye > length(vertex_position)) discard;
+
 		vec3 c_light = (camera.view * vec4(light_pos, 1.0f)).xyz;
 
 		vec3 c_light_dir = c_light - c_pos;
@@ -90,7 +96,7 @@ void main()
 		}
 	}
 
-    color *= pass_sample(ssao, texcoord).rgb;
+    color *= pass_sample(ssao, pixel_pos()).rgb;
 
 	FragColor = vec4(color, 1.0);
 }  

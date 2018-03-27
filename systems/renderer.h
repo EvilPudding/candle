@@ -21,16 +21,16 @@ typedef struct uniform_t uniform_t;
 
 enum
 {
-	PASS_FOR_EACH_LIGHT    = 1 << 0,
-	PASS_MIPMAPED 		   = 1 << 1,
-	PASS_RECORD_BRIGHTNESS = 1 << 2,
-	PASS_GBUFFER		   = 1 << 3,
-	PASS_CUBEMAP 		   = 1 << 4,
-	PASS_CLEAR_COLOR	   = 1 << 5,
-	PASS_CLEAR_DEPTH	   = 1 << 6,
-	PASS_DISABLE_DEPTH	   = 1 << 7,
-	PASS_INVERT_DEPTH	   = 1 << 8,
-	PASS_ADDITIVE		   = 1 << 9
+	PASS_MIPMAPED 		   		= 1 << 0,
+	PASS_RECORD_BRIGHTNESS 		= 1 << 1,
+	PASS_GBUFFER		   		= 1 << 2,
+	PASS_CUBEMAP 		   		= 1 << 3,
+	PASS_CLEAR_COLOR	   		= 1 << 4,
+	PASS_CLEAR_DEPTH	   		= 1 << 5,
+	PASS_DISABLE_DEPTH	   		= 1 << 6,
+	PASS_DISABLE_DEPTH_UPDATE	= 1 << 7,
+	PASS_INVERT_DEPTH			= 1 << 8,
+	PASS_ADDITIVE				= 1 << 9
 } pass_options;
 
 typedef enum
@@ -126,11 +126,11 @@ typedef struct pass_t
 {
 	fs_t *shader;
 	texture_t *output;
-	int for_each_light;
 	char feed_name[32];
 	int gbuffer;
 	int additive;
 	int disable_depth;
+	int disable_depth_update;
 	int invert_depth;
 	unsigned int clear;
 	ulong draw_signal;
@@ -194,6 +194,7 @@ typedef struct c_renderer_t
 } c_renderer_t;
 
 DEF_SIG(render_visible);
+DEF_SIG(render_lights);
 DEF_SIG(render_transparent);
 DEF_SIG(render_decals);
 DEF_SIG(render_quad);

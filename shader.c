@@ -29,10 +29,8 @@ static struct source *g_sources = NULL;
 static int g_sources_num = 0;
 
 void shaders_common_frag_reg(void);
- void shaders_ambient_frag_reg(void);
  void shaders_depth_frag_reg(void);
  void shaders_gbuffer_frag_reg(void);
- void shaders_gbuffer_editmode_frag_reg(void);
  void shaders_decals_frag_reg(void);
  void shaders_ambient_frag_reg(void);
  void shaders_bright_frag_reg(void);
@@ -56,7 +54,6 @@ void shaders_reg()
 	shaders_copy_frag_reg();
 	shaders_depth_frag_reg();
 	shaders_gbuffer_frag_reg();
-	shaders_gbuffer_editmode_frag_reg();
 	shaders_decals_frag_reg();
 	shaders_phong_frag_reg();
 	shaders_quad_frag_reg();
@@ -433,7 +430,6 @@ static int shader_new_loader(shader_t *self)
 	self->u_light_pos = glGetUniformLocation(self->program, "light_pos"); glerr();
 	self->u_light_intensity = glGetUniformLocation(self->program, "light_intensity"); glerr();
 	self->u_light_color = glGetUniformLocation(self->program, "light_color"); glerr();
-	self->u_light_ambient = glGetUniformLocation(self->program, "light_ambient"); glerr();
 	self->u_light_radius = glGetUniformLocation(self->program, "light_radius"); glerr();
 
 	self->u_has_tex = glGetUniformLocation(self->program, "has_tex"); glerr();
@@ -560,7 +556,6 @@ void shader_bind_light(shader_t *self, entity_t light)
 	probe_c = c_probe(&light);
 	/* if(!light_c->before_draw || light_c->before_draw((c_t*)light_c)) */
 	/* { */
-		glUniform1f(self->u_light_ambient, light_c->ambient);
 		glUniform1f(self->u_light_radius, light_c->radius);
 		glUniform1f(self->u_light_intensity, light_c->intensity);
 		glUniform3f(self->u_light_color,

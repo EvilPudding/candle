@@ -7,21 +7,25 @@
 #include <stdlib.h>
 
 
-void c_decal_init(c_decal_t *self) { } 
-
 mesh_t *g_decal_mesh = NULL;
 
-c_decal_t *c_decal_new(mat_t *mat)
+void c_decal_init(c_decal_t *self)
 {
-	c_decal_t *self = component_new(ct_decal);
-
-	self->visible = 1;
-	self->mat = mat;
 
 	if(!g_decal_mesh)
 	{
 		g_decal_mesh = sauces_mesh("cube.ply");
 	}
+	self->visible = 1;
+
+
+} 
+
+c_decal_t *c_decal_new(mat_t *mat)
+{
+	c_decal_t *self = component_new(ct_decal);
+
+	self->mat = mat;
 
 	if(!c_mesh_gl(self))
 	{
@@ -37,7 +41,7 @@ c_decal_t *c_decal_new(mat_t *mat)
 
 int c_decal_render(c_decal_t *self)
 {
-	return c_model_render(c_model(self));
+	return c_model_render(c_model(self), 0);
 }
 
 DEC_CT(ct_decal)

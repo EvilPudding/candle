@@ -13,10 +13,10 @@
 DEC_SIG(mesh_changed);
 
 static mat_t *g_missing_mat = NULL;
-static vs_t *g_model_vs = NULL;
 
 int c_model_menu(c_model_t *self, void *ctx);
 int g_update_id = 0;
+vs_t *g_model_vs = NULL;
 
 static void c_model_init(c_model_t *self)
 {
@@ -154,32 +154,25 @@ int c_model_render_transparent(c_model_t *self)
 	if(!self->mesh || !self->visible) return 1;
 	if(self->before_draw) if(!self->before_draw((c_t*)self)) return 1;
 
-	shader_t *shader = vs_bind(g_model_vs);
-	if(!shader) return 0;
-	c_node_t *node = c_node(self);
-	if(node)
-	{
-		c_node_update_model(node);
-		shader_update(shader, &node->model);
-	}
-
-	c_mesh_gl_draw(c_mesh_gl(self), 1);
-	return 1;
+	return c_model_render(self, 1);
 }
 
-int c_model_render(c_model_t *self)
+int c_model_render(c_model_t *self, int transp)
+{
+	return c_model_render_at(self, c_node(self), transp);
+}
+
+int c_model_render_at(c_model_t *self, c_node_t *node, int transp)
 {
 	shader_t *shader = vs_bind(g_model_vs);
 	if(!shader) return 0;
-	c_node_t *node = c_node(self);
 	if(node)
 	{
 		c_node_update_model(node);
 
 		shader_update(shader, &node->model);
 	}
-
-	c_mesh_gl_draw(c_mesh_gl(self), 0);
+	c_mesh_gl_draw(c_mesh_gl(self), transp);
 	return 1;
 }
 
@@ -188,7 +181,7 @@ int c_model_render_visible(c_model_t *self)
 	if(!self->mesh || !self->visible) return 1;
 	if(self->before_draw) if(!self->before_draw((c_t*)self)) return 1;
 
-	return c_model_render(self);
+	return c_model_render(self, 0);
 }
 
 int c_model_menu(c_model_t *self, void *ctx)

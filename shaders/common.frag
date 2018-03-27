@@ -70,7 +70,6 @@ uniform vec3 light_pos;
 uniform float light_intensity;
 uniform float light_radius;
 uniform vec3 light_color;
-uniform float light_ambient;
 uniform float has_tex;
 uniform float cameraspace_normals;
 
