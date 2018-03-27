@@ -44,8 +44,7 @@ static void mesh_gl_add_group(c_mesh_gl_t *self)
 
 static int c_mesh_gl_new_loader(c_mesh_gl_t *self)
 {
-	mesh_gl_add_group(self);
-
+	/* mesh_gl_add_group(self); */
 
 	return 1;
 }
@@ -142,7 +141,18 @@ static int glg_add_vert(glg_t *self, vec3_t p, vec3_t n, vec2_t t, int id)
 	self->nor[i] = n;
 	self->tex[i] = t;
 	/* self->col[i] = c; */
-	self->id[i] = int_to_vec2(id + 1);
+	self->id[i] = int_to_vec2(id);
+
+
+	/* union { */
+	/* 	unsigned int i; */
+	/* 	struct{ */
+	/* 		unsigned char r, g, b, a; */
+	/* 	}; */
+	/* } convert = {.i = id + 1}; */
+	/* printf("%d = [%d]%d(%f) [%d]%d(%f)\n", id + 1, */
+	/* 		convert.r, (int)round(self->id[i].x*255), self->id[i].x, */
+	/* 		convert.g, (int)round(self->id[i].y*255), self->id[i].y); */
 
 	return i;
 }
@@ -391,24 +401,35 @@ int glg_update_ram(glg_t *self)
 
 	int selection = model->layers[self->layer_id].selection;
 
+	vector_t *faces = mesh->faces;
+	vector_t *edges = mesh->edges;
+
+	mesh_selection_t *sel = &mesh->selections[selection];
+	if(selection != -1) faces = sel->faces;
+	if(selection != -1) edges = sel->edges;
+	/* if(sel->visible == 0) return 1; */
+
 	int i;
-	if(vector_count(mesh->faces))
+	if(vector_count(faces))
 	{
 		mesh_update_smooth_normals(mesh);
 		int triangle_count = 0;
-		for(i = 0; i < vector_count(mesh->faces); i++)
+		for(i = 0; i < vector_count(faces); i++)
 		{
-			face_t *face = m_face(mesh, i); if(!face) continue;
-			if(selection != -1) continue;
+			int id = i;
+			if(selection != -1) id = vector_value(faces, i, int);
+			face_t *face = m_face(mesh, id); if(!face) continue;
 
 			if(face->e_size == 3) triangle_count++;
 			else triangle_count += 2;
 		}
 		glg_ind_prealloc(self, triangle_count * 3);
 
-		for(i = 0; i < vector_count(mesh->faces); i++)
+		for(i = 0; i < vector_count(faces); i++)
 		{
-			face_t *face = m_face(mesh, i); if(!face) continue;
+			int id = i;
+			if(selection != -1) id = vector_value(faces, i, int);
+			face_t *face = m_face(mesh, id); if(!face) continue;
 #ifdef MESH4
 			if(face->pair != -1)
 			{
@@ -423,12 +444,11 @@ int glg_update_ram(glg_t *self)
 				}
 			}
 #endif
-			if(selection != -1) continue;
-			glg_face_to_gl(self, face, i);
+			glg_face_to_gl(self, face, id);
 		}
 		glg_get_tg_bt(self);
 	}
-	else
+	else if(vector_count(edges))
 	{
 		glg_edges_to_gl(self);
 	}
@@ -526,8 +546,13 @@ void c_mesh_gl_update(c_mesh_gl_t *self)
 	/* if(self->mesh->update_locked) return; */
 	if(self->mesh->mid_load) return;
 	SDL_SemWait(self->mesh->sem);
-	for(i = 0; i < self->groups_num; i++)
+
+	c_model_t *model = c_model(self);
+
+	for(i = 0; i < model->layers_num; i++)
 	{
+		if(i >= self->groups_num) mesh_gl_add_group(self);
+
 		glg_t *group = &self->groups[i];
 		if(self->mesh->update_id != group->update_id && group->updated)
 		{
@@ -591,8 +616,17 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 		wireframe = layer->wireframe;
 	}
 
-	glPolygonOffset(0.0f, model->layers[self->layer_id].offset);
+	/* glPolygonOffset(0.0f, model->layers[self->layer_id].offset); */
 	glerr();
+
+	if(self->layer_id)
+	{
+		glDepthFunc(GL_LEQUAL);
+	}
+	else
+	{
+		glPolygonOffset(0.0f, 0.0f);
+	}
 
 	if(cull_face == GL_NONE)
 	{
@@ -666,7 +700,7 @@ int c_mesh_gl_draw(c_mesh_gl_t *self, int transparent)
 	if(shader)
 	{
 		glUniform1f(shader->u_has_tex, (float)self->mesh->has_texcoords);
-		vec2_t id_color = int_to_vec2(c_entity(self) + 1);
+		vec2_t id_color = int_to_vec2(c_entity(self));
 
 		glUniform2f(shader->u_id, id_color.x, id_color.y);
 		glerr();
@@ -781,8 +815,4 @@ DEC_CT(ct_mesh_gl)
 
 	ct_add_interaction(ct, ct_model);
 
-	/* ct_listener(ct, WORLD|RENDER_THREAD, component_menu, */
-			/* (signal_cb)c_mesh_gl_menu); */
-
-	/* ct_listener(ct, WORLD, collider_callback, c_grid_collider); */
 }

@@ -92,6 +92,7 @@ typedef struct
 			uint u_transparency;
 			uint u_position;
 			uint u_id;
+			uint u_geomid;
 			uint u_normal;
 		} gbuffer;
 	};
@@ -221,6 +222,8 @@ entity_t c_renderer_get_camera(c_renderer_t *self);
 void c_renderer_clear_shader(c_renderer_t *self, shader_t *shader);
 int c_renderer_scene_changed(c_renderer_t *self);
 entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
+		float *depth);
+entity_t c_renderer_geom_at_pixel(c_renderer_t *self, int x, int y,
 		float *depth);
 
 void pass_set_model(pass_t *self, mat4_t model);

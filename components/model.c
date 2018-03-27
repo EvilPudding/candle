@@ -66,8 +66,8 @@ void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset)
 	self->layers[i].cull_front = 0;
 	self->layers[i].cull_back = 1;
 	self->layers[i].wireframe = 0;
-	self->layers[i].update_id = 0;
 	self->layers[i].offset = 0;
+	entity_signal_same(c_entity(self), mesh_changed, NULL);
 }
 
 c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow)

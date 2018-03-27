@@ -34,6 +34,7 @@ struct gbuffer_t
 	sampler2D transparency;
 	sampler2D position;
 	sampler2D id;
+	sampler2D geomid;
 	sampler2D normal;
 };
 
@@ -176,6 +177,11 @@ vec4 get_specular(gbuffer_t buffer)
 vec4 get_transparency(gbuffer_t buffer)
 {
 	return textureLod(buffer.transparency, pixel_pos(), 0);
+}
+
+vec2 get_geomid(gbuffer_t buffer)
+{
+	return textureLod(buffer.geomid, pixel_pos(), 0).rg;
 }
 
 vec2 get_id(gbuffer_t buffer)

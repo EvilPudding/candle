@@ -30,7 +30,6 @@ void mesh_selection_init(mesh_selection_t *self)
 #ifdef MESH4
 	self->cells = vector_new(sizeof(int), 0, &fallback);
 #endif
-
 }
 
 mesh_t *mesh_new()

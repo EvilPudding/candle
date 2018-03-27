@@ -151,6 +151,12 @@ static void c_renderer_bind_gbuffer(c_renderer_t *self, pass_t *pass,
 	texture_bind(gbuffer, (*i));
 	(*i)++;
 
+	glUniform1i(sb->gbuffer.u_geomid, (*i)); glerr();
+	glActiveTexture(GL_TEXTURE0 + (*i)); glerr();
+	texture_bind(gbuffer, (*i));
+	(*i)++;
+
+
 	glerr();
 }
 
@@ -194,6 +200,8 @@ void c_renderer_bind_get_uniforms(c_renderer_t *self, bind_t *bind,
 				shader_uniform(self->shader, "gbuffer", "position");
 			sb->gbuffer.u_id =
 				shader_uniform(self->shader, "gbuffer", "id");
+			sb->gbuffer.u_geomid =
+				shader_uniform(self->shader, "gbuffer", "geomid");
 			sb->gbuffer.u_normal =
 				shader_uniform(self->shader, "gbuffer", "normal");
 			glerr();
@@ -550,6 +558,7 @@ static int c_renderer_update_screen_texture(c_renderer_t *self)
 			texture_add_buffer(pass->output, "position", 1, 3, 0);
 			texture_add_buffer(pass->output, "normal", 1, 2, 0);
 			texture_add_buffer(pass->output, "id", 1, 2, 0);
+			texture_add_buffer(pass->output, "geomid", 1, 2, 0);
 
 			texture_draw_id(pass->output, COLOR_TEX); /* DRAW DIFFUSE */
 
@@ -726,14 +735,26 @@ void c_renderer_add_camera(c_renderer_t *self, entity_t camera)
 	self->camera = camera;
 }
 
+entity_t c_renderer_geom_at_pixel(c_renderer_t *self, int x, int y,
+		float *depth)
+{
+	entity_t result;
+	if(!self->passes[1].output) return entity_null;
+
+	unsigned int res = texture_get_pixel(self->passes[1].output, 6,
+			x * self->resolution, y * self->resolution, depth) & 0xFFFF;
+	result = res - 1;
+	return result;
+}
+
 entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
 		float *depth)
 {
 	entity_t result;
-	if(!self->passes[0].output) return entity_null;
+	if(!self->passes[1].output) return entity_null;
 
-	unsigned int res = texture_get_pixel(self->passes[0].output, 5,
-			x * self->resolution, y * self->resolution, depth);
+	unsigned int res = texture_get_pixel(self->passes[1].output, 5,
+			x * self->resolution, y * self->resolution, depth) & 0xFFFF;
 	result = res - 1;
 	return result;
 }

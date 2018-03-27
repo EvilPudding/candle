@@ -3,8 +3,10 @@
 #include <components/name.h>
 #include <components/node.h>
 #include <components/camera.h>
+#include <components/model.h>
 #include <systems/window.h>
 #include <candle.h>
+#include <mesh.h>
 #include <keyboard.h>
 #include <stdlib.h>
 #include "renderer.h"
@@ -20,11 +22,17 @@ DEC_SIG(component_menu);
 #define MAX_VERTEX_MEMORY 512 * 1024
 #define MAX_ELEMENT_MEMORY 128 * 1024
 
+mat_t *g_sel_mat = NULL;
 
 void c_editmode_init(c_editmode_t *self)
 {
 	self->spawn_pos = vec2(25, 25);
 	self->mode = EDIT_OBJECT;
+	if(!g_sel_mat)
+	{
+		g_sel_mat = mat_new("sel_mat");
+				/* sauces_mat("pack1/white"); */
+	}
 }
 
 int c_editmode_bind_mode(c_editmode_t *self)
@@ -34,27 +42,28 @@ int c_editmode_bind_mode(c_editmode_t *self)
 
 vec2_t c_editmode_bind_over(c_editmode_t *self)
 {
-	if(self->mode == EDIT_OBJECT)
-	{
-		return int_to_vec2(self->over + 1);
-	}
-	else
-	{
-		return int_to_vec2(self->over_poly + 1);
-	}
+	return int_to_vec2(self->over);
+}
+vec2_t c_editmode_bind_over_poly(c_editmode_t *self)
+{
+	return int_to_vec2(self->over_poly);
 }
 
 vec2_t c_editmode_bind_selected(c_editmode_t *self)
 {
-	if(self->mode == EDIT_OBJECT)
-	{
-		return int_to_vec2(self->selected + 1);
-	}
-	else
-	{
-		return int_to_vec2(self->selected_poly + 1);
-	}
+	return int_to_vec2(self->selected);
 }
+
+
+/* vec2_t c_editmode_bind_over(c_editmode_t *self) */
+/* { */
+/* 	return int_to_vec2(self->over); */
+/* } */
+
+/* vec2_t c_editmode_bind_selected(c_editmode_t *self) */
+/* { */
+/* 	return int_to_vec2(self->selected); */
+/* } */
 
 
 /* entity_t p; */
@@ -112,27 +121,14 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 		/* nk_style_set_font(self->nk, &roboto->handle); */
 	} 
 
-	c_renderer_replace_pass(c_renderer(self), "gbuffer", "gbuffer_editmode",
-			render_visible, 1.0f,
-			PASS_GBUFFER | PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR,
-		(bind_t[]){
-			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, c_renderer(self)},
-			{BIND_INTEGER, "mode", (getter_cb)c_editmode_bind_mode, self},
-			{BIND_VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
-			{BIND_VEC2, "sel_id", (getter_cb)c_editmode_bind_selected, self},
-			{BIND_NONE}
-		}
-	);
-
-
 	c_renderer_add_pass(c_renderer(self), "rendered", "highlight",
 			render_quad, 1.0f, 0,
 		(bind_t[]){
-			{BIND_GBUFFER, "gbuffer"},
+			{BIND_GBUFFER, "gb2"},
 			{BIND_PREV_PASS_OUTPUT, "final"},
 			{BIND_INTEGER, "mode", (getter_cb)c_editmode_bind_mode, self},
 			{BIND_VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
-			{BIND_VEC2, "sel_id", (getter_cb)c_editmode_bind_selected, self},
+			{BIND_VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
 			{BIND_NONE}
 		}
 	);
@@ -159,7 +155,17 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 	}
 	else
 	{
-		self->over_poly = result;
+		if(result == self->selected)
+		{
+			entity_t result = c_renderer_geom_at_pixel(renderer, x, y,
+					&self->mouse_depth);
+			self->over_poly = result;
+			/* printf("%lu\n", result); */
+		}
+		else
+		{
+			self->over_poly = 0;
+		}
 	}
 }
 
@@ -254,13 +260,23 @@ int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 
 			if(self->mode == EDIT_OBJECT)
 			{
-				self->selected = result & 0xFFFF;
+				self->selected = result;
 
 				c_editmode_open_entity(self, self->selected);
 			}
-			else
+			else// if(result == self->selected)
 			{
-				self->selected_poly = result & 0xFFFF;
+				entity_t result =
+					c_renderer_geom_at_pixel(c_renderer(self), event->x,
+							event->y, &self->mouse_depth);
+
+				/* TODO: select one more poly */
+				self->selected_poly = result;
+				mesh_t *mesh = c_model(&self->selected)->mesh;
+				mesh_lock(mesh);
+				mesh_select(mesh, SEL_EDITING, MESH_FACE, self->selected_poly);
+				mesh_modified(mesh);
+				mesh_unlock(mesh);
 			}
 		}
 	}
@@ -276,7 +292,23 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 		case 'c':
 			if(self->control)
 			{
-				self->mode = !self->mode;
+				if(self->selected && self->mode == EDIT_OBJECT)
+				{
+					self->mode = EDIT_FACE; 
+					c_model_t *cm = c_model(&self->selected);
+					if(cm && cm->mesh)
+					{
+						mesh_t *mesh = cm->mesh;
+						mesh_lock(mesh);
+						c_model_add_layer(cm, g_sel_mat, SEL_EDITING, 0.8);
+						mesh_modified(mesh);
+						mesh_unlock(mesh);
+					}
+				}
+				else
+				{
+					self->mode = EDIT_OBJECT; 
+				}
 			}
 			break;
 		case '`':
@@ -524,7 +556,6 @@ int c_editmode_events_end(c_editmode_t *self)
 
 int c_editmode_event(c_editmode_t *self, SDL_Event *event)
 {
-
 	if(self->nk)
 	{
 		nk_sdl_handle_event(event);

@@ -45,14 +45,6 @@ void texture_update_gl(texture_t *self)
 			NULL);
 }
 
-struct pixel_request
-{
-	int x, y, buffer;
-	texture_t *tex;
-	int *output;
-	float *depth;
-};
-
 uint texture_get_pixel(texture_t *self, int buffer, int x, int y,
 		float *depth)
 {
@@ -69,7 +61,7 @@ uint texture_get_pixel(texture_t *self, int buffer, int x, int y,
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
 
-		glReadPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &data);
+		glReadPixels(x, y, 1, 1, GL_RG, GL_UNSIGNED_BYTE, &data);
 	}
 	if(depth)
 	{
@@ -88,53 +80,6 @@ uint texture_get_pixel(texture_t *self, int buffer, int x, int y,
 	glerr();
 	return data;
 }
-
-
-/* void texture_get_pixel_loader(struct pixel_request *info) */
-/* { */
-/* 	glFlush(); */
-/* 	glFinish(); */
-
-/* 	glBindFramebuffer(GL_READ_FRAMEBUFFER, info->tex->frame_buffer[0]); glerr(); */
-
-/* 	if(info->output) */
-/* 	{ */
-/* 		glReadBuffer(info->tex->attachments[info->buffer]); */
-
-/* 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1); */
-
-
-/* 		glReadPixels(info->x, info->y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &info->output); */
-/* 		printf("%d\n", *info->output); */
-/* 	} */
-/* 	if(info->depth) */
-/* 	{ */
-/* 		/1* texture_bind(info->tex, DEPTH_TEX); *1/ */
-/* 		glReadBuffer(GL_NONE); */
-
-/* 		/1* texture_2D_frame_buffer(info->tex); *1/ */
-/* 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1); */
-
-/* 		glReadPixels(info->x, info->y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, info->depth); */
-/* 	} */
-
-/* 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0); */
-/* } */
-
-
-/* int texture_get_pixel(texture_t *self, int buffer, int x, int y, */
-/* 		float *depth) */
-/* { */
-/* 	int data = 0; */
-/* 	y = self->height-y; */
-
-/* 	struct pixel_request req = {.tex = self, .x = x, .y = y, .buffer = buffer, */
-/* 		.depth = depth, .output = &data}; */
-
-/* 	loader_push_wait(candle->loader, (loader_cb)texture_get_pixel_loader, &req, NULL); */
-
-/* 	return data; */
-/* } */
 
 void texture_update_brightness(texture_t *self)
 {

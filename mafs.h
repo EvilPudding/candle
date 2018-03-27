@@ -1046,10 +1046,11 @@ static inline float float_mix(float x, float y, float a)
 /* TODO maybe this shouldn't be here */
 static inline vec2_t int_to_vec2(int id)
 {
+	id++;
 	union {
 		unsigned int i;
 		struct{
-			char r, g, b, a;
+			unsigned char r, g, b, a;
 		};
 	} convert = {.i = id};
 
