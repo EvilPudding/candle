@@ -227,11 +227,6 @@ void mat_set_diffuse(mat_t *self, prop_t diffuse)
 	self->diffuse = diffuse;
 }
 
-void mat_set_ambient_light(mat_t *self, vec4_t light)
-{
-	self->ambient_light = light;
-}
-
 void mat_bind(mat_t *self, shader_t *shader)
 {
 	mat_bind_prop(&shader->u_diffuse, &self->diffuse, shader->bound_textures++);
@@ -241,8 +236,6 @@ void mat_bind(mat_t *self, shader_t *shader)
 	/* mat_bind_prop(&shader->u_position, &self->position, 5); */
 	/* mat_bind_prop(&shader->u_position, &self->position, 6); */
 
-	glUniform4f(shader->u_ambient_light, self->ambient_light.r,
-			self->ambient_light.g, self->ambient_light.b, self->ambient_light.a);
 	glerr();
 
 }

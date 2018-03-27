@@ -16,7 +16,7 @@ void main()
 
 	DiffuseColor = dif;
 
-	SpecularColor = resolveProperty(specular, texcoord) * 2;
+	SpecularColor = resolveProperty(specular, texcoord);
 
 	Transparency = resolveProperty(transparency, texcoord);
 

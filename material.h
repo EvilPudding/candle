@@ -27,7 +27,6 @@ typedef struct
 	/* prop_t position; */
 	/* prop_t cnormal; */
 
-	vec4_t ambient_light;
 } mat_t;
 
 extern char g_mats_path[256];
@@ -40,7 +39,6 @@ void mat_set_diffuse(mat_t *self, prop_t diffuse);
 void mat_set_normal(mat_t *self, prop_t normal);
 void mat_set_specular(mat_t *self, prop_t specular);
 void mat_set_transparency(mat_t *self, prop_t transparency);
-void mat_set_ambient_light(mat_t *self, vec4_t light);
 void mat_destroy(mat_t *self);
 
 #endif /* !MATERIAL_H */

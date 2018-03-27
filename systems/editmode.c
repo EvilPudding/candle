@@ -342,12 +342,11 @@ int c_editmode_key_down(c_editmode_t *self, char *key)
 	return 1;
 }
 
-void node_node(c_editmode_t *self, c_node_t *node)
+void node_entity(c_editmode_t *self, entity_t entity)
 {
 	char buffer[64];
 	char *final_name = buffer;
-	const entity_t entity = c_entity(node);
-	c_name_t *name = c_name(node);
+	c_name_t *name = c_name(&entity);
 	if(name)
 	{
 		final_name = name->name;
@@ -356,38 +355,58 @@ void node_node(c_editmode_t *self, c_node_t *node)
 	{
 		sprintf(buffer, "NODE_%ld", entity);
 	}
-	if(nk_tree_push_id(self->nk, NK_TREE_NODE, final_name, NK_MINIMIZED,
-				(int)entity))
+	c_node_t *node = c_node(&entity);
+	if(node)
 	{
-		if(nk_button_label(self->nk, "select"))
+		if(nk_tree_push_id(self->nk, NK_TREE_NODE, final_name, NK_MINIMIZED,
+					(int)entity))
+		{
+			if(nk_button_label(self->nk, "select"))
+			{
+				c_editmode_open_entity(self, entity);
+				self->selected = entity;
+			}
+			int i;
+			for(i = 0; i < node->children_size; i++)
+			{
+				node_entity(self, node->children[i]);
+			}
+			nk_tree_pop(self->nk);
+		}
+	}
+	else
+	{
+		int is_selected = self->selected == entity;
+		if(nk_selectable_label(self->nk, final_name, NK_TEXT_ALIGN_LEFT, &is_selected))
 		{
 			c_editmode_open_entity(self, entity);
 			self->selected = entity;
 		}
-		int i;
-		for(i = 0; i < node->children_size; i++)
-		{
-			node_node(self, c_node(&node->children[i]));
-		}
-		nk_tree_pop(self->nk);
 	}
+}
+
+void tools_gui(c_editmode_t *self)
+{
+	/* unsigned long i; */
+
+
 }
 
 void node_tree(c_editmode_t *self)
 {
-	int i;
-	ct_t *nodes = ecm_get(ct_node);
+	unsigned long i;
 
-	if(nk_tree_push(self->nk, NK_TREE_TAB, "nodes", NK_MINIMIZED))
+	if(nk_tree_push(self->nk, NK_TREE_TAB, "entities", NK_MINIMIZED))
 	{
-		int p;
-		for(p = 0; p < nodes->pages_size; p++)
-		for(i = 0; i < nodes->pages[p].components_size; i++)
+		for(i = 1; i < g_ecm->entities_busy_size; i++)
 		{
-			c_node_t *node = (c_node_t*)ct_get_at(nodes, p, i);
-			if(node->parent != entity_null) continue;
-			node_node(self, node);
+			if(!g_ecm->entities_busy[i]) continue;
+			c_node_t *node = c_node(&i);
+
+			if(node && node->parent != entity_null) continue;
+			node_entity(self, i);
 		}
+
 		nk_tree_pop(self->nk);
 	}
 }
@@ -439,6 +458,89 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 	return res;
 }
 
+/* From https://github.com/wooorm/levenshtein.c */
+unsigned int levenshtein(const char *a, const char *b) {
+  unsigned int length = strlen(a);
+  unsigned int bLength = strlen(b);
+  unsigned int *cache = calloc(length, sizeof(unsigned int));
+  unsigned int index = 0;
+  unsigned int bIndex = 0;
+  unsigned int distance;
+  unsigned int bDistance;
+  unsigned int result;
+  char code;
+
+  /* Shortcut optimizations / degenerate cases. */
+  if (a == b) {
+    return 0;
+  }
+
+  if (length == 0) {
+    return bLength;
+  }
+
+  if (bLength == 0) {
+    return length;
+  }
+
+  /* initialize the vector. */
+  while (index < length) {
+    cache[index] = index + 1;
+    index++;
+  }
+
+  /* Loop. */
+  while (bIndex < bLength) {
+    code = b[bIndex];
+    result = distance = bIndex++;
+    index = -1;
+
+    while (++index < length) {
+      bDistance = code == a[index] ? distance : distance + 1;
+      distance = cache[index];
+
+      cache[index] = result = distance > result
+        ? bDistance > result
+          ? result + 1
+          : bDistance
+        : bDistance > distance
+          ? distance + 1
+          : bDistance;
+    }
+  }
+
+  free(cache);
+
+  return result;
+}
+
+static void insert_ct(c_editmode_t *self, int ct, int dist)
+{
+	int i;
+	for(i = 0; i < self->ct_list_size && i < 9; i++)
+	{
+		if(self->ct_list[i].distance > dist)
+		{
+			memmove(&self->ct_list[i + 1], &self->ct_list[i], (9 - i) *
+					sizeof(self->ct_list[0]));
+			self->ct_list[i].distance = dist;
+			self->ct_list[i].ct = ct;
+			if(self->ct_list_size < 9)
+			{
+				self->ct_list_size++;
+			}
+			return;
+		}
+	}
+	if(self->ct_list_size < 9)
+	{
+		self->ct_list[self->ct_list_size].distance = dist;
+		self->ct_list[self->ct_list_size].ct = ct;
+		self->ct_list_size++;
+		return;
+	}
+}
+
 int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 {
 	c_name_t *name = c_name(&ent);
@@ -485,6 +587,41 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 				}
 			}
 		}
+		struct nk_rect bounds = nk_window_get_bounds(self->nk);
+		if (nk_contextual_begin(self->nk, 0, nk_vec2(150, 300), bounds)) {
+
+			nk_layout_row_dynamic(self->nk, 25, 1);
+			if(nk_edit_string_zero_terminated(self->nk, NK_EDIT_BOX|NK_EDIT_AUTO_SELECT,
+					self->ct_search, sizeof(self->ct_search), nk_filter_ascii))
+			{
+				if(strncmp(self->ct_search_bak, self->ct_search, sizeof(self->ct_search_bak)))
+				{
+					strncpy(self->ct_search_bak, self->ct_search, sizeof(self->ct_search_bak));
+
+
+					self->ct_list_size = 0;
+					for(i = 0; i < g_ecm->cts_size; i++)
+					{
+						ct_t *ct = ecm_get(i);
+						if(ct_get(ct, ent)) continue;
+
+						uint dist = levenshtein(ct->name, self->ct_search);
+						insert_ct(self, i, dist);
+					}
+						
+				}
+			}
+			for(i = 0; i < self->ct_list_size; i++)
+			{
+				ct_t *ct = ecm_get(self->ct_list[i].ct);
+				if (nk_contextual_item_label(self->nk, ct->name, NK_TEXT_CENTERED))
+				{
+					entity_add_component(ent, component_new(ct->id));
+				}
+
+			}
+			nk_contextual_end(self->nk);
+		}
 	}
 	nk_end(self->nk);
 	return res;
@@ -496,7 +633,7 @@ int c_editmode_draw(c_editmode_t *self)
 	if(self->nk && (self->visible || self->control))
 	{
 		if (nk_begin(self->nk, "Edit menu",
-					nk_rect(self->spawn_pos.x, self->spawn_pos.y, 230, 180),
+					nk_rect(self->spawn_pos.x, self->spawn_pos.y, 230, 380),
 					NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|
 					NK_WINDOW_SCALABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
 		{
@@ -511,6 +648,8 @@ int c_editmode_draw(c_editmode_t *self)
 			entity_signal(c_entity(self), global_menu, self->nk);
 
 			node_tree(self);
+
+			tools_gui(self);
 		}
 		nk_end(self->nk);
 

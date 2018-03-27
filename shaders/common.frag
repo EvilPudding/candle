@@ -19,7 +19,6 @@ struct pass_t
 
 uniform vec2 output_size;
 
-uniform vec3 ambient_light;
 
 uniform property_t diffuse;
 uniform property_t specular;
@@ -50,7 +49,6 @@ uniform samplerCube ambient_map;
 
 uniform sampler3D perlin_map;
 //uniform samplerCubeShadow shadow_map;
-uniform vec3 light_pos;
 
 struct camera_t
 {
@@ -68,7 +66,11 @@ uniform mat4 MVP;
 
 uniform camera_t camera;
 
+uniform vec3 light_pos;
 uniform float light_intensity;
+uniform float light_radius;
+uniform vec3 light_color;
+uniform float light_ambient;
 uniform float has_tex;
 uniform float cameraspace_normals;
 
@@ -124,7 +126,7 @@ vec4 resolveProperty(property_t prop, vec2 coords)
 	return prop.color;
 }
 
-float ambient = 0.08;
+/* float ambient = 0.08; */
 /* float ambient = 1.00; */
 
 float lookup_single(vec3 shadowCoord)

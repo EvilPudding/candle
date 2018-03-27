@@ -416,8 +416,6 @@ static int shader_new_loader(shader_t *self)
 
 	self->u_perlin_map = glGetUniformLocation(self->program, "perlin_map"); glerr();
 
-	self->u_shadow_map = glGetUniformLocation(self->program, "shadow_map"); glerr();
-	self->u_light_pos = glGetUniformLocation(self->program, "light_pos"); glerr();
 
 	self->u_ambient_map = glGetUniformLocation(self->program, "ambient_map"); glerr();
 	self->u_probe_pos = glGetUniformLocation(self->program, "probe_pos"); glerr();
@@ -431,7 +429,12 @@ static int shader_new_loader(shader_t *self)
 	self->u_angle4 = glGetUniformLocation(self->program, "angle4"); glerr();
 #endif
 
+	self->u_shadow_map = glGetUniformLocation(self->program, "shadow_map"); glerr();
+	self->u_light_pos = glGetUniformLocation(self->program, "light_pos"); glerr();
 	self->u_light_intensity = glGetUniformLocation(self->program, "light_intensity"); glerr();
+	self->u_light_color = glGetUniformLocation(self->program, "light_color"); glerr();
+	self->u_light_ambient = glGetUniformLocation(self->program, "light_ambient"); glerr();
+	self->u_light_radius = glGetUniformLocation(self->program, "light_radius"); glerr();
 
 	self->u_has_tex = glGetUniformLocation(self->program, "has_tex"); glerr();
 
@@ -440,7 +443,6 @@ static int shader_new_loader(shader_t *self)
 
 	self->u_screen_size = glGetUniformLocation(self->program, "screen_size"); glerr();
 
-	self->u_ambient_light = glGetUniformLocation(self->program, "ambient_light"); glerr();
 
 	self->u_horizontal_blur = glGetUniformLocation(self->program, "horizontal"); glerr();
 
@@ -558,7 +560,13 @@ void shader_bind_light(shader_t *self, entity_t light)
 	probe_c = c_probe(&light);
 	/* if(!light_c->before_draw || light_c->before_draw((c_t*)light_c)) */
 	/* { */
+		glUniform1f(self->u_light_ambient, light_c->ambient);
+		glUniform1f(self->u_light_radius, light_c->radius);
 		glUniform1f(self->u_light_intensity, light_c->intensity);
+		glUniform3f(self->u_light_color,
+				light_c->color.r,
+				light_c->color.g,
+				light_c->color.b);
 	/* } */
 	/* else */
 	/* { */

@@ -44,6 +44,14 @@ typedef struct
 		EDIT_OBJECT
 	} mode;
 
+	struct {
+		int ct;
+		int distance;
+	} ct_list[10];
+	int ct_list_size;
+	char ct_search_bak[32];
+	char ct_search[32];
+
 } c_editmode_t;
 
 DEF_CASTER(ct_editmode, c_editmode, c_editmode_t)

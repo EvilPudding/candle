@@ -57,8 +57,6 @@ typedef struct shader_t
 	GLuint u_perlin_map;
 	GLuint u_angle4;
 
-	GLuint u_shadow_map;
-	GLuint u_light_pos;
 
 	GLuint u_ambient_map;
 	GLuint u_probe_pos;
@@ -66,7 +64,12 @@ typedef struct shader_t
 	GLuint u_camera_pos;
 	GLuint u_camera_model;
 	GLuint u_exposure;
+	GLuint u_shadow_map;
 	GLuint u_light_intensity;
+	GLuint u_light_pos;
+	GLuint u_light_color;
+	GLuint u_light_ambient;
+	GLuint u_light_radius;
 
 	GLuint u_has_tex;
 	GLuint u_id;
@@ -82,7 +85,6 @@ typedef struct shader_t
 	GLuint u_horizontal_blur; /* TODO: make this dynamic */
 	GLuint u_output_size;
 
-	GLuint u_ambient_light;
 
 	mat4_t vp;
 

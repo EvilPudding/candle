@@ -19,7 +19,7 @@ void main()
 	float dist_to_eye = length(c_pos);
 	/* FragColor = clamp(vec4((nor+1.0f)/2.0f, 1.0),0,1); return; */
 
-	vec3 color = ambient * dif;
+	vec3 color = light_color * light_ambient * dif;
 	/* FragColor = vec4(texcoord - gl_FragCoord.xy / screen_size, 0, 1); return; */
 
 	if(light_intensity > 0.01)
@@ -53,9 +53,11 @@ void main()
 			float diffuseCoefficient = max(0.0, dot(c_nor, normalize(c_light_dir)));
 			/* FragColor = vec4(vec3(diffuseCoefficient / 10), 1.0f); return; */
 
-			vec3 frag_diffuse = light_intensity * diffuseCoefficient * dif;
+			vec3 frag_diffuse = light_intensity * diffuseCoefficient * dif * light_color;
 
-			float attenuation = 1.0 / (1.0 + lightAtt * pow(point_to_light, 2));
+			float l = point_to_light / light_radius;
+			float attenuation = clamp(1.0f - pow(l, 2), 0.0f, 1.0f);
+			/* float attenuation = 1.0 / (1.0 + lightAtt * pow(point_to_light, 2)); */
 
 			vec3 color_lit = attenuation * frag_diffuse;
 
