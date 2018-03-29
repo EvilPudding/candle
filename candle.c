@@ -334,15 +334,18 @@ int candle_run(candle_t *self, entity_t root, const char *map_name)
 
 	if(file == NULL) return 0;
 
-	char line[2048];
-	while(!feof(file))
+	char *line = NULL;
+	size_t n = 0;
+	while(1)
 	{
-		if(!fgets(line, sizeof(line), file))
-		{
-			return 0;
-		}
+		ssize_t read = getline(&line, &n, file);
+		if(read == -1) break;
+		if(read == 0) continue;
+		printf("%s\n", line);
 		candle_run_command(self, root, line);
 	}
+	printf("end\n");
+	free(line);
 
 	fclose(file);
 

@@ -89,7 +89,6 @@ void ecm_register_all()
 			g_ecm->regs[j]();
 		}
 	}
-	free(g_ecm->regs[j]);
 }
 
 void _ct_listener(ct_t *self, int flags, uint signal,

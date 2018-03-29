@@ -49,6 +49,7 @@ int c_light_render(c_light_t *self)
 {
 	c_renderer(&candle->systems)->bound_light = c_entity(self);
 
+	if(!g_light || !c_mesh_gl(&g_light)) return 0;
 	if(self->radius > 0.0f)
 	{
 		shader_t *shader = vs_bind(g_model_vs);
