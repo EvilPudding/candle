@@ -15,12 +15,12 @@ uniform int mode;
 #define EDIT_OBJECT	3
 
 
-float filtered(vec2 c, vec2 filter)
+float filtered(vec2 c, vec2 fil)
 {
-	filter = round(filter * 255); 
+	filter = round(fil * 255); 
 	c = round(c * 255); 
 
-	if(c.x != filter.x || c.y != filter.y)
+	if(c.x != fil.x || c.y != fil.y)
 	{
 		return 0;
 	}
