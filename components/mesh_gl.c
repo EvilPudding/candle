@@ -628,6 +628,7 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 		glPolygonOffset(0.0f, 0.0f);
 	}
 
+	int cull_was_enabled = glIsEnabled(GL_CULL_FACE);
 	if(cull_face == GL_NONE)
 	{
 		glDisable(GL_CULL_FACE); glerr();
@@ -677,7 +678,11 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 #endif
 
 	glerr();
-	glEnable(GL_CULL_FACE);
+
+	if(cull_was_enabled)
+	{
+		glEnable(GL_CULL_FACE);
+	}
 	/* printf("/GLG_DRAW\n"); */
 	return 1;
 

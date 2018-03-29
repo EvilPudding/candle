@@ -280,6 +280,5 @@ void c_spacial_update_model_matrix(c_spacial_t *self)
 	self->model_matrix = mat4_scale_aniso(self->model_matrix, self->scale.x,
 			self->scale.y, self->scale.z);
 
-	entity_signal(c_entity(self), spacial_changed,
-			&c_entity(self));
+	entity_signal(c_entity(self), spacial_changed, &c_entity(self));
 }

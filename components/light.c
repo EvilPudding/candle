@@ -20,16 +20,29 @@ void c_light_init(c_light_t *self)
 	self->color = vec4(1.0f);
 	self->intensity = 1;
 	self->shadow_size = 512;
-	if(!g_depth_fs) g_depth_fs = fs_new("depth");
 	self->radius = 5.0f;
 
 	if(!g_light)
 	{
+		g_depth_fs = fs_new("depth");
 		g_light = entity_new(c_node_new(),
 				c_model_new(sauces_mesh("light_mesh.obj"), NULL, 0));
 		c_model(&g_light)->visible = 0;
 
 	}
+}
+
+c_light_t *c_light_new(float intensity, float radius,
+		vec4_t color, int shadow_size)
+{
+	c_light_t *self = component_new(ct_light);
+
+	self->intensity = intensity;
+	self->color = color;
+	self->shadow_size = shadow_size;
+	self->radius = radius;
+
+	return self;
 }
 
 int c_light_render(c_light_t *self)
@@ -46,6 +59,7 @@ int c_light_render(c_light_t *self)
 		c_node_update_model(node);
 
 		float rad = self->radius * 1.1f;
+		/* float rad = self->radius * 0.5f; */
 		mat4_t model = mat4_scale_aniso(node->model,
 				rad / sc->scale.x, rad / sc->scale.y, rad / sc->scale.z);
 
@@ -61,19 +75,6 @@ int c_light_render(c_light_t *self)
 	}
 }
 
-
-c_light_t *c_light_new(float intensity, float radius,
-		vec4_t color, int shadow_size)
-{
-	c_light_t *self = component_new(ct_light);
-
-	self->intensity = intensity;
-	self->color = color;
-	self->shadow_size = shadow_size;
-	self->radius = radius;
-
-	return self;
-}
 
 int c_light_menu(c_light_t *self, void *ctx)
 {
@@ -113,14 +114,16 @@ int c_light_probe_render(c_light_t *self)
 	if(!probe)
 	{
 		entity_add_component(c_entity(self), (c_t*)c_probe_new(self->shadow_size));
-		c_probe_update_position(c_probe(self));
-		probe = c_probe(self);
+		entity_signal(c_entity(self), spacial_changed, &c_entity(self));
+		return 0;
 	}
 	if(!g_depth_fs) return 0;
 
 	fs_bind(g_depth_fs);
 
+	glDisable(GL_CULL_FACE);
 	c_probe_render(probe, render_shadows);
+	glEnable(GL_CULL_FACE);
 	return 1;
 }
 

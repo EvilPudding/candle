@@ -588,17 +588,7 @@ static int c_renderer_resize(c_renderer_t *self, window_resize_data *event)
 
 static inline void pass_draw_object(c_renderer_t *self, pass_t *pass)
 {
-	if(pass->gbuffer)
-	{
-		glEnable(GL_CULL_FACE); glerr();
-	}
-
 	entity_signal(c_entity(self), pass->draw_signal, NULL);
-
-	if(pass->gbuffer)
-	{
-		glDisable(GL_CULL_FACE); glerr();
-	}
 }
 
 static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
@@ -631,6 +621,7 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	}
+	glEnable(GL_CULL_FACE); glerr();
 
 	if(!pass->disable_depth)
 	{

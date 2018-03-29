@@ -247,18 +247,86 @@ void candle_wait(candle_t *candle)
 	SDL_WaitThread(candle->ticker_thr, NULL);
 }
 
-void candle_register_template(candle_t *self, const char *key,
-		template_cb cb)
+void candle_reg_prefab(candle_t *self, const char *key, prefab_cb cb)
 {
-	uint i = self->templates_size++;
-	self->templates = realloc(self->templates,
-			sizeof(*self->templates) * self->templates_size);
-	template_t *template = &self->templates[i];
-	template->cb = cb;
-	strncpy(template->key, key, sizeof(template->key) - 1);
+	uint i = self->prefabs_size++;
+	self->prefabs = realloc(self->prefabs,
+			sizeof(*self->prefabs) * self->prefabs_size);
+	prefab_t *prefab = &self->prefabs[i];
+	prefab->cb = cb;
+	strncpy(prefab->key, key, sizeof(prefab->key) - 1);
 }
 
-int candle_import(candle_t *self, entity_t root, const char *map_name)
+entity_t candle_run_command(candle_t *self, entity_t root, char *command)
+{
+	/* TODO: optimize this function */
+	int i;
+
+	prefab_t *prefab;
+
+	entity_t instance = root;
+
+	char separators[] = " ";
+
+	char *p = strtok(command, separators);
+	char *argv[32];
+	int argc = 0;
+
+	argv[argc++] = strdup(p);
+
+	while((p = strtok(NULL, separators)) != NULL)
+	{
+		argv[argc++] = strdup(p);
+	}
+
+	for(prefab = self->prefabs; prefab->key; prefab++)
+	{
+		if(!strcmp(argv[0], prefab->key))
+		{
+			instance = prefab->cb(instance, argc, argv);
+			break;
+		}
+	}
+	for(i = 0; i < argc; i++)
+	{
+		free(argv[i]);
+	}
+	if(instance == entity_null) instance = root;
+	return instance;
+}
+
+/* int candle_import(candle_t *self, entity_t root, const char *map_name) */
+/* { */
+/* 	printf("Importing '%s'\n", map_name); */
+
+/* 	FILE *file = fopen(map_name, "r"); */
+/* 	entity_t pass; */
+
+/* 	if(file == NULL) return 0; */
+
+/* 	while(!feof(file)) */
+/* 	{ */
+/* 		char name[32]; */
+/* 		if(fscanf(file, "%s ", name) == -1) continue; */
+/* 		prefab_t *prefab; */
+
+/* 		for(prefab = self->prefabs; prefab->key; prefab++) */
+/* 		{ */
+/* 			if(!strcmp(name, prefab->key)) */
+/* 			{ */
+/* 				pass = prefab->cb(pass, file, self); */
+/* 				break; */
+/* 			} */
+/* 		} */
+/* 		if(pass == entity_null) pass = root; */
+/* 	} */
+
+/* 	fclose(file); */
+
+/* 	return 1; */
+/* } */
+
+int candle_run(candle_t *self, entity_t root, const char *map_name)
 {
 	printf("Importing '%s'\n", map_name);
 
@@ -266,23 +334,14 @@ int candle_import(candle_t *self, entity_t root, const char *map_name)
 
 	if(file == NULL) return 0;
 
-	entity_t pass = root;
-
+	char line[2048];
 	while(!feof(file))
 	{
-		char name[32];
-		if(fscanf(file, "%s ", name) == -1) continue;
-		template_t *template;
-
-		for(template = self->templates; template->key; template++)
+		if(!fgets(line, sizeof(line), file))
 		{
-			if(!strcmp(name, template->key))
-			{
-				pass = template->cb(pass, file, self);
-				break;
-			}
+			return 0;
 		}
-		if(pass == entity_null) pass = root;
+		candle_run_command(self, root, line);
 	}
 
 	fclose(file);
@@ -290,24 +349,24 @@ int candle_import(candle_t *self, entity_t root, const char *map_name)
 	return 1;
 }
 
-int candle_import_dir(candle_t *self, entity_t root, const char *dir_name)
-{
-	DIR *dir = opendir(dir_name);
-	if(dir != NULL)
-	{
-		struct dirent *ent;
-		while((ent = readdir(dir)) != NULL)
-		{
-			candle_import(self, root, ent->d_name);
-		}
-		closedir(dir);
-	}
-	else
-	{
-		return 0;
-	}
-	return 1;
-}
+/* int candle_import_dir(candle_t *self, entity_t root, const char *dir_name) */
+/* { */
+/* 	DIR *dir = opendir(dir_name); */
+/* 	if(dir != NULL) */
+/* 	{ */
+/* 		struct dirent *ent; */
+/* 		while((ent = readdir(dir)) != NULL) */
+/* 		{ */
+/* 			candle_import(self, root, ent->d_name); */
+/* 		} */
+/* 		closedir(dir); */
+/* 	} */
+/* 	else */
+/* 	{ */
+/* 		return 0; */
+/* 	} */
+/* 	return 1; */
+/* } */
 
 void candle_release_mouse(candle_t *self, entity_t ent, int reset)
 {

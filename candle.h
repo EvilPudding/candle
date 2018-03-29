@@ -21,13 +21,13 @@ DEF_SIG(events_end);
 void candle_register(void);
 
 typedef struct candle_t candle_t;
-typedef entity_t(*template_cb)(entity_t root, FILE *fd, candle_t *candle);
+typedef entity_t(*prefab_cb)(entity_t root, int argc, char **argv);
 
 typedef struct
 {
 	char key[32];
-	template_cb cb;
-} template_t;
+	prefab_cb cb;
+} prefab_t;
 
 typedef struct candle_t
 {
@@ -50,8 +50,8 @@ typedef struct candle_t
 	int mo_x, mo_y;
 	/* ------------------------- */
 
-	template_t *templates;
-	uint templates_size;
+	prefab_t *prefabs;
+	uint prefabs_size;
 
 	void *render_thr;
 	void *candle_thr;
@@ -65,8 +65,9 @@ typedef struct candle_t
 void candle_wait(candle_t *self);
 void candle_reset_dir(candle_t *self);
 
-void candle_register_template(candle_t *self, const char *key, template_cb cb);
+void candle_reg_prefab(candle_t *self, const char *key, prefab_cb cb);
 int candle_import(candle_t *self, entity_t root, const char *map_name);
+int candle_run(candle_t *self, entity_t root, const char *map_name);
 int candle_import_dir(candle_t *self, entity_t root, const char *dir_name);
 
 /* TODO send this to mouse.h */

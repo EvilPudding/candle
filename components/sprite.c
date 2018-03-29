@@ -36,7 +36,8 @@ static void c_sprite_init(c_sprite_t *self)
 			"	{\n"
 			"		vec4 center = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
 			"		pos = MVP * center;\n"
-			"		pos = vec4(pos.xyz + P.xyz * 0.5, pos.w);\n"
+			"		vec2 size = vec2(P.x * (screen_size.y / screen_size.x), P.y);\n"
+			"		pos = vec4(pos.xy + 0.5 * size, pos.z, pos.w);\n"
 			"		vertex_position = (camera.view * M * center).xyz + P.xyz * 0.5;\n"
 
 			"		vertex_normal    = (vec4( N, 0.0f)).xyz;\n"
