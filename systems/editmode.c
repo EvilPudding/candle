@@ -588,10 +588,11 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 			}
 		}
 		struct nk_rect bounds = nk_window_get_bounds(self->nk);
-		if (nk_contextual_begin(self->nk, 0, nk_vec2(150, 300), bounds)) {
+		if(nk_contextual_begin(self->nk, 0, nk_vec2(150, 300), bounds))
+		{
 
 			nk_layout_row_dynamic(self->nk, 25, 1);
-			if(nk_edit_string_zero_terminated(self->nk, NK_EDIT_BOX|NK_EDIT_AUTO_SELECT,
+			if(nk_edit_string_zero_terminated(self->nk, NK_EDIT_FIELD|NK_EDIT_AUTO_SELECT,
 					self->ct_search, sizeof(self->ct_search), nk_filter_ascii))
 			{
 				if(strncmp(self->ct_search_bak, self->ct_search, sizeof(self->ct_search_bak)))

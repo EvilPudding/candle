@@ -17,7 +17,7 @@ uniform int mode;
 
 float filtered(vec2 c, vec2 fil)
 {
-	filter = round(fil * 255); 
+	fil = round(fil * 255); 
 	c = round(c * 255); 
 
 	if(c.x != fil.x || c.y != fil.y)
