@@ -592,37 +592,46 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 		{
 
 			nk_layout_row_dynamic(self->nk, 25, 1);
-			if(nk_edit_string_zero_terminated(self->nk, NK_EDIT_FIELD|NK_EDIT_AUTO_SELECT,
-					self->ct_search, sizeof(self->ct_search), nk_filter_ascii))
+			int active = nk_edit_string_zero_terminated(self->nk,
+					NK_EDIT_FIELD|NK_EDIT_SIG_ENTER, self->ct_search,
+					sizeof(self->ct_search), nk_filter_ascii) &
+				NK_EDIT_COMMITED;
+
+			if(strncmp(self->ct_search_bak, self->ct_search, sizeof(self->ct_search_bak)))
 			{
-				if(strncmp(self->ct_search_bak, self->ct_search, sizeof(self->ct_search_bak)))
+				strncpy(self->ct_search_bak, self->ct_search, sizeof(self->ct_search_bak));
+
+
+				self->ct_list_size = 0;
+				for(i = 0; i < g_ecm->cts_size; i++)
 				{
-					strncpy(self->ct_search_bak, self->ct_search, sizeof(self->ct_search_bak));
+					ct_t *ct = ecm_get(i);
+					if(ct_get(ct, ent)) continue;
 
-
-					self->ct_list_size = 0;
-					for(i = 0; i < g_ecm->cts_size; i++)
-					{
-						ct_t *ct = ecm_get(i);
-						if(ct_get(ct, ent)) continue;
-
-						uint dist = levenshtein(ct->name, self->ct_search);
-						insert_ct(self, i, dist);
-					}
-						
+					uint dist = levenshtein(ct->name, self->ct_search);
+					insert_ct(self, i, dist);
 				}
+					
 			}
-			for(i = 0; i < self->ct_list_size; i++)
+			if(active)
 			{
-				ct_t *ct = ecm_get(self->ct_list[i].ct);
-				if (nk_contextual_item_label(self->nk, ct->name, NK_TEXT_CENTERED))
+				ct_t *ct = ecm_get(self->ct_list[0].ct);
+				entity_add_component(ent, component_new(ct->id));
+				nk_contextual_close(self->nk);
+			}
+			else
+			{
+				for(i = 0; i < self->ct_list_size; i++)
 				{
-					self->ct_search_bak[0] = '\0';
-					self->ct_search[0] = '\0';
-					self->ct_list_size = 0;
-					entity_add_component(ent, component_new(ct->id));
+					ct_t *ct = ecm_get(self->ct_list[i].ct);
+					if (nk_contextual_item_label(self->nk, ct->name, NK_TEXT_CENTERED))
+					{
+						self->ct_search_bak[0] = '\0';
+						self->ct_search[0] = '\0';
+						self->ct_list_size = 0;
+						entity_add_component(ent, component_new(ct->id));
+					}
 				}
-
 			}
 			nk_contextual_end(self->nk);
 		}
