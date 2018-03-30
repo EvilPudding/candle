@@ -68,7 +68,8 @@ void candle_reset_dir(candle_t *self);
 void candle_reg_prefab(candle_t *self, const char *key, prefab_cb cb);
 int candle_import(candle_t *self, entity_t root, const char *map_name);
 int candle_run(candle_t *self, entity_t root, const char *map_name);
-int candle_import_dir(candle_t *self, entity_t root, const char *dir_name);
+entity_t candle_run_command(candle_t *self, entity_t root, char *command);
+/* int candle_import_dir(candle_t *self, entity_t root, const char *dir_name); */
 
 /* TODO send this to mouse.h */
 void candle_grab_mouse(candle_t *self, entity_t ent, int visibility);

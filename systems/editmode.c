@@ -592,8 +592,8 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 		{
 
 			nk_layout_row_dynamic(self->nk, 25, 1);
-			int active = nk_edit_string_zero_terminated(self->nk,
-					NK_EDIT_FIELD|NK_EDIT_SIG_ENTER, self->ct_search,
+			int active = nk_edit_string_zero_terminated(self->nk, NK_EDIT_FIELD
+					| NK_EDIT_SIG_ENTER, self->ct_search,
 					sizeof(self->ct_search), nk_filter_ascii) &
 				NK_EDIT_COMMITED;
 
@@ -663,6 +663,14 @@ int c_editmode_draw(c_editmode_t *self)
 			node_tree(self);
 
 			tools_gui(self);
+
+			if(nk_edit_string_zero_terminated(self->nk, NK_EDIT_FIELD |
+						NK_EDIT_SIG_ENTER, self->shell, sizeof(self->shell),
+						nk_filter_ascii) & NK_EDIT_COMMITED)
+			{
+				candle_run_command(candle, entity_null, self->shell);
+				self->shell[0] = '\0';
+			}
 		}
 		nk_end(self->nk);
 

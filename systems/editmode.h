@@ -51,6 +51,7 @@ typedef struct
 	int ct_list_size;
 	char ct_search_bak[32];
 	char ct_search[32];
+	char shell[512];
 
 } c_editmode_t;
 

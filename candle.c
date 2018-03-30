@@ -9,6 +9,7 @@
 #include <systems/window.h>
 #include <systems/sauces.h>
 
+#include <components/node.h>
 
 #ifndef WIN32
 #include <unistd.h>
@@ -342,7 +343,12 @@ int candle_run(candle_t *self, entity_t root, const char *map_name)
 		if(read == -1) break;
 		if(read == 0) continue;
 		printf("%s\n", line);
-		candle_run_command(self, root, line);
+		entity_t entity = candle_run_command(self, root, line);
+
+		if(root && c_node(&root))
+		{
+			c_node_add(c_node(&root), 1, entity);
+		}
 	}
 	printf("end\n");
 	free(line);
