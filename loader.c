@@ -42,6 +42,7 @@ void loader_push_wait(loader_t *self, loader_cb cb, void *usrptr, c_t *c)
 	}
 }
 
+
 void loader_push(loader_t *self, loader_cb cb, void *usrptr, c_t *c)
 {
 	int same_thread = SDL_ThreadID() == self->threadId;

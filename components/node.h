@@ -25,6 +25,5 @@ entity_t c_node_get_by_name(c_node_t *self, const char *name);
 void c_node_add(c_node_t *self, int num, ...);
 void c_node_update_model(c_node_t *self);
 vec3_t c_node_global_to_local(c_node_t *self, vec3_t vec);
-void c_node_register(void);
 
 #endif /* !NODE_H */

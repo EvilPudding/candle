@@ -18,6 +18,5 @@ DEF_CASTER(ct_decal, c_decal, c_decal_t)
 
 c_decal_t *c_decal_new(mat_t *mat);
 void c_decal_destroy(c_decal_t *self);
-void c_decal_register(void);
 
 #endif /* !DECAL_H */

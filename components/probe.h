@@ -21,7 +21,6 @@ DEF_CASTER(ct_probe, c_probe, c_probe_t)
 
 c_probe_t *c_probe_new(int map_size);
 void c_probe_destroy(c_probe_t *self);
-void c_probe_register(void);
 int c_probe_update_position(c_probe_t *self);
 int c_probe_render(c_probe_t *self, uint signal);
 

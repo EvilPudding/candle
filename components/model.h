@@ -49,7 +49,6 @@ int c_model_render_transparent(c_model_t *self);
 int c_model_render_visible(c_model_t *self);
 int c_model_render(c_model_t *self, int transp);
 int c_model_render_at(c_model_t *self, c_node_t *node, int transp);
-void c_model_register(void);
 void c_model_set_mesh(c_model_t *self, mesh_t *mesh);
 
 #endif /* !MODEL_H */

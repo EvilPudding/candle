@@ -186,6 +186,7 @@ static int c_physics_update(c_physics_t *self, float *dt)
 	for(i = 0; i < vels->pages[p].components_size; i++)
 	{
 		c_velocity_t *vc = (c_velocity_t*)ct_get_at(vels, p, i);
+		if(!c_entity(vc)) continue;
 
 		c_spacial_t *sc = c_spacial(vc);
 
@@ -200,6 +201,7 @@ static int c_physics_update(c_physics_t *self, float *dt)
 	for(i = 0; i < bodies->pages[p].components_size; i++)
 	{
 		c_rigid_body_t *c1 = (c_rigid_body_t*)ct_get_at(bodies, p, i);
+		if(!c_entity(c1)) continue;
 		c_velocity_t *v1 = c_velocity(c1);
 		int si = i + 1;
 
@@ -208,6 +210,7 @@ static int c_physics_update(c_physics_t *self, float *dt)
 			for(j = si; j < bodies->pages[p2].components_size; j++)
 			{
 				c_rigid_body_t *c2 = (c_rigid_body_t*)ct_get_at(bodies, p2, j);
+				if(!c_entity(c2)) continue;
 				c_velocity_t *v2 = c_velocity(c2);
 
 				if(!v1 && !v2) continue;

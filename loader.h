@@ -30,6 +30,7 @@ typedef struct
 
 loader_t *loader_new(void);
 void loader_push(loader_t *self, loader_cb cb, void *usrptr, c_t *c);
+void loader_push_async(loader_t *self, loader_cb cb, void *usrptr, c_t *c);
 void loader_push_wait(loader_t *self, loader_cb cb, void *usrptr, c_t *c);
 int loader_update(loader_t *self);
 void loader_wait(loader_t *self);

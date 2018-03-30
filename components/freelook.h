@@ -19,8 +19,6 @@ c_freelook_t *c_freelook_new(entity_t force_down, float sensitivity);
 void c_freelook_set_controls(c_freelook_t *self,
 		entity_t x_control, entity_t y_control);
 
-void c_freelook_register(void);
-
 vec3_t c_freelook_up(c_freelook_t *self);
 
 #endif /* !FREELOOK_H */

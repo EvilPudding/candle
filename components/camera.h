@@ -29,6 +29,4 @@ void c_camera_update_view(c_camera_t *self);
 int c_camera_update(c_camera_t *self, void *event);
 void c_camera_activate(c_camera_t *self);
 
-void c_camera_register(void);
-
 #endif /* !CAMERA_H */

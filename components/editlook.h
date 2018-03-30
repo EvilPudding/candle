@@ -18,8 +18,6 @@ DEF_CASTER(ct_editlook, c_editlook, c_editlook_t)
 
 c_editlook_t *c_editlook_new(void);
 
-void c_editlook_register(void);
-
 vec3_t c_editlook_up(c_editlook_t *self);
 
 #endif /* !EDITLOOK_H */

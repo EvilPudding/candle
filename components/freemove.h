@@ -21,6 +21,5 @@ typedef struct
 DEF_CASTER(ct_freemove, c_freemove, c_freemove_t)
 
 c_freemove_t *c_freemove_new(entity_t orientation, int plane_movement, entity_t force_down);
-void c_freemove_register(void);
 
 #endif /* !FREEMOVE_H */

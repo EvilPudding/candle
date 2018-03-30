@@ -18,6 +18,5 @@ DEF_CASTER(ct_sprite, c_sprite, c_sprite_t)
 extern int g_update_id;
 
 c_sprite_t *c_sprite_new(mat_t *mat, int cast_shadow);
-void c_sprite_register(void);
 
 #endif /* !SPRITE_H */

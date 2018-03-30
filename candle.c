@@ -18,7 +18,9 @@
 #include <fcntl.h>
 
 DEC_SIG(world_update);
+DEC_SIG(after_update);
 DEC_SIG(world_draw);
+DEC_SIG(after_draw);
 DEC_SIG(ui_draw);
 
 DEC_SIG(events_begin);
@@ -180,6 +182,7 @@ static int render_loop(candle_t *self)
 			/* printf("\t%ld\n", self->render_id); */
 			entity_signal(entity_null, world_draw, NULL);
 			entity_signal(entity_null, ui_draw, NULL);
+			entity_signal(entity_null, after_draw, NULL);
 
 			c_window_draw(c_window(&self->systems));
 
@@ -205,7 +208,9 @@ static int render_loop(candle_t *self)
 void candle_register()
 {
 	signal_init(&world_update, sizeof(float));
+	signal_init(&after_update, sizeof(float));
 	signal_init(&world_draw, sizeof(void*));
+	signal_init(&after_draw, sizeof(void*));
 	signal_init(&event_handle, sizeof(void*));
 	signal_init(&events_end, sizeof(void*));
 	signal_init(&events_begin, sizeof(void*));
@@ -221,6 +226,7 @@ static int ticker_loop(candle_t *self)
 		int current = SDL_GetTicks();
 		float dt = (current - self->last_update) / 1000.0;
 		entity_signal(entity_null, world_update, &dt);
+		entity_signal(entity_null, after_update, &dt);
 		self->last_update = current;
 		SDL_Delay(16);
 	}
@@ -329,8 +335,6 @@ entity_t candle_run_command(candle_t *self, entity_t root, char *command)
 
 int candle_run(candle_t *self, entity_t root, const char *map_name)
 {
-	printf("Importing '%s'\n", map_name);
-
 	FILE *file = fopen(map_name, "r");
 
 	if(file == NULL) return 0;
@@ -342,7 +346,6 @@ int candle_run(candle_t *self, entity_t root, const char *map_name)
 		ssize_t read = getline(&line, &n, file);
 		if(read == -1) break;
 		if(read == 0) continue;
-		printf("%s\n", line);
 		entity_t entity = candle_run_command(self, root, line);
 
 		if(root && c_node(&root))
@@ -350,7 +353,6 @@ int candle_run(candle_t *self, entity_t root, const char *map_name)
 			c_node_add(c_node(&root), 1, entity);
 		}
 	}
-	printf("end\n");
 	free(line);
 
 	fclose(file);

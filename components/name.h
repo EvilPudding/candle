@@ -12,6 +12,5 @@ typedef struct
 DEF_CASTER(ct_name, c_name, c_name_t)
 
 c_name_t *c_name_new(const char *name);
-void c_name_register(void);
 
 #endif /* !NAME_H */

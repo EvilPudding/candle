@@ -3,6 +3,7 @@
 #include <ecm.h>
 #include <candle.h>
 #include <components/name.h>
+#include <components/destroyed.h>
 
 /* static void entity_check_missing_dependencies(entity_t self); */
 
@@ -56,14 +57,9 @@ entity_t _entity_new(int comp_num, ...)
 
 void entity_destroy(entity_t self)
 {
-	int i;
-	for(i = 0; i < g_ecm->cts_size; i++)
+	if(!c_destroyed(&self))
 	{
-		ct_t *ct = ecm_get(g_ecm->cts[i].id);
-		c_t *c = ct_get(ct, &self);
-		if(!c) continue;
-		c->entity = entity_null;
-		ct->offsets[self].offset = -1;
+		entity_add_component(self, c_destroyed_new());
 	}
 }
 

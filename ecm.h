@@ -110,7 +110,6 @@ typedef struct
 	listener_t *listeners;
 	uint listeners_size;
 
-	
 } signal_t;
 
 typedef struct ecm_t

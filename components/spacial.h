@@ -27,7 +27,6 @@ DEF_CASTER(ct_spacial, c_spacial, c_spacial_t)
 
 c_spacial_t *c_spacial_new(void);
 void c_spacial_init(c_spacial_t *self);
-void c_spacial_register(void);
 vec3_t c_spacial_up(c_spacial_t *self);
 
 void c_spacial_lock(c_spacial_t *self);

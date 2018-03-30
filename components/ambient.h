@@ -17,6 +17,5 @@ DEF_CASTER(ct_ambient, c_ambient, c_ambient_t)
 
 c_ambient_t *c_ambient_new(int map_size);
 void c_ambient_destroy(c_ambient_t *self);
-void c_ambient_register(void);
 
 #endif /* !AMBIENT_H */
