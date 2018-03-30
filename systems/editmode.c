@@ -617,6 +617,9 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 				ct_t *ct = ecm_get(self->ct_list[i].ct);
 				if (nk_contextual_item_label(self->nk, ct->name, NK_TEXT_CENTERED))
 				{
+					self->ct_search_bak[0] = '\0';
+					self->ct_search[0] = '\0';
+					self->ct_list_size = 0;
 					entity_add_component(ent, component_new(ct->id));
 				}
 
