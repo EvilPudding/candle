@@ -54,25 +54,18 @@ entity_t _entity_new(int comp_num, ...)
 	return self;
 }
 
-/* static void entity_check_missing_dependencies(entity_t self) */
-/* { */
-/* 	uint i, j; */
-/* 	for(j = 0; j < g_ecm->cts_size; j++) */
-/* 	{ */
-/* 		ct_t *ct = &g_ecm->cts[j]; */
-/* 		if(ct_get(ct, self)) */
-/* 		{ */
-/* 			for(i = 0; i < ct->depends_size; i++) */
-/* 			{ */
-/* 				ct_t *ct2 = ecm_get(ct->depends[i].ct); */
-/* 				if(!ct_get(ct2, self)) */
-/* 				{ */
-/* 					exit(1); */
-/* 				} */
-/* 			} */
-/* 		} */
-/* 	} */
-/* } */
+void entity_destroy(entity_t self)
+{
+	int i;
+	for(i = 0; i < g_ecm->cts_size; i++)
+	{
+		ct_t *ct = ecm_get(g_ecm->cts[i].id);
+		c_t *c = ct_get(ct, &self);
+		if(!c) continue;
+		c->entity = entity_null;
+		ct->offsets[self].offset = -1;
+	}
+}
 
 int listener_signal(listener_t *self, entity_t ent, void *data)
 {
@@ -83,6 +76,7 @@ int listener_signal(listener_t *self, entity_t ent, void *data)
 		for(j = 0; j < ct->pages[p].components_size; j++)
 		{
 			c_t *c = ct_get_at(ct, p, j);
+			if(!c_entity(c)) continue;
 			if((self->flags & ENTITY) && c_entity(c) != ent)
 				continue;
 
@@ -94,10 +88,10 @@ int listener_signal(listener_t *self, entity_t ent, void *data)
 
 int listener_signal_same(listener_t *self, entity_t ent, void *data)
 {
-	c_t *comp = ct_get(ecm_get(self->comp_type), ent);
-	if(comp)
+	c_t *c = ct_get(ecm_get(self->comp_type), &ent);
+	if(c)
 	{
-		return self->cb(comp, data);
+		return self->cb(c, data);
 	}
 	return 1;
 }
@@ -171,10 +165,6 @@ int entity_signal(entity_t self, uint signal, void *data)
 		if(listener_signal(lis, self, data) == 0) return 0;
 	}
 	return 1;
-}
-
-void entity_destroy(entity_t self) 
-{
 }
 
 

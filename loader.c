@@ -17,8 +17,7 @@ void loader_push_wait(loader_t *self, loader_cb cb, void *usrptr, c_t *c)
 	{
 		if(c)
 		{
-			cb(ct_get(ecm_get(c->comp_type),
-					c->entity));
+			cb(ct_get(ecm_get(c->comp_type), &c->entity));
 		}
 		else
 		{
@@ -70,8 +69,7 @@ int loader_update(loader_t *self)
 		}
 		else
 		{
-			void *c = ct_get(ecm_get(load->ct.comp_type),
-					load->ct.entity);
+			void *c = ct_get(ecm_get(load->ct.comp_type), &load->ct.entity);
 			load->cb(c);
 		}
 

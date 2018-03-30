@@ -42,7 +42,7 @@ void *component_new(int comp_type)
 	for(i = 0; i < ct->depends_size; i++)
 	{
 		ct_t *ct2 = ecm_get(ct->depends[i].ct);
-		if(!ct_get(ct2, entity))
+		if(!ct_get(ct2, &entity))
 		{
 			/* printf("adding dependency %s\n", ct2->name); */
 			component_new(ct2->id);

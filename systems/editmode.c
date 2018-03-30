@@ -565,7 +565,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 		for(i = 0; i < sig->cts_size; i++)
 		{
 			ct_t *ct = ecm_get(sig->cts[i]);
-			c_t *comp = ct_get(ct, ent);
+			c_t *comp = ct_get(ct, &ent);
 			if(comp && !ct->is_interaction)
 			{
 				if(nk_tree_push_id(self->nk, NK_TREE_TAB, ct->name,
@@ -579,7 +579,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 				{
 					if(ct->depends[j].is_interaction)
 					{
-						c_t *inter = ct_get(ct, ent);
+						c_t *inter = ct_get(ct, &ent);
 						ct_t *inter_ct = ecm_get(ct->depends[j].ct);
 						component_signal(inter, inter_ct,
 								component_menu, self->nk);
@@ -592,6 +592,11 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 		{
 
 			nk_layout_row_dynamic(self->nk, 25, 1);
+			if (nk_contextual_item_label(self->nk, "delete", NK_TEXT_CENTERED))
+			{
+				entity_destroy(ent);
+			}
+
 			int active = nk_edit_string_zero_terminated(self->nk, NK_EDIT_FIELD
 					| NK_EDIT_SIG_ENTER, self->ct_search,
 					sizeof(self->ct_search), nk_filter_ascii) &
@@ -606,7 +611,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 				for(i = 0; i < g_ecm->cts_size; i++)
 				{
 					ct_t *ct = ecm_get(i);
-					if(ct_get(ct, ent)) continue;
+					if(ct_get(ct, &ent)) continue;
 
 					uint dist = levenshtein(ct->name, self->ct_search);
 					insert_ct(self, i, dist);

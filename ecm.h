@@ -29,8 +29,8 @@ typedef int(*before_draw_cb)(c_t *self);
 #define DEC_SIG(var) uint var = IDENT_NULL
 #define DEF_SIG(var) extern uint var
 #define DEF_CASTER(ct, cn, nc_t) extern uint ct; \
-	static inline nc_t *cn(const void *entity)\
-{ return ct==IDENT_NULL?NULL:(nc_t*)ct_get(ecm_get(ct), *(entity_t*)entity); } \
+	static inline nc_t *cn(void *entity)\
+{ return ct==IDENT_NULL?NULL:(nc_t*)ct_get(ecm_get(ct), entity); } \
 
 
 #define CONSTR_BEFORE_REG 101
@@ -147,11 +147,11 @@ static inline c_t *ct_get_at(ct_t *self, uint page, uint i)
 	return (c_t*)&(self->pages[page].components[i * self->size]);
 }
 
-static inline c_t *ct_get(ct_t *self, entity_t entity)
+static inline c_t *ct_get(ct_t *self, entity_t *entity)
 {
-	if(entity >= self->offsets_size) return NULL;
-	uint offset = self->offsets[entity].offset;
-	uint page = self->offsets[entity].page;
+	if((*entity) >= self->offsets_size) return NULL;
+	uint offset = self->offsets[*entity].offset;
+	uint page = self->offsets[*entity].page;
 	if(offset == -1) return NULL;
 	return (c_t*)&(self->pages[page].components[offset]);
 }
