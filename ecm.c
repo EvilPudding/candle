@@ -133,7 +133,6 @@ void _signal_init(uint id, uint size)
 	int ret;
 	khiter_t k = kh_put(32, g_ecm->signals_hash, id, &ret);
 	kh_value(g_ecm->signals_hash, k) = (signal_t){.size = size};
-	printf("registering %u\n", id);
 }
 
 entity_t ecm_new_entity()
