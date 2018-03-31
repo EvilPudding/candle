@@ -7,8 +7,6 @@
 extern int window_width;
 extern int window_height;
 
-DEF_SIG(window_resize);
-
 typedef struct
 {
 	int width, height;

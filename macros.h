@@ -1,6 +1,7 @@
 #ifndef MACROS_H
 #define MACROS_H
 
+#define _GNU_SOURCE
 #ifndef ARGNUM
 #define ARGNUM(...) \
     _ARGNUM(_0, ##__VA_ARGS__, \
@@ -22,5 +23,70 @@
 
 
 #endif
+
+#define ECMHASH(str) murmur_hash(str, strlen(str), 0)
+#define sig(str) murmur_hash(str, strlen(str), 0)
+
+typedef unsigned int uint;
+__attribute__((always_inline))
+__attribute__((optimize("unroll-loops")))
+static inline uint murmur_hash(const void *key, int len, uint seed)
+{
+    /* 32-Bit MurmurHash3: https://code.google.com/p/smhasher/wiki/MurmurHash3*/
+    #define ROTL(x,r) ((x) << (r) | ((x) >> (32 - r)))
+    union {const uint *i; const char *b;} conv = {0};
+    const char *data = (const char*)key;
+    const int nblocks = len/4;
+    uint h1 = seed;
+    const uint c1 = 0xcc9e2d51;
+    const uint c2 = 0x1b873593;
+    const char *tail;
+    const uint *blocks;
+    uint k1;
+    int i;
+
+    /* body */
+    if (!key) return 0;
+    conv.b = (data + nblocks*4);
+    blocks = (const uint*)conv.i;
+    for (i = -nblocks; i; ++i) {
+        k1 = blocks[i];
+        k1 *= c1;
+        k1 = ROTL(k1,15);
+        k1 *= c2;
+
+        h1 ^= k1;
+        h1 = ROTL(h1,13);
+        h1 = h1*5+0xe6546b64;
+    }
+
+    /* tail */
+    tail = (const char*)(data + nblocks*4);
+    k1 = 0;
+    switch (len & 3) {
+    case 3: k1 ^= (uint)(tail[2] << 16); /* fallthrough */
+    case 2: k1 ^= (uint)(tail[1] << 8u); /* fallthrough */
+    case 1: k1 ^= tail[0];
+            k1 *= c1;
+            k1 = ROTL(k1,15);
+            k1 *= c2;
+            h1 ^= k1;
+            break;
+    default: break;
+    }
+
+    /* finalization */
+    h1 ^= (uint)len;
+    /* fmix32 */
+    h1 ^= h1 >> 16;
+    h1 *= 0x85ebca6b;
+    h1 ^= h1 >> 13;
+    h1 *= 0xc2b2ae35;
+    h1 ^= h1 >> 16;
+
+    #undef ROTL
+    return h1;
+}
+
 
 #endif /* !MACROS_H */

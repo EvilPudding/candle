@@ -169,15 +169,15 @@ DEC_CT(ct_editlook)
 			sizeof(c_editlook_t), (init_cb)c_editlook_init,
 			1, ct_spacial);
 
-	ct_listener(ct, WORLD, mouse_wheel, c_editlook_mouse_wheel);
+	ct_listener(ct, WORLD, sig("mouse_wheel"), c_editlook_mouse_wheel);
 
-	ct_listener(ct, WORLD, mouse_move, c_editlook_mouse_move);
+	ct_listener(ct, WORLD, sig("mouse_move"), c_editlook_mouse_move);
 
-	ct_listener(ct, WORLD, window_resize, c_editlook_window_resize);
+	ct_listener(ct, WORLD, sig("window_resize"), c_editlook_window_resize);
 
-	ct_listener(ct, WORLD, mouse_press, c_editlook_mouse_press);
+	ct_listener(ct, WORLD, sig("mouse_press"), c_editlook_mouse_press);
 
-	ct_listener(ct, WORLD, mouse_release, c_editlook_mouse_release);
+	ct_listener(ct, WORLD, sig("mouse_release"), c_editlook_mouse_release);
 
 }
 

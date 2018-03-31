@@ -33,9 +33,6 @@ typedef struct
 	int sprite;
 } c_model_t;
 
-
-DEF_SIG(mesh_changed);
-
 DEF_CASTER(ct_model, c_model, c_model_t)
 extern int g_update_id;
 extern vs_t *g_model_vs;

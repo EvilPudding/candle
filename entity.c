@@ -50,7 +50,7 @@ entity_t _entity_new(int comp_num, ...)
 	/* { */
 		/* printf("new %s entity %ld\n", c_name(&self)->name, self); */
 	/* } */
-	entity_signal_same(self, entity_created, NULL);
+	entity_signal_same(self, sig("entity_created"), NULL);
 
 	return self;
 }
@@ -107,7 +107,7 @@ int entity_signal_same(entity_t self, uint signal, void *data)
 	/* if(signal == IDENT_NULL) exit(1); */
 	uint i;
 
-	signal_t *sig = &g_ecm->signals[signal];
+	signal_t *sig = ecm_get_signal(signal);
 
 	for(i = 0; i < sig->listeners_size; i++)
 	{
@@ -152,9 +152,9 @@ int entity_signal_same(entity_t self, uint signal, void *data)
 int entity_signal(entity_t self, uint signal, void *data)
 {
 	uint i;
-	/* if(signal == IDENT_NULL) exit(1); */
 
-	signal_t *sig = &g_ecm->signals[signal];
+	signal_t *sig = ecm_get_signal(signal);
+	if(!sig) exit(1);
 	for(i = 0; i < sig->listeners_size; i++)
 	{
 		listener_t *lis = &sig->listeners[i];
@@ -169,7 +169,7 @@ void _entity_add_post(entity_t self, c_t *comp)
 	--_g_creating_num;
 
 	ct_t *ct = ecm_get(comp->comp_type);
-	component_signal(comp, ct, entity_created, NULL);
+	component_signal(comp, ct, sig("entity_created"), NULL);
 
 }
 

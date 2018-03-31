@@ -16,15 +16,6 @@
 #include "noise.h"
 #include <nk.h>
 
-
-DEC_SIG(offscreen_render);
-DEC_SIG(render_visible);
-DEC_SIG(render_transparent);
-DEC_SIG(render_quad);
-DEC_SIG(render_lights);
-DEC_SIG(render_decals);
-/* DEC_SIG(world_changed); */
-
 static int c_renderer_pass(c_renderer_t *self, const char *name);
 
 static void c_renderer_update_probes(c_renderer_t *self);
@@ -404,7 +395,7 @@ static int c_renderer_created(c_renderer_t *self)
 	self->angle4 = M_PI * 0.45;
 #endif
 
-	c_renderer_add_pass(self, "gbuffer", "gbuffer", render_visible, 1.0f,
+	c_renderer_add_pass(self, "gbuffer", "gbuffer", sig("render_visible"), 1.0f,
 			PASS_GBUFFER | PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR,
 		(bind_t[]){
 			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, self},
@@ -412,7 +403,7 @@ static int c_renderer_created(c_renderer_t *self)
 		}
 	);
 
-	c_renderer_add_pass(self, "gb2", "gbuffer", render_visible, 1.0f,
+	c_renderer_add_pass(self, "gb2", "gbuffer", sig("render_visible"), 1.0f,
 			PASS_GBUFFER | PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR,
 		(bind_t[]){
 			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, self},
@@ -421,7 +412,7 @@ static int c_renderer_created(c_renderer_t *self)
 	);
 
 	/* DECAL PASS */
-	c_renderer_add_pass(self, "gb2", "decals", render_decals, 1.0f,
+	c_renderer_add_pass(self, "gb2", "decals", sig("render_decals"), 1.0f,
 			PASS_GBUFFER | PASS_DISABLE_DEPTH_UPDATE | PASS_INVERT_DEPTH,
 		(bind_t[]){
 			{BIND_GBUFFER, "gbuffer"},
@@ -432,7 +423,7 @@ static int c_renderer_created(c_renderer_t *self)
 
 	/* c_renderer_set_output(self, "gb2"); */
 
-	c_renderer_add_pass(self, "ssao", "ssao", render_quad, 1.0f,
+	c_renderer_add_pass(self, "ssao", "ssao", sig("render_quad"), 1.0f,
 			PASS_DISABLE_DEPTH,
 		(bind_t[]){
 			{BIND_GBUFFER, "gb2"},
@@ -441,7 +432,7 @@ static int c_renderer_created(c_renderer_t *self)
 		}
 	);
 
-	c_renderer_add_pass(self, "rendered", "phong", render_lights, 1.0f,
+	c_renderer_add_pass(self, "rendered", "phong", sig("render_lights"), 1.0f,
 			PASS_DISABLE_DEPTH | PASS_ADDITIVE | PASS_CLEAR_COLOR |
 			PASS_DISABLE_DEPTH_UPDATE |
 			(self->roughness * PASS_MIPMAPED),
@@ -453,7 +444,7 @@ static int c_renderer_created(c_renderer_t *self)
 		}
 	);
 
-	c_renderer_add_pass(self, "gb2", "gbuffer", render_transparent, 1.0f,
+	c_renderer_add_pass(self, "gb2", "gbuffer", sig("render_transparent"), 1.0f,
 			PASS_GBUFFER,
 		(bind_t[]){
 			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, self},
@@ -462,7 +453,7 @@ static int c_renderer_created(c_renderer_t *self)
 	);
 
 
-	c_renderer_add_pass(self, "transp", "transparency", render_quad, 1.0f,
+	c_renderer_add_pass(self, "transp", "transparency", sig("render_quad"), 1.0f,
 			PASS_DISABLE_DEPTH | PASS_CLEAR_COLOR,
 		(bind_t[]){
 			{BIND_GBUFFER, "gb2"},
@@ -472,7 +463,7 @@ static int c_renderer_created(c_renderer_t *self)
 		}
 	);
 
-	c_renderer_add_pass(self, "final", "ssr", render_quad, 1.0f,
+	c_renderer_add_pass(self, "final", "ssr", sig("render_quad"), 1.0f,
 			PASS_DISABLE_DEPTH | PASS_CLEAR_COLOR |
 			self->auto_exposure * PASS_RECORD_BRIGHTNESS,
 		(bind_t[]){
@@ -489,14 +480,14 @@ static int c_renderer_created(c_renderer_t *self)
 	int i;
 	for(i = 0; i < 6; i++)
 	{
-		c_renderer_add_pass(self, "pre_bloom", i?"copy":"bright", render_quad, 1.0f,
+		c_renderer_add_pass(self, "pre_bloom", i?"copy":"bright", sig("render_quad"), 1.0f,
 				PASS_DISABLE_DEPTH,
 			(bind_t[]){
 				{BIND_PREV_PASS_OUTPUT, "buf"},
 				{BIND_NONE}
 			}
 		);
-		c_renderer_add_pass(self, "bloom_x", "blur", render_quad, bloom_scale,
+		c_renderer_add_pass(self, "bloom_x", "blur", sig("render_quad"), bloom_scale,
 				PASS_DISABLE_DEPTH,
 			(bind_t[]){
 				{BIND_PREV_PASS_OUTPUT, "buf"},
@@ -504,7 +495,7 @@ static int c_renderer_created(c_renderer_t *self)
 				{BIND_NONE}
 			}
 		);
-		c_renderer_add_pass(self, "bloom_xy", "blur", render_quad, bloom_scale,
+		c_renderer_add_pass(self, "bloom_xy", "blur", sig("render_quad"), bloom_scale,
 				PASS_DISABLE_DEPTH,
 			(bind_t[]){
 				{BIND_PREV_PASS_OUTPUT, "buf"},
@@ -514,7 +505,7 @@ static int c_renderer_created(c_renderer_t *self)
 		);
 	}
 
-	c_renderer_add_pass(self, "final", "copy", render_quad, 1.0f,
+	c_renderer_add_pass(self, "final", "copy", sig("render_quad"), 1.0f,
 			PASS_DISABLE_DEPTH | PASS_ADDITIVE,
 		(bind_t[]){
 			{BIND_PREV_PASS_OUTPUT, "buf"},
@@ -798,22 +789,22 @@ DEC_CT(ct_renderer)
 	ct_t *ct = ct_new("c_renderer", &ct_renderer,
 			sizeof(c_renderer_t), (init_cb)c_renderer_init, 1, ct_window);
 
-	ct_listener(ct, WORLD, window_resize, c_renderer_resize);
+	ct_listener(ct, WORLD, sig("window_resize"), c_renderer_resize);
 
-	ct_listener(ct, WORLD, world_draw, c_renderer_draw);
+	ct_listener(ct, WORLD, sig("world_draw"), c_renderer_draw);
 
-	ct_listener(ct, ENTITY, entity_created, c_renderer_created);
+	ct_listener(ct, ENTITY, sig("entity_created"), c_renderer_created);
 
-	ct_listener(ct, WORLD, component_menu, c_renderer_component_menu);
+	ct_listener(ct, WORLD, sig("component_menu"), c_renderer_component_menu);
 
-	ct_listener(ct, WORLD, global_menu, c_renderer_global_menu);
+	ct_listener(ct, WORLD, sig("global_menu"), c_renderer_global_menu);
 
-	signal_init(&offscreen_render, 0);
-	signal_init(&render_visible, sizeof(shader_t));
-	signal_init(&render_lights, sizeof(shader_t));
-	signal_init(&render_transparent, sizeof(shader_t));
-	signal_init(&render_quad, sizeof(shader_t));
-	signal_init(&render_decals, sizeof(shader_t));
+	signal_init(sig("offscreen_render"), 0);
+	signal_init(sig("render_visible"), sizeof(shader_t));
+	signal_init(sig("render_lights"), sizeof(shader_t));
+	signal_init(sig("render_transparent"), sizeof(shader_t));
+	signal_init(sig("render_quad"), sizeof(shader_t));
+	signal_init(sig("render_decals"), sizeof(shader_t));
 }
 
 
@@ -829,7 +820,7 @@ static void c_renderer_update_probes(c_renderer_t *self)
 	glEnable(GL_CULL_FACE); glerr();
 	glEnable(GL_DEPTH_TEST); glerr();
 
-	entity_signal(c_entity(self), offscreen_render, NULL);
+	entity_signal(c_entity(self), sig("offscreen_render"), NULL);
 
 	glerr();
 

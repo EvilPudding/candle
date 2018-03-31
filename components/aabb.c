@@ -96,8 +96,8 @@ DEC_CT(ct_aabb)
 	ct_t *ct = ct_new("c_aabb", &ct_aabb, sizeof(c_aabb_t),
 			(init_cb)c_aabb_init, 1, ct_spacial);
 
-	ct_listener(ct, WORLD, mesh_changed, c_aabb_on_mesh_change);
-	ct_listener(ct, ENTITY, spacial_changed, c_aabb_spacial_changed);
+	ct_listener(ct, WORLD, sig("mesh_changed"), c_aabb_on_mesh_change);
+	ct_listener(ct, ENTITY, sig("spacial_changed"), c_aabb_spacial_changed);
 
 	/* ct_listener(ct, WORLD, collider_callback, c_grid_collider); */
 }

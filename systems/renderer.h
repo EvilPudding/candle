@@ -193,13 +193,6 @@ typedef struct c_renderer_t
 	int passes_bound;
 } c_renderer_t;
 
-DEF_SIG(render_visible);
-DEF_SIG(render_lights);
-DEF_SIG(render_transparent);
-DEF_SIG(render_decals);
-DEF_SIG(render_quad);
-DEF_SIG(offscreen_render);
-
 DEF_CASTER(ct_renderer, c_renderer, c_renderer_t)
 
 c_renderer_t *c_renderer_new(float resolution, int auto_exposure,

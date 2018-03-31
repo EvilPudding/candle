@@ -39,7 +39,7 @@ int c_ambient_render(c_ambient_t *self)
 
 	fs_bind(g_shader);
 
-	c_probe_render(probe, render_visible);
+	c_probe_render(probe, sig("render_visible"));
 
 	return 1;
 }
@@ -49,7 +49,7 @@ DEC_CT(ct_ambient)
 	ct_t *ct = ct_new("c_ambient", &ct_ambient,
 			sizeof(c_ambient_t), (init_cb)c_ambient_init, 1, ct_spacial);
 
-	ct_listener(ct, WORLD, offscreen_render, c_ambient_render);
+	ct_listener(ct, WORLD, sig("offscreen_render"), c_ambient_render);
 }
 
 

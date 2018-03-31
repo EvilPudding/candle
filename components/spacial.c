@@ -3,8 +3,6 @@
 #include <nk.h>
 #include <systems/editmode.h>
 
-DEC_SIG(spacial_changed);
-
 int c_spacial_menu(c_spacial_t *self, void *ctx);
 
 void c_spacial_init(c_spacial_t *self)
@@ -33,9 +31,9 @@ DEC_CT(ct_spacial)
 	ct_t *ct = ct_new("c_spacial", &ct_spacial,
 			sizeof(c_spacial_t), (init_cb)c_spacial_init, 0);
 
-	signal_init(&spacial_changed, sizeof(entity_t));
+	signal_init(sig("spacial_changed"), sizeof(entity_t));
 
-	ct_listener(ct, WORLD, component_menu, c_spacial_menu);
+	ct_listener(ct, WORLD, sig("component_menu"), c_spacial_menu);
 }
 
 void c_spacial_unlock(c_spacial_t *self)
@@ -45,7 +43,7 @@ void c_spacial_unlock(c_spacial_t *self)
 	{
 		self->modified = 0;
 		c_spacial_update_model_matrix(self);
-		entity_signal(self->super.entity, spacial_changed,
+		entity_signal(self->super.entity, sig("spacial_changed"),
 				&self->super.entity);
 	}
 }
@@ -280,5 +278,5 @@ void c_spacial_update_model_matrix(c_spacial_t *self)
 	self->model_matrix = mat4_scale_aniso(self->model_matrix, self->scale.x,
 			self->scale.y, self->scale.z);
 
-	entity_signal(c_entity(self), spacial_changed, &c_entity(self));
+	entity_signal(c_entity(self), sig("spacial_changed"), &c_entity(self));
 }

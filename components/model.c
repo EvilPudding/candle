@@ -10,8 +10,6 @@
 #include "shader.h"
 #include <systems/editmode.h>
 
-DEC_SIG(mesh_changed);
-
 static mat_t *g_missing_mat = NULL;
 
 int c_model_menu(c_model_t *self, void *ctx);
@@ -67,7 +65,7 @@ void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset)
 	self->layers[i].cull_back = 1;
 	self->layers[i].wireframe = 0;
 	self->layers[i].offset = 0;
-	entity_signal_same(c_entity(self), mesh_changed, NULL);
+	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
 }
 
 c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow)
@@ -128,7 +126,7 @@ void c_model_set_mesh(c_model_t *self, mesh_t *mesh)
 {
 	mesh_t *old_mesh = self->mesh;
 	self->mesh = mesh;
-	entity_signal_same(c_entity(self), mesh_changed, NULL);
+	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
 	if(old_mesh) mesh_destroy(old_mesh);
 }
 
@@ -137,7 +135,7 @@ int c_model_created(c_model_t *self)
 	if(self->mesh)
 	{
 		g_update_id++;
-		entity_signal_same(c_entity(self), mesh_changed, NULL);
+		entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
 	}
 	return 1;
 }
@@ -255,20 +253,20 @@ int c_model_scene_changed(c_model_t *self, entity_t *entity)
 
 DEC_CT(ct_model)
 {
-	signal_init(&mesh_changed, sizeof(mesh_t));
+	signal_init(sig("mesh_changed"), sizeof(mesh_t));
 
 	ct_t *ct = ct_new("c_model", &ct_model, sizeof(c_model_t),
 			(init_cb)c_model_init, 2, ct_spacial, ct_node);
 
-	ct_listener(ct, ENTITY, entity_created, c_model_created);
+	ct_listener(ct, ENTITY, sig("entity_created"), c_model_created);
 
-	ct_listener(ct, WORLD, component_menu, c_model_menu);
+	ct_listener(ct, WORLD, sig("component_menu"), c_model_menu);
 
-	ct_listener(ct, ENTITY, spacial_changed, c_model_scene_changed);
+	ct_listener(ct, ENTITY, sig("spacial_changed"), c_model_scene_changed);
 
-	ct_listener(ct, WORLD, render_visible, c_model_render_visible);
+	ct_listener(ct, WORLD, sig("render_visible"), c_model_render_visible);
 
-	ct_listener(ct, WORLD, render_transparent, c_model_render_transparent);
+	ct_listener(ct, WORLD, sig("render_transparent"), c_model_render_transparent);
 
-	ct_listener(ct, WORLD, render_shadows, c_model_render_shadows);
+	ct_listener(ct, WORLD, sig("render_shadows"), c_model_render_shadows);
 }

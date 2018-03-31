@@ -49,7 +49,7 @@ DEC_CT(ct_decal)
 	ct_t *ct = ct_new("c_decal", &ct_decal, sizeof(c_decal_t),
 			(init_cb)c_decal_init, 1, ct_spacial);
 
-	ct_listener(ct, WORLD, render_decals, c_decal_render);
+	ct_listener(ct, WORLD, sig("render_decals"), c_decal_render);
 }
 
 

@@ -25,9 +25,13 @@ typedef struct
 	float x, y;
 } mouse_move_data;
 
-DEF_SIG(mouse_move);
-DEF_SIG(mouse_press);
-DEF_SIG(mouse_release);
-DEF_SIG(mouse_wheel);
+typedef struct c_mouse_t
+{
+	c_t super;
+	/* currently, mouse has no options */
+} c_mouse_t;
+
+DEF_CASTER(ct_mouse, c_mouse, c_mouse_t)
+c_mouse_t *c_mouse_new(void);
 
 #endif /* !MOUSE_H */

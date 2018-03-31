@@ -9,7 +9,6 @@
 
 #include "candle.h"
 
-DEC_SIG(entity_created);
 SDL_sem *sem;
 
 listener_t *ct_get_listener(ct_t *self, uint signal)
@@ -66,7 +65,9 @@ void ecm_init()
 	self->regs_size = 0;
 	self->regs = malloc(sizeof(*self->regs) * 256);
 
-	signal_init(&entity_created, 0);
+	self->signals_hash = kh_init(32);
+
+	signal_init(sig("entity_created"), 0);
 
 	ecm_new_entity(); // entity_null
 
@@ -91,11 +92,18 @@ void ecm_register_all()
 	}
 }
 
-void _ct_listener(ct_t *self, int flags, uint signal,
-	signal_cb cb)
+signal_t *ecm_get_signal(uint signal)
 {
+	khiter_t k = kh_get(32, g_ecm->signals_hash, signal);
+	if(k == kh_end(g_ecm->signals_hash)) return NULL;
+	return &kh_value(g_ecm->signals_hash, k);
+}
+
+void _ct_listener(ct_t *self, int flags, uint signal, signal_cb cb)
+{
+	signal_t *sig = ecm_get_signal(signal);
+	if(!sig) return;
 	if(!self) return;
-	if(signal == IDENT_NULL) return;
 	if(ct_get_listener(self, signal)) return;
 
 	uint i = self->listeners_size++;
@@ -106,7 +114,6 @@ void _ct_listener(ct_t *self, int flags, uint signal,
 		.flags = flags, .comp_type = self->id};
 	self->listeners[i] = lis;
 
-	signal_t *sig = &g_ecm->signals[signal];
 
 	i = sig->cts_size++;
 	sig->cts = realloc(sig->cts, sizeof(*sig->cts) * sig->cts_size);
@@ -118,17 +125,15 @@ void _ct_listener(ct_t *self, int flags, uint signal,
 	sig->listeners[i] = lis;
 }
 
-void signal_init(uint *target, uint size)
+void _signal_init(uint id, uint size)
 {
 	if(!g_ecm) return;
-	if(*target != IDENT_NULL) return;
-	uint i = g_ecm->signals_size++;
-	g_ecm->signals = realloc(g_ecm->signals, sizeof(*g_ecm->signals) *
-			g_ecm->signals_size);
+	if(ecm_get_signal(id)) return;
 
-	g_ecm->signals[i] = (signal_t){.size = size};
-
-	*target = i;
+	int ret;
+	khiter_t k = kh_put(32, g_ecm->signals_hash, id, &ret);
+	kh_value(g_ecm->signals_hash, k) = (signal_t){.size = size};
+	printf("registering %u\n", id);
 }
 
 entity_t ecm_new_entity()

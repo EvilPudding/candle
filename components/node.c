@@ -95,7 +95,7 @@ DEC_CT(ct_node)
 	ct_t *ct = ct_new("c_node", &ct_node, sizeof(c_node_t),
 			(init_cb)c_node_init, 1, ct_spacial);
 
-	ct_listener(ct, ENTITY, spacial_changed, c_node_changed);
+	ct_listener(ct, ENTITY, sig("spacial_changed"), c_node_changed);
 }
 
 void c_node_update_model(c_node_t *self)

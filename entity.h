@@ -21,7 +21,9 @@ entity_t _entity_new(int comp_num, ...);
 int entity_signal_same_TOPLEVEL(entity_t self, unsigned int signal, void *data);
 int entity_signal_TOPLEVEL(entity_t self, unsigned int signal, void *data);
 int component_signal_TOPLEVEL(c_t *comp, ct_t *ct, unsigned int signal, void *data);
+
 int entity_signal_same(entity_t self, unsigned int signal, void *data);
+
 int entity_signal(entity_t self, unsigned int signal, void *data);
 int component_signal(c_t *comp, ct_t *ct, unsigned int signal, void *data);
 

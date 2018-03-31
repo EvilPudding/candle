@@ -53,7 +53,7 @@ DEC_CT(ct_destroyed)
 	ct_t *ct = ct_new("c_destroyed", &ct_destroyed, sizeof(c_destroyed_t),
 			NULL, 0);
 
-	ct_listener(ct, WORLD, after_update, c_destroyed_thr);
-	ct_listener(ct, WORLD, after_draw, c_destroyed_thr);
+	ct_listener(ct, WORLD, sig("after_update"), c_destroyed_thr);
+	ct_listener(ct, WORLD, sig("after_draw"), c_destroyed_thr);
 }
 

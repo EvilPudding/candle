@@ -21,8 +21,6 @@ typedef struct
 	int modified;
 } c_spacial_t;
 
-DEF_SIG(spacial_changed);
-
 DEF_CASTER(ct_spacial, c_spacial, c_spacial_t)
 
 c_spacial_t *c_spacial_new(void);

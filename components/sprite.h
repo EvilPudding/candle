@@ -12,8 +12,6 @@ typedef struct
 	int cast_shadow;
 } c_sprite_t;
 
-DEF_SIG(mesh_changed);
-
 DEF_CASTER(ct_sprite, c_sprite, c_sprite_t)
 extern int g_update_id;
 

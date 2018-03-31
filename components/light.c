@@ -10,8 +10,6 @@
 #include <systems/renderer.h>
 #include <stdlib.h>
 
-DEC_SIG(render_shadows);
-
 static fs_t *g_depth_fs = NULL;
 entity_t g_light = entity_null;
 
@@ -115,7 +113,7 @@ int c_light_probe_render(c_light_t *self)
 	if(!probe)
 	{
 		entity_add_component(c_entity(self), (c_t*)c_probe_new(self->shadow_size));
-		entity_signal(c_entity(self), spacial_changed, &c_entity(self));
+		entity_signal(c_entity(self), sig("spacial_changed"), &c_entity(self));
 		return 0;
 	}
 	if(!g_depth_fs) return 0;
@@ -123,7 +121,7 @@ int c_light_probe_render(c_light_t *self)
 	fs_bind(g_depth_fs);
 
 	glDisable(GL_CULL_FACE);
-	c_probe_render(probe, render_shadows);
+	c_probe_render(probe, sig("render_shadows"));
 	glEnable(GL_CULL_FACE);
 	return 1;
 }
@@ -133,11 +131,11 @@ DEC_CT(ct_light)
 	ct_t *ct = ct_new("c_light", &ct_light,
 			sizeof(c_light_t), (init_cb)c_light_init, 2, ct_spacial, ct_node);
 
-	ct_listener(ct, WORLD, offscreen_render, c_light_probe_render);
+	ct_listener(ct, WORLD, sig("offscreen_render"), c_light_probe_render);
 
-	ct_listener(ct, WORLD, component_menu, c_light_menu);
+	ct_listener(ct, WORLD, sig("component_menu"), c_light_menu);
 
-	ct_listener(ct, WORLD, render_lights, c_light_render);
+	ct_listener(ct, WORLD, sig("render_lights"), c_light_render);
 
-	signal_init(&render_shadows, 0);
+	signal_init(sig("render_shadows"), 0);
 }

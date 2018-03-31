@@ -85,10 +85,10 @@ DEC_CT(ct_freelook)
 	ct_t *ct = ct_new("c_freelook", &ct_freelook, sizeof(c_freelook_t),
 			(init_cb)c_freelook_init, 1, ct_spacial);
 
-	ct_listener(ct, WORLD, mouse_move, c_freelook_mouse_move);
+	ct_listener(ct, WORLD, sig("mouse_move"), c_freelook_mouse_move);
 
-	ct_listener(ct, ENTITY, entity_created, c_freelook_update);
+	ct_listener(ct, ENTITY, sig("entity_created"), c_freelook_update);
 
-	ct_listener(ct, WORLD, window_resize, c_freelook_window_resize);
+	ct_listener(ct, WORLD, sig("window_resize"), c_freelook_window_resize);
 }
 

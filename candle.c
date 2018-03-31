@@ -17,16 +17,6 @@
 #include <dirent.h>
 #include <fcntl.h>
 
-DEC_SIG(world_update);
-DEC_SIG(after_update);
-DEC_SIG(world_draw);
-DEC_SIG(after_draw);
-DEC_SIG(ui_draw);
-
-DEC_SIG(events_begin);
-DEC_SIG(event_handle);
-DEC_SIG(events_end);
-
 void candle_reset_dir(candle_t *self)
 {
 #ifdef WIN32
@@ -41,15 +31,15 @@ int handle_event(candle_t *self, SDL_Event event)
 	char key;
 	if(self->mouse_owners[0] != entity_null)
 	{
-		if(entity_signal_same(self->mouse_owners[0],
-					event_handle, &event) == 0)
+		if(entity_signal_same(self->mouse_owners[0], sig("event_handle"),
+					&event) == 0)
 		{
 			return 1;
 		}
 	}
 	else
 	{
-		if(entity_signal(entity_null, event_handle, &event) == 0)
+		if(entity_signal(entity_null, sig("event_handle"), &event) == 0)
 		{
 			return 1;
 		}
@@ -61,41 +51,24 @@ int handle_event(candle_t *self, SDL_Event event)
 		case SDL_MOUSEWHEEL:
 			bdata = (mouse_button_data){event.wheel.x, event.wheel.y,
 				event.wheel.direction, SDL_BUTTON_MIDDLE};
-			{
-				entity_signal(entity_null, mouse_wheel, &bdata);
-			}
+			entity_signal(entity_null, sig("mouse_wheel"), &bdata);
 			break;
 		case SDL_MOUSEBUTTONUP:
 			bdata = (mouse_button_data){event.button.x, event.button.y, 0,
 				event.button.button};
-			if(self->mouse_owners[0] != entity_null)
-			{
-				entity_signal(self->mouse_owners[0], mouse_release, &bdata);
-			}
-			else
-			{
-				entity_signal(entity_null, mouse_release, &bdata);
-			}
+			entity_signal(self->mouse_owners[0], sig("mouse_release"), &bdata);
 			break;
 		case SDL_MOUSEBUTTONDOWN:
 			bdata = (mouse_button_data){event.button.x, event.button.y, 0,
 				event.button.button};
-			{
-				entity_signal(entity_null, mouse_press, &bdata);
-			}
+			entity_signal(entity_null, sig("mouse_press"), &bdata);
 			break;
 		case SDL_MOUSEMOTION:
 			self->mx = event.motion.x; self->my = event.motion.y;
 			mdata = (mouse_move_data){event.motion.xrel, event.motion.yrel,
 				event.motion.x, event.motion.y};
-			if(self->mouse_owners[0] != entity_null)
-			{
-				entity_signal_same(self->mouse_owners[0], mouse_move, &mdata);
-			}
-			else
-			{
-				entity_signal(entity_null, mouse_move, &mdata);
-			}
+
+			entity_signal_same(self->mouse_owners[0], sig("mouse_move"), &mdata);
 			break;
 		case SDL_KEYUP:
 			key = event.key.keysym.sym;
@@ -103,7 +76,7 @@ int handle_event(candle_t *self, SDL_Event event)
 			{
 				self->shift = 0;
 			}
-			entity_signal(entity_null, key_up, &key);
+			entity_signal(entity_null, sig("key_up"), &key);
 			break;
 		case SDL_KEYDOWN:
 			key = event.key.keysym.sym;
@@ -111,7 +84,7 @@ int handle_event(candle_t *self, SDL_Event event)
 			{
 				self->shift = 1;
 			}
-			entity_signal(entity_null, key_down, &key);
+			entity_signal(entity_null, sig("key_down"), &key);
 			break;
 		case SDL_WINDOWEVENT:
 			switch(event.window.event)
@@ -132,7 +105,7 @@ static void candle_handle_events(candle_t *self)
 	/* SDL_WaitEvent(&event); */
 	/* keySpec(state->key_state, state); */
 	int has_events = 0;
-	entity_signal(entity_null, events_begin, NULL);
+	entity_signal(entity_null, sig("events_begin"), NULL);
 	while(SDL_PollEvent(&event))
 	{
 		/* if(!) */
@@ -150,7 +123,7 @@ static void candle_handle_events(candle_t *self)
 			handle_event(self, event);
 		}
 	}
-	entity_signal(entity_null, events_end, NULL);
+	entity_signal(entity_null, sig("events_end"), NULL);
 	if(has_events)
 	{
 		/* event.type = SDL_USEREVENT; */
@@ -180,9 +153,9 @@ static int render_loop(candle_t *self)
 		{
 			/* candle_handle_events(self); */
 			/* printf("\t%ld\n", self->render_id); */
-			entity_signal(entity_null, world_draw, NULL);
-			entity_signal(entity_null, ui_draw, NULL);
-			entity_signal(entity_null, after_draw, NULL);
+			entity_signal(entity_null, sig("world_draw"), NULL);
+			entity_signal(entity_null, sig("ui_draw"), NULL);
+			entity_signal(entity_null, sig("after_draw"), NULL);
 
 			c_window_draw(c_window(&self->systems));
 
@@ -207,16 +180,16 @@ static int render_loop(candle_t *self)
 
 void candle_register()
 {
-	signal_init(&world_update, sizeof(float));
-	signal_init(&after_update, sizeof(float));
-	signal_init(&world_draw, sizeof(void*));
-	signal_init(&after_draw, sizeof(void*));
-	signal_init(&event_handle, sizeof(void*));
-	signal_init(&events_end, sizeof(void*));
-	signal_init(&events_begin, sizeof(void*));
+	signal_init(sig("world_update"), sizeof(float));
+	signal_init(sig("after_update"), sizeof(float));
+	signal_init(sig("world_draw"), sizeof(void*));
+	signal_init(sig("after_draw"), sizeof(void*));
+	signal_init(sig("event_handle"), sizeof(void*));
+	signal_init(sig("events_end"), sizeof(void*));
+	signal_init(sig("events_begin"), sizeof(void*));
 
 	/* TODO remove ui_draw in favour of sorted by priority listeners */
-	signal_init(&ui_draw, sizeof(void*));
+	signal_init(sig("ui_draw"), sizeof(void*));
 }
 
 static int ticker_loop(candle_t *self)
@@ -225,8 +198,8 @@ static int ticker_loop(candle_t *self)
 	{
 		int current = SDL_GetTicks();
 		float dt = (current - self->last_update) / 1000.0;
-		entity_signal(entity_null, world_update, &dt);
-		entity_signal(entity_null, after_update, &dt);
+		entity_signal(entity_null, sig("world_update"), &dt);
+		entity_signal(entity_null, sig("after_update"), &dt);
 		self->last_update = current;
 		SDL_Delay(16);
 	}
@@ -489,7 +462,8 @@ void candle_init2(void)
 	candle->mouse_owners[0] = entity_null;
 	candle->mouse_visible[0] = 1;
 
-	candle->systems = entity_new(c_physics_new(), c_sauces_new());
+	candle->systems = entity_new(c_mouse_new(), c_keyboard_new(),
+			c_physics_new(), c_sauces_new());
 
 	//int res = pipe(candle->events);
 	//if(res == -1) exit(1);

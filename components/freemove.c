@@ -78,7 +78,7 @@ static int c_freemove_update(c_freemove_t *self, float *dt)
 		*vel = vec3_add(*vel, front);
 	}
 
-	entity_signal(self->super.entity, spacial_changed, &self->super.entity);
+	entity_signal(self->super.entity, sig("spacial_changed"), &self->super.entity);
 
 	return 1;
 }
@@ -114,10 +114,10 @@ DEC_CT(ct_freemove)
 			sizeof(c_freemove_t), (init_cb)c_freemove_init,
 			2, ct_spacial, ct_velocity);
 
-	ct_listener(ct, WORLD, key_up, c_freemove_key_up);
+	ct_listener(ct, WORLD, sig("key_up"), c_freemove_key_up);
 
-	ct_listener(ct, WORLD, key_down, c_freemove_key_down);
+	ct_listener(ct, WORLD, sig("key_down"), c_freemove_key_down);
 
-	ct_listener(ct, WORLD, world_update, c_freemove_update);
+	ct_listener(ct, WORLD, sig("world_update"), c_freemove_update);
 }
 

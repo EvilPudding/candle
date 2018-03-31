@@ -6,10 +6,6 @@
 #define DEPTH_TEX 0
 #define COLOR_TEX 1
 
-#ifndef uint
-#	define uint unsigned int
-#endif
-
 typedef struct
 {
 	char name[256];

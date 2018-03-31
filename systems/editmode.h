@@ -57,9 +57,6 @@ typedef struct
 
 DEF_CASTER(ct_editmode, c_editmode, c_editmode_t)
 
-DEF_SIG(global_menu);
-DEF_SIG(component_menu);
-
 c_editmode_t *c_editmode_new(void);
 void c_editmode_activate(c_editmode_t *self);
 void c_editmode_register(void);

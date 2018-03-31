@@ -11,15 +11,6 @@
 #include <keyboard.h>
 #include <mouse.h>
 
-DEF_SIG(world_update);
-DEF_SIG(after_update);
-DEF_SIG(world_draw);
-DEF_SIG(after_draw);
-DEF_SIG(ui_draw);
-DEF_SIG(event_handle);
-DEF_SIG(events_begin);
-DEF_SIG(events_end);
-
 void candle_register(void);
 
 typedef struct candle_t candle_t;

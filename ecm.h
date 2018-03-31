@@ -7,6 +7,8 @@
 #include "mesh.h"
 #include "entity.h"
 #include "vector.h"
+#include "khash.h"
+#include "macros.h"
 
 #define _GNU_SOURCE
 #include <search.h>
@@ -26,12 +28,9 @@ typedef int(*before_draw_cb)(c_t *self);
 
 
 #define IDENT_NULL UINT_MAX
-#define DEC_SIG(var) uint var = IDENT_NULL
-#define DEF_SIG(var) extern uint var
 #define DEF_CASTER(ct, cn, nc_t) extern uint ct; \
 	static inline nc_t *cn(void *entity)\
 { return ct==IDENT_NULL?NULL:(nc_t*)ct_get(ecm_get(ct), entity); } \
-
 
 #define CONSTR_BEFORE_REG 101
 #define CONSTR_REG 102
@@ -112,6 +111,8 @@ typedef struct
 
 } signal_t;
 
+KHASH_MAP_INIT_INT(32, signal_t)
+
 typedef struct ecm_t
 {
 	int *entities_busy;
@@ -120,8 +121,7 @@ typedef struct ecm_t
 	ct_t *cts;
 	uint cts_size;
 
-	signal_t *signals;
-	uint signals_size;
+	khash_t(32) *signals_hash;
 
 	uint global;
 
@@ -155,8 +155,12 @@ static inline c_t *ct_get(ct_t *self, entity_t *entity)
 	return (c_t*)&(self->pages[page].components[offset]);
 }
 
-void _ct_listener(ct_t *self, int flags,
-		uint signal, signal_cb cb);
+signal_t *ecm_get_signal(uint signal);
+void _signal_init(uint id, uint size);
+#define signal_init(id, size) \
+	(_signal_init(id, size))
+
+void _ct_listener(ct_t *self, int flags, uint signal, signal_cb cb);
 #define ct_listener(self, flags, signal, cb) \
 	(_ct_listener(self, flags, signal, (signal_cb)cb))
 
@@ -169,7 +173,6 @@ c_t *ct_add(ct_t *self, entity_t entity);
 extern ecm_t *g_ecm;
 void ecm_init(void);
 entity_t ecm_new_entity(void);
-void signal_init(uint *target, uint size);
 void ecm_add_reg(c_reg_cb reg);
 void ecm_register_all(void);
 
@@ -190,6 +193,5 @@ static inline ct_t *ecm_get(uint comp_type) {
 void *component_new(int comp_type);
 
 /* builtin signals */
-extern uint entity_created;
 
 #endif /* !ECM_H */

@@ -529,7 +529,7 @@ static int glg_update_buffers(glg_t *self)
 	self->updated = 1;
 	/* if(!self->ready) */
 	{
-		entity_signal(self->entity, spacial_changed, NULL);
+		entity_signal(self->entity, sig("spacial_changed"), NULL);
 	}
 	self->ready = 1;
 
@@ -816,7 +816,7 @@ DEC_CT(ct_mesh_gl)
 	ct_t *ct = ct_new("c_mesh_gl", &ct_mesh_gl,
 			sizeof(c_mesh_gl_t), (init_cb)c_mesh_gl_init, 0);
 
-	ct_listener(ct, ENTITY, mesh_changed, c_mesh_gl_on_mesh_changed);
+	ct_listener(ct, ENTITY, sig("mesh_changed"), c_mesh_gl_on_mesh_changed);
 
 	ct_add_interaction(ct, ct_model);
 

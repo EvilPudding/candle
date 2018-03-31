@@ -15,10 +15,6 @@ void nk_candle_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
 		int max_element_buffer);
 static int c_editmode_activate_loader(c_editmode_t *self);
 
-
-DEC_SIG(global_menu);
-DEC_SIG(component_menu);
-
 #define MAX_VERTEX_MEMORY 512 * 1024
 #define MAX_ELEMENT_MEMORY 128 * 1024
 
@@ -122,7 +118,7 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 	} 
 
 	c_renderer_add_pass(c_renderer(self), "rendered", "highlight",
-			render_quad, 1.0f, PASS_DISABLE_DEPTH,
+			sig("render_quad"), 1.0f, PASS_DISABLE_DEPTH,
 		(bind_t[]){
 			{BIND_GBUFFER, "gb2"},
 			{BIND_PREV_PASS_OUTPUT, "final"},
@@ -560,7 +556,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 	{
 		int i;
 
-		signal_t *sig = &g_ecm->signals[component_menu];
+		signal_t *sig = ecm_get_signal(sig("component_menu"));
 
 		for(i = 0; i < sig->cts_size; i++)
 		{
@@ -571,7 +567,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 				if(nk_tree_push_id(self->nk, NK_TREE_TAB, ct->name,
 							NK_MINIMIZED, i))
 				{
-					component_signal(comp, ct, component_menu, self->nk);
+					component_signal(comp, ct, sig("component_menu"), self->nk);
 					nk_tree_pop(self->nk);
 				}
 				int j;
@@ -582,7 +578,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 						c_t *inter = ct_get(ct, &ent);
 						ct_t *inter_ct = ecm_get(ct->depends[j].ct);
 						component_signal(inter, inter_ct,
-								component_menu, self->nk);
+								sig("component_menu"), self->nk);
 					}
 				}
 			}
@@ -663,7 +659,7 @@ int c_editmode_draw(c_editmode_t *self)
 				c_editmode_open_entity(self, c_entity(self));
 			}
 
-			entity_signal(c_entity(self), global_menu, self->nk);
+			entity_signal(c_entity(self), sig("global_menu"), self->nk);
 
 			node_tree(self);
 
@@ -743,28 +739,28 @@ DEC_CT(ct_editmode)
 	ct_t *ct = ct_new("c_editmode", &ct_editmode,
 			sizeof(c_editmode_t), (init_cb)c_editmode_init, 0);
 
-	signal_init(&global_menu, sizeof(struct nk_context*));
-	signal_init(&component_menu, sizeof(struct nk_context*));
+	signal_init(sig("global_menu"), sizeof(struct nk_context*));
+	signal_init(sig("component_menu"), sizeof(struct nk_context*));
 
-	ct_listener(ct, WORLD, key_up, c_editmode_key_up);
+	ct_listener(ct, WORLD, sig("key_up"), c_editmode_key_up);
 
-	ct_listener(ct, WORLD, key_down, c_editmode_key_down);
+	ct_listener(ct, WORLD, sig("key_down"), c_editmode_key_down);
 
-	ct_listener(ct, WORLD, mouse_move, c_editmode_mouse_move);
+	ct_listener(ct, WORLD, sig("mouse_move"), c_editmode_mouse_move);
 
-	ct_listener(ct, WORLD, ui_draw, c_editmode_draw);
+	ct_listener(ct, WORLD, sig("ui_draw"), c_editmode_draw);
 
-	ct_listener(ct, WORLD, mouse_press, c_editmode_mouse_press);
+	ct_listener(ct, WORLD, sig("mouse_press"), c_editmode_mouse_press);
 
-	ct_listener(ct, WORLD, mouse_release, c_editmode_mouse_release);
+	ct_listener(ct, WORLD, sig("mouse_release"), c_editmode_mouse_release);
 
-	ct_listener(ct, WORLD, event_handle, c_editmode_event);
+	ct_listener(ct, WORLD, sig("event_handle"), c_editmode_event);
 
-	ct_listener(ct, WORLD, events_begin, c_editmode_events_begin);
+	ct_listener(ct, WORLD, sig("events_begin"), c_editmode_events_begin);
 
-	ct_listener(ct, WORLD, events_end, c_editmode_events_end);
+	ct_listener(ct, WORLD, sig("events_end"), c_editmode_events_end);
 
-	/* ct_listener(ct, WORLD, window_resize, c_editmode_resize); */
+	/* ct_listener(ct, WORLD, sig("window_resize"), c_editmode_resize); */
 
 }
 

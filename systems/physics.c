@@ -10,8 +10,6 @@
 #include <components/light.h>
 #include <components/node.h>
 
-DEC_SIG(collider_callback);
-
 static vec3_t c_physics_handle_forces(c_physics_t *self, vec3_t vel, float *dt)
 {
 	unsigned int i, p;
@@ -237,10 +235,6 @@ static int c_physics_update(c_physics_t *self, float *dt)
 	return 1;
 }
 
-static void c_physics_init(c_physics_t *self)
-{
-}
-
 c_physics_t *c_physics_new()
 {
 	c_physics_t *self = component_new(ct_physics);
@@ -250,11 +244,10 @@ c_physics_t *c_physics_new()
 
 DEC_CT(ct_physics)
 {
-	ct_t *ct = ct_new("Physics", &ct_physics,
-			sizeof(c_physics_t), (init_cb)c_physics_init, 0);
+	ct_t *ct = ct_new("Physics", &ct_physics, sizeof(c_physics_t), NULL, 0);
 
-	ct_listener(ct, WORLD, world_update, c_physics_update);
+	ct_listener(ct, WORLD, sig("world_update"), c_physics_update);
 
-	signal_init(&collider_callback, 0);
+	signal_init(sig("collider_callback"), 0);
 }
 

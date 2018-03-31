@@ -100,7 +100,7 @@ DEC_CT(ct_probe)
 	ct_t *ct = ct_new("c_probe", &ct_probe, sizeof(c_probe_t),
 			(init_cb)c_probe_init, 1, ct_spacial);
 
-	ct_listener(ct, ENTITY, spacial_changed, c_probe_update_position);
+	ct_listener(ct, ENTITY, sig("spacial_changed"), c_probe_update_position);
 }
 
 

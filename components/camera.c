@@ -137,8 +137,8 @@ DEC_CT(ct_camera)
 	ct_t *ct = ct_new("c_camera", &ct_camera, sizeof(c_camera_t),
 			(init_cb)c_camera_init, 2, ct_spacial, ct_node);
 
-	ct_listener(ct, ENTITY, spacial_changed, c_camera_changed);
-	ct_listener(ct, WORLD, window_resize, c_camera_update);
+	ct_listener(ct, ENTITY, sig("spacial_changed"), c_camera_changed);
+	ct_listener(ct, WORLD, sig("window_resize"), c_camera_update);
 
-	ct_listener(ct, WORLD, component_menu, c_camera_component_menu);
+	ct_listener(ct, WORLD, sig("component_menu"), c_camera_component_menu);
 }

@@ -71,7 +71,7 @@ c_sprite_t *c_sprite_new(mat_t *mat, int cast_shadow)
 int c_sprite_created(c_sprite_t *self)
 {
 	g_update_id++;
-	entity_signal_same(c_entity(self), mesh_changed, NULL);
+	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
 	return 1;
 }
 
@@ -132,15 +132,15 @@ DEC_CT(ct_sprite)
 	ct_t *ct = ct_new("c_sprite", &ct_sprite, sizeof(c_sprite_t),
 			(init_cb)c_sprite_init, 2, ct_spacial, ct_node);
 
-	ct_listener(ct, ENTITY, entity_created, c_sprite_created);
+	ct_listener(ct, ENTITY, sig("entity_created"), c_sprite_created);
 
 	/* ct_listener(ct, WORLD, component_menu, c_sprite_menu); */
 
-	ct_listener(ct, ENTITY, spacial_changed, c_sprite_scene_changed);
+	ct_listener(ct, ENTITY, sig("spacial_changed"), c_sprite_scene_changed);
 
-	ct_listener(ct, WORLD, render_visible, c_sprite_render_visible);
+	ct_listener(ct, WORLD, sig("render_visible"), c_sprite_render_visible);
 
-	ct_listener(ct, WORLD, render_transparent, c_sprite_render_transparent);
+	ct_listener(ct, WORLD, sig("render_transparent"), c_sprite_render_transparent);
 
-	ct_listener(ct, WORLD, render_shadows, c_sprite_render_shadows);
+	ct_listener(ct, WORLD, sig("render_shadows"), c_sprite_render_shadows);
 }

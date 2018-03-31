@@ -8,8 +8,6 @@
 #include <stdio.h>
 #include <string.h>
 
-DEC_SIG(window_resize);
-
 int window_width = 1360;
 int window_height = 765;
 
@@ -94,7 +92,7 @@ int c_window_toggle_fullscreen_gl(c_window_t *self)
 	self->height = dm.h;
 
 	printf("window resize: %dx%d\n", self->width, self->height);
-	entity_signal(entity_null, window_resize,
+	entity_signal(entity_null, sig("window_resize"),
 		&(window_resize_data){.width = self->width, .height = self->height});
 
 	SDL_SetWindowSize(self->window, self->width, self->height);
@@ -116,7 +114,7 @@ void c_window_handle_resize(c_window_t *self, const SDL_Event event)
 	self->height = event.window.data2;
 	printf("window resize: %dx%d\n", self->width, self->height);
 
-	entity_signal(entity_null, window_resize,
+	entity_signal(entity_null, sig("window_resize"),
 		&(window_resize_data){.width = self->width, .height = self->height});
 }
 
@@ -139,7 +137,7 @@ int c_window_created(c_window_t *self)
 	c_model_cull_face(c_model(self), 0, 2);
 
 
-	entity_signal(c_entity(self), window_resize,
+	entity_signal(c_entity(self), sig("window_resize"),
 			&(window_resize_data){
 			.width = self->width,
 			.height = self->height});
@@ -215,9 +213,9 @@ DEC_CT(ct_window)
 	ct_t *ct = ct_new("c_window", &ct_window,
 			sizeof(c_window_t), (init_cb)c_window_init, 0);
 
-	ct_listener(ct, ENTITY, entity_created, c_window_created);
+	ct_listener(ct, ENTITY, sig("entity_created"), c_window_created);
 
-	signal_init(&window_resize, sizeof(window_resize_data));
+	signal_init(sig("window_resize"), sizeof(window_resize_data));
 
-	ct_listener(ct, WORLD, render_quad, c_window_render_quad);
+	ct_listener(ct, WORLD, sig("render_quad"), c_window_render_quad);
 }
