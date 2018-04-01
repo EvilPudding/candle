@@ -8,7 +8,7 @@ typedef struct c_keyboard_t
 	/* currently, keyboard has no options */
 } c_keyboard_t;
 
-DEF_CASTER(ct_keyboard, c_keyboard, c_keyboard_t)
+DEF_CASTER("c_keyboard", c_keyboard, c_keyboard_t)
 c_keyboard_t *c_keyboard_new(void);
 
 #endif /* !KEYBOARD_H */

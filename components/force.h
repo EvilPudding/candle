@@ -12,7 +12,7 @@ typedef struct
 	vec3_t force;
 } c_force_t;
 
-DEF_CASTER(ct_force, c_force, c_force_t)
+DEF_CASTER("c_force", c_force, c_force_t)
 
 c_force_t *c_force_new(float x, float y, float z, int active);
 

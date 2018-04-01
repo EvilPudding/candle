@@ -12,7 +12,7 @@ void c_sauces_init(c_sauces_t *self)
 
 c_sauces_t *c_sauces_new()
 {
-	c_sauces_t *self = component_new(ct_sauces);
+	c_sauces_t *self = component_new("c_sauces");
 	return self;
 }
 
@@ -163,10 +163,9 @@ int c_sauces_component_menu(c_sauces_t *self, void *ctx)
 }
 
 
-DEC_CT(ct_sauces)
+REG()
 {
-	ct_t *ct = ct_new("c_sauces", &ct_sauces,
-			sizeof(c_sauces_t), (init_cb)c_sauces_init, 0);
+	ct_t *ct = ct_new("c_sauces", sizeof(c_sauces_t), (init_cb)c_sauces_init, 0);
 
 	ct_listener(ct, WORLD, sig("component_menu"), c_sauces_component_menu);
 }

@@ -28,19 +28,27 @@ typedef int(*before_draw_cb)(c_t *self);
 
 
 #define IDENT_NULL UINT_MAX
-#define DEF_CASTER(ct, cn, nc_t) extern uint ct; \
+#define DEF_CASTER(ct, cn, nc_t) \
 	static inline nc_t *cn(void *entity)\
-{ return ct==IDENT_NULL?NULL:(nc_t*)ct_get(ecm_get(ct), entity); } \
+{ return (nc_t*)ct_get(ecm_get(ref(ct)), entity); } \
 
-#define CONSTR_BEFORE_REG 101
-#define CONSTR_REG 102
-#define CONSTR_AFTER_REG 103
-#define DEC_CT(var) \
-	uint var = IDENT_NULL; \
-	static void var##_register(void); \
-	__attribute__((constructor (CONSTR_REG))) static void add_reg(void) \
-	{ ecm_add_reg(var##_register); } \
-	static void var##_register(void)
+#define CONSTR_BEFORE_REG 102
+#define CONSTR_REG 103
+#define CONSTR_AFTER_REG 104
+/* #define REG() \ */
+	/* static void _register(void); \ */
+	/* __attribute__((constructor (CONSTR_REG))) static void add_reg(void) \ */
+	/* { ecm_add_reg(_register); } \ */
+	/* static void _register(void) */
+#define REG() \
+	__attribute__((constructor (CONSTR_REG))) static void _register(void)
+
+#define ecm_foreach_ct(vvar, code) { khint_t __i;		\
+	for (__i = kh_begin(g_ecm->cts); __i != kh_end(g_ecm->cts); ++__i) {		\
+		if (!kh_exist(g_ecm->cts,__i)) continue;						\
+		(vvar) = &kh_val(g_ecm->cts,__i);								\
+		code;												\
+	} }
 
 #define WORLD 0x00
 #define ENTITY 0x01
@@ -111,17 +119,17 @@ typedef struct
 
 } signal_t;
 
-KHASH_MAP_INIT_INT(32, signal_t)
+KHASH_MAP_INIT_INT(sig, signal_t)
+KHASH_MAP_INIT_INT(ct, ct_t)
 
 typedef struct ecm_t
 {
 	int *entities_busy;
 	uint entities_busy_size;
 
-	ct_t *cts;
-	uint cts_size;
+	khash_t(ct) *cts;
 
-	khash_t(32) *signals_hash;
+	khash_t(sig) *signals;
 
 	uint global;
 
@@ -179,18 +187,26 @@ void ecm_register_all(void);
 void ecm_add_entity(entity_t *entity);
 /* uint ecm_register_system(ecm_t *self, void *system); */
 
-ct_t *ct_new(const char *name, uint *target, uint size,
-		init_cb init, int depend_size, ...);
+#define ct_new(name, size, init, depend_size, ...) \
+	_ct_new(name, ref(name), size, init, depend_size, ##__VA_ARGS__)
+ct_t *_ct_new(const char *name, uint hash, uint size, init_cb init,
+		int depend_size, ...);
 
 void ct_add_dependency(ct_t *dep, uint target);
 void ct_add_interaction(ct_t *dep, uint target);
 
 
-static inline ct_t *ecm_get(uint comp_type) {
-	return &g_ecm->cts[comp_type]; }
+static inline ct_t *ecm_get(uint comp_type)
+{
+	khiter_t k = kh_get(ct, g_ecm->cts, comp_type);
+	if(k == kh_end(g_ecm->cts)) return NULL;
+	return &kh_value(g_ecm->cts, k);
+}
 /* void ecm_generate_hashes(ecm_t *self); */
 
-void *component_new(int comp_type);
+#define component_new_from_ref(comp_type) _component_new(comp_type)
+#define component_new(comp_type) _component_new(ref(comp_type))
+void *_component_new(uint comp_type);
 
 /* builtin signals */
 

@@ -9,7 +9,7 @@ typedef struct
 	char name[32];
 } c_name_t;
 
-DEF_CASTER(ct_name, c_name, c_name_t)
+DEF_CASTER("c_name", c_name, c_name_t)
 
 c_name_t *c_name_new(const char *name);
 

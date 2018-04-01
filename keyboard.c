@@ -5,14 +5,14 @@
 
 c_keyboard_t *c_keyboard_new()
 {
-	c_keyboard_t *self = component_new(ct_keyboard);
+	c_keyboard_t *self = component_new("c_keyboard");
 
 	return self;
 }
 
-DEC_CT(ct_keyboard)
+REG()
 {
-	ct_new("Keyboard", &ct_keyboard, sizeof(c_keyboard_t), NULL, 0);
+	ct_new("c_keyboard", sizeof(c_keyboard_t), NULL, 0);
 
 	signal_init(sig("key_up"), sizeof(char));
 	signal_init(sig("key_down"), sizeof(char));

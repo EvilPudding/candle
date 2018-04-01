@@ -28,7 +28,7 @@ typedef struct c_window_t
 
 } c_window_t;
 
-DEF_CASTER(ct_window, c_window, c_window_t)
+DEF_CASTER("c_window", c_window, c_window_t)
 
 int c_window_draw(c_window_t *self);
 int c_window_render_quad(c_window_t *self, texture_t *texture);

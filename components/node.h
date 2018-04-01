@@ -18,7 +18,7 @@ typedef struct
 	entity_t parent;
 } c_node_t;
 
-DEF_CASTER(ct_node, c_node, c_node_t)
+DEF_CASTER("c_node", c_node, c_node_t)
 
 c_node_t *c_node_new(void);
 entity_t c_node_get_by_name(c_node_t *self, const char *name);

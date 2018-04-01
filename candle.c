@@ -416,49 +416,6 @@ __attribute__((constructor (CONSTR_AFTER_REG)))
 void candle_init2(void)
 {
 
-	ecm_register_all();
-
-		/* keyboard_register(); */
-		/* mouse_register(); */
-
-		/* c_spacial_register(); */
-		/* c_node_register(); */
-		/* c_velocity_register(); */
-		/* c_force_register(); */
-		/* c_freemove_register(); */
-		/* c_freelook_register(); */
-		/* c_model_register(); */
-		/* c_rigid_body_register(); */
-		/* c_aabb_register(); */
-		/* c_probe_register(); */
-		/* c_ambient_register(); */
-		/* c_name_register(); */
-		/* c_editlook_register(); */
-		/* c_decal_register(); */
-		/* c_sprite_register(); */
-
-		/* /1* OpenGL mesh plugin *1/ */
-		/* c_mesh_gl_register(); */
-
-		/* c_physics_register(); */
-		/* c_window_register(); */
-		/* c_renderer_register(); */
-		/* c_editmode_register(); */
-		/* c_camera_register(); */
-		/* c_sauces_register(); */
-
-		/* va_list comps; */
-		/* va_start(comps, comps_size); */
-		/* int i; */
-		/* for(i = 0; i < comps_size; i++) */
-		/* { */
-		/* 	c_reg_cb cb = va_arg(comps, c_reg_cb); */
-		/* 	cb(); */
-		/* } */
-		/* va_end(comps); */
-	/* } */
-
-
 	candle->mouse_owners[0] = entity_null;
 	candle->mouse_visible[0] = 1;
 

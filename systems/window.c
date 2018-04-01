@@ -137,7 +137,7 @@ int c_window_created(c_window_t *self)
 	c_model_cull_face(c_model(self), 0, 2);
 
 
-	entity_signal(c_entity(self), sig("window_resize"),
+	entity_signal(entity_null, sig("window_resize"),
 			&(window_resize_data){
 			.width = self->width,
 			.height = self->height});
@@ -147,7 +147,7 @@ int c_window_created(c_window_t *self)
 
 c_window_t *c_window_new(int width, int height)
 {
-	c_window_t *self = component_new(ct_window);
+	c_window_t *self = component_new("c_window");
 	self->width = width ? width : window_width;
 	self->height = height ? height : window_height;
 	return self;
@@ -208,10 +208,10 @@ void c_window_rect(c_window_t *self, int x, int y, int width, int height,
 }
 
 
-DEC_CT(ct_window)
+REG()
 {
-	ct_t *ct = ct_new("c_window", &ct_window,
-			sizeof(c_window_t), (init_cb)c_window_init, 0);
+	ct_t *ct = ct_new("c_window", sizeof(c_window_t), (init_cb)c_window_init,
+			0);
 
 	ct_listener(ct, ENTITY, sig("entity_created"), c_window_created);
 

@@ -28,11 +28,11 @@ listener_t *ct_get_listener(ct_t *self, uint signal)
 	return NULL;
 }
 
-void *component_new(int comp_type)
+void *_component_new(uint comp_type)
 {
 	entity_t entity = _g_creating[_g_creating_num - 1];
 
-	ct_t *ct = &g_ecm->cts[comp_type];
+	ct_t *ct = ecm_get(comp_type);
 
 	/* printf("%ld << %s\n", entity, ct->name); */
 	c_t *self = ct_add(ct, entity);
@@ -44,7 +44,7 @@ void *component_new(int comp_type)
 		if(!ct_get(ct2, &entity))
 		{
 			/* printf("adding dependency %s\n", ct2->name); */
-			component_new(ct2->id);
+			_component_new(ct2->id);
 		}
 	}
 	if(ct->init) ct->init(self);
@@ -65,7 +65,8 @@ void ecm_init()
 	self->regs_size = 0;
 	self->regs = malloc(sizeof(*self->regs) * 256);
 
-	self->signals_hash = kh_init(32);
+	self->signals = kh_init(sig);
+	self->cts = kh_init(ct);
 
 	signal_init(sig("entity_created"), 0);
 
@@ -82,29 +83,32 @@ void ecm_add_reg(c_reg_cb reg)
 
 void ecm_register_all()
 {
-	int i, j;
-	for(i = 0; i < 4; i++)
+	int j;
+	for(j = 0; j < g_ecm->regs_size; j++)
 	{
-		for(j = 0; j < g_ecm->regs_size; j++)
-		{
-			g_ecm->regs[j]();
-		}
+		g_ecm->regs[j]();
 	}
 }
 
 signal_t *ecm_get_signal(uint signal)
 {
-	khiter_t k = kh_get(32, g_ecm->signals_hash, signal);
-	if(k == kh_end(g_ecm->signals_hash)) return NULL;
-	return &kh_value(g_ecm->signals_hash, k);
+	khiter_t k = kh_get(sig, g_ecm->signals, signal);
+	if(k == kh_end(g_ecm->signals))
+	{
+		int ret;
+		k = kh_put(sig, g_ecm->signals, signal, &ret);
+		signal_t *sig = &kh_value(g_ecm->signals, k);
+		*sig = (signal_t){0};
+	}
+	return &kh_value(g_ecm->signals, k);
 }
 
 void _ct_listener(ct_t *self, int flags, uint signal, signal_cb cb)
 {
 	signal_t *sig = ecm_get_signal(signal);
-	if(!sig) return;
-	if(!self) return;
-	if(ct_get_listener(self, signal)) return;
+	if(!sig) exit(1);
+	if(!self) exit(1);
+	if(ct_get_listener(self, signal)) exit(1);
 
 	uint i = self->listeners_size++;
 	self->listeners = realloc(self->listeners, sizeof(*self->listeners) *
@@ -127,12 +131,16 @@ void _ct_listener(ct_t *self, int flags, uint signal, signal_cb cb)
 
 void _signal_init(uint id, uint size)
 {
-	if(!g_ecm) return;
-	if(ecm_get_signal(id)) return;
+	signal_t *sig = ecm_get_signal(id);
+	if(sig)
+	{
+		ecm_get_signal(id)->size = size;
+		return;
+	}
 
 	int ret;
-	khiter_t k = kh_put(32, g_ecm->signals_hash, id, &ret);
-	kh_value(g_ecm->signals_hash, k) = (signal_t){.size = size};
+	khiter_t k = kh_put(sig, g_ecm->signals, id, &ret);
+	kh_value(g_ecm->signals, k) = (signal_t){.size = size};
 }
 
 entity_t ecm_new_entity()
@@ -217,10 +225,9 @@ struct comp_page *ct_add_page(ct_t *self)
 
 }
 
-ct_t *ct_new(const char *name, uint *target, uint size,
-		init_cb init, int depend_size, ...)
+ct_t *_ct_new(const char *name, uint hash, uint size, init_cb init,
+		int depend_size, ...)
 {
-	if(*target != IDENT_NULL) return ecm_get(*target);
 	va_list depends;
 
 	va_start(depends, depend_size);
@@ -231,19 +238,14 @@ ct_t *ct_new(const char *name, uint *target, uint size,
 	}
 	va_end(depends);
 
-	uint i = g_ecm->cts_size++;
+	int ret;
+	khiter_t k = kh_put(ct, g_ecm->cts, hash, &ret);
 
-	if(target) *target = i;
+	ct_t *ct = &kh_value(g_ecm->cts, k);
+	printf("%s %u\n", name, hash);
 
-	g_ecm->cts = realloc(g_ecm->cts,
-			sizeof(*g_ecm->cts) *
-			g_ecm->cts_size);
-
-	ct_t *ct = &g_ecm->cts[i];
-
-	*ct = (ct_t)
-	{
-		.id = i,
+	*ct = (ct_t) {
+		.id = hash,
 		.init = init,
 		.size = size,
 		.depends_size = depend_size,
@@ -266,6 +268,8 @@ ct_t *ct_new(const char *name, uint *target, uint size,
 		va_end(depends);
 	}
 	ct_add_page(ct);
+
+	if(!ecm_get(hash)) exit(1);
 
 	return ct;
 }

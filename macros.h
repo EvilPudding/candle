@@ -26,6 +26,9 @@
 
 #define ECMHASH(str) murmur_hash(str, strlen(str), 0)
 #define sig(str) murmur_hash(str, strlen(str), 0)
+#define ref(str) murmur_hash(str, strlen(str), 0)
+#define TP2(a, b) a##b
+#define TP(a, b) TP2(a, b)
 
 typedef unsigned int uint;
 __attribute__((always_inline))

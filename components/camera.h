@@ -20,7 +20,7 @@ typedef struct
 	int height;
 } c_camera_t;
 
-DEF_CASTER(ct_camera, c_camera, c_camera_t)
+DEF_CASTER("c_camera", c_camera, c_camera_t)
 
 c_camera_t *c_camera_new(float fov, float near, float far);
 c_camera_t *c_camera_clone(c_camera_t *self);

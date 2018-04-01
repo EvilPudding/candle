@@ -18,7 +18,7 @@ typedef struct
 	collider_cb costum;
 } c_rigid_body_t;
 
-DEF_CASTER(ct_rigid_body, c_rigid_body, c_rigid_body_t)
+DEF_CASTER("c_rigid_body", c_rigid_body, c_rigid_body_t)
 
 c_rigid_body_t *c_rigid_body_new(collider_cb costum);
 int c_rigid_body_intersects(c_rigid_body_t *self, c_rigid_body_t *other,

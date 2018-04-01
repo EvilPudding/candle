@@ -21,7 +21,7 @@ typedef struct c_sauces_t
 
 } c_sauces_t;
 
-DEF_CASTER(ct_sauces, c_sauces, c_sauces_t)
+DEF_CASTER("c_sauces", c_sauces, c_sauces_t)
 
 c_sauces_t *c_sauces_new(void);
 void c_sauces_register(void);

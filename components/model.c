@@ -70,7 +70,7 @@ void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset)
 
 c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow)
 {
-	c_model_t *self = component_new(ct_model);
+	c_model_t *self = component_new("c_model");
 
 	self->layers_num = 0;
 	self->mesh = mesh;
@@ -251,12 +251,12 @@ int c_model_scene_changed(c_model_t *self, entity_t *entity)
 }
 
 
-DEC_CT(ct_model)
+REG()
 {
 	signal_init(sig("mesh_changed"), sizeof(mesh_t));
 
-	ct_t *ct = ct_new("c_model", &ct_model, sizeof(c_model_t),
-			(init_cb)c_model_init, 2, ct_spacial, ct_node);
+	ct_t *ct = ct_new("c_model", sizeof(c_model_t),
+			(init_cb)c_model_init, 2, ref("c_spacial"), ref("c_node"));
 
 	ct_listener(ct, ENTITY, sig("entity_created"), c_model_created);
 

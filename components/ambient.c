@@ -14,7 +14,7 @@ void c_ambient_init(c_ambient_t *self)
 
 c_ambient_t *c_ambient_new(int map_size)
 {
-	c_ambient_t *self = component_new(ct_ambient);
+	c_ambient_t *self = component_new("c_ambient");
 
 	self->map_size = map_size;
 
@@ -44,10 +44,10 @@ int c_ambient_render(c_ambient_t *self)
 	return 1;
 }
 
-DEC_CT(ct_ambient)
+REG()
 {
-	ct_t *ct = ct_new("c_ambient", &ct_ambient,
-			sizeof(c_ambient_t), (init_cb)c_ambient_init, 1, ct_spacial);
+	ct_t *ct = ct_new("c_ambient", sizeof(c_ambient_t),
+			(init_cb)c_ambient_init, 1, ref("c_spacial"));
 
 	ct_listener(ct, WORLD, sig("offscreen_render"), c_ambient_render);
 }

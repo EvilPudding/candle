@@ -65,7 +65,7 @@ vec2_t c_editmode_bind_selected(c_editmode_t *self)
 /* entity_t p; */
 c_editmode_t *c_editmode_new()
 {
-	c_editmode_t *self = component_new(ct_editmode);
+	c_editmode_t *self = component_new("c_editmode");
 
 	return self;
 }
@@ -604,20 +604,20 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 
 
 				self->ct_list_size = 0;
-				for(i = 0; i < g_ecm->cts_size; i++)
+				ct_t *ct;
+				ecm_foreach_ct(ct,
 				{
-					ct_t *ct = ecm_get(i);
 					if(ct_get(ct, &ent)) continue;
 
 					uint dist = levenshtein(ct->name, self->ct_search);
 					insert_ct(self, i, dist);
-				}
+				});
 					
 			}
 			if(active)
 			{
 				ct_t *ct = ecm_get(self->ct_list[0].ct);
-				entity_add_component(ent, component_new(ct->id));
+				entity_add_component(ent, component_new_from_ref(ct->id));
 				nk_contextual_close(self->nk);
 			}
 			else
@@ -630,7 +630,8 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 						self->ct_search_bak[0] = '\0';
 						self->ct_search[0] = '\0';
 						self->ct_list_size = 0;
-						entity_add_component(ent, component_new(ct->id));
+						entity_add_component(ent,
+								component_new_from_ref(ct->id));
 					}
 				}
 			}
@@ -734,10 +735,10 @@ int c_editmode_event(c_editmode_t *self, SDL_Event *event)
 	return 1;
 }
 
-DEC_CT(ct_editmode)
+REG()
 {
-	ct_t *ct = ct_new("c_editmode", &ct_editmode,
-			sizeof(c_editmode_t), (init_cb)c_editmode_init, 0);
+	ct_t *ct = ct_new("c_editmode", sizeof(c_editmode_t),
+			(init_cb)c_editmode_init, 0);
 
 	signal_init(sig("global_menu"), sizeof(struct nk_context*));
 	signal_init(sig("component_menu"), sizeof(struct nk_context*));

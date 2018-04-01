@@ -12,7 +12,7 @@ typedef struct
 	int cast_shadow;
 } c_sprite_t;
 
-DEF_CASTER(ct_sprite, c_sprite, c_sprite_t)
+DEF_CASTER("c_sprite", c_sprite, c_sprite_t)
 extern int g_update_id;
 
 c_sprite_t *c_sprite_new(mat_t *mat, int cast_shadow);

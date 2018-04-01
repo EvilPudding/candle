@@ -24,7 +24,7 @@ CFLAGS_DEB = $(CFLAGS) -g3
 all: $(DIR)/candle.a
 
 $(DIR)/candle.a: init $(OBJS_REL) $(SHAD)
-	$(AR) rs $@ $(OBJS_REL) $(SHAD)
+	$(AR) rcs $@ $(OBJS_REL) $(SHAD)
 
 $(DIR)/%.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS_REL)

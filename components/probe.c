@@ -9,7 +9,7 @@ void c_probe_init(c_probe_t *self) { }
 
 c_probe_t *c_probe_new(int map_size)
 {
-	c_probe_t *self = component_new(ct_probe);
+	c_probe_t *self = component_new("c_probe");
 
 	self->map = texture_cubemap(map_size, map_size, 1);
 
@@ -95,10 +95,10 @@ void c_probe_destroy(c_probe_t *self)
 	free(self);
 }
 
-DEC_CT(ct_probe)
+REG()
 {
-	ct_t *ct = ct_new("c_probe", &ct_probe, sizeof(c_probe_t),
-			(init_cb)c_probe_init, 1, ct_spacial);
+	ct_t *ct = ct_new("c_probe", sizeof(c_probe_t),
+			(init_cb)c_probe_init, 1, ref("c_spacial"));
 
 	ct_listener(ct, ENTITY, sig("spacial_changed"), c_probe_update_position);
 }

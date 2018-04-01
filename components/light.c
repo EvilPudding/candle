@@ -33,7 +33,7 @@ void c_light_init(c_light_t *self)
 c_light_t *c_light_new(float intensity, float radius,
 		vec4_t color, int shadow_size)
 {
-	c_light_t *self = component_new(ct_light);
+	c_light_t *self = component_new("c_light");
 
 	self->intensity = intensity;
 	self->color = color;
@@ -126,10 +126,10 @@ int c_light_probe_render(c_light_t *self)
 	return 1;
 }
 
-DEC_CT(ct_light)
+REG()
 {
-	ct_t *ct = ct_new("c_light", &ct_light,
-			sizeof(c_light_t), (init_cb)c_light_init, 2, ct_spacial, ct_node);
+	ct_t *ct = ct_new("c_light", sizeof(c_light_t), (init_cb)c_light_init,
+			2, ref("c_spacial"), ref("c_node"));
 
 	ct_listener(ct, WORLD, sig("offscreen_render"), c_light_probe_render);
 

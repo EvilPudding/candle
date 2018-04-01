@@ -15,7 +15,7 @@ static void c_aabb_init(c_aabb_t *self)
 
 c_aabb_t *c_aabb_new()
 {
-	c_aabb_t *self = component_new(ct_aabb);
+	c_aabb_t *self = component_new("c_aabb");
 
 	return self;
 }
@@ -91,10 +91,10 @@ int c_aabb_intersects(c_aabb_t *self, c_aabb_t *other)
 		(min1.z <= max2.z && max1.z >= min2.z);
 }
 
-DEC_CT(ct_aabb)
+REG()
 {
-	ct_t *ct = ct_new("c_aabb", &ct_aabb, sizeof(c_aabb_t),
-			(init_cb)c_aabb_init, 1, ct_spacial);
+	ct_t *ct = ct_new("c_aabb", sizeof(c_aabb_t),
+			(init_cb)c_aabb_init, 1, ref("c_spacial"));
 
 	ct_listener(ct, WORLD, sig("mesh_changed"), c_aabb_on_mesh_change);
 	ct_listener(ct, ENTITY, sig("spacial_changed"), c_aabb_spacial_changed);

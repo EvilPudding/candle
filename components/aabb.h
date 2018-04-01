@@ -20,7 +20,7 @@ typedef struct
 } c_aabb_t;
 
 
-DEF_CASTER(ct_aabb, c_aabb, c_aabb_t)
+DEF_CASTER("c_aabb", c_aabb, c_aabb_t)
 
 c_aabb_t *c_aabb_new(void);
 

@@ -692,7 +692,7 @@ c_renderer_t *c_renderer_new(float resolution, int auto_exposure,
 {
 	SDL_GL_SetSwapInterval(lock_fps);
 
-	c_renderer_t *self = component_new(ct_renderer);
+	c_renderer_t *self = component_new("c_renderer");
 
 	self->output_id = -1;
 	self->resolution = resolution;
@@ -784,10 +784,10 @@ int c_renderer_component_menu(c_renderer_t *self, void *ctx)
 	return 1;
 }
 
-DEC_CT(ct_renderer)
+REG()
 {
-	ct_t *ct = ct_new("c_renderer", &ct_renderer,
-			sizeof(c_renderer_t), (init_cb)c_renderer_init, 1, ct_window);
+	ct_t *ct = ct_new("c_renderer", sizeof(c_renderer_t),
+			(init_cb)c_renderer_init, 1, ref("c_window"));
 
 	ct_listener(ct, WORLD, sig("window_resize"), c_renderer_resize);
 
@@ -948,6 +948,7 @@ int c_renderer_draw(c_renderer_t *self)
 	uint i;
 
 	if(self->camera == entity_null) return 1;
+	if(!self->width || !self->height) return 1;
 
 	self->frame++;
 

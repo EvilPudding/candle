@@ -19,7 +19,7 @@ static void c_mesh_gl_init(c_mesh_gl_t *self)
 
 c_mesh_gl_t *c_mesh_gl_new()
 {
-	c_mesh_gl_t *self = component_new(ct_mesh_gl);
+	c_mesh_gl_t *self = component_new("c_mesh_gl");
 
 	return self;
 }
@@ -811,13 +811,13 @@ void c_mesh_gl_destroy(c_mesh_gl_t *self)
 			(c_t*)self);
 }
 
-DEC_CT(ct_mesh_gl)
+REG()
 {
-	ct_t *ct = ct_new("c_mesh_gl", &ct_mesh_gl,
-			sizeof(c_mesh_gl_t), (init_cb)c_mesh_gl_init, 0);
+	ct_t *ct = ct_new("c_mesh_gl", sizeof(c_mesh_gl_t),
+			(init_cb)c_mesh_gl_init, 0);
 
 	ct_listener(ct, ENTITY, sig("mesh_changed"), c_mesh_gl_on_mesh_changed);
 
-	ct_add_interaction(ct, ct_model);
+	ct_add_interaction(ct, ref("c_model"));
 
 }
