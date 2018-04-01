@@ -21,7 +21,7 @@ void c_editlook_init(c_editlook_t *self)
 
 c_editlook_t *c_editlook_new()
 {
-	c_editlook_t *self = component_new("c_editlook");
+	c_editlook_t *self = component_new("c_editLook");
 
 	self->sensitivity = 0.8;
 

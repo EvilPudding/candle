@@ -9,10 +9,10 @@ void main()
 {
 	vec3 dif = get_diffuse(gbuffer);
 	vec4 trans = get_transparency(gbuffer);
+	vec4 spec = get_specular(gbuffer);
 	vec3 nor = get_normal(gbuffer);
 
 	vec3 c_pos = get_position(gbuffer);
-	nor.z = 0;
 
 	if(trans.a != 0.0f)
 	{
@@ -21,22 +21,11 @@ void main()
 		/* vec3 hit = v_pos - nor / (dist_to_eye + 2.0); */
 		vec3 hit = c_pos + nor * 0.08;
 
-		/* float eta = 1.3f; */
-		/* float N_dot_I = dot(nor, v_pos); */
-		/* FragColor = vec4(vec3(N_dot_I), 1.0); return; */
-		/* float k = 1.f - eta * eta * (1.f - N_dot_I * N_dot_I); */
-		/* vec3 hit = eta * v_pos - (eta * N_dot_I + sqrt(k)) * nor; */
+		vec2 coord = pixel_pos() + nor.xy * 0.03;
 
-        vec4 projectedCoord     = camera.projection * vec4(hit, 1.0f);
-        projectedCoord.xy      /= projectedCoord.w;
-        projectedCoord.xy       = projectedCoord.xy * 0.5 + 0.5; 
-		/* FragColor = vec4(projectedCoord.xy, 0.0, 1.0); */
-		/* return; */
-
-		/* pos.s = clamp(pos.s, 0.0, 1.0); */
-		/* pos.t = clamp(pos.t, 0.0, 1.0); */
-
-		vec3 color = pass_sample(rendered, projectedCoord.xy).rgb;
+		vec3 color = //pass_sample(rendered, coord).rgb;
+		textureLod(rendered.texture, coord.xy, (1.0f - spec.a) * 3).rgb;
+		/* vec3 color = vec3(c_pos.xy, 0.0f); */
 
 		FragColor = vec4(color * trans.rgb, 1.0);
 	}
