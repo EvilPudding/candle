@@ -1525,6 +1525,7 @@ struct int_int mesh_face_triangulate(mesh_t *self, int i, int flip)
 void mesh_triangulate(mesh_t *self)
 {
 	int i;
+	mesh_lock(self);
 	if(self->triangulated) return;
 	for(i = 0; i < vector_count(self->faces); i++)
 	{
@@ -1551,6 +1552,7 @@ void mesh_triangulate(mesh_t *self)
 #endif
 	}
 	self->triangulated = 1;
+	mesh_unlock(self);
 }
 
 mesh_t *mesh_circle(float radius, int segments)
