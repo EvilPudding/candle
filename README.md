@@ -1,7 +1,7 @@
 # candle
 C Game Engine
 
-So far barebones C engine with rendering and some basic collision detection.
+Barebones C engine with rendering and basic collision detection.
 
 
 ## Screenshots
