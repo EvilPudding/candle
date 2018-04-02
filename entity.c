@@ -104,7 +104,6 @@ int component_signal(c_t *comp, ct_t *ct, uint signal, void *data)
 
 int entity_signal_same(entity_t self, uint signal, void *data)
 {
-	/* if(signal == IDENT_NULL) exit(1); */
 	uint i;
 
 	signal_t *sig = ecm_get_signal(signal);

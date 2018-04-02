@@ -56,19 +56,43 @@ int handle_event(candle_t *self, SDL_Event event)
 		case SDL_MOUSEBUTTONUP:
 			bdata = (mouse_button_data){event.button.x, event.button.y, 0,
 				event.button.button};
-			entity_signal(self->mouse_owners[0], sig("mouse_release"), &bdata);
+			if(self->mouse_owners[0] != entity_null)
+			{
+				entity_signal_same(self->mouse_owners[0], sig("mouse_release"),
+						&bdata);
+			}
+			else
+			{
+				entity_signal(entity_null, sig("mouse_release"), &bdata);
+			}
 			break;
 		case SDL_MOUSEBUTTONDOWN:
 			bdata = (mouse_button_data){event.button.x, event.button.y, 0,
 				event.button.button};
-			entity_signal(entity_null, sig("mouse_press"), &bdata);
+			if(self->mouse_owners[0] != entity_null)
+			{
+				entity_signal_same(self->mouse_owners[0], sig("mouse_press"),
+						&bdata);
+			}
+			else
+			{
+				entity_signal(entity_null, sig("mouse_press"), &bdata);
+			}
 			break;
 		case SDL_MOUSEMOTION:
 			self->mx = event.motion.x; self->my = event.motion.y;
 			mdata = (mouse_move_data){event.motion.xrel, event.motion.yrel,
 				event.motion.x, event.motion.y};
 
-			entity_signal_same(self->mouse_owners[0], sig("mouse_move"), &mdata);
+			if(self->mouse_owners[0] != entity_null)
+			{
+				entity_signal_same(self->mouse_owners[0], sig("mouse_move"),
+						&mdata);
+			}
+			else
+			{
+				entity_signal(entity_null, sig("mouse_move"), &mdata);
+			}
 			break;
 		case SDL_KEYUP:
 			key = event.key.keysym.sym;

@@ -167,7 +167,6 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 
 int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 {
-	printf("mm\n");
 	if(self->control && !candle->pressing)
 	{
 		if(self->mode == EDIT_OBJECT)
