@@ -56,7 +56,7 @@ int handle_event(candle_t *self, SDL_Event event)
 		case SDL_MOUSEBUTTONUP:
 			bdata = (mouse_button_data){event.button.x, event.button.y, 0,
 				event.button.button};
-			if(self->mouse_owners[0] != entity_null)
+			if(self->mouse_owners[0])
 			{
 				entity_signal_same(self->mouse_owners[0], sig("mouse_release"),
 						&bdata);
@@ -69,7 +69,7 @@ int handle_event(candle_t *self, SDL_Event event)
 		case SDL_MOUSEBUTTONDOWN:
 			bdata = (mouse_button_data){event.button.x, event.button.y, 0,
 				event.button.button};
-			if(self->mouse_owners[0] != entity_null)
+			if(self->mouse_owners[0])
 			{
 				entity_signal_same(self->mouse_owners[0], sig("mouse_press"),
 						&bdata);
@@ -84,7 +84,7 @@ int handle_event(candle_t *self, SDL_Event event)
 			mdata = (mouse_move_data){event.motion.xrel, event.motion.yrel,
 				event.motion.x, event.motion.y};
 
-			if(self->mouse_owners[0] != entity_null)
+			if(self->mouse_owners[0])
 			{
 				entity_signal_same(self->mouse_owners[0], sig("mouse_move"),
 						&mdata);

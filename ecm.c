@@ -325,8 +325,11 @@ void ecm_clean2(void)
 			
 				entity_t ent2 = ct_get_at(ct, page, offset)->entity;
 
-				ct->offsets[ent2].offset = offset;
-				ct->offsets[ent2].page = page;
+				if(ent2)
+				{
+					ct->offsets[ent2].offset = offset;
+					ct->offsets[ent2].page = page;
+				}
 			}
 			
 
