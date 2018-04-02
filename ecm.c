@@ -309,13 +309,13 @@ void ecm_clean2(void)
 				ct->destroy(c);
 			}
 			c->entity = entity_null;
-			ct->offsets[ent].offset = -1;
 
 			uint offset = ct->offsets[ent].offset;
 			uint page = ct->offsets[ent].page;
 
 			struct comp_page *last = &ct->pages[ct->pages_size - 1];
 			struct comp_page *curr = &ct->pages[page];
+			if(ct->pages_size <= page) continue;
 
 			uint last_offset = last->components_size - 1;
 			if(last != curr && offset != last_offset)
@@ -333,6 +333,7 @@ void ecm_clean2(void)
 			}
 			
 
+			ct->offsets[ent].offset = -1;
 			last->components_size--;
 			if(last->components_size == 0)
 			{
