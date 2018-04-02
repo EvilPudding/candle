@@ -147,7 +147,7 @@ int c_window_created(c_window_t *self)
 
 c_window_t *c_window_new(int width, int height)
 {
-	c_window_t *self = component_new("c_window");
+	c_window_t *self = component_new("window");
 	self->width = width ? width : window_width;
 	self->height = height ? height : window_height;
 	return self;
@@ -210,7 +210,7 @@ void c_window_rect(c_window_t *self, int x, int y, int width, int height,
 
 REG()
 {
-	ct_t *ct = ct_new("c_window", sizeof(c_window_t), (init_cb)c_window_init,
+	ct_t *ct = ct_new("window", sizeof(c_window_t), (init_cb)c_window_init,
 			0);
 
 	ct_listener(ct, ENTITY, sig("entity_created"), c_window_created);

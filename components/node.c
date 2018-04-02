@@ -18,7 +18,7 @@ static void c_node_init(c_node_t *self)
 
 c_node_t *c_node_new()
 {
-	c_node_t *self = component_new("c_node");
+	c_node_t *self = component_new("node");
 	return self;
 }
 
@@ -92,8 +92,8 @@ void c_node_add(c_node_t *self, int num, ...)
 
 REG()
 {
-	ct_t *ct = ct_new("c_node", sizeof(c_node_t),
-			(init_cb)c_node_init, 1, ref("c_spacial"));
+	ct_t *ct = ct_new("node", sizeof(c_node_t),
+			(init_cb)c_node_init, 1, ref("spacial"));
 
 	ct_listener(ct, ENTITY, sig("spacial_changed"), c_node_changed);
 }

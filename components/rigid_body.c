@@ -18,7 +18,7 @@ static void c_rigid_body_init(c_rigid_body_t *self)
 
 c_rigid_body_t *c_rigid_body_new(collider_cb costum)
 {
-	c_rigid_body_t *self = component_new("c_rigid_body");
+	c_rigid_body_t *self = component_new("rigid_body");
 
 	self->costum = costum;
 
@@ -52,8 +52,8 @@ int c_rigid_body_intersects(c_rigid_body_t *self, c_rigid_body_t *other,
 
 REG()
 {
-	ct_new("c_rigid_body", sizeof(c_rigid_body_t), (init_cb)c_rigid_body_init,
-			1, ref("c_spacial"));
+	ct_new("rigid_body", sizeof(c_rigid_body_t), (init_cb)c_rigid_body_init,
+			1, ref("spacial"));
 }
 
 /* GJK */

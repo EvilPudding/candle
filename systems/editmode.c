@@ -65,7 +65,7 @@ vec2_t c_editmode_bind_selected(c_editmode_t *self)
 /* entity_t p; */
 c_editmode_t *c_editmode_new()
 {
-	c_editmode_t *self = component_new("c_editmode");
+	c_editmode_t *self = component_new("editmode");
 
 	return self;
 }
@@ -167,6 +167,7 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 
 int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 {
+	printf("mm\n");
 	if(self->control && !candle->pressing)
 	{
 		if(self->mode == EDIT_OBJECT)
@@ -737,7 +738,7 @@ int c_editmode_event(c_editmode_t *self, SDL_Event *event)
 
 REG()
 {
-	ct_t *ct = ct_new("c_editmode", sizeof(c_editmode_t),
+	ct_t *ct = ct_new("editmode", sizeof(c_editmode_t),
 			(init_cb)c_editmode_init, 0);
 
 	signal_init(sig("global_menu"), sizeof(struct nk_context*));

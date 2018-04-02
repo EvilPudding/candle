@@ -18,7 +18,7 @@ static void c_camera_init(c_camera_t *self)
 
 c_camera_t *c_camera_new(float fov, float near, float far)
 {
-	c_camera_t *self = component_new("c_camera");
+	c_camera_t *self = component_new("camera");
 
 	self->near = near;
 	self->far = far;
@@ -134,8 +134,8 @@ int c_camera_update(c_camera_t *self, void *event)
 
 REG()
 {
-	ct_t *ct = ct_new("c_camera", sizeof(c_camera_t), (init_cb)c_camera_init,
-			2, ref("c_spacial"), ref("c_node"));
+	ct_t *ct = ct_new("camera", sizeof(c_camera_t), (init_cb)c_camera_init,
+			2, ref("spacial"), ref("node"));
 
 	ct_listener(ct, ENTITY, sig("spacial_changed"), c_camera_changed);
 	ct_listener(ct, WORLD, sig("window_resize"), c_camera_update);

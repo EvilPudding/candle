@@ -12,7 +12,7 @@ c_destroyed_t *c_destroyed_new()
 		sem2 = SDL_CreateSemaphore(0);
 	}
 
-	return component_new("c_destroyed");
+	return component_new("destroyed");
 }
 
 void c_destroyed_destroy(c_destroyed_t *self)
@@ -50,7 +50,7 @@ int c_destroyed_thr(c_destroyed_t *self)
 
 REG()
 {
-	ct_t *ct = ct_new("c_destroyed", sizeof(c_destroyed_t), NULL, 0);
+	ct_t *ct = ct_new("destroyed", sizeof(c_destroyed_t), NULL, 0);
 
 	ct_listener(ct, WORLD, sig("after_update"), c_destroyed_thr);
 	ct_listener(ct, WORLD, sig("after_draw"), c_destroyed_thr);

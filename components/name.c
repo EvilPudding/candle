@@ -10,7 +10,7 @@ static void c_name_init(c_name_t *self)
 
 c_name_t *c_name_new(const char *name)
 {
-	c_name_t *self = component_new("c_name");
+	c_name_t *self = component_new("name");
 
 	strncpy(self->name, name, sizeof(self->name));
 
@@ -19,7 +19,7 @@ c_name_t *c_name_new(const char *name)
 
 REG()
 {
-	ct_new("c_name", sizeof(c_name_t), (init_cb)c_name_init, 0);
+	ct_new("name", sizeof(c_name_t), (init_cb)c_name_init, 0);
 }
 
 

@@ -14,7 +14,7 @@ static vec3_t c_physics_handle_forces(c_physics_t *self, vec3_t vel, float *dt)
 {
 	unsigned int i, p;
 
-	ct_t *forces = ecm_get(ref("c_force"));
+	ct_t *forces = ecm_get(ref("force"));
 
 	for(p = 0; p < forces->pages_size; p++)
 	for(i = 0; i < forces->pages[p].components_size; i++)
@@ -177,8 +177,8 @@ static int c_physics_update(c_physics_t *self, float *dt)
 {
 	unsigned long i, j, p, p2;
 
-	ct_t *vels = ecm_get(ref("c_velocity"));
-	ct_t *bodies = ecm_get(ref("c_rigid_body"));
+	ct_t *vels = ecm_get(ref("velocity"));
+	ct_t *bodies = ecm_get(ref("rigid_body"));
 
 	for(p = 0; p < vels->pages_size; p++)
 	for(i = 0; i < vels->pages[p].components_size; i++)
@@ -237,14 +237,14 @@ static int c_physics_update(c_physics_t *self, float *dt)
 
 c_physics_t *c_physics_new()
 {
-	c_physics_t *self = component_new("c_physics");
+	c_physics_t *self = component_new("physics");
 
 	return self;
 }
 
 REG()
 {
-	ct_t *ct = ct_new("c_physics", sizeof(c_physics_t), NULL, 0);
+	ct_t *ct = ct_new("physics", sizeof(c_physics_t), NULL, 0);
 
 	ct_listener(ct, WORLD, sig("world_update"), c_physics_update);
 

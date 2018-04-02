@@ -17,7 +17,7 @@ typedef struct c_probe_t
 	int last_update;
 } c_probe_t;
 
-DEF_CASTER("c_probe", c_probe, c_probe_t)
+DEF_CASTER("probe", c_probe, c_probe_t)
 
 c_probe_t *c_probe_new(int map_size);
 void c_probe_destroy(c_probe_t *self);

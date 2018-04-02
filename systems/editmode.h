@@ -55,7 +55,7 @@ typedef struct
 
 } c_editmode_t;
 
-DEF_CASTER("c_editmode", c_editmode, c_editmode_t)
+DEF_CASTER("editmode", c_editmode, c_editmode_t)
 
 c_editmode_t *c_editmode_new(void);
 void c_editmode_activate(c_editmode_t *self);

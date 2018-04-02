@@ -21,7 +21,7 @@ typedef struct
 	int modified;
 } c_spacial_t;
 
-DEF_CASTER("c_spacial", c_spacial, c_spacial_t)
+DEF_CASTER("spacial", c_spacial, c_spacial_t)
 
 c_spacial_t *c_spacial_new(void);
 void c_spacial_init(c_spacial_t *self);

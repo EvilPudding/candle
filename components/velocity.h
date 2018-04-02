@@ -16,7 +16,7 @@ typedef struct
 	vec3_t velocity;
 } c_velocity_t;
 
-DEF_CASTER("c_velocity", c_velocity, c_velocity_t)
+DEF_CASTER("velocity", c_velocity, c_velocity_t)
 
 c_velocity_t *c_velocity_new(float x, float y, float z);
 void c_velocity_init(c_velocity_t *self);

@@ -17,7 +17,7 @@ typedef struct c_physics_t
 	/* currently, physics has no options */
 } c_physics_t;
 
-DEF_CASTER("c_physics", c_physics, c_physics_t)
+DEF_CASTER("physics", c_physics, c_physics_t)
 
 c_physics_t *c_physics_new(void);
 

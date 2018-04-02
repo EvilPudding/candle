@@ -415,6 +415,7 @@ void candle_init(void)
 __attribute__((constructor (CONSTR_AFTER_REG)))
 void candle_init2(void)
 {
+	if(candle->sem) return;
 
 	candle->mouse_owners[0] = entity_null;
 	candle->mouse_visible[0] = 1;

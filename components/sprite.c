@@ -57,7 +57,7 @@ static void c_sprite_init(c_sprite_t *self)
 
 c_sprite_t *c_sprite_new(mat_t *mat, int cast_shadow)
 {
-	c_sprite_t *self = component_new("c_sprite");
+	c_sprite_t *self = component_new("sprite");
 
 	self->cast_shadow = cast_shadow;
 
@@ -129,8 +129,8 @@ int c_sprite_scene_changed(c_sprite_t *self, entity_t *entity)
 REG()
 {
 
-	ct_t *ct = ct_new("c_sprite", sizeof(c_sprite_t),
-			(init_cb)c_sprite_init, 1, ref("c_node"));
+	ct_t *ct = ct_new("sprite", sizeof(c_sprite_t),
+			(init_cb)c_sprite_init, 1, ref("node"));
 
 	ct_listener(ct, ENTITY, sig("entity_created"), c_sprite_created);
 

@@ -54,7 +54,7 @@ typedef struct c_mesh_gl_t
 } c_mesh_gl_t;
 
 
-DEF_CASTER("c_mesh_gl", c_mesh_gl, c_mesh_gl_t)
+DEF_CASTER("mesh_gl", c_mesh_gl, c_mesh_gl_t)
 
 c_mesh_gl_t *c_mesh_gl_new(void);
 

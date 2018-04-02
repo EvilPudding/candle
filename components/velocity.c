@@ -5,7 +5,7 @@
 
 c_velocity_t *c_velocity_new(float x, float y, float z)
 {
-	c_velocity_t *self = component_new("c_velocity");
+	c_velocity_t *self = component_new("velocity");
 
 	self->velocity = vec3(x, y, z);
 
@@ -26,6 +26,6 @@ void c_velocity_set_vel(c_velocity_t *self, float x, float y, float z)
 
 REG()
 {
-	ct_new("c_velocity", sizeof(c_velocity_t), NULL, 1, ref("c_spacial"));
+	ct_new("velocity", sizeof(c_velocity_t), NULL, 1, ref("spacial"));
 }
 

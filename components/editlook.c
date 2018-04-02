@@ -21,7 +21,7 @@ void c_editlook_init(c_editlook_t *self)
 
 c_editlook_t *c_editlook_new()
 {
-	c_editlook_t *self = component_new("c_editLook");
+	c_editlook_t *self = component_new("editLook");
 
 	self->sensitivity = 0.8;
 
@@ -165,8 +165,8 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 
 REG()
 {
-	ct_t *ct = ct_new("c_editLook", sizeof(c_editlook_t),
-			(init_cb)c_editlook_init, 1, ref("c_spacial"));
+	ct_t *ct = ct_new("editLook", sizeof(c_editlook_t),
+			(init_cb)c_editlook_init, 1, ref("spacial"));
 
 	ct_listener(ct, WORLD, sig("mouse_wheel"), c_editlook_mouse_wheel);
 

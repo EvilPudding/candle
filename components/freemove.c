@@ -23,7 +23,7 @@ static void c_freemove_init(c_freemove_t *self)
 
 c_freemove_t *c_freemove_new(entity_t orientation, int plane_movement, entity_t force_down)
 {
-	c_freemove_t *self = component_new("c_freemove");
+	c_freemove_t *self = component_new("freemove");
 	self->plane_movement = plane_movement;
 	self->force_down = force_down;
 
@@ -110,8 +110,8 @@ static int c_freemove_key_down(c_freemove_t *self, char *key)
 
 REG()
 {
-	ct_t *ct = ct_new("c_freemove", sizeof(c_freemove_t),
-			(init_cb)c_freemove_init, 2, ref("c_spacial"), ref("c_velocity"));
+	ct_t *ct = ct_new("freemove", sizeof(c_freemove_t),
+			(init_cb)c_freemove_init, 2, ref("spacial"), ref("velocity"));
 
 	ct_listener(ct, WORLD, sig("key_up"), c_freemove_key_up);
 

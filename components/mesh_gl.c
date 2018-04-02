@@ -19,7 +19,7 @@ static void c_mesh_gl_init(c_mesh_gl_t *self)
 
 c_mesh_gl_t *c_mesh_gl_new()
 {
-	c_mesh_gl_t *self = component_new("c_mesh_gl");
+	c_mesh_gl_t *self = component_new("mesh_gl");
 
 	return self;
 }
@@ -29,17 +29,15 @@ static void mesh_gl_add_group(c_mesh_gl_t *self)
 	int i = self->groups_num++;
 	glg_t *group = &self->groups[i];
 
-#ifdef USE_VAO
-	glGenVertexArrays(1, &group->vao); glerr();
-#endif
 	group->gl_ind_num = 0;
 	group->gl_vert_num = 0;
 	group->ready = 0;
-	glGenBuffers(7, group->vbo); glerr();
 	group->update_id = -1;
 	group->updated = 1;
+	group->vao = 0;
 	group->entity = c_entity(self);
 	group->layer_id = i;
+
 }
 
 static int c_mesh_gl_new_loader(c_mesh_gl_t *self)
@@ -471,6 +469,13 @@ int c_mesh_gl_updated(c_mesh_gl_t *self)
 static int glg_update_buffers(glg_t *self)
 {
 	int i = 0;
+	if(!self->vao)
+	{
+#ifdef USE_VAO
+		glGenVertexArrays(1, &self->vao); glerr();
+#endif
+		glGenBuffers(7, self->vbo); glerr();
+	}
 	glBindVertexArray(self->vao); glerr();
 
 	if(self->vert_num > self->gl_vert_num)
@@ -813,11 +818,11 @@ void c_mesh_gl_destroy(c_mesh_gl_t *self)
 
 REG()
 {
-	ct_t *ct = ct_new("c_mesh_gl", sizeof(c_mesh_gl_t),
+	ct_t *ct = ct_new("mesh_gl", sizeof(c_mesh_gl_t),
 			(init_cb)c_mesh_gl_init, 0);
 
 	ct_listener(ct, ENTITY, sig("mesh_changed"), c_mesh_gl_on_mesh_changed);
 
-	ct_add_interaction(ct, ref("c_model"));
+	ct_add_interaction(ct, ref("model"));
 
 }

@@ -21,14 +21,14 @@ void c_spacial_init(c_spacial_t *self)
 
 c_spacial_t *c_spacial_new()
 {
-	c_spacial_t *self = component_new("c_spacial");
+	c_spacial_t *self = component_new("spacial");
 
 	return self;
 }
 
 REG()
 {
-	ct_t *ct = ct_new("c_spacial", sizeof(c_spacial_t),
+	ct_t *ct = ct_new("spacial", sizeof(c_spacial_t),
 			(init_cb)c_spacial_init, 0);
 
 	signal_init(sig("spacial_changed"), sizeof(entity_t));

@@ -23,7 +23,7 @@ void c_decal_init(c_decal_t *self)
 
 c_decal_t *c_decal_new(mat_t *mat)
 {
-	c_decal_t *self = component_new("c_decal");
+	c_decal_t *self = component_new("decal");
 
 	self->mat = mat;
 
@@ -46,8 +46,8 @@ int c_decal_render(c_decal_t *self)
 
 REG()
 {
-	ct_t *ct = ct_new("c_decal", sizeof(c_decal_t),
-			(init_cb)c_decal_init, 1, ref("c_spacial"));
+	ct_t *ct = ct_new("decal", sizeof(c_decal_t),
+			(init_cb)c_decal_init, 1, ref("spacial"));
 
 	ct_listener(ct, WORLD, sig("render_decals"), c_decal_render);
 }

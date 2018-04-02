@@ -18,7 +18,7 @@ static void c_freelook_init(c_freelook_t *self)
 
 c_freelook_t *c_freelook_new(entity_t force_down, float sensitivity)
 {
-	c_freelook_t *self = component_new("c_freelook");
+	c_freelook_t *self = component_new("freelook");
 	self->sensitivity = sensitivity;
 
 	self->force_down = force_down;
@@ -82,8 +82,8 @@ static int c_freelook_mouse_move(c_freelook_t *self, mouse_move_data *event)
 
 REG()
 {
-	ct_t *ct = ct_new("c_freelook", sizeof(c_freelook_t),
-			(init_cb)c_freelook_init, 1, ref("c_spacial"));
+	ct_t *ct = ct_new("freelook", sizeof(c_freelook_t),
+			(init_cb)c_freelook_init, 1, ref("spacial"));
 
 	ct_listener(ct, WORLD, sig("mouse_move"), c_freelook_mouse_move);
 

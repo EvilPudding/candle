@@ -12,7 +12,7 @@ void c_force_init(c_force_t *self)
 
 c_force_t *c_force_new(float x, float y, float z, int active)
 {
-	c_force_t *self = component_new("c_force");
+	c_force_t *self = component_new("force");
 
 	self->active = active;
 	self->force = vec3(x, y, z);
@@ -22,6 +22,6 @@ c_force_t *c_force_new(float x, float y, float z, int active)
 
 REG()
 {
-	ct_new("c_force", sizeof(c_force_t), (init_cb)c_force_init, 0);
+	ct_new("force", sizeof(c_force_t), (init_cb)c_force_init, 0);
 }
 

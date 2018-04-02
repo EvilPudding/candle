@@ -17,7 +17,7 @@ typedef struct
 
 } c_light_t;
 
-DEF_CASTER("c_light", c_light, c_light_t)
+DEF_CASTER("light", c_light, c_light_t)
 
 c_light_t *c_light_new(float intensity, float radius, vec4_t color,
 		int shadow_size);

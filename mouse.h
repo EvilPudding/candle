@@ -31,7 +31,7 @@ typedef struct c_mouse_t
 	/* currently, mouse has no options */
 } c_mouse_t;
 
-DEF_CASTER("c_mouse", c_mouse, c_mouse_t)
+DEF_CASTER("mouse", c_mouse, c_mouse_t)
 c_mouse_t *c_mouse_new(void);
 
 #endif /* !MOUSE_H */
