@@ -20,6 +20,7 @@ typedef struct ecm_t ecm_t;
 typedef struct c_t c_t;
 
 typedef void(*init_cb)(c_t *self);
+typedef void(*destroy_cb)(c_t *self);
 typedef int(*signal_cb)(c_t *self, void *data);
 typedef void(*c_reg_cb)(void);
 
@@ -81,6 +82,7 @@ typedef struct ct_t
 	char name[32];
 
 	init_cb init;
+	destroy_cb destroy;
 
 	uint id;
 	uint size;
@@ -121,6 +123,7 @@ typedef struct
 
 KHASH_MAP_INIT_INT(sig, signal_t)
 KHASH_MAP_INIT_INT(ct, ct_t)
+KHASH_MAP_INIT_INT(c, c_t*)
 
 typedef struct ecm_t
 {
@@ -128,6 +131,7 @@ typedef struct ecm_t
 	uint entities_busy_size;
 
 	khash_t(ct) *cts;
+	khash_t(c) *cs;
 
 	khash_t(sig) *signals;
 
@@ -136,6 +140,7 @@ typedef struct ecm_t
 	int regs_size;
 	c_reg_cb *regs;
 
+	int dirty;
 } ecm_t; /* Entity Component System */
 
 typedef struct c_t
@@ -183,14 +188,16 @@ void ecm_init(void);
 entity_t ecm_new_entity(void);
 void ecm_add_reg(c_reg_cb reg);
 void ecm_register_all(void);
+void ecm_clean(void);
 
 void ecm_add_entity(entity_t *entity);
 /* uint ecm_register_system(ecm_t *self, void *system); */
 
-#define ct_new(name, size, init, depend_size, ...) \
-	_ct_new(name, ref(name), size, init, depend_size, ##__VA_ARGS__)
+#define ct_new(name, size, init, destroy, depend_size, ...) \
+	_ct_new(name, ref(name), size, (init_cb)init, (destroy_cb)destroy, \
+			depend_size, ##__VA_ARGS__)
 ct_t *_ct_new(const char *name, uint hash, uint size, init_cb init,
-		int depend_size, ...);
+		destroy_cb destroy, int depend_size, ...);
 
 void ct_add_dependency(ct_t *dep, uint target);
 void ct_add_interaction(ct_t *dep, uint target);

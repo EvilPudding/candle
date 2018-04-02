@@ -28,8 +28,7 @@ c_spacial_t *c_spacial_new()
 
 REG()
 {
-	ct_t *ct = ct_new("spacial", sizeof(c_spacial_t),
-			(init_cb)c_spacial_init, 0);
+	ct_t *ct = ct_new("spacial", sizeof(c_spacial_t), c_spacial_init, NULL, 0);
 
 	signal_init(sig("spacial_changed"), sizeof(entity_t));
 

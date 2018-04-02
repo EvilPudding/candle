@@ -27,6 +27,7 @@
 #define ECMHASH(str) murmur_hash(str, strlen(str), 0)
 #define sig(str) murmur_hash(str, strlen(str), 0)
 #define ref(str) murmur_hash(str, strlen(str), 0)
+#define ent_comp_ref(str, ent) murmur_hash(str, strlen(str), ent)
 #define TP2(a, b) a##b
 #define TP(a, b) TP2(a, b)
 
@@ -86,6 +87,26 @@ static inline uint murmur_hash(const void *key, int len, uint seed)
     h1 ^= h1 >> 13;
     h1 *= 0xc2b2ae35;
     h1 ^= h1 >> 16;
+
+    #undef ROTL
+    return h1;
+}
+static inline uint murmur_hash_step(uint h1, uint block)
+{
+    /* 32-Bit MurmurHash3: https://code.google.com/p/smhasher/wiki/MurmurHash3*/
+    #define ROTL(x,r) ((x) << (r) | ((x) >> (32 - r)))
+    const uint c1 = 0xcc9e2d51;
+    const uint c2 = 0x1b873593;
+    uint k1 = block;
+
+    /* body */
+	k1 *= c1;
+	k1 = ROTL(k1,15);
+	k1 *= c2;
+
+	h1 ^= k1;
+	h1 = ROTL(h1,13);
+	h1 = h1*5+0xe6546b64;
 
     #undef ROTL
     return h1;

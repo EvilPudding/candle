@@ -10,12 +10,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-
-
-static void c_camera_init(c_camera_t *self)
-{
-}
-
 c_camera_t *c_camera_new(float fov, float near, float far)
 {
 	c_camera_t *self = component_new("camera");
@@ -34,7 +28,6 @@ c_camera_t *c_camera_new(float fov, float near, float far)
 c_camera_t *c_camera_clone(c_camera_t *self)
 {
 	c_camera_t *clone = malloc(sizeof *clone);
-	c_camera_init(clone);
 
 	clone->near = self->near;
 	clone->far = self->far;
@@ -134,8 +127,8 @@ int c_camera_update(c_camera_t *self, void *event)
 
 REG()
 {
-	ct_t *ct = ct_new("camera", sizeof(c_camera_t), (init_cb)c_camera_init,
-			2, ref("spacial"), ref("node"));
+	ct_t *ct = ct_new("camera", sizeof(c_camera_t), NULL,
+			NULL, 1, ref("node"));
 
 	ct_listener(ct, ENTITY, sig("spacial_changed"), c_camera_changed);
 	ct_listener(ct, WORLD, sig("window_resize"), c_camera_update);

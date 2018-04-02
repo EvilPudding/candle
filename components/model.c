@@ -255,8 +255,9 @@ REG()
 {
 	signal_init(sig("mesh_changed"), sizeof(mesh_t));
 
+	/* TODO destroyer */
 	ct_t *ct = ct_new("model", sizeof(c_model_t),
-			(init_cb)c_model_init, 1, ref("node"));
+			c_model_init, NULL, 1, ref("node"));
 
 	ct_listener(ct, ENTITY, sig("entity_created"), c_model_created);
 

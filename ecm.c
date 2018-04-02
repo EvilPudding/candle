@@ -8,6 +8,13 @@
 #include <SDL2/SDL.h>
 
 #include "candle.h"
+#include "components/destroyed.h"
+
+
+static int steps = 0;
+static SDL_sem *sem1 = NULL;
+static SDL_sem *sem2 = NULL;
+
 
 SDL_sem *sem;
 
@@ -67,12 +74,20 @@ void ecm_init()
 
 	self->signals = kh_init(sig);
 	self->cts = kh_init(ct);
+	self->cs = kh_init(c);
 
 	signal_init(sig("entity_created"), 0);
 
 	ecm_new_entity(); // entity_null
 
 	sem = SDL_CreateSemaphore(1);
+
+	if(!sem1)
+	{
+		sem1 = SDL_CreateSemaphore(0);
+		sem2 = SDL_CreateSemaphore(0);
+	}
+
 }
 
 
@@ -226,7 +241,7 @@ struct comp_page *ct_add_page(ct_t *self)
 }
 
 ct_t *_ct_new(const char *name, uint hash, uint size, init_cb init,
-		int depend_size, ...)
+		destroy_cb destroy, int depend_size, ...)
 {
 	va_list depends;
 
@@ -247,6 +262,7 @@ ct_t *_ct_new(const char *name, uint hash, uint size, init_cb init,
 	*ct = (ct_t) {
 		.id = hash,
 		.init = init,
+		.destroy = destroy,
 		.size = size,
 		.depends_size = depend_size,
 		.is_interaction = 0,
@@ -274,6 +290,82 @@ ct_t *_ct_new(const char *name, uint hash, uint size, init_cb init,
 	return ct;
 }
 
+void ecm_clean2(void)
+{
+	ct_t *dest = ecm_get(ref("destroyed"));
+
+	while(dest->pages[0].components_size)
+	{
+		c_destroyed_t *dc = (c_destroyed_t*)ct_get_at(dest, 0, 0);
+		entity_t ent = c_entity(dc);
+		if(!ent) continue;
+
+		ct_t *ct;
+		ecm_foreach_ct(ct,
+		{
+			c_t *c = ct_get(ct, &ent); if(!c) continue;
+			if(ct->destroy)
+			{
+				ct->destroy(c);
+			}
+			c->entity = entity_null;
+			ct->offsets[ent].offset = -1;
+
+			uint offset = ct->offsets[ent].offset;
+			uint page = ct->offsets[ent].page;
+
+			struct comp_page *last = &ct->pages[ct->pages_size - 1];
+			struct comp_page *curr = &ct->pages[page];
+
+			uint last_offset = last->components_size - 1;
+			if(last != curr && offset != last_offset)
+			{
+				memcpy(&curr->components[offset],
+						&last->components[last_offset], ct->size);
+			
+				entity_t ent2 = ct_get_at(ct, page, offset)->entity;
+
+				ct->offsets[ent2].offset = offset;
+				ct->offsets[ent2].page = page;
+			}
+			
+
+			last->components_size--;
+			if(last->components_size == 0)
+			{
+				free(last->components);
+				ct->pages_size--;
+			}
+		});
+	}
+
+	g_ecm->dirty = 0;
+	steps = 0;
+
+	SDL_SemPost(sem2);
+}
+
+void ecm_clean()
+{
+	if(!g_ecm->dirty) return;
+	if(steps == 2)
+	{
+		ecm_clean2();
+	}
+	else if(steps == 0)
+	{
+		steps++;
+		SDL_SemWait(sem1);
+		ecm_clean2();
+	}
+	else
+	{
+		steps++;
+		SDL_SemPost(sem1);
+		SDL_SemWait(sem2);
+	}
+}
+
 static SDL_mutex *mut = NULL;
 c_t *ct_add(ct_t *self, entity_t entity)
 {
@@ -290,7 +382,6 @@ c_t *ct_add(ct_t *self, entity_t entity)
 	}
 
 	uint offset;
-
 
 	if(entity >= self->offsets_size)
 	{

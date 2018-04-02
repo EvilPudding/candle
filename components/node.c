@@ -92,8 +92,9 @@ void c_node_add(c_node_t *self, int num, ...)
 
 REG()
 {
+	/* TODO destroyer */
 	ct_t *ct = ct_new("node", sizeof(c_node_t),
-			(init_cb)c_node_init, 1, ref("spacial"));
+			c_node_init, NULL, 1, ref("spacial"));
 
 	ct_listener(ct, ENTITY, sig("spacial_changed"), c_node_changed);
 }

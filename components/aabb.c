@@ -94,7 +94,7 @@ int c_aabb_intersects(c_aabb_t *self, c_aabb_t *other)
 REG()
 {
 	ct_t *ct = ct_new("aabb", sizeof(c_aabb_t),
-			(init_cb)c_aabb_init, 1, ref("spacial"));
+			c_aabb_init, NULL, 1, ref("spacial"));
 
 	ct_listener(ct, WORLD, sig("mesh_changed"), c_aabb_on_mesh_change);
 	ct_listener(ct, ENTITY, sig("spacial_changed"), c_aabb_spacial_changed);

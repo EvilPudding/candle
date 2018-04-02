@@ -166,7 +166,7 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 REG()
 {
 	ct_t *ct = ct_new("editLook", sizeof(c_editlook_t),
-			(init_cb)c_editlook_init, 1, ref("spacial"));
+			c_editlook_init, NULL, 1, ref("spacial"));
 
 	ct_listener(ct, WORLD, sig("mouse_wheel"), c_editlook_mouse_wheel);
 

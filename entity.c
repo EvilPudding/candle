@@ -60,6 +60,7 @@ void entity_destroy(entity_t self)
 	if(!c_destroyed(&self))
 	{
 		entity_add_component(self, c_destroyed_new());
+		g_ecm->dirty = 1;
 	}
 }
 

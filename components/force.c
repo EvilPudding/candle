@@ -22,6 +22,6 @@ c_force_t *c_force_new(float x, float y, float z, int active)
 
 REG()
 {
-	ct_new("force", sizeof(c_force_t), (init_cb)c_force_init, 0);
+	ct_new("force", sizeof(c_force_t), c_force_init, NULL, 0);
 }
 

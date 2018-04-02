@@ -370,8 +370,6 @@ shader_t *vs_bind(vs_t *vs)
 	return *sh;
 }
 
-static void c_renderer_init(c_renderer_t *self) { } 
-
 entity_t c_renderer_get_camera(c_renderer_t *self)
 {
 	return self->camera;
@@ -787,7 +785,7 @@ int c_renderer_component_menu(c_renderer_t *self, void *ctx)
 REG()
 {
 	ct_t *ct = ct_new("renderer", sizeof(c_renderer_t),
-			(init_cb)c_renderer_init, 1, ref("window"));
+			NULL, NULL, 1, ref("window"));
 
 	ct_listener(ct, WORLD, sig("window_resize"), c_renderer_resize);
 

@@ -26,6 +26,6 @@ void c_velocity_set_vel(c_velocity_t *self, float x, float y, float z)
 
 REG()
 {
-	ct_new("velocity", sizeof(c_velocity_t), NULL, 1, ref("spacial"));
+	ct_new("velocity", sizeof(c_velocity_t), NULL, NULL, 1, ref("spacial"));
 }
 

@@ -47,7 +47,7 @@ int c_decal_render(c_decal_t *self)
 REG()
 {
 	ct_t *ct = ct_new("decal", sizeof(c_decal_t),
-			(init_cb)c_decal_init, 1, ref("spacial"));
+			c_decal_init, NULL, 1, ref("spacial"));
 
 	ct_listener(ct, WORLD, sig("render_decals"), c_decal_render);
 }

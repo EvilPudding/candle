@@ -738,7 +738,7 @@ int c_editmode_event(c_editmode_t *self, SDL_Event *event)
 REG()
 {
 	ct_t *ct = ct_new("editmode", sizeof(c_editmode_t),
-			(init_cb)c_editmode_init, 0);
+			c_editmode_init, NULL, 0);
 
 	signal_init(sig("global_menu"), sizeof(struct nk_context*));
 	signal_init(sig("component_menu"), sizeof(struct nk_context*));

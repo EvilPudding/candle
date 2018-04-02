@@ -806,20 +806,21 @@ void glg_destroy(glg_t *self)
 
 void c_mesh_gl_destroy(c_mesh_gl_t *self)
 {
-	int i;
-	for(i = 0; i < self->groups_num; i++)
-	{
-		glg_destroy(&self->groups[i]);
-	}
+	/* TODO fix this destroyer */
+	/* int i; */
+	/* for(i = 0; i < self->groups_num; i++) */
+	/* { */
+		/* glg_destroy(&self->groups[i]); */
+	/* } */
 
-	loader_push(candle->loader, (loader_cb)c_mesh_gl_destroy_loader, NULL,
-			(c_t*)self);
+	/* loader_push(candle->loader, (loader_cb)c_mesh_gl_destroy_loader, NULL, */
+			/* (c_t*)self); */
 }
 
 REG()
 {
-	ct_t *ct = ct_new("mesh_gl", sizeof(c_mesh_gl_t),
-			(init_cb)c_mesh_gl_init, 0);
+	ct_t *ct = ct_new("mesh_gl", sizeof(c_mesh_gl_t), c_mesh_gl_init,
+			c_mesh_gl_destroy, 0);
 
 	ct_listener(ct, ENTITY, sig("mesh_changed"), c_mesh_gl_on_mesh_changed);
 

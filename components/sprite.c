@@ -128,9 +128,8 @@ int c_sprite_scene_changed(c_sprite_t *self, entity_t *entity)
 
 REG()
 {
-
 	ct_t *ct = ct_new("sprite", sizeof(c_sprite_t),
-			(init_cb)c_sprite_init, 1, ref("node"));
+			c_sprite_init, NULL, 1, ref("node"));
 
 	ct_listener(ct, ENTITY, sig("entity_created"), c_sprite_created);
 

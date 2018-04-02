@@ -179,7 +179,8 @@ static int render_loop(candle_t *self)
 			/* printf("\t%ld\n", self->render_id); */
 			entity_signal(entity_null, sig("world_draw"), NULL);
 			entity_signal(entity_null, sig("ui_draw"), NULL);
-			entity_signal(entity_null, sig("after_draw"), NULL);
+
+			ecm_clean();
 
 			c_window_draw(c_window(&self->systems));
 
@@ -205,9 +206,7 @@ static int render_loop(candle_t *self)
 void candle_register()
 {
 	signal_init(sig("world_update"), sizeof(float));
-	signal_init(sig("after_update"), sizeof(float));
 	signal_init(sig("world_draw"), sizeof(void*));
-	signal_init(sig("after_draw"), sizeof(void*));
 	signal_init(sig("event_handle"), sizeof(void*));
 	signal_init(sig("events_end"), sizeof(void*));
 	signal_init(sig("events_begin"), sizeof(void*));
@@ -223,7 +222,7 @@ static int ticker_loop(candle_t *self)
 		int current = SDL_GetTicks();
 		float dt = (current - self->last_update) / 1000.0;
 		entity_signal(entity_null, sig("world_update"), &dt);
-		entity_signal(entity_null, sig("after_update"), &dt);
+		ecm_clean();
 		self->last_update = current;
 		SDL_Delay(16);
 	}

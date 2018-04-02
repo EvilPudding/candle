@@ -47,7 +47,7 @@ int c_ambient_render(c_ambient_t *self)
 REG()
 {
 	ct_t *ct = ct_new("ambient", sizeof(c_ambient_t),
-			(init_cb)c_ambient_init, 1, ref("spacial"));
+			c_ambient_init, NULL, 1, ref("spacial"));
 
 	ct_listener(ct, WORLD, sig("offscreen_render"), c_ambient_render);
 }

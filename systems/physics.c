@@ -244,7 +244,7 @@ c_physics_t *c_physics_new()
 
 REG()
 {
-	ct_t *ct = ct_new("physics", sizeof(c_physics_t), NULL, 0);
+	ct_t *ct = ct_new("physics", sizeof(c_physics_t), NULL, NULL, 0);
 
 	ct_listener(ct, WORLD, sig("world_update"), c_physics_update);
 

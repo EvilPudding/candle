@@ -6,10 +6,6 @@
 #include <stdlib.h>
 
 
-void c_sauces_init(c_sauces_t *self)
-{
-}
-
 c_sauces_t *c_sauces_new()
 {
 	c_sauces_t *self = component_new("sauces");
@@ -165,7 +161,7 @@ int c_sauces_component_menu(c_sauces_t *self, void *ctx)
 
 REG()
 {
-	ct_t *ct = ct_new("sauces", sizeof(c_sauces_t), (init_cb)c_sauces_init, 0);
+	ct_t *ct = ct_new("sauces", sizeof(c_sauces_t), NULL, NULL, 0);
 
 	ct_listener(ct, WORLD, sig("component_menu"), c_sauces_component_menu);
 }

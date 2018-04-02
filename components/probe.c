@@ -5,8 +5,6 @@
 #include <components/model.h>
 
 
-void c_probe_init(c_probe_t *self) { }
-
 c_probe_t *c_probe_new(int map_size)
 {
 	c_probe_t *self = component_new("probe");
@@ -92,13 +90,14 @@ int c_probe_render(c_probe_t *self, uint signal)
 
 void c_probe_destroy(c_probe_t *self)
 {
+	/* TODO free textures */
 	free(self);
 }
 
 REG()
 {
 	ct_t *ct = ct_new("probe", sizeof(c_probe_t),
-			(init_cb)c_probe_init, 1, ref("spacial"));
+			NULL, c_probe_destroy, 1, ref("spacial"));
 
 	ct_listener(ct, ENTITY, sig("spacial_changed"), c_probe_update_position);
 }

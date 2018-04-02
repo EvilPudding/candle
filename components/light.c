@@ -128,8 +128,8 @@ int c_light_probe_render(c_light_t *self)
 
 REG()
 {
-	ct_t *ct = ct_new("light", sizeof(c_light_t), (init_cb)c_light_init,
-			1, ref("node"));
+	ct_t *ct = ct_new("light", sizeof(c_light_t), c_light_init,
+			c_light_destroy, 1, ref("node"));
 
 	ct_listener(ct, WORLD, sig("offscreen_render"), c_light_probe_render);
 
