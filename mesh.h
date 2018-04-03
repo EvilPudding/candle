@@ -215,6 +215,7 @@ mesh_t *mesh_new(void);
 void mesh_destroy(mesh_t *self);
 
 void mesh_load(mesh_t *self, const char *filename);
+void mesh_load_scene(mesh_t *self, const void *scene);
 mesh_t *mesh_quad(void);
 mesh_t *mesh_circle(float radius, int segments);
 mesh_t *mesh_torus(float radius, float inner_radius, int segments,
@@ -282,7 +283,7 @@ void mesh_add_quad(mesh_t *self,
 		int v1, vec3_t v1n, vec2_t v1t,
 		int v2, vec3_t v2n, vec2_t v2t,
 		int v3, vec3_t v3n, vec2_t v3t,
-		int v4, vec3_t v4n, vec2_t v4t);
+		int v4, vec3_t v4n, vec2_t v4t, int pair_up);
 int mesh_add_regular_quad( mesh_t *self,
 	vecN_t p1, vec3_t n1, vec2_t t1, vecN_t p2, vec3_t n2, vec2_t t2,
 	vecN_t p3, vec3_t n3, vec2_t t3, vecN_t p4, vec3_t n4, vec2_t t4

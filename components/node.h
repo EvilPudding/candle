@@ -21,7 +21,7 @@ typedef struct
 DEF_CASTER("node", c_node, c_node_t)
 
 c_node_t *c_node_new(void);
-entity_t c_node_get_by_name(c_node_t *self, const char *name);
+entity_t c_node_get_by_name(c_node_t *self, uint hash);
 void c_node_add(c_node_t *self, int num, ...);
 void c_node_update_model(c_node_t *self);
 vec3_t c_node_global_to_local(c_node_t *self, vec3_t vec);

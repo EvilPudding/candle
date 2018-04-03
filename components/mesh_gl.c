@@ -35,6 +35,7 @@ static void mesh_gl_add_group(c_mesh_gl_t *self)
 	group->update_id = -1;
 	group->updated = 1;
 	group->vao = 0;
+	group->vbo_num = 7;
 	group->entity = c_entity(self);
 	group->layer_id = i;
 
@@ -474,7 +475,7 @@ static int glg_update_buffers(glg_t *self)
 #ifdef USE_VAO
 		glGenVertexArrays(1, &self->vao); glerr();
 #endif
-		glGenBuffers(7, self->vbo); glerr();
+		glGenBuffers(self->vbo_num, self->vbo); glerr();
 	}
 	glBindVertexArray(self->vao); glerr();
 

@@ -27,7 +27,8 @@ typedef struct
 	int ind_num; int ind_alloc;
 
 	GLuint vao;
-	GLuint vbo[7];
+	GLuint vbo[12];
+	int vbo_num;
 	int gl_ind_num;
 	int gl_vert_num;
 

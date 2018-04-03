@@ -5,13 +5,19 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <components/model.h>
+#include <components/node.h>
+#include <components/name.h>
+
+#include <assimp/cimport.h>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 c_sauces_t *c_sauces_new()
 {
 	c_sauces_t *self = component_new("sauces");
 	return self;
 }
-
 
 void c_sauces_mat_reg(c_sauces_t *self, const char *name, mat_t *mat)
 {
@@ -70,6 +76,78 @@ mesh_t *c_sauces_mesh_get(c_sauces_t *self, const char *name)
 
 	c_sauces_mesh_reg(self, name, mesh);
 	return mesh;
+}
+
+static inline mat4_t mat4_from_ai(const struct aiMatrix4x4 m)
+{
+	mat4_t r;
+
+	r._[0]._[0] = m.a1; r._[0]._[1] = m.a2;
+	r._[0]._[2] = m.a3; r._[0]._[3] = m.a4;
+
+	r._[1]._[0] = m.b1; r._[1]._[1] = m.b2;
+	r._[1]._[2] = m.b3; r._[1]._[3] = m.b4;
+
+	r._[2]._[0] = m.c1; r._[2]._[1] = m.c2;
+	r._[2]._[2] = m.c3; r._[2]._[3] = m.c4;
+
+	r._[3]._[0] = m.d1; r._[3]._[1] = m.d2;
+	r._[3]._[2] = m.d3; r._[3]._[3] = m.d4;
+
+	return r;
+}
+
+void load_node(entity_t entity, const struct aiNode *anode)
+{
+	int i;
+	c_node_t *node = c_node(&entity);
+	c_spacial_t *spacial = c_spacial(&entity);
+
+	spacial->model_matrix = mat4_from_ai(anode->mTransformation);
+
+	const char *name = anode->mName.data;
+
+	entity_t n = c_node_get_by_name(node, ref(name));
+
+	if(!n)
+	{
+		n = entity_new(c_name_new(name), c_node_new());
+	}
+	c_node_add(node, 1, n);
+	for(i = 0; i < anode->mNumChildren; i++)
+	{
+		load_node(n, anode->mChildren[i]);
+	}
+}
+
+entity_t c_sauces_model_get(c_sauces_t *self, const char *name)
+{
+	char buffer[2048];
+	snprintf(buffer, sizeof(buffer), "resauces/models/%s", name);
+
+	entity_t result;
+	const struct aiScene *scene = aiImportFile(buffer,
+			/* aiProcess_CalcTangentSpace  	| */
+			/* aiProcess_Triangulate			| */
+			/* aiProcess_GenSmoothNormals		| */
+			aiProcess_JoinIdenticalVertices |
+			aiProcess_SortByPType);
+	if(!scene)
+	{
+		printf("failed to load %s\n", name);
+		return entity_null;
+	}
+
+	result = entity_new(c_model_new(mesh_new(), mat_new("t"), 1));
+	mesh_t *mesh = c_model(&result)->mesh;
+	mesh_load_scene(mesh, scene);
+
+	load_node(result, scene->mRootNode);
+
+	aiReleaseImport(scene);
+
+
+	return result;
 }
 
 texture_t *c_sauces_texture_get(c_sauces_t *self, const char *name)
