@@ -2,7 +2,6 @@
 #include <search.h>
 
 #include <string.h>
-#include "ext.h"
 #include "ecm.h"
 #include <stdarg.h>
 #include <SDL2/SDL.h>

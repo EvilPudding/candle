@@ -2117,7 +2117,6 @@ void mesh_load_scene(mesh_t *self, const void *scene)
 			self->has_texcoords = 0;
 		}
 
-
 		for(j = 0; j < group->mNumVertices; j++)
 		{
 			mesh_add_vert(self, VEC3(_vec3(group->mVertices[j])));

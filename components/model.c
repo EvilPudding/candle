@@ -1,4 +1,3 @@
-#include "../ext.h"
 #include "model.h"
 #include "mesh_gl.h"
 #include "node.h"

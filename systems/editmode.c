@@ -610,7 +610,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 					if(ct_get(ct, &ent)) continue;
 
 					uint dist = levenshtein(ct->name, self->ct_search);
-					insert_ct(self, i, dist);
+					insert_ct(self, ct->id, dist);
 				});
 					
 			}

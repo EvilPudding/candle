@@ -1,4 +1,3 @@
-#include "../ext.h"
 #include "force.h"
 #include "velocity.h"
 #include "spacial.h"

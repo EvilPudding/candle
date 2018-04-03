@@ -1,4 +1,3 @@
-#include "../ext.h"
 #include "rigid_body.h"
 #include "model.h"
 #include "aabb.h"
