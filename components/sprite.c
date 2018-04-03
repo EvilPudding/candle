@@ -1,4 +1,3 @@
-#include "../ext.h"
 #include "sprite.h"
 #include "mesh_gl.h"
 #include "model.h"

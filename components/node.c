@@ -33,7 +33,7 @@ static int c_node_changed(c_node_t *self)
 	return 1;
 }
 
-entity_t c_node_get_by_name(c_node_t *self, const char *name)
+entity_t c_node_get_by_name(c_node_t *self, uint hash)
 {
 	ulong i;
 	for(i = 0; i < self->children_size; i++)
@@ -42,7 +42,7 @@ entity_t c_node_get_by_name(c_node_t *self, const char *name)
 		c_name_t *child_name = c_name(&child);
 		c_node_t *child_node;
 
-		if(!strncmp(child_name->name, name, sizeof(child_name->name) - 1))
+		if(child_name->hash == hash)
 		{
 			return child;
 		}
@@ -50,7 +50,7 @@ entity_t c_node_get_by_name(c_node_t *self, const char *name)
 		child_node = c_node(&child);
 		if(child_node)
 		{
-			entity_t response = c_node_get_by_name(child_node, name);
+			entity_t response = c_node_get_by_name(child_node, hash);
 			if(response != entity_null)
 			{
 				return response;

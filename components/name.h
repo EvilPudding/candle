@@ -7,6 +7,7 @@ typedef struct
 {
 	c_t super; /* extends c_t */
 	char name[32];
+	unsigned int hash;
 } c_name_t;
 
 DEF_CASTER("name", c_name, c_name_t)

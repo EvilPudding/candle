@@ -6,6 +6,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <assimp/cimport.h>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
 static vec3_t mesh_support(mesh_t *self, const vec3_t dir);
 static int mesh_get_pair_edge(mesh_t *self, int e);
 int mesh_get_face_from_verts(mesh_t *self, int v0, int v1, int v2);
@@ -983,7 +987,7 @@ int mesh_add_regular_quad( mesh_t *self,
 	mesh_add_quad(self, v1, n1, t1,
 			v2, n2, t2,
 			v3, n3, t3,
-			v4, n4, t4);
+			v4, n4, t4, 1);
 
 	return 1;
 }
@@ -1191,7 +1195,7 @@ void mesh_add_quad(mesh_t *self,
 		int v1, vec3_t v1n, vec2_t v1t,
 		int v2, vec3_t v2n, vec2_t v2t,
 		int v3, vec3_t v3n, vec2_t v3t,
-		int v4, vec3_t v4n, vec2_t v4t)
+		int v4, vec3_t v4n, vec2_t v4t, int pair_up)
 {
 
 	mesh_lock(self);
@@ -1238,14 +1242,17 @@ void mesh_add_quad(mesh_t *self,
 	*e3 = (edge_t){ .v = v4, .n = v4n, .t = v4t, .face = face_id,
 		.next = ie0, .prev = ie2, .pair = -1, .cell_pair = -1};
 
-	if(!mesh_get_pair_edge(self, ie0))
-		vert_add_half(self, m_vert(self, v1), ie0);
-	if(!mesh_get_pair_edge(self, ie1))
-		vert_add_half(self, m_vert(self, v2), ie1);
-	if(!mesh_get_pair_edge(self, ie2))
-		vert_add_half(self, m_vert(self, v3), ie2);
-	if(!mesh_get_pair_edge(self, ie3))
-		vert_add_half(self, m_vert(self, v4), ie3);
+	if(pair_up)
+	{
+		if(!mesh_get_pair_edge(self, ie0))
+			vert_add_half(self, m_vert(self, v1), ie0);
+		if(!mesh_get_pair_edge(self, ie1))
+			vert_add_half(self, m_vert(self, v2), ie1);
+		if(!mesh_get_pair_edge(self, ie2))
+			vert_add_half(self, m_vert(self, v3), ie2);
+		if(!mesh_get_pair_edge(self, ie3))
+			vert_add_half(self, m_vert(self, v4), ie3);
+	}
 
 
 #ifdef MESH4
@@ -1900,7 +1907,7 @@ void mesh_extrude_edges(mesh_t *self, int steps, vecN_t offset,
 					ne->v, Z3, ne->t,
 					e->v, Z3, e->t,
 					et, Z3, e->t,
-					nt, Z3, ne->t
+					nt, Z3, ne->t, 1
 			);
 			/* mesh_edge_select(self, e_id, SEL_UNSELECTED); */
 
@@ -2008,7 +2015,7 @@ mesh_t *mesh_lathe(mesh_t *mesh, float angle, int segments,
 			mesh_add_quad(self, v1, Z3, vec2( e->t.x, pa),
 								v2, Z3, vec2(ne->t.x, pa),
 								v3, Z3, vec2(ne->t.x,  a),
-								v4, Z3, vec2( e->t.x,  a));
+								v4, Z3, vec2( e->t.x,  a), 1);
 		}
 		pa = a;
 	}
@@ -2090,6 +2097,80 @@ void mesh_wait(mesh_t *self)
 	SDL_SemPost(self->sem);
 }
 
+void mesh_load_scene(mesh_t *self, const void *scene)
+{
+	int i;
+	mesh_lock(self);
+	const struct aiScene *s = scene;
+
+	int offset = 0;
+	for(i = 0; i < s->mNumMeshes; i++)
+	{
+		int j;
+
+		const struct aiMesh *group = s->mMeshes[i];
+		printf("group: %s\n", group->mName.data);
+		/* int mat = group->mMaterialIndex; */
+
+		if(!group->mTextureCoords[0])
+		{
+			self->has_texcoords = 0;
+		}
+
+		for(j = 0; j < group->mNumVertices; j++)
+		{
+			mesh_add_vert(self, VEC3(_vec3(group->mVertices[j])));
+		}
+		struct aiVector3D *normals = group->mNormals;
+		normals = NULL;
+		struct aiVector3D *texcoor = group->mTextureCoords[0];
+		for(j = 0; j < group->mNumFaces; j++)
+		{
+			const struct aiFace *face = &group->mFaces[j];
+			unsigned int *indices = face->mIndices;
+
+			if(face->mNumIndices == 3)
+			{
+				int i0 = indices[0] + offset;
+				int i1 = indices[1] + offset;
+				int i2 = indices[2] + offset;
+				mesh_add_triangle(self,
+						i0, normals?vec3(_vec3(normals[i0])):Z3,
+						texcoor?vec2(_vec2(texcoor[i0])):Z2,
+
+						i1, normals?vec3(_vec3(normals[i1])):Z3,
+						texcoor?vec2(_vec2(texcoor[i1])):Z2,
+
+						i2, normals?vec3(_vec3(normals[i2])):Z3,
+						texcoor?vec2(_vec2(texcoor[i2])):Z2, 1);
+			}
+			else if(face->mNumIndices == 4)
+			{
+				int i0 = indices[0] + offset;
+				int i1 = indices[1] + offset;
+				int i2 = indices[2] + offset;
+				int i3 = indices[3] + offset;
+				mesh_add_quad(self,
+						i0, normals?vec3(_vec3(normals[i0])):Z3,
+						texcoor?vec2(_vec2(texcoor[i0])):Z2,
+
+						i1, normals?vec3(_vec3(normals[i1])):Z3,
+						texcoor?vec2(_vec2(texcoor[i1])):Z2,
+
+						i2, normals?vec3(_vec3(normals[i2])):Z3,
+						texcoor?vec2(_vec2(texcoor[i2])):Z2,
+
+						i3, normals?vec3(_vec3(normals[i3])):Z3,
+						texcoor?vec2(_vec2(texcoor[i3])):Z2, 1);
+			}
+		}
+		offset += group->mNumVertices;
+	}
+
+	mesh_unlock(self);
+
+}
+
 void mesh_load(mesh_t *self, const char *filename)
 {
 	char ext[16];
@@ -2097,6 +2178,8 @@ void mesh_load(mesh_t *self, const char *filename)
 	mesh_lock(self);
 
 	strncpy(ext, strrchr(filename, '.') + 1, sizeof(ext));
+
+
 	if(!strncmp(ext, "ply", sizeof(ext)))
 	{
 		mesh_load_ply(self, filename);

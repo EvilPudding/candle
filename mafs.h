@@ -1075,9 +1075,9 @@ static inline vec2_t int_to_vec2(int id)
 #define _if(c, a, b) __builtin_choose_expr(c, a, b)
 /* #define CONSTIFY(x) (__builtin_constant_p(x)&&(x)) */
 
-#define _vec2(v) v.x, v.y
-#define _vec3(v) v.x, v.y, v.z
-#define _vec4(v) v.x, v.y, v.z, v.w
+#define _vec2(v) (float)v.x, (float)v.y
+#define _vec3(v) (float)v.x, (float)v.y, (float)v.z
+#define _vec4(v) (float)v.x, (float)v.y, (float)v.z, (float)v.w
 
 #define __vec2_1(a)  \
 			_if(_type(a, vec2_t), \
