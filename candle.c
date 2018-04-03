@@ -262,6 +262,7 @@ void candle_reg_prefab(candle_t *self, const char *key, prefab_cb cb)
 
 entity_t candle_run_command(candle_t *self, entity_t root, char *command)
 {
+	if(command[0] == '\0') return root;
 	/* TODO: optimize this function */
 	int i;
 

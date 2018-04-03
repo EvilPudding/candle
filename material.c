@@ -13,7 +13,7 @@ mat_t *mat_new(const char *name)
 {
 	mat_t *self = calloc(1, sizeof *self);
 	mat_set_normal(self, (prop_t){.color=vec4(0.5, 0.5, 1.0, 0.0)});
-	mat_set_diffuse(self, (prop_t){.color=vec4(0.5, 0.5, 0.8, 1.0)});
+	mat_set_diffuse(self, (prop_t){.color=vec4(0.5, 0.5, 0.5, 1.0)});
 
 	strncpy(self->name, name, sizeof(self->name));
 

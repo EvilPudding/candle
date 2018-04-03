@@ -27,6 +27,7 @@ void c_editmode_init(c_editmode_t *self)
 	if(!g_sel_mat)
 	{
 		g_sel_mat = mat_new("sel_mat");
+		g_sel_mat->diffuse.color = vec4(0, 2, 0, 1);
 				/* sauces_mat("pack1/white"); */
 	}
 }
@@ -88,9 +89,9 @@ void c_editmode_activate(c_editmode_t *self)
 		);
 		c_spacial_t *sc = c_spacial(&self->camera);
 		c_spacial_lock(sc);
-		c_spacial_set_pos(sc, vec3(3, 3, 3));
-		c_spacial_rotate_Y(sc, M_PI / 4);
-		c_spacial_rotate_X(sc, -M_PI * 0.2);
+		c_spacial_set_pos(sc, vec3(4, 1.5, 0));
+		c_spacial_rotate_Y(sc, M_PI / 2);
+		c_spacial_rotate_X(sc, -M_PI * 0.05);
 		c_spacial_unlock(sc);
 	}
 	c_camera_activate(c_camera(&self->camera));
@@ -670,8 +671,12 @@ int c_editmode_draw(c_editmode_t *self)
 						NK_EDIT_SIG_ENTER, self->shell, sizeof(self->shell),
 						nk_filter_ascii) & NK_EDIT_COMMITED)
 			{
-				candle_run_command(candle, entity_null, self->shell);
+				entity_t instance = candle_run_command(candle, entity_null, self->shell);
 				self->shell[0] = '\0';
+				if(instance)
+				{
+					self->selected = instance;
+				}
 			}
 		}
 		nk_end(self->nk);
