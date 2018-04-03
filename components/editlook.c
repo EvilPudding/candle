@@ -14,9 +14,6 @@
 void c_editlook_init(c_editlook_t *self)
 {
 	self->win_min_side = 1080;
-
-	self->panning = 0;
-	self->pressed_r = 0;
 }
 
 c_editlook_t *c_editlook_new()
