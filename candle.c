@@ -17,21 +17,24 @@
 #include <dirent.h>
 #include <fcntl.h>
 
-void candle_reset_dir(candle_t *self)
+candle_t *g_candle;
+entity_t g_systems;
+
+void candle_reset_dir()
 {
 #ifdef WIN32
-    _chdir(self->firstDir);
+    _chdir(g_candle->firstDir);
 #else
-	if(chdir(self->firstDir)) printf("Chdir failed.\n");
+	if(chdir(g_candle->firstDir)) printf("Chdir failed.\n");
 #endif
 }
 
-int handle_event(candle_t *self, SDL_Event event)
+int handle_event(SDL_Event event)
 {
 	char key;
-	if(self->mouse_owners[0] != entity_null)
+	if(g_candle->mouse_owners[0] != entity_null)
 	{
-		if(entity_signal_same(self->mouse_owners[0], sig("event_handle"),
+		if(entity_signal_same(g_candle->mouse_owners[0], sig("event_handle"),
 					&event) == 0)
 		{
 			return 1;
@@ -56,9 +59,9 @@ int handle_event(candle_t *self, SDL_Event event)
 		case SDL_MOUSEBUTTONUP:
 			bdata = (mouse_button_data){event.button.x, event.button.y, 0,
 				event.button.button};
-			if(self->mouse_owners[0])
+			if(g_candle->mouse_owners[0])
 			{
-				entity_signal_same(self->mouse_owners[0], sig("mouse_release"),
+				entity_signal_same(g_candle->mouse_owners[0], sig("mouse_release"),
 						&bdata);
 			}
 			else
@@ -69,9 +72,9 @@ int handle_event(candle_t *self, SDL_Event event)
 		case SDL_MOUSEBUTTONDOWN:
 			bdata = (mouse_button_data){event.button.x, event.button.y, 0,
 				event.button.button};
-			if(self->mouse_owners[0])
+			if(g_candle->mouse_owners[0])
 			{
-				entity_signal_same(self->mouse_owners[0], sig("mouse_press"),
+				entity_signal_same(g_candle->mouse_owners[0], sig("mouse_press"),
 						&bdata);
 			}
 			else
@@ -80,13 +83,13 @@ int handle_event(candle_t *self, SDL_Event event)
 			}
 			break;
 		case SDL_MOUSEMOTION:
-			self->mx = event.motion.x; self->my = event.motion.y;
+			g_candle->mx = event.motion.x; g_candle->my = event.motion.y;
 			mdata = (mouse_move_data){event.motion.xrel, event.motion.yrel,
 				event.motion.x, event.motion.y};
 
-			if(self->mouse_owners[0])
+			if(g_candle->mouse_owners[0])
 			{
-				entity_signal_same(self->mouse_owners[0], sig("mouse_move"),
+				entity_signal_same(g_candle->mouse_owners[0], sig("mouse_move"),
 						&mdata);
 			}
 			else
@@ -98,7 +101,7 @@ int handle_event(candle_t *self, SDL_Event event)
 			key = event.key.keysym.sym;
 			if(key == -31)
 			{
-				self->shift = 0;
+				g_candle->shift = 0;
 			}
 			entity_signal(entity_null, sig("key_up"), &key);
 			break;
@@ -106,7 +109,7 @@ int handle_event(candle_t *self, SDL_Event event)
 			key = event.key.keysym.sym;
 			if(key == -31)
 			{
-				self->shift = 1;
+				g_candle->shift = 1;
 			}
 			entity_signal(entity_null, sig("key_down"), &key);
 			break;
@@ -114,7 +117,7 @@ int handle_event(candle_t *self, SDL_Event event)
 			switch(event.window.event)
 			{
 				case SDL_WINDOWEVENT_RESIZED:
-				c_window_handle_resize(c_window(&self->systems), event);
+				c_window_handle_resize(c_window(&g_systems), event);
 					break; 
 			}
 			break;
@@ -123,7 +126,7 @@ int handle_event(candle_t *self, SDL_Event event)
 
 	return 0;
 }
-static void candle_handle_events(candle_t *self)
+static void candle_handle_events(void)
 {
 	SDL_Event event;
 	/* SDL_WaitEvent(&event); */
@@ -139,12 +142,12 @@ static void candle_handle_events(candle_t *self)
 			{
 				//close(candle->events[0]);
 				//close(candle->events[1]);
-				self->exit = 1;
+				g_candle->exit = 1;
 				return;
 			}
 			/* int res = write(candle->events[1], &event, sizeof(event)); */
 			/* if(res == -1) exit(1); */
-			handle_event(self, event);
+			handle_event(event);
 		}
 	}
 	entity_signal(entity_null, sig("events_end"), NULL);
@@ -155,23 +158,23 @@ static void candle_handle_events(candle_t *self)
 	}
 }
 
-static int render_loop(candle_t *self)
+static int render_loop(void)
 {
-	self->loader = loader_new();
+	g_candle->loader = loader_new();
 
 	int last = SDL_GetTicks();
 	int fps = 0;
-	self->render_id = SDL_ThreadID();
+	g_candle->render_id = SDL_ThreadID();
 	//SDL_GL_MakeCurrent(state->renderer->window, state->renderer->context); 
-	/* SDL_LockMutex(self->mut); */
-	entity_add_component(self->systems, c_window_new(0, 0));
+	/* SDL_LockMutex(g_candle->mut); */
+	entity_add_component(g_systems, c_window_new(0, 0));
 	/* printf("unlock 2\n"); */
-	SDL_SemPost(self->sem);
+	SDL_SemPost(g_candle->sem);
 
-	while(!self->exit)
+	while(!g_candle->exit)
 	{
-		candle_handle_events(self);
-		loader_update(self->loader);
+		candle_handle_events();
+		loader_update(g_candle->loader);
 
 		/* if(state->gameStarted) */
 		{
@@ -182,7 +185,7 @@ static int render_loop(candle_t *self)
 
 			ecm_clean();
 
-			c_window_draw(c_window(&self->systems));
+			c_window_draw(c_window(&g_systems));
 
 			fps++;
 			/* candle_handle_events(self); */
@@ -192,7 +195,7 @@ static int render_loop(candle_t *self)
 		int current = SDL_GetTicks();
 		if(current - last > 1000)
 		{
-			self->fps = fps;
+			g_candle->fps = fps;
 			fps = 0;
 			last = current;
 		}
@@ -215,18 +218,18 @@ void candle_register()
 	signal_init(sig("ui_draw"), sizeof(void*));
 }
 
-static int ticker_loop(candle_t *self)
+static int ticker_loop(void)
 {
 	do
 	{
 		int current = SDL_GetTicks();
-		float dt = (current - self->last_update) / 1000.0;
+		float dt = (current - g_candle->last_update) / 1000.0;
 		entity_signal(entity_null, sig("world_update"), &dt);
 		ecm_clean();
-		self->last_update = current;
+		g_candle->last_update = current;
 		SDL_Delay(16);
 	}
-	while(!self->exit);
+	while(!g_candle->exit);
 	return 1;
 }
 
@@ -243,36 +246,36 @@ static int ticker_loop(candle_t *self)
 /* 	return 1; */
 /* } */
 
-void candle_wait(candle_t *candle)
+void candle_wait(void)
 {
 	/* SDL_WaitThread(candle->candle_thr, NULL); */
-	SDL_WaitThread(candle->render_thr, NULL);
-	SDL_WaitThread(candle->ticker_thr, NULL);
+	SDL_WaitThread(g_candle->render_thr, NULL);
+	SDL_WaitThread(g_candle->ticker_thr, NULL);
 }
 
-void candle_reg_prefab(candle_t *self, const char *key, prefab_cb cb)
+void candle_reg_cmd(const char *key, cmd_cb cb)
 {
-	uint i = self->prefabs_size++;
-	self->prefabs = realloc(self->prefabs,
-			sizeof(*self->prefabs) * self->prefabs_size);
-	prefab_t *prefab = &self->prefabs[i];
-	prefab->cb = cb;
-	strncpy(prefab->key, key, sizeof(prefab->key) - 1);
+	int ret;
+	uint hash = ref(key);
+	khiter_t k = kh_put(cmd, g_candle->cmds, hash, &ret);
+	cmd_t *cmd = &kh_value(g_candle->cmds, k);
+
+	cmd->cb = cb;
+	strncpy(cmd->key, key, sizeof(cmd->key) - 1);
 }
 
-entity_t candle_run_command(candle_t *self, entity_t root, char *command)
+entity_t candle_run_command(entity_t root, const char *command)
 {
 	if(command[0] == '\0') return root;
+	char *copy = strdup(command);
 	/* TODO: optimize this function */
 	int i;
-
-	prefab_t *prefab;
 
 	entity_t instance = root;
 
 	char separators[] = " ";
 
-	char *p = strtok(command, separators);
+	char *p = strtok(copy, separators);
 	char *argv[32];
 	int argc = 0;
 
@@ -283,23 +286,23 @@ entity_t candle_run_command(candle_t *self, entity_t root, char *command)
 		argv[argc++] = strdup(p);
 	}
 
-	for(prefab = self->prefabs; prefab->key; prefab++)
+	uint hash = ref(argv[0]);
+	khiter_t k = kh_get(cmd, g_candle->cmds, hash);
+	if(k != kh_end(g_candle->cmds))
 	{
-		if(!strcmp(argv[0], prefab->key))
-		{
-			instance = prefab->cb(instance, argc, argv);
-			break;
-		}
+		cmd_t *cmd = &kh_value(g_candle->cmds, k);
+
+		instance = cmd->cb(instance, argc, argv);
+
 	}
-	for(i = 0; i < argc; i++)
-	{
-		free(argv[i]);
-	}
+	for(i = 0; i < argc; i++) free(argv[i]);
+	free(copy);
+
 	if(instance == entity_null) instance = root;
 	return instance;
 }
 
-int candle_run(candle_t *self, entity_t root, const char *map_name)
+int candle_run(entity_t root, const char *map_name)
 {
 	FILE *file = fopen(map_name, "r");
 
@@ -312,7 +315,7 @@ int candle_run(candle_t *self, entity_t root, const char *map_name)
 		ssize_t read = getline(&line, &n, file);
 		if(read == -1) break;
 		if(read == 0) continue;
-		entity_t entity = candle_run_command(self, root, line);
+		entity_t entity = candle_run_command(root, line);
 
 		if(root && c_node(&root) && entity != root)
 		{
@@ -326,64 +329,45 @@ int candle_run(candle_t *self, entity_t root, const char *map_name)
 	return 1;
 }
 
-/* int candle_import_dir(candle_t *self, entity_t root, const char *dir_name) */
-/* { */
-/* 	DIR *dir = opendir(dir_name); */
-/* 	if(dir != NULL) */
-/* 	{ */
-/* 		struct dirent *ent; */
-/* 		while((ent = readdir(dir)) != NULL) */
-/* 		{ */
-/* 			candle_import(self, root, ent->d_name); */
-/* 		} */
-/* 		closedir(dir); */
-/* 	} */
-/* 	else */
-/* 	{ */
-/* 		return 0; */
-/* 	} */
-/* 	return 1; */
-/* } */
-
-void candle_release_mouse(candle_t *self, entity_t ent, int reset)
+void candle_release_mouse(entity_t ent, int reset)
 {
 	int i;
 	for(i = 0; i < 16; i++)
 	{
-		if(self->mouse_owners[i] == ent)
+		if(g_candle->mouse_owners[i] == ent)
 		{
 			/* // SDL_SetWindowGrab(mainWindow, SDL_FALSE); */
 			SDL_SetRelativeMouseMode(SDL_FALSE);
 			if(reset)
 			{
-				SDL_WarpMouseInWindow(c_window(&self->systems)->window, self->mo_x,
-						self->mo_y);
+				SDL_WarpMouseInWindow(c_window(&SYS)->window, g_candle->mo_x,
+						g_candle->mo_y);
 			}
 			for(; i < 15; i++)
 			{
-				self->mouse_owners[i] = self->mouse_owners[i + 1];
-				self->mouse_visible[i] = self->mouse_visible[i + 1];
+				g_candle->mouse_owners[i] = g_candle->mouse_owners[i + 1];
+				g_candle->mouse_visible[i] = g_candle->mouse_visible[i + 1];
 
 			}
 		}
 	}
-	int vis = self->mouse_visible[0];
+	int vis = g_candle->mouse_visible[0];
 	SDL_ShowCursor(vis); 
 	SDL_SetRelativeMouseMode(!vis);
 }
 
-void candle_grab_mouse(candle_t *self, entity_t ent, int visibility)
+void candle_grab_mouse(entity_t ent, int visibility)
 {
 	int i;
 	for(i = 15; i >= 1; i--)
 	{
-		self->mouse_owners[i] = self->mouse_owners[i - 1];
-		self->mouse_visible[i] = self->mouse_visible[i - 1];
+		g_candle->mouse_owners[i] = g_candle->mouse_owners[i - 1];
+		g_candle->mouse_visible[i] = g_candle->mouse_visible[i - 1];
 	}
-	self->mouse_owners[0] = ent;
-	self->mouse_visible[0] = visibility;
-	self->mo_x = self->mx;
-	self->mo_y = self->my;
+	g_candle->mouse_owners[0] = ent;
+	g_candle->mouse_visible[0] = visibility;
+	g_candle->mo_x = g_candle->mx;
+	g_candle->mo_y = g_candle->my;
 	SDL_ShowCursor(visibility); 
 	SDL_SetRelativeMouseMode(!visibility);
 }
@@ -391,13 +375,16 @@ void candle_grab_mouse(candle_t *self, entity_t ent, int visibility)
 __attribute__((constructor (CONSTR_BEFORE_REG)))
 void candle_init(void)
 {
-	candle_t *self = calloc(1, sizeof *self);
-	candle = self;
+	g_candle = calloc(1, sizeof *g_candle);
 
 	ecm_init();
 
-	self->firstDir = SDL_GetBasePath();
-	candle_reset_dir(self);
+	g_systems = g_candle->systems = entity_new();
+
+	g_candle->cmds = kh_init(cmd);
+
+	g_candle->firstDir = SDL_GetBasePath();
+	candle_reset_dir();
 
 	shaders_reg();
 
@@ -408,25 +395,26 @@ void candle_init(void)
 __attribute__((constructor (CONSTR_AFTER_REG)))
 void candle_init2(void)
 {
-	if(candle->sem) return;
+	if(g_candle->sem) return;
 
-	candle->mouse_owners[0] = entity_null;
-	candle->mouse_visible[0] = 1;
+	g_candle->mouse_owners[0] = entity_null;
+	g_candle->mouse_visible[0] = 1;
 
-	candle->systems = entity_new(c_mouse_new(), c_keyboard_new(),
-			c_physics_new(), c_sauces_new());
+	entity_add_component(g_systems, c_mouse_new());
+	entity_add_component(g_systems, c_keyboard_new());
+	entity_add_component(g_systems, c_physics_new());
+	entity_add_component(g_systems, c_sauces_new());
 
 	//int res = pipe(candle->events);
 	//if(res == -1) exit(1);
 
 	/* candle->candle_thr = SDL_CreateThread((int(*)(void*))candle_loop, "candle_loop", candle); */
-	candle->sem = SDL_CreateSemaphore(0);
-	candle->render_thr = SDL_CreateThread((int(*)(void*))render_loop, "render_loop", candle);
-	candle->ticker_thr = SDL_CreateThread((int(*)(void*))ticker_loop, "ticker_loop", candle);
-	SDL_SemWait(candle->sem);
+	g_candle->sem = SDL_CreateSemaphore(0);
+	g_candle->render_thr = SDL_CreateThread((int(*)(void*))render_loop, "render_loop", NULL);
+	g_candle->ticker_thr = SDL_CreateThread((int(*)(void*))ticker_loop, "ticker_loop", NULL);
+	SDL_SemWait(g_candle->sem);
 	/* SDL_Delay(500); */
 
 	/* candle_import_dir(candle, entity_null, "./"); */
 }
 
-candle_t *candle;

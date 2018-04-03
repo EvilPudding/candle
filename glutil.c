@@ -37,7 +37,7 @@ void _check_gl_error(const char *file, int line)
 
 		err=glGetError();
 	}
-	if(SDL_ThreadID() != candle->render_id)
+	if(SDL_ThreadID() != g_candle->render_id)
 	{
 		exit(1);
 	}

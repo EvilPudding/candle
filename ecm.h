@@ -31,7 +31,7 @@ typedef int(*before_draw_cb)(c_t *self);
 #define IDENT_NULL UINT_MAX
 #define DEF_CASTER(ct, cn, nc_t) \
 	static inline nc_t *cn(void *entity)\
-{ return (nc_t*)ct_get(ecm_get(ref(ct)), entity); } \
+{ return (nc_t*)ct_get(ecm_get(ref(ct)), entity); }
 
 #define CONSTR_BEFORE_REG 102
 #define CONSTR_REG 103

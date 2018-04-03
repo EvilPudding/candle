@@ -45,7 +45,7 @@ c_light_t *c_light_new(float intensity, float radius,
 
 int c_light_render(c_light_t *self)
 {
-	c_renderer(&candle->systems)->bound_light = c_entity(self);
+	c_renderer(&SYS)->bound_light = c_entity(self);
 
 	if(!g_light || !c_mesh_gl(&g_light)) return 0;
 	if(self->radius > 0.0f)
@@ -70,7 +70,7 @@ int c_light_render(c_light_t *self)
 	}
 	else
 	{
-		return c_window_render_quad(c_window(&candle->systems), NULL);
+		return c_window_render_quad(c_window(&SYS), NULL);
 	}
 }
 

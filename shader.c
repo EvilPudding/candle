@@ -197,7 +197,7 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 
 	self->modifiers[i + 1] = vertex_modifier_new( "\n\tgl_Position = pos; }");
 
-	loader_push_wait(candle->loader, (loader_cb)vs_new_loader, self, NULL);
+	loader_push_wait(g_candle->loader, (loader_cb)vs_new_loader, self, NULL);
 
 	return self;
 }
@@ -499,7 +499,7 @@ fs_t *fs_new(const char *filename)
 
 	self->filename = strdup(filename);
 
-	loader_push_wait(candle->loader, (loader_cb)fs_new_loader, self, NULL);
+	loader_push_wait(g_candle->loader, (loader_cb)fs_new_loader, self, NULL);
 	return self;
 }
 
@@ -510,7 +510,7 @@ shader_t *shader_new(fs_t *fs, vs_t *vs)
 	self->index = vs->index;
 
 	self->ready = 0;
-	loader_push_wait(candle->loader, (loader_cb)shader_new_loader, self, NULL);
+	loader_push_wait(g_candle->loader, (loader_cb)shader_new_loader, self, NULL);
 	return self;
 }
 
@@ -525,7 +525,7 @@ void shader_bind_ambient(shader_t *self, texture_t *ambient)
 
 void shader_bind_probe(shader_t *self, entity_t probe)
 {
-	/* shader_t *self = c_renderer(&candle->systems)->shader; */
+	/* shader_t *self = c_renderer(&g_systems)->shader; */
 	const vec3_t lpos = c_spacial(&probe)->pos;
 
 	glUniform3f(self->u_probe_pos, lpos.x, lpos.y, lpos.z);
@@ -580,7 +580,7 @@ void shader_bind_light(shader_t *self, entity_t light)
 void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
 		mat4_t *projection, mat4_t *model, float exposure, float angle4)
 {
-	/* shader_t *self = c_renderer(&candle->systems)->shader; */
+	/* shader_t *self = c_renderer(&g_systems)->shader; */
 	self->vp = mat4_mul(*projection, *view);
 
 	glUniformMatrix4fv(self->u_v, 1, GL_FALSE, (void*)view->_);
@@ -599,7 +599,7 @@ void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
 
 void shader_update(shader_t *self, mat4_t *model_matrix)
 {
-	/* shader_t *self = c_renderer(&candle->systems)->shader; */
+	/* shader_t *self = c_renderer(&g_systems)->shader; */
 	mat4_t mvp = mat4_mul(self->vp, *model_matrix);
 
 	glUniformMatrix4fv(self->u_mvp, 1, GL_FALSE, (void*)mvp._);
@@ -617,7 +617,7 @@ void shader_update(shader_t *self, mat4_t *model_matrix)
 
 void shader_bind_screen(shader_t *self, texture_t *buffer, float sx, float sy)
 {
-	/* shader_t *self = c_renderer(&candle->systems)->shader; */
+	/* shader_t *self = c_renderer(&g_systems)->shader; */
 
 	glUniform2f(self->u_screen_size, sx * buffer->width, sy * buffer->height);
 	glerr();

@@ -129,7 +129,7 @@ mat_t *mat_from_file(const char *filename)
 		return 0;
 	}
 
-	c_sauces_mat_reg(c_sauces(&candle->systems), self->name, self);
+	c_sauces_mat_reg(c_sauces(&SYS), self->name, self);
 	return self;
 }
 

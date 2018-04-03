@@ -332,7 +332,7 @@ int c_renderer_bind_pass(c_renderer_t *self, pass_t *pass)
 
 void fs_bind(fs_t *fs)
 {
-	c_renderer_t *renderer = c_renderer(&candle->systems);
+	c_renderer_t *renderer = c_renderer(&SYS);
 	if(renderer->frag_bound == fs) return;
 	glerr();
 
@@ -343,7 +343,7 @@ void fs_bind(fs_t *fs)
 
 shader_t *vs_bind(vs_t *vs)
 {
-	c_renderer_t *renderer = c_renderer(&candle->systems);
+	c_renderer_t *renderer = c_renderer(&SYS);
 
 	if(renderer->shader && renderer->shader->index == vs->index)
 	{
@@ -662,7 +662,7 @@ int init_perlin(c_renderer_t *self)
 	int texes = 8;
 	int m = self->perlin_size * texes;
 	self->perlin = texture_new_3D(m, m, m, 4);
-	loader_wait(candle->loader);
+	loader_wait(g_candle->loader);
 
 	int x, y, z;
 
@@ -745,7 +745,7 @@ int c_renderer_global_menu(c_renderer_t *self, void *ctx)
 	nk_layout_row_end(ctx);
 #endif
 
-	char fps[12]; sprintf(fps, "%d", candle->fps);
+	char fps[12]; sprintf(fps, "%d", g_candle->fps);
 
 	nk_layout_row_begin(ctx, NK_DYNAMIC, 30, 2);
 		nk_layout_row_push(ctx, 0.35);

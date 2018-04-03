@@ -35,7 +35,7 @@ static int c_editlook_window_resize(c_editlook_t *self,
 
 int c_editlook_mouse_wheel(c_editlook_t *self, mouse_button_data *event)
 {
-	c_editmode_t *edit = c_editmode(&candle->systems);
+	c_editmode_t *edit = c_editmode(&SYS);
 	if(!edit->control) return 1;
 
 	c_spacial_t *sc = c_spacial(self);
@@ -57,7 +57,7 @@ int c_editlook_mouse_press(c_editlook_t *self, mouse_button_data *event)
 		fake_x = event->x;
 		fake_y = event->y;
 
-		candle_grab_mouse(candle, c_entity(self), 0);
+		candle_grab_mouse(c_entity(self), 0);
 	}
 	return 1;
 }
@@ -68,7 +68,7 @@ int c_editlook_mouse_release(c_editlook_t *self, mouse_button_data *event)
 	{
 		if(self->pressed_r)
 		{
-			candle_release_mouse(candle, c_entity(self), !self->panning);
+			candle_release_mouse(c_entity(self), !self->panning);
 		}
 		self->pressed_r = 0;
 		self->panning = 0;
@@ -78,8 +78,8 @@ int c_editlook_mouse_release(c_editlook_t *self, mouse_button_data *event)
 
 int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 {
-	c_editmode_t *edit = c_editmode(&candle->systems);
-	c_renderer_t *renderer = c_renderer(&candle->systems);
+	c_editmode_t *edit = c_editmode(&SYS);
+	c_renderer_t *renderer = c_renderer(&SYS);
 	if(!edit->control) return 1;
 	if(!self->pressed_r) return 1;
 
@@ -89,7 +89,7 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 
 	fake_x += event->sx;
 	fake_y += event->sy;
-	if(candle->shift)
+	if(g_candle->shift)
 	{
 		float px = fake_x / renderer->width;
 		float py = 1.0f - fake_y / renderer->height;

@@ -41,7 +41,7 @@ static void texture_update_gl_loader(texture_t *self)
 
 void texture_update_gl(texture_t *self)
 {
-	loader_push(candle->loader, (loader_cb)texture_update_gl_loader, self,
+	loader_push(g_candle->loader, (loader_cb)texture_update_gl_loader, self,
 			NULL);
 }
 
@@ -288,7 +288,7 @@ texture_t *texture_new_2D
 
 	self->imageData = calloc(imageSize, 1);
 	
-	loader_push(candle->loader, (loader_cb)texture_new_2D_loader, self, NULL);
+	loader_push(g_candle->loader, (loader_cb)texture_new_2D_loader, self, NULL);
 
 	return self;
 }
@@ -368,7 +368,7 @@ texture_t *texture_new_3D
 	/* } */
 
 
-	loader_push(candle->loader, (loader_cb)texture_new_3D_loader, self, NULL);
+	loader_push(g_candle->loader, (loader_cb)texture_new_3D_loader, self, NULL);
 
 	return self;
 }
@@ -424,7 +424,7 @@ texture_t *texture_from_file(const char *filename)
 	self->color_buffers_size = 1;
 	self->texNames[COLOR_TEX] = strdup("color");
 
-	loader_push(candle->loader, (loader_cb)texture_from_file_loader, self, NULL);
+	loader_push(g_candle->loader, (loader_cb)texture_from_file_loader, self, NULL);
 
     return self;
 }
@@ -672,7 +672,7 @@ texture_t *texture_cubemap
 	self->color_buffers_size = 1;
 	self->attachments[0] = GL_COLOR_ATTACHMENT0;
 
-	loader_push(candle->loader, (loader_cb)texture_cubemap_loader, self, NULL);
+	loader_push(g_candle->loader, (loader_cb)texture_cubemap_loader, self, NULL);
 
 	return self;
 }

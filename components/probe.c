@@ -60,7 +60,7 @@ int c_probe_render(c_probe_t *self, uint signal)
 
 	if(self->last_update == g_update_id) return 0;
 
-	c_renderer_t *renderer = c_renderer(&candle->systems);
+	c_renderer_t *renderer = c_renderer(&SYS);
 	renderer->bound_probe = c_entity(self);
 	renderer->bound_camera_pos = ps->pos;
 	renderer->bound_projection = &self->projection;
@@ -83,7 +83,7 @@ int c_probe_render(c_probe_t *self, uint signal)
 	}
 
 	self->last_update = g_update_id;
-	c_renderer(&candle->systems)->bound_probe = entity_null;
+	c_renderer(&SYS)->bound_probe = entity_null;
 	return 1;
 }
 

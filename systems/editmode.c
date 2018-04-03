@@ -73,8 +73,8 @@ c_editmode_t *c_editmode_new()
 
 void c_editmode_activate(c_editmode_t *self)
 {
-	loader_push_wait(candle->loader, (loader_cb)c_editmode_activate_loader, NULL,
-			(c_t*)self);
+	loader_push_wait(g_candle->loader, (loader_cb)c_editmode_activate_loader,
+			NULL, (c_t*)self);
 
 	self->activated = 1;
 	self->control = 1;
@@ -168,7 +168,7 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 
 int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 {
-	if(self->control && !candle->pressing)
+	if(self->control && !g_candle->pressing)
 	{
 		if(self->mode == EDIT_OBJECT)
 		{
@@ -312,7 +312,7 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 			{
 				if(!self->control)
 				{
-					candle_grab_mouse(candle, c_entity(self), 1);
+					candle_grab_mouse(c_entity(self), 1);
 					self->backup_camera = c_renderer(self)->camera;
 					if(!self->activated) { c_editmode_activate(self); }
 					c_renderer(self)->camera = self->camera;
@@ -320,7 +320,7 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 				}
 				else
 				{
-					candle_release_mouse(candle, c_entity(self), 0);
+					candle_release_mouse(c_entity(self), 0);
 					self->over = entity_null;
 					c_renderer(self)->camera = self->backup_camera;
 					self->control = 0;
@@ -671,7 +671,7 @@ int c_editmode_draw(c_editmode_t *self)
 						NK_EDIT_SIG_ENTER, self->shell, sizeof(self->shell),
 						nk_filter_ascii) & NK_EDIT_COMMITED)
 			{
-				entity_t instance = candle_run_command(candle, entity_null, self->shell);
+				entity_t instance = candle_run_command(entity_null, self->shell);
 				self->shell[0] = '\0';
 				if(instance)
 				{

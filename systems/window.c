@@ -104,7 +104,7 @@ int c_window_toggle_fullscreen_gl(c_window_t *self)
 }
 void c_window_toggle_fullscreen(c_window_t *self)
 {
-	loader_push(candle->loader, (loader_cb)c_window_toggle_fullscreen_gl,
+	loader_push(g_candle->loader, (loader_cb)c_window_toggle_fullscreen_gl,
 		NULL, (c_t*)self);
 }
 
