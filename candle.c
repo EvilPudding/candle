@@ -298,37 +298,6 @@ entity_t candle_run_command(candle_t *self, entity_t root, char *command)
 	return instance;
 }
 
-/* int candle_import(candle_t *self, entity_t root, const char *map_name) */
-/* { */
-/* 	printf("Importing '%s'\n", map_name); */
-
-/* 	FILE *file = fopen(map_name, "r"); */
-/* 	entity_t pass; */
-
-/* 	if(file == NULL) return 0; */
-
-/* 	while(!feof(file)) */
-/* 	{ */
-/* 		char name[32]; */
-/* 		if(fscanf(file, "%s ", name) == -1) continue; */
-/* 		prefab_t *prefab; */
-
-/* 		for(prefab = self->prefabs; prefab->key; prefab++) */
-/* 		{ */
-/* 			if(!strcmp(name, prefab->key)) */
-/* 			{ */
-/* 				pass = prefab->cb(pass, file, self); */
-/* 				break; */
-/* 			} */
-/* 		} */
-/* 		if(pass == entity_null) pass = root; */
-/* 	} */
-
-/* 	fclose(file); */
-
-/* 	return 1; */
-/* } */
-
 int candle_run(candle_t *self, entity_t root, const char *map_name)
 {
 	FILE *file = fopen(map_name, "r");
@@ -344,7 +313,7 @@ int candle_run(candle_t *self, entity_t root, const char *map_name)
 		if(read == 0) continue;
 		entity_t entity = candle_run_command(self, root, line);
 
-		if(root && c_node(&root))
+		if(root && c_node(&root) && entity != root)
 		{
 			c_node_add(c_node(&root), 1, entity);
 		}
