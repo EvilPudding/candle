@@ -178,7 +178,7 @@ static void texture_new_2D_loader(texture_t *self)
 		glTexParameteri(self->target, GL_TEXTURE_WRAP_S, wrap);
 		glTexParameteri(self->target, GL_TEXTURE_WRAP_T, wrap);
 
-		glTexImage2D(self->target, 0, GL_DEPTH_COMPONENT32, self->width,
+		glTexImage2D(self->target, 0, GL_DEPTH_COMPONENT, self->width,
 				self->height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL); glerr();
 	}
 

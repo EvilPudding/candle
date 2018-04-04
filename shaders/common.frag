@@ -31,7 +31,6 @@ struct gbuffer_t
 	sampler2D diffuse;
 	sampler2D specular;
 	sampler2D transparency;
-	sampler2D position;
 	sampler2D id;
 	sampler2D geomid;
 	sampler2D normal;
@@ -55,6 +54,7 @@ struct camera_t
 	vec3 pos;
 	float exposure;
 	mat4 projection;
+	mat4 inv_projection;
 	mat4 view;
 	mat4 model;
 #ifdef MESH4
@@ -195,9 +195,23 @@ vec3 get_diffuse(gbuffer_t buffer)
 	return textureLod(buffer.diffuse, pixel_pos(), 0).rgb;
 }
 
+vec3 get_position(gbuffer_t buffer, vec2 pos)
+{
+	vec3 raw_pos = vec3(pos, textureLod(buffer.depth, pos, 0).r);
+	vec4 clip_pos = vec4(raw_pos * 2.0 - 1.0, 1.0);
+	vec4 view_pos = camera.inv_projection * clip_pos;
+
+	return view_pos.xyz / view_pos.w;
+}
 vec3 get_position(gbuffer_t buffer)
 {
-	return textureLod(buffer.position, pixel_pos(), 0).rgb;
+	vec2 pos = pixel_pos();
+
+	vec3 raw_pos = vec3(pos, textureLod(buffer.depth, pos, 0).r);
+	vec4 clip_pos = vec4(raw_pos * 2.0 - 1.0, 1.0);
+	vec4 view_pos = camera.inv_projection * clip_pos;
+
+	return view_pos.xyz / view_pos.w;
 }
 
 vec3 get_normal(gbuffer_t buffer)
@@ -294,7 +308,7 @@ float rand(vec2 co)
 float doAmbientOcclusion(vec2 tcoord, vec2 uv, vec3 p, vec3 cnorm)
 {
     float scale = 1.2, bias = 0.01, intensity = 5; 
-    vec3 diff = textureLod(gbuffer.position, tcoord + uv, 0).xyz - p;
+    vec3 diff = get_position(gbuffer, tcoord + uv) - p;
     vec3 v = normalize(diff);
 	float dist = length(diff);
 	/* if(dist > 0.7) return 0.0f; */
@@ -336,7 +350,7 @@ float ambientOcclusion(vec3 p, vec3 n, float dist_to_eye)
 		ao += doAmbientOcclusion(texcoord,coord2, p, n);
 	}
 	ao /= float(iterations) * 4.0f;
-	return 1.0f - ao * 0.7f; 
+	return clamp(1.0f - ao * 0.7f, 0.0f, 1.0f); 
 }
 
 
@@ -345,19 +359,12 @@ const float maxSteps = 20;
 const float searchDist = 20;
 const float searchDistInv = 1.0f / searchDist;
 
-/* in mat4 inv_projection; */
-
-vec3 calcViewPosition(in vec2 TexCoord)
-{
-	return textureLod(gbuffer.position, TexCoord, 0).xyz;
-}
-
 vec3 get_proj_coord(vec3 hitCoord) // z = hitCoord.z - depth
 {
 	vec4 projectedCoord     = camera.projection * vec4(hitCoord, 1.0); \
 	projectedCoord.xy      /= projectedCoord.w; \
 	projectedCoord.xy       = projectedCoord.xy * 0.5 + 0.5;  \
-	float depth             = calcViewPosition(projectedCoord.xy).z; \
+	float depth             = get_position(gbuffer, projectedCoord.xy).z; \
 	return vec3(projectedCoord.xy, hitCoord.z - depth);
 }
 

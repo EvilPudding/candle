@@ -54,6 +54,7 @@ typedef struct shader_t
 	GLuint u_v;
 	GLuint u_mv;
 	GLuint u_projection;
+	GLuint u_inv_projection;
 	GLuint u_perlin_map;
 	GLuint u_angle4;
 

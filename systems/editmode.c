@@ -687,12 +687,13 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 
 int c_editmode_draw(c_editmode_t *self)
 {
+
 	if(self->nk && (self->visible || self->control))
 	{
 		if (nk_begin(self->nk, "Edit menu",
 					nk_rect(self->spawn_pos.x, self->spawn_pos.y, 230, 380),
-					NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|
-					NK_WINDOW_SCALABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
+					NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
+					NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE))
 		{
 
 

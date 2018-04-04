@@ -81,6 +81,7 @@ typedef struct
 			uint u_pos;
 			uint u_exposure;
 			uint u_projection;
+			uint u_inv_projection;
 #ifdef MESH4
 			uint u_angle4;
 #endif
@@ -90,7 +91,6 @@ typedef struct
 			uint u_diffuse;
 			uint u_specular;
 			uint u_transparency;
-			uint u_position;
 			uint u_id;
 			uint u_geomid;
 			uint u_normal;

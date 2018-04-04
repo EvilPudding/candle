@@ -140,6 +140,7 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"	vec3 pos;\n"
 			"	float exposure;\n"
 			"	mat4 projection;\n"
+			"	mat4 inv_projection;\n"
 			"	mat4 view;\n"
 			"	mat4 model;\n"
 			"#ifdef MESH4\n"
@@ -153,8 +154,6 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"uniform camera_t camera;\n"
 			"uniform vec2 id;\n"
 			"uniform float cameraspace_normals;\n"
-			"\n"
-			"out mat4 inv_projection;\n"
 			"\n"
 			"out vec3 tgspace_light_dir;\n"
 			"out vec3 tgspace_eye_dir;\n"
@@ -420,6 +419,7 @@ static int shader_new_loader(shader_t *self)
 
 	self->u_v = glGetUniformLocation(self->program, "camera.view"); glerr();
 	self->u_projection = glGetUniformLocation(self->program, "camera.projection"); glerr();
+	self->u_inv_projection = glGetUniformLocation(self->program, "camera.inv_projection"); glerr();
 	self->u_camera_pos = glGetUniformLocation(self->program, "camera.pos"); glerr();
 	self->u_camera_model = glGetUniformLocation(self->program, "camera.model"); glerr();
 	self->u_exposure = glGetUniformLocation(self->program, "camera.exposure"); glerr();
@@ -549,8 +549,6 @@ void shader_bind_light(shader_t *self, entity_t light)
 	c_light_t *light_c;
 	c_probe_t *probe_c;
 
-	const vec3_t lpos = c_spacial(&light)->pos;
-
 	c_node_t *node = c_node(&light);
 	c_node_update_model(node);
 	vec3_t lp = mat4_mul_vec4(node->model, vec4(0.0, 0.0, 0.0, 1.0)).xyz;
@@ -574,8 +572,9 @@ void shader_bind_light(shader_t *self, entity_t light)
 
 	if(probe_c && probe_c->map)
 	{
-		glUniform1i(self->u_shadow_map, 0); glerr();
-		glActiveTexture(GL_TEXTURE0); glerr();
+		int i = self->bound_textures++;
+		glUniform1i(self->u_shadow_map, i); glerr();
+		glActiveTexture(GL_TEXTURE0 + i); glerr();
 		texture_bind(probe_c->map, COLOR_TEX);
 	}
 
@@ -596,7 +595,9 @@ void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
 	glUniform1f(self->u_exposure, exposure);
 
 	/* TODO unnecessary? */
-	glUniformMatrix4fv(self->u_projection, 1, GL_FALSE, (void*)projection);
+	mat4_t inv_projection = mat4_invert(*projection);
+	glUniformMatrix4fv(self->u_projection, 1, GL_FALSE, (void*)projection->_);
+	glUniformMatrix4fv(self->u_inv_projection, 1, GL_FALSE, (void*)inv_projection._);
 
 	glerr();
 }

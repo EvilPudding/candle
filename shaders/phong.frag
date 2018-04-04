@@ -11,13 +11,15 @@ void main()
 	vec3 c_pos = get_position(gbuffer);
 	vec3 w_pos = (camera.model * vec4(c_pos, 1.0f)).xyz;
 
+	/* vec3 c_pos2 = get_position2(gbuffer); */
+
+	/* FragColor = vec4(vec3(length(c_pos2 - c_pos)*10), 1); return; */
 	vec3 c_nor = get_normal(gbuffer);
 
-	/* FragColor = vec4(abs(textureLod(gbuffer.normal, texcoord, 0).rgb - c_nor), 1.0f); */
-	/* FragColor = vec4(c_pos, 1.0f); return; */
 
 	float dist_to_eye = length(c_pos);
 	/* FragColor = clamp(vec4((nor+1.0f)/2.0f, 1.0),0,1); return; */
+
 
 	vec3 color = vec3(0.0f);
 	/* FragColor = vec4(texcoord - gl_FragCoord.xy / screen_size, 0, 1); return; */
@@ -39,7 +41,6 @@ void main()
 		/* FragColor = vec4(texture(shadow_map, -vec).rgb, 1.0f); return; */
 
 		/* FragColor = vec4(vec3(nor) * 0.5 + 0.5, 1.0); return; */
-
 
 		float sd = get_shadow(w_light_dir, point_to_light, dist_to_eye);
 

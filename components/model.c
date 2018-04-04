@@ -21,7 +21,6 @@ static void c_model_init(c_model_t *self)
 	{
 		g_missing_mat = mat_new("missing");
 		mat_set_diffuse(g_missing_mat, (prop_t){.color=vec4(0.0, 0.9, 1.0, 1.0)});
-
 	}
 
 	self->sprite = 0;

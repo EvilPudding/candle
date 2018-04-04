@@ -2,9 +2,8 @@
 layout (location = 0) out vec4 DiffuseColor;
 layout (location = 1) out vec4 SpecularColor;
 layout (location = 2) out vec4 Transparency;
-layout (location = 3) out vec3 PositionColor;
-layout (location = 4) out vec2 Normal;
-layout (location = 5) out vec2 ID;
+layout (location = 3) out vec2 Normal;
+layout (location = 4) out vec2 ID;
 
 #include "common.frag"
 #line 10
@@ -30,7 +29,6 @@ void main()
 	vec3 norm = ((camera.view * model) * vec4(vnorm, 0.0f)).xyz;
 	if(dot(norm, get_normal(gbuffer)) < 0.5) discard;
 
-	PositionColor = get_position(gbuffer);
 	DiffuseColor = resolveProperty(diffuse, tc);
 	SpecularColor = resolveProperty(specular, tc);
 	Transparency = vec4(0.0f);

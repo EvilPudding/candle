@@ -89,8 +89,11 @@ static void c_renderer_bind_camera(c_renderer_t *self, pass_t *pass,
 	glUniform1f(sb->camera.u_exposure, cam->exposure);
 
 	/* TODO unnecessary? */
+	mat4_t inv_projection = mat4_invert(cam->projection_matrix);
 	glUniformMatrix4fv(sb->camera.u_projection, 1, GL_FALSE,
 			(void*)cam->projection_matrix._);
+	glUniformMatrix4fv(sb->camera.u_inv_projection, 1, GL_FALSE,
+			(void*)inv_projection._);
 }
 
 static void c_renderer_bind_gbuffer(c_renderer_t *self, pass_t *pass,
@@ -110,42 +113,37 @@ static void c_renderer_bind_gbuffer(c_renderer_t *self, pass_t *pass,
 
 	glUniform1i(sb->gbuffer.u_depth, (*i)); glerr();
 	glActiveTexture(GL_TEXTURE0 + (*i)); glerr();
-	texture_bind(gbuffer, (*i));
+	texture_bind(gbuffer, 0);
 	(*i)++;
 
 	glUniform1i(sb->gbuffer.u_diffuse, (*i)); glerr();
 	glActiveTexture(GL_TEXTURE0 + (*i)); glerr();
-	texture_bind(gbuffer, (*i));
+	texture_bind(gbuffer, 1);
 	(*i)++;
 
 	glUniform1i(sb->gbuffer.u_specular, (*i)); glerr();
 	glActiveTexture(GL_TEXTURE0 + (*i)); glerr();
-	texture_bind(gbuffer, (*i));
+	texture_bind(gbuffer, 2);
 	(*i)++;
 
 	glUniform1i(sb->gbuffer.u_transparency, (*i)); glerr();
 	glActiveTexture(GL_TEXTURE0 + (*i)); glerr();
-	texture_bind(gbuffer, (*i));
-	(*i)++;
-
-	glUniform1i(sb->gbuffer.u_position, (*i)); glerr();
-	glActiveTexture(GL_TEXTURE0 + (*i)); glerr();
-	texture_bind(gbuffer, (*i));
+	texture_bind(gbuffer, 3);
 	(*i)++;
 
 	glUniform1i(sb->gbuffer.u_normal, (*i)); glerr();
 	glActiveTexture(GL_TEXTURE0 + (*i)); glerr();
-	texture_bind(gbuffer, (*i));
+	texture_bind(gbuffer, 4);
 	(*i)++;
 
 	glUniform1i(sb->gbuffer.u_id, (*i)); glerr();
 	glActiveTexture(GL_TEXTURE0 + (*i)); glerr();
-	texture_bind(gbuffer, (*i));
+	texture_bind(gbuffer, 5);
 	(*i)++;
 
 	glUniform1i(sb->gbuffer.u_geomid, (*i)); glerr();
 	glActiveTexture(GL_TEXTURE0 + (*i)); glerr();
-	texture_bind(gbuffer, (*i));
+	texture_bind(gbuffer, 6);
 	(*i)++;
 
 
@@ -173,6 +171,8 @@ void c_renderer_bind_get_uniforms(c_renderer_t *self, bind_t *bind,
 				shader_uniform(self->shader, bind->name, "model");
 			sb->camera.u_projection =
 				shader_uniform(self->shader, bind->name, "projection");
+			sb->camera.u_inv_projection =
+				shader_uniform(self->shader, bind->name, "inv_projection");
 #ifdef MESH4
 			sb->camera.u_angle4 =
 				shader_uniform(self->shader, bind->name, "angle4");
@@ -188,8 +188,6 @@ void c_renderer_bind_get_uniforms(c_renderer_t *self, bind_t *bind,
 				shader_uniform(self->shader, "gbuffer", "specular");
 			sb->gbuffer.u_transparency =
 				shader_uniform(self->shader, "gbuffer", "transparency");
-			sb->gbuffer.u_position =
-				shader_uniform(self->shader, "gbuffer", "position");
 			sb->gbuffer.u_id =
 				shader_uniform(self->shader, "gbuffer", "id");
 			sb->gbuffer.u_geomid =
@@ -550,7 +548,6 @@ static int c_renderer_update_screen_texture(c_renderer_t *self)
 			/* texture_add_buffer(pass->output, "diffuse", 1, 1, 0); */
 			texture_add_buffer(pass->output, "specular", 1, 4, 0);
 			texture_add_buffer(pass->output, "transparency", 1, 4, 0);
-			texture_add_buffer(pass->output, "position", 1, 3, 0);
 			texture_add_buffer(pass->output, "normal", 1, 2, 0);
 			texture_add_buffer(pass->output, "id", 1, 2, 0);
 			texture_add_buffer(pass->output, "geomid", 1, 2, 0);
@@ -711,7 +708,7 @@ entity_t c_renderer_geom_at_pixel(c_renderer_t *self, int x, int y,
 	entity_t result;
 	if(!self->passes[1].output) return entity_null;
 
-	unsigned int res = texture_get_pixel(self->passes[1].output, 6,
+	unsigned int res = texture_get_pixel(self->passes[1].output, 5,
 			x * self->resolution, y * self->resolution, depth) & 0xFFFF;
 	result = res - 1;
 	return result;
@@ -723,7 +720,7 @@ entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
 	entity_t result;
 	if(!self->passes[1].output) return entity_null;
 
-	unsigned int res = texture_get_pixel(self->passes[1].output, 5,
+	unsigned int res = texture_get_pixel(self->passes[1].output, 4,
 			x * self->resolution, y * self->resolution, depth) & 0xFFFF;
 	result = res - 1;
 	return result;
