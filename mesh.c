@@ -2097,74 +2097,67 @@ void mesh_wait(mesh_t *self)
 	SDL_SemPost(self->sem);
 }
 
-void mesh_load_scene(mesh_t *self, const void *scene)
+void mesh_load_scene(mesh_t *self, const void *grp)
 {
-	int i;
 	mesh_lock(self);
-	const struct aiScene *s = scene;
+	const struct aiMesh *group = grp;
 
-	int offset = 0;
-	for(i = 0; i < s->mNumMeshes; i++)
+	int offset = vector_count(self->verts);
+	int j;
+
+	/* int mat = group->mMaterialIndex; */
+
+	if(!group->mTextureCoords[0])
 	{
-		int j;
+		self->has_texcoords = 0;
+	}
 
-		const struct aiMesh *group = s->mMeshes[i];
-		printf("group: %s\n", group->mName.data);
-		/* int mat = group->mMaterialIndex; */
+	for(j = 0; j < group->mNumVertices; j++)
+	{
+		mesh_add_vert(self, VEC3(_vec3(group->mVertices[j])));
+	}
+	struct aiVector3D *normals = group->mNormals;
+	normals = NULL;
+	struct aiVector3D *texcoor = group->mTextureCoords[0];
+	for(j = 0; j < group->mNumFaces; j++)
+	{
+		const struct aiFace *face = &group->mFaces[j];
+		unsigned int *indices = face->mIndices;
 
-		if(!group->mTextureCoords[0])
+		if(face->mNumIndices == 3)
 		{
-			self->has_texcoords = 0;
-		}
+			int i0 = indices[0] + offset;
+			int i1 = indices[1] + offset;
+			int i2 = indices[2] + offset;
+			mesh_add_triangle(self,
+					i0, normals?vec3(_vec3(normals[i0])):Z3,
+					texcoor?vec2(_vec2(texcoor[i0])):Z2,
 
-		for(j = 0; j < group->mNumVertices; j++)
+					i1, normals?vec3(_vec3(normals[i1])):Z3,
+					texcoor?vec2(_vec2(texcoor[i1])):Z2,
+
+					i2, normals?vec3(_vec3(normals[i2])):Z3,
+					texcoor?vec2(_vec2(texcoor[i2])):Z2, 1);
+		}
+		else if(face->mNumIndices == 4)
 		{
-			mesh_add_vert(self, VEC3(_vec3(group->mVertices[j])));
+			int i0 = indices[0] + offset;
+			int i1 = indices[1] + offset;
+			int i2 = indices[2] + offset;
+			int i3 = indices[3] + offset;
+			mesh_add_quad(self,
+					i0, normals?vec3(_vec3(normals[i0])):Z3,
+					texcoor?vec2(_vec2(texcoor[i0])):Z2,
+
+					i1, normals?vec3(_vec3(normals[i1])):Z3,
+					texcoor?vec2(_vec2(texcoor[i1])):Z2,
+
+					i2, normals?vec3(_vec3(normals[i2])):Z3,
+					texcoor?vec2(_vec2(texcoor[i2])):Z2,
+
+					i3, normals?vec3(_vec3(normals[i3])):Z3,
+					texcoor?vec2(_vec2(texcoor[i3])):Z2, 1);
 		}
-		struct aiVector3D *normals = group->mNormals;
-		normals = NULL;
-		struct aiVector3D *texcoor = group->mTextureCoords[0];
-		for(j = 0; j < group->mNumFaces; j++)
-		{
-			const struct aiFace *face = &group->mFaces[j];
-			unsigned int *indices = face->mIndices;
-
-			if(face->mNumIndices == 3)
-			{
-				int i0 = indices[0] + offset;
-				int i1 = indices[1] + offset;
-				int i2 = indices[2] + offset;
-				mesh_add_triangle(self,
-						i0, normals?vec3(_vec3(normals[i0])):Z3,
-						texcoor?vec2(_vec2(texcoor[i0])):Z2,
-
-						i1, normals?vec3(_vec3(normals[i1])):Z3,
-						texcoor?vec2(_vec2(texcoor[i1])):Z2,
-
-						i2, normals?vec3(_vec3(normals[i2])):Z3,
-						texcoor?vec2(_vec2(texcoor[i2])):Z2, 1);
-			}
-			else if(face->mNumIndices == 4)
-			{
-				int i0 = indices[0] + offset;
-				int i1 = indices[1] + offset;
-				int i2 = indices[2] + offset;
-				int i3 = indices[3] + offset;
-				mesh_add_quad(self,
-						i0, normals?vec3(_vec3(normals[i0])):Z3,
-						texcoor?vec2(_vec2(texcoor[i0])):Z2,
-
-						i1, normals?vec3(_vec3(normals[i1])):Z3,
-						texcoor?vec2(_vec2(texcoor[i1])):Z2,
-
-						i2, normals?vec3(_vec3(normals[i2])):Z3,
-						texcoor?vec2(_vec2(texcoor[i2])):Z2,
-
-						i3, normals?vec3(_vec3(normals[i3])):Z3,
-						texcoor?vec2(_vec2(texcoor[i3])):Z2, 1);
-			}
-		}
-		offset += group->mNumVertices;
 	}
 
 	mesh_unlock(self);

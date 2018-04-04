@@ -5,7 +5,11 @@ c_name_t *c_name_new(const char *name)
 {
 	c_name_t *self = component_new("name");
 
-	strncpy(self->name, name, sizeof(self->name));
+
+	for(int i = 0; name[i]; i++)
+	{
+		self->name[i] = tolower(name[i]);
+	}
 	self->hash = ref(name);
 
 	return self;

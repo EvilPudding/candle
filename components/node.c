@@ -60,6 +60,22 @@ entity_t c_node_get_by_name(c_node_t *self, uint hash)
 	return entity_null;
 }
 
+void c_node_remove(c_node_t *self, entity_t child)
+{
+	int i;
+	for(i = 0; i < self->children_size; i++)
+	{
+		if(self->children[i] == child)
+		{
+			if(--self->children_size)
+			{
+				self->children[i] = self->children[self->children_size];
+			}
+		}
+
+	}
+}
+
 void c_node_add(c_node_t *self, int num, ...)
 {
 	va_list children;
@@ -80,8 +96,12 @@ void c_node_add(c_node_t *self, int num, ...)
 		c_node_t *child_node = c_node(&child);
 		if(!child_node)
 		{
-			entity_add_component(child, (c_t*)c_node_new());
+			entity_add_component(child, c_node_new());
 			child_node = c_node(&child);
+		}
+		if(child_node->parent && child_node->parent != c_entity(self))
+		{
+			c_node_remove(c_node(&child_node->parent), child);
 		}
 		child_node->parent = self->super.entity;
 		c_node_changed(child_node);

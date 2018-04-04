@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include <components/model.h>
+#include <components/light.h>
 #include <components/node.h>
 #include <components/name.h>
 
@@ -94,6 +95,7 @@ static inline mat4_t mat4_from_ai(const struct aiMatrix4x4 m)
 	r._[3]._[0] = m.d1; r._[3]._[1] = m.d2;
 	r._[3]._[2] = m.d3; r._[3]._[3] = m.d4;
 
+	/* return mat4_transpose(r); */
 	return r;
 }
 
@@ -103,25 +105,25 @@ void load_node(entity_t entity, const struct aiNode *anode)
 	c_node_t *node = c_node(&entity);
 	c_spacial_t *spacial = c_spacial(&entity);
 
-	spacial->model_matrix = mat4_from_ai(anode->mTransformation);
+	c_spacial_set_model(spacial, mat4_from_ai(anode->mTransformation));
 
-	const char *name = anode->mName.data;
-
-	entity_t n = c_node_get_by_name(node, ref(name));
-
-	if(!n)
-	{
-		n = entity_new(c_name_new(name), c_node_new());
-	}
-	c_node_add(node, 1, n);
 	for(i = 0; i < anode->mNumChildren; i++)
 	{
-		load_node(n, anode->mChildren[i]);
+		const struct aiNode *cnode = anode->mChildren[i];
+		const char *name = cnode->mName.data;
+		entity_t n = c_node_get_by_name(node, ref(name));
+		if(!n)
+		{
+			n = entity_new(c_name_new(name), c_node_new());
+		}
+		c_node_add(node, 1, n);
+		load_node(n, cnode);
 	}
 }
 
 entity_t c_sauces_model_get(c_sauces_t *self, const char *name)
 {
+	int i;
 	char buffer[2048];
 	snprintf(buffer, sizeof(buffer), "resauces/models/%s", name);
 
@@ -138,11 +140,60 @@ entity_t c_sauces_model_get(c_sauces_t *self, const char *name)
 		return entity_null;
 	}
 
-	result = entity_new(c_model_new(mesh_new(), mat_new("t"), 1));
-	mesh_t *mesh = c_model(&result)->mesh;
-	mesh_load_scene(mesh, scene);
-
+	result = entity_new(c_name_new(name),
+			c_model_new(mesh_new(), mat_new("t"), 1));
 	load_node(result, scene->mRootNode);
+	c_node_t *root = c_node(&result);
+
+	for(i = 0; i < scene->mNumMeshes; i++)
+	{
+		const struct aiMesh *mesh = scene->mMeshes[i];
+		entity_t node = c_node_get_by_name(root, ref(mesh->mName.data));
+		if(node)
+		{
+			c_model_t *mc = c_model(&node);
+			if(!mc)
+			{
+				entity_add_component(node, c_model_new(mesh_new(),
+							mat_new("t"), 1));
+				mc = c_model(&node);
+			}
+
+			mesh_load_scene(mc->mesh, mesh);
+		}
+		else
+		{
+			printf("%s not found\n", mesh->mName.data);
+			mesh_load_scene(c_model(&result)->mesh, mesh);
+		}
+	}
+
+	for(i = 0; i < scene->mNumLights; i++)
+	{
+		const struct aiLight *light = scene->mLights[i];
+		entity_t node = c_node_get_by_name(root, ref(light->mName.data));
+		if(node)
+		{
+			c_light_t *lc = c_light(&node);
+			if(!lc)
+			{
+				vec4_t color = vec4(
+					light->mColorDiffuse.r,
+					light->mColorDiffuse.g,
+					light->mColorDiffuse.b,
+					1.0f
+				);
+				entity_add_component(node, c_light_new(1.0f, 40.0f,
+							color, 256));
+			}
+
+			/* load_light(lc, light); */
+		}
+		else
+		{
+			printf("%s not found for light\n", light->mName.data);
+		}
+	}
 
 	aiReleaseImport(scene);
 

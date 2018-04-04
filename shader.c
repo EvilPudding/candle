@@ -3,6 +3,7 @@
 #include "components/light.h"
 #include "components/probe.h"
 #include "components/spacial.h"
+#include "components/node.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -550,7 +551,10 @@ void shader_bind_light(shader_t *self, entity_t light)
 
 	const vec3_t lpos = c_spacial(&light)->pos;
 
-	glUniform3f(self->u_light_pos, lpos.x, lpos.y, lpos.z);
+	c_node_t *node = c_node(&light);
+	c_node_update_model(node);
+	vec3_t lp = mat4_mul_vec4(node->model, vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+	glUniform3f(self->u_light_pos, lp.x, lp.y, lp.z);
 
 	light_c = c_light(&light);
 	probe_c = c_probe(&light);

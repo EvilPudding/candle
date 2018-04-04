@@ -61,6 +61,41 @@ vec2_t c_editmode_bind_selected(c_editmode_t *self)
 /* { */
 /* 	return int_to_vec2(self->selected); */
 /* } */
+entity_t arrows;
+void c_editmode_coords(c_editmode_t *self)
+{
+	if(!self->selected) return;
+	if(!arrows)
+	{
+		mesh_t *arrow = mesh_circle(0.01f, 8);
+		mesh_lock(arrow);
+		mesh_extrude_edges(arrow, 1, vec4(0.0, 0.5, 0.0, 0.0), 1.0f, NULL);
+		mesh_extrude_edges(arrow, 1, vec4(0.0, 0.0, 0.0, 0.0), 2.00f, NULL);
+		mesh_extrude_edges(arrow, 1, vec4(0.0, 0.05, 0.0, 0.0), 0.01f, NULL);
+		mesh_unlock(arrow);
+
+		arrows = entity_new(c_name_new("Coord System"), c_node_new());
+
+		mat_t *mX = mat_new("X"); mX->diffuse.color.xyz = vec3(1.0, 0.0, 0.0);
+		mat_t *mY = mat_new("Y"); mY->diffuse.color.xyz = vec3(0.0, 1.0, 0.0);
+		mat_t *mZ = mat_new("Z"); mZ->diffuse.color.xyz = vec3(0.0, 0.0, 1.0);
+
+		entity_t X = entity_new(c_name_new("X"), c_model_new(arrow, mX, 0));
+		c_spacial_rotate_Z(c_spacial(&X), -M_PI / 2.0f);
+		entity_t Z = entity_new(c_name_new("Z"), c_model_new(arrow, mZ, 0));
+		c_spacial_rotate_X(c_spacial(&Z), M_PI / 2.0f);
+		entity_t Y = entity_new(c_name_new("Y"), c_model_new(arrow, mY, 0));
+
+		c_node_add(c_node(&arrows), 3, X, Y, Z);
+	}
+	c_node_t *nc = c_node(&self->selected);
+	if(!nc)
+	{
+		entity_add_component(self->selected, c_node_new());
+		nc = c_node(&self);
+	}
+	c_node_add(nc, 1, arrows);
+}
 
 
 /* entity_t p; */
@@ -231,6 +266,8 @@ void c_editmode_open_entity(c_editmode_t *self, entity_t ent)
 {
 	if(!ent) return;
 	int i;
+	self->open_entities_count = 0;
+
 	for(i = 0; i < self->open_entities_count; i++)
 	{
 		if(self->open_entities[i] == ent) return;
@@ -239,6 +276,14 @@ void c_editmode_open_entity(c_editmode_t *self, entity_t ent)
 	self->spawn_pos.x += 25;
 	self->spawn_pos.y += 25;
 	self->open_entities[self->open_entities_count++] = ent;
+}
+
+void c_editmode_select(c_editmode_t *self, entity_t select)
+{
+	self->selected = select;
+	c_editmode_coords(self);
+
+	c_editmode_open_entity(self, self->selected);
 }
 
 int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
@@ -257,9 +302,7 @@ int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 
 			if(self->mode == EDIT_OBJECT)
 			{
-				self->selected = result;
-
-				c_editmode_open_entity(self, self->selected);
+				c_editmode_select(self, result);
 			}
 			else// if(result == self->selected)
 			{
@@ -360,8 +403,7 @@ void node_entity(c_editmode_t *self, entity_t entity)
 		{
 			if(nk_button_label(self->nk, "select"))
 			{
-				c_editmode_open_entity(self, entity);
-				self->selected = entity;
+				c_editmode_select(self, entity);
 			}
 			int i;
 			for(i = 0; i < node->children_size; i++)
@@ -376,8 +418,7 @@ void node_entity(c_editmode_t *self, entity_t entity)
 		int is_selected = self->selected == entity;
 		if(nk_selectable_label(self->nk, final_name, NK_TEXT_ALIGN_LEFT, &is_selected))
 		{
-			c_editmode_open_entity(self, entity);
-			self->selected = entity;
+			c_editmode_select(self, entity);
 		}
 	}
 }
@@ -589,7 +630,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 		{
 
 			nk_layout_row_dynamic(self->nk, 25, 1);
-			if (nk_contextual_item_label(self->nk, "delete", NK_TEXT_CENTERED))
+			if(nk_contextual_item_label(self->nk, "delete", NK_TEXT_CENTERED))
 			{
 				entity_destroy(ent);
 			}
@@ -675,7 +716,7 @@ int c_editmode_draw(c_editmode_t *self)
 				self->shell[0] = '\0';
 				if(instance)
 				{
-					self->selected = instance;
+					c_editmode_select(self, instance);
 				}
 			}
 		}
