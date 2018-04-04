@@ -41,13 +41,9 @@ uniform gbuffer_t gbuffer;
 uniform float distortion;
 uniform float scattering;
 
-uniform samplerCube shadow_map;
-
 uniform samplerCube ambient_map;
-/* uniform samplerCube shadow_map_color; */
 
 uniform sampler3D perlin_map;
-//uniform samplerCubeShadow shadow_map;
 
 struct camera_t
 {
@@ -70,6 +66,8 @@ uniform vec3 light_pos;
 uniform float light_intensity;
 uniform float light_radius;
 uniform vec3 light_color;
+uniform samplerCube light_shadow_map;
+
 uniform float has_tex;
 uniform float cameraspace_normals;
 
@@ -130,7 +128,7 @@ vec4 resolveProperty(property_t prop, vec2 coords)
 
 float lookup_single(vec3 shadowCoord)
 {
-	return texture(shadow_map, shadowCoord).a;
+	return texture(light_shadow_map, shadowCoord).a;
 }
 
 /* float prec = 0.05; */

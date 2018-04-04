@@ -196,7 +196,7 @@ void mat_bind_prop(u_prop_t *uniforms, prop_t *prop, int num)
 
 	if(prop->texture_blend)
 	{
-		texture_bind(prop->texture, -1);
+		texture_bind(prop->texture, COLOR_TEX);
 	}
 	else
 	{

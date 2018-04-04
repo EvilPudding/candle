@@ -74,7 +74,7 @@ int handle_event(SDL_Event event)
 				event.button.button};
 			if(g_candle->mouse_owners[0])
 			{
-				entity_signal_same(g_candle->mouse_owners[0], sig("mouse_press"),
+				entity_signal(g_candle->mouse_owners[0], sig("mouse_press"),
 						&bdata);
 			}
 			else

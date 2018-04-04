@@ -427,7 +427,7 @@ static int shader_new_loader(shader_t *self)
 	self->u_angle4 = glGetUniformLocation(self->program, "angle4"); glerr();
 #endif
 
-	self->u_shadow_map = glGetUniformLocation(self->program, "shadow_map"); glerr();
+	self->u_shadow_map = glGetUniformLocation(self->program, "light_shadow_map"); glerr();
 	self->u_light_pos = glGetUniformLocation(self->program, "light_pos"); glerr();
 	self->u_light_intensity = glGetUniformLocation(self->program, "light_intensity"); glerr();
 	self->u_light_color = glGetUniformLocation(self->program, "light_color"); glerr();
@@ -517,8 +517,9 @@ shader_t *shader_new(fs_t *fs, vs_t *vs)
 
 void shader_bind_ambient(shader_t *self, texture_t *ambient)
 {
-	glUniform1i(self->u_ambient_map, 11); glerr();
-	glActiveTexture(GL_TEXTURE0 + 11); glerr();
+	int i = self->bound_textures++;
+	glUniform1i(self->u_ambient_map, i); glerr();
+	glActiveTexture(GL_TEXTURE0 + i); glerr();
 	texture_bind(ambient, COLOR_TEX);
 
 	glerr();
@@ -572,9 +573,9 @@ void shader_bind_light(shader_t *self, entity_t light)
 
 	if(probe_c && probe_c->map)
 	{
-		int i = self->bound_textures++;
-		glUniform1i(self->u_shadow_map, i); glerr();
-		glActiveTexture(GL_TEXTURE0 + i); glerr();
+		/* int i = self->bound_textures++; */
+		glUniform1i(self->u_shadow_map, 19); glerr();
+		glActiveTexture(GL_TEXTURE0 + 19); glerr();
 		texture_bind(probe_c->map, COLOR_TEX);
 	}
 
@@ -627,8 +628,9 @@ void shader_bind_screen(shader_t *self, texture_t *buffer, float sx, float sy)
 	glUniform2f(self->u_screen_size, sx * buffer->width, sy * buffer->height);
 	glerr();
 
-	glUniform1i(self->u_diffuse.texture, 1); glerr();
-	glActiveTexture(GL_TEXTURE0 + 1); glerr();
+	int i = self->bound_textures++;
+	glUniform1i(self->u_diffuse.texture, i); glerr();
+	glActiveTexture(GL_TEXTURE0 + i); glerr();
 
 	texture_bind(buffer, COLOR_TEX);
 }

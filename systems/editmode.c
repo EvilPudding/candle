@@ -69,9 +69,15 @@ void c_editmode_coords(c_editmode_t *self)
 	{
 		mesh_t *arrow = mesh_circle(0.01f, 8);
 		mesh_lock(arrow);
+#ifdef MESH4
 		mesh_extrude_edges(arrow, 1, vec4(0.0, 0.5, 0.0, 0.0), 1.0f, NULL);
 		mesh_extrude_edges(arrow, 1, vec4(0.0, 0.0, 0.0, 0.0), 2.00f, NULL);
 		mesh_extrude_edges(arrow, 1, vec4(0.0, 0.05, 0.0, 0.0), 0.01f, NULL);
+#else
+		mesh_extrude_edges(arrow, 1, vec3(0.0, 0.5, 0.0), 1.0f, NULL);
+		mesh_extrude_edges(arrow, 1, vec3(0.0, 0.0, 0.0), 2.00f, NULL);
+		mesh_extrude_edges(arrow, 1, vec3(0.0, 0.05, 0.0), 0.01f, NULL);
+#endif
 		mesh_unlock(arrow);
 
 		arrows = entity_new(c_name_new("Coord System"), c_node_new());
