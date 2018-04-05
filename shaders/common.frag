@@ -221,9 +221,11 @@ vec3 get_normal()
 {
 	if(has_tex > 0.5)
 	{
-		vec3 normalColor = resolveProperty(normal, texcoord).rgb * 2.0f - 1.0f;
-		normalColor = vec3(normalColor.y, -normalColor.x, normalColor.z);
+		vec3 normalColor = resolveProperty(normal, vec2(texcoord.x, texcoord.y)).rgb * 2.0f - 1.0f;
+		/* vec3 normalColor = resolveProperty(normal, texcoord).rgb * 2.0f - 1.0f; */
+		/* normalColor = vec3(normalColor.y, normalColor.x, normalColor.z); */
 		return normalize(TM * normalColor);
+
 	}
 	return normalize(vertex_normal);
 }

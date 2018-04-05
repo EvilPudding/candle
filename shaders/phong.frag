@@ -51,9 +51,6 @@ void main()
 		{
 
 
-			/* float specul_smudge = min(1.0, 1.0 - pow(noi, 5)); */
-			float specul_smudge = 1.0;
-
 			float lightAtt = 0.01;
 
 
@@ -69,30 +66,25 @@ void main()
 			vec3 color_lit = attenuation * frag_diffuse;
 
 
-			/* if(specul_smudge > 0.0 && diffuseCoefficient > 0.005 && attenuation > 0.01) */
-			/* { */
-			/* 	vec4 spe = get_specular(gbuffer); */
+			if(diffuseCoefficient > 0.005 && attenuation > 0.01)
+			{
+				vec4 spe = get_specular(gbuffer);
 
-			/* 	vec3 eye_dir = normalize(-c_pos); */
+				vec3 eye_dir = normalize(-c_pos);
 
-			/* 	vec3 reflect_dir = reflect(light_dir, nor); */
+				vec3 reflect_dir = normalize(reflect(c_light_dir, c_nor));
 
 
-			/* 	float specularCoefficient = 0.0; */
-			/* 	vec3 specularColor = spe.rgb * light_intensity * specul_smudge; */
-			/* 	float power = clamp(roughnessToSpecularPower(spe.a), 0.0f, 1.0f) * 10; */
+				float specularCoefficient = 0.0;
+				vec3 specularColor = spe.rgb * light_intensity;
+				float power = clamp(roughnessToSpecularPower(spe.a), 0.0f, 1.0f) * 10;
 
-			/* 	specularCoefficient = pow(max(dot(eye_dir, reflect_dir), 0.0), power); */
-			/* 	if(power >= 1.0f) */
-			/* 	{ */
-			/* 		specularCoefficient = 0.0f; */
-			/* 	} */
+				specularCoefficient = pow(clamp(-dot(eye_dir, reflect_dir), 0.0f, 1.0f), power);
 
-			/* 	vec3 frag_specular = clamp(specularCoefficient * specularColor, 0.0f, 1.0f); */
-			/* 	color_lit += attenuation * frag_specular; */
-				/* FragColor = vec4(vec3(specularCoefficient), 1.0); return; */
-				/* FragColor = vec4(vec3(specularColor), 1.0); return; */
-			/* } */
+				vec3 frag_specular = clamp(specularCoefficient * specularColor, 0.0f, 1.0f);
+				color_lit += attenuation * frag_specular;
+				/* FragColor = vec4(reflect_dir, 1.0); return; */
+			}
 			color += color_lit * (1.0 - sd);
 		}
 	}

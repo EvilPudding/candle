@@ -129,10 +129,10 @@ entity_t c_sauces_model_get(c_sauces_t *self, const char *name)
 
 	entity_t result;
 	const struct aiScene *scene = aiImportFile(buffer,
-			/* aiProcess_CalcTangentSpace  	| */
+			/* aiProcess_CalcTangentSpace  		| */
 			/* aiProcess_Triangulate			| */
 			/* aiProcess_GenSmoothNormals		| */
-			aiProcess_JoinIdenticalVertices |
+			aiProcess_JoinIdenticalVertices 	|
 			aiProcess_SortByPType);
 	if(!scene)
 	{
