@@ -131,9 +131,9 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"layout (location = 1) in vec3 N;\n"
 			"layout (location = 2) in vec2 UV;\n"
 			"layout (location = 3) in vec3 TG;\n"
-			"layout (location = 4) in vec3 BT;\n"
+			"/* layout (location = 4) in vec3 BT; */\n"
 			"/* layout (location = 5) in vec4 COL; */\n"
-			"layout (location = 5) in vec2 ID;\n"
+			"layout (location = 4) in vec2 ID;\n"
 			"\n"
 			"struct camera_t\n"
 			"{\n"
@@ -403,9 +403,9 @@ static int shader_new_loader(shader_t *self)
 	/* TANGENT */
 	glBindAttribLocation(self->program, 3, "TG"); glerr();
 	/* BITANGENT */
-	glBindAttribLocation(self->program, 4, "BT"); glerr();
+	/* glBindAttribLocation(self->program, 4, "BT"); glerr(); */
 	/* ID */
-	glBindAttribLocation(self->program, 5, "ID"); glerr();
+	glBindAttribLocation(self->program, 4, "ID"); glerr();
 
 	self->u_mvp = glGetUniformLocation(self->program, "MVP"); glerr();
 	self->u_m = glGetUniformLocation(self->program, "M"); glerr();

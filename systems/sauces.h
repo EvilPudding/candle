@@ -36,12 +36,12 @@ void c_sauces_texture_reg(c_sauces_t *self, const char *name, texture_t *texture
 mesh_t *c_sauces_mesh_get(c_sauces_t *self, const char *name);
 void c_sauces_mesh_reg(c_sauces_t *self, const char *name, mesh_t *mesh);
 
-entity_t c_sauces_model_get(c_sauces_t *self, const char *name);
+entity_t c_sauces_model_get(c_sauces_t *self, const char *name, float scale);
 
 #define sauces_mat_at(name) (c_sauces_get_mats_at(c_sauces(&SYS), name))
 #define sauces_mat(name) (c_sauces_mat_get(c_sauces(&SYS), name))
 #define sauces_mesh(name) (c_sauces_mesh_get(c_sauces(&SYS), name))
-#define sauces_model(name) (c_sauces_model_get(c_sauces(&SYS), name))
+#define sauces_model(name, scale) (c_sauces_model_get(c_sauces(&SYS), name, scale))
 #define sauces_tex(name) (c_sauces_texture_get(c_sauces(&SYS), name))
 
 #endif /* !RESAUCES_H */

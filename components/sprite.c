@@ -41,7 +41,7 @@ static void c_sprite_init(c_sprite_t *self)
 
 			"		vertex_normal    = (vec4( N, 0.0f)).xyz;\n"
 			"		vertex_tangent   = (vec4(TG, 0.0f)).xyz;\n"
-			"		vertex_bitangent = (vec4(BT, 0.0f)).xyz;\n"
+			"		vertex_bitangent = cross(vertex_normal, vertex_tangent);\n"
 			"		texcoord = vec2(-UV.y, UV.x);\n"
 
 			"		object_id = id;\n"

@@ -91,7 +91,7 @@ void glg_vert_prealloc(glg_t *self, int size)
 	self->nor = realloc(self->nor, self->vert_alloc * sizeof(*self->nor));
 	self->tex = realloc(self->tex, self->vert_alloc * sizeof(*self->tex));
 	self->tan = realloc(self->tan, self->vert_alloc * sizeof(*self->tan));
-	self->bit = realloc(self->bit, self->vert_alloc * sizeof(*self->bit));
+	/* self->bit = realloc(self->bit, self->vert_alloc * sizeof(*self->bit)); */
 	/* self->col = realloc(self->col, self->vert_alloc * sizeof(*self->col)); */
 	self->id = realloc(self->id, self->vert_alloc * sizeof(*self->id));
 }
@@ -238,96 +238,75 @@ void glg_face_to_gl(glg_t *self, face_t *f, int id)
 
 void glg_get_tg_bt(glg_t *self)
 {
-	mesh_t *mesh = c_model(&self->entity)->mesh;
-	int i, a;
-	/* if(self->bit) free(self->bit); */
-	/* if(self->tan) free(self->tan); */
-	/* self->bit = calloc(3 * self->vert_num, sizeof(*self->bit)); */
-	/* self->tan = calloc(3 * self->vert_num, sizeof(*self->tan)); */
+	int i;
 
-	vec3_t *tan1 = calloc(self->vert_num * 2, sizeof(*tan1));
-	vec3_t *tan2 = tan1 + self->vert_num;
+	/* memset(self->tan, 0, self->ind_num * sizeof(*self->tan)); */
+	/* memset(self->bit, 0, self->ind_num * sizeof(*self->bit)); */
 
-	if(!mesh->has_texcoords)
+	for(i = 0; i < self->ind_num; i += 3)
 	{
-		for(a = 0; a < self->vert_num; a++)
-		{
-			vec3_t n = self->nor[a];
+		int i0 = self->ind[i + 0];
+		int i1 = self->ind[i + 1];
+		int i2 = self->ind[i + 2];
+		self->tan[i0] = vec3(0.0f);
+		self->tan[i1] = vec3(0.0f);
+		self->tan[i2] = vec3(0.0f);
 
-			vec3_t c1 = vec3_cross(n, vec3(0.0, 0.0, 1.0)); 
-			vec3_t c2 = vec3_cross(n, vec3(0.0, 1.0, 0.0)); 
-
-			if(vec3_len(c1) > vec3_len(c2))
-			{
-				tan1[a] = vec3_norm(c1);
-			}
-			else
-			{
-				tan1[a] = vec3_norm(c2);
-			}
-		}
+		/* self->bit[i0] = vec3(0.0f); */
+		/* self->bit[i1] = vec3(0.0f); */
+		/* self->bit[i2] = vec3(0.0f); */
 	}
-	else
+	for(i = 0; i < self->ind_num; i += 3)
 	{
-		for(i = 0; i < self->ind_num; i += 3)
-		{
-			int i1 = self->ind[i + 0];
-			int i2 = self->ind[i + 1];
-			int i3 = self->ind[i + 2];
+		int i0 = self->ind[i + 0];
+		int i1 = self->ind[i + 1];
+		int i2 = self->ind[i + 2];
 
-			vec3_t v1 = ((vec3_t*)self->pos)[i1];
-			vec3_t v2 = ((vec3_t*)self->pos)[i2];
-			vec3_t v3 = ((vec3_t*)self->pos)[i3];
+		vec3_t v0 = ((vec3_t*)self->pos)[i0];
+		vec3_t v1 = ((vec3_t*)self->pos)[i1];
+		vec3_t v2 = ((vec3_t*)self->pos)[i2];
 
-			vec2_t w1 = ((vec2_t*)self->tex)[i1];
-			vec2_t w2 = ((vec2_t*)self->tex)[i2];
-			vec2_t w3 = ((vec2_t*)self->tex)[i3];
+		vec2_t w0 = ((vec2_t*)self->tex)[i0];
+		vec2_t w1 = ((vec2_t*)self->tex)[i1];
+		vec2_t w2 = ((vec2_t*)self->tex)[i2];
 
-			float x1 = v2.x - v1.x;
-			float x2 = v3.x - v1.x;
-			float y1 = v2.y - v1.y;
-			float y2 = v3.y - v1.y;
-			float z1 = v2.z - v1.z;
-			float z2 = v3.z - v1.z;
+		vec3_t dp1 = vec3_sub(v1, v0);
+		vec3_t dp2 = vec3_sub(v2, v0);
 
-			float s1 = w2.x - w1.x;
-			float s2 = w3.x - w1.x;
-			float t1 = w2.y - w1.y;
-			float t2 = w3.y - w1.y;
+		vec2_t duv1 = vec2_sub(w1, w0);
+		vec2_t duv2 = vec2_sub(w2, w0);
 
-			float r = 1.0F / (s1 * t2 - s2 * t1);
-			vec3_t sdir = vec3((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
-					(t2 * z1 - t1 * z2) * r);
-			vec3_t tdir = vec3((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
-					(s1 * z2 - s2 * z1) * r);
+		float r = 1.0f / (duv1.x * duv2.y - duv1.y * duv2.x);
+		vec3_t tangent   = vec3_scale(vec3_sub(vec3_scale(dp1, duv2.y), vec3_scale(dp2, duv1.y)), r);
+		/* vec3_t bitangent = vec3_scale(vec3_sub(vec3_scale(dp2, duv1.x), vec3_scale(dp1, duv2.x)), r); */
 
-			tan1[i1] = vec3_add(tan1[i1], sdir);
-			tan1[i2] = vec3_add(tan1[i2], sdir);
-			tan1[i3] = vec3_add(tan1[i3], sdir);
 
-			tan2[i1] = vec3_add(tan2[i1], tdir);
-			tan2[i2] = vec3_add(tan2[i2], tdir);
-			tan2[i3] = vec3_add(tan2[i3], tdir);
-		}
+		self->tan[i0] = vec3_add(self->tan[i0], tangent);
+		self->tan[i1] = vec3_add(self->tan[i1], tangent);
+		self->tan[i2] = vec3_add(self->tan[i2], tangent);
+
+		/* self->bit[i0] = vec3_add(self->bit[i0], bitangent); */
+		/* self->bit[i1] = vec3_add(self->bit[i1], bitangent); */
+		/* self->bit[i2] = vec3_add(self->bit[i2], bitangent); */
 	}
-	for(a = 0; a < self->vert_num; a++)
+	for(i = 0; i < self->vert_num; i++)
 	{
-		vec3_t *n = &((vec3_t*)self->nor)[a];
-		vec3_t *t = &tan1[a];
+		vec3_t n = self->nor[i];
+		vec3_t t = self->tan[i];
+		/* vec3_t b = self->bit[i]; */
 
-		// Gram-Schmidt orthogonalize
-		vec3_t tangent = vec3_norm(
-				vec3_sub(*t, vec3_scale(*n, vec3_dot(*n, *t))));
+		/* Gram-Schmidt orthogonalize */
+		t = vec3_norm(vec3_sub(t, vec3_scale(n, vec3_dot(n, t))));
 
-		self->tan[a] = tangent;
+		/* Calculate handedness */
+		/* self->tan[a].w = */
+		/* if(vec3_dot(vec3_cross(n, t), b) < 0.0f) */
+		/* { */
+			/* t = vec3_inv(t); */
+		/* } */
 
-		self->bit[a] = vec3_cross(tangent, *n);
-
-		// Calculate handedness
-		/* mesh->tan[a].w = (vec3_dot(vec3_mull_cross(n, t), tan2[a]) < 0.0F) ? -1.0F : 1.0F; */
+		self->tan[i] = t;
 	}
-
-	free(tan1);
 }
 
 static inline void create_buffer(int id, GLuint vbo, void *arr, int dim, size_t size)
@@ -445,7 +424,10 @@ int glg_update_ram(glg_t *self)
 #endif
 			glg_face_to_gl(self, face, id);
 		}
-		glg_get_tg_bt(self);
+		if(mesh->has_texcoords)
+		{
+			glg_get_tg_bt(self);
+		}
 	}
 	else if(vector_count(edges))
 	{
@@ -505,8 +487,8 @@ static int glg_update_buffers(glg_t *self)
 		i++;
 
 		/* BITANGENT BUFFER */
-		create_buffer(i, self->vbo[i], self->bit, 3, self->gl_vert_num);
-		i++;
+		/* create_buffer(i, self->vbo[i], self->bit, 3, self->gl_vert_num); */
+		/* i++; */
 
 		/* COLOR BUFFER */
 		/* create_buffer(i, self->vbo[i], self->col, 4, self->gl_vert_num); */
@@ -519,7 +501,7 @@ static int glg_update_buffers(glg_t *self)
 	if(self->ind_num > self->gl_ind_num)
 	{
 
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self->vbo[6]);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self->vbo[i]);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, self->ind_num *
 				sizeof(*self->ind), self->ind, GL_STATIC_DRAW);
 
@@ -750,9 +732,8 @@ static void glg_update_vbos(glg_t *self)
 	i++;
 
 	/* BITANGENT BUFFER */
-	update_buffer(i, self->vbo[i], self->bit, 3, self->gl_vert_num);
-
-	i++;
+	/* update_buffer(i, self->vbo[i], self->bit, 3, self->gl_vert_num); */
+	/* i++; */
 
 	/* COLOR BUFFER */
 	/* update_buffer(i, self->vbo[i], self->col, 4, self->gl_vert_num); */
@@ -798,7 +779,7 @@ void glg_destroy(glg_t *self)
 	if(self->nor) free(self->nor);
 	if(self->pos) free(self->pos);
 	if(self->tan) free(self->tan);
-	if(self->bit) free(self->bit);
+	/* if(self->bit) free(self->bit); */
 	/* if(self->col) free(self->col); */
 	if(self->id) free(self->id);
 	if(self->ind) free(self->ind);

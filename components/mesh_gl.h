@@ -12,7 +12,6 @@ typedef struct
 	vec2_t *tex;
 	vec3_t *nor;
 	vec3_t *tan;
-	vec3_t *bit;
 #ifdef MESH4
 	vec4_t *pos;
 #else

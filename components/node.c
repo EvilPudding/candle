@@ -42,7 +42,7 @@ entity_t c_node_get_by_name(c_node_t *self, uint hash)
 		c_name_t *child_name = c_name(&child);
 		c_node_t *child_node;
 
-		if(child_name->hash == hash)
+		if(child_name && child_name->hash == hash)
 		{
 			return child;
 		}

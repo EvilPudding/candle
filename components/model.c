@@ -41,7 +41,7 @@ static void c_model_init(c_model_t *self)
 			"		mat4 MV    = camera.view * M;\n"
 			"		vertex_normal    = normalize(MV * vec4( N, 0.0f)).xyz;\n"
 			"		vertex_tangent   = normalize(MV * vec4(TG, 0.0f)).xyz;\n"
-			"		vertex_bitangent = normalize(MV * vec4(BT, 0.0f)).xyz;\n"
+			"		vertex_bitangent = cross(vertex_normal, vertex_tangent);\n"
 
 			"		object_id = id;\n"
 			"		poly_id = ID;\n"

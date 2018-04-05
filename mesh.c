@@ -888,7 +888,9 @@ int mesh_add_vert(mesh_t *self, vecN_t pos)
 	vert->color = vec4(0.0f);
 
 #ifdef MESH4
-	vert->pos = pos; /* 4d meshes dont support transformations yet */
+	vert->pos = mat4_mul_vec4(self->transformation,
+			vec4(_vec3(pos), 1.0));
+	vert->pos.w = pos.w;
 #else
 	vert->pos = mat4_mul_vec4(self->transformation,
 			vec4(_vec3(pos), 1.0)).xyz;
@@ -2101,6 +2103,7 @@ void mesh_load_scene(mesh_t *self, const void *grp)
 {
 	mesh_lock(self);
 	const struct aiMesh *group = grp;
+	strcpy(self->name, "load_result");
 
 	int offset = vector_count(self->verts);
 	int j;
@@ -2160,6 +2163,7 @@ void mesh_load_scene(mesh_t *self, const void *grp)
 		}
 	}
 
+	printf("unlock\n");
 	mesh_unlock(self);
 
 }

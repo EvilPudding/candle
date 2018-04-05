@@ -79,7 +79,7 @@ mesh_t *c_sauces_mesh_get(c_sauces_t *self, const char *name)
 	return mesh;
 }
 
-static inline mat4_t mat4_from_ai(const struct aiMatrix4x4 m)
+static inline mat4_t mat4_from_ai(const struct aiMatrix4x4 m, float scale)
 {
 	mat4_t r;
 
@@ -95,17 +95,18 @@ static inline mat4_t mat4_from_ai(const struct aiMatrix4x4 m)
 	r._[3]._[0] = m.d1; r._[3]._[1] = m.d2;
 	r._[3]._[2] = m.d3; r._[3]._[3] = m.d4;
 
-	/* return mat4_transpose(r); */
+	r = mat4_transpose(r);
+	r = mat4_scale(r, scale);
 	return r;
 }
 
-void load_node(entity_t entity, const struct aiNode *anode)
+void load_node(entity_t entity, const struct aiNode *anode, float scale)
 {
 	int i;
 	c_node_t *node = c_node(&entity);
 	c_spacial_t *spacial = c_spacial(&entity);
 
-	c_spacial_set_model(spacial, mat4_from_ai(anode->mTransformation));
+	c_spacial_set_model(spacial, mat4_from_ai(anode->mTransformation, scale));
 
 	for(i = 0; i < anode->mNumChildren; i++)
 	{
@@ -115,13 +116,19 @@ void load_node(entity_t entity, const struct aiNode *anode)
 		if(!n)
 		{
 			n = entity_new(c_name_new(name), c_node_new());
+
+			/* mesh_t *space = sauces_mesh("cube.ply"); */
+			/* entity_t m = entity_new(c_node_new(), */
+			/* 		c_model_new(space, mat_new("cb"), 1)); */
+			/* c_spacial_set_scale(c_spacial(&m), vec3(0.2)); */
+			/* c_node_add(c_node(&n), 1, m); */
 		}
 		c_node_add(node, 1, n);
-		load_node(n, cnode);
+		load_node(n, cnode, scale);
 	}
 }
 
-entity_t c_sauces_model_get(c_sauces_t *self, const char *name)
+entity_t c_sauces_model_get(c_sauces_t *self, const char *name, float scale)
 {
 	int i;
 	char buffer[2048];
@@ -142,7 +149,10 @@ entity_t c_sauces_model_get(c_sauces_t *self, const char *name)
 
 	result = entity_new(c_name_new(name),
 			c_model_new(mesh_new(), mat_new("t"), 1));
-	load_node(result, scene->mRootNode);
+	c_model(&result)->mesh->transformation =
+		mat4_scale_aniso(c_model(&result)->mesh->transformation, scale, scale, scale);
+
+	load_node(result, scene->mRootNode, scale);
 	c_node_t *root = c_node(&result);
 
 	for(i = 0; i < scene->mNumMeshes; i++)
