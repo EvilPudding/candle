@@ -29,7 +29,7 @@ static int c_renderer_update_screen_texture(c_renderer_t *self);
 int c_renderer_scene_changed(c_renderer_t *self)
 {
 	g_update_id++;
-	return 1;
+	return CONTINUE;
 }
 
 static void c_renderer_bind_pass_output(c_renderer_t *self, pass_t *pass,
@@ -450,7 +450,7 @@ static int c_renderer_created(c_renderer_t *self)
 
 
 	c_renderer_add_pass(self, "transp", "transparency", sig("render_quad"), 1.0f,
-			PASS_DISABLE_DEPTH | PASS_CLEAR_COLOR,
+			PASS_DISABLE_DEPTH_UPDATE | PASS_DISABLE_DEPTH | PASS_CLEAR_COLOR,
 		(bind_t[]){
 			{BIND_GBUFFER, "gb2"},
 			{BIND_PASS_OUTPUT, "rendered"},
@@ -460,7 +460,7 @@ static int c_renderer_created(c_renderer_t *self)
 	);
 
 	c_renderer_add_pass(self, "final", "ssr", sig("render_quad"), 1.0f,
-			PASS_DISABLE_DEPTH | PASS_CLEAR_COLOR |
+			PASS_DISABLE_DEPTH_UPDATE | PASS_DISABLE_DEPTH | PASS_CLEAR_COLOR |
 			self->auto_exposure * PASS_RECORD_BRIGHTNESS,
 		(bind_t[]){
 			{BIND_GBUFFER, "gb2"},
@@ -471,6 +471,13 @@ static int c_renderer_created(c_renderer_t *self)
 		}
 	);
 
+	c_renderer_add_pass(self, "final", "xray", sig("render_xray"), 1.0f,
+			PASS_DISABLE_DEPTH_UPDATE,
+		(bind_t[]){
+			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, self},
+			{BIND_NONE}
+		}
+	);
 
 	float bloom_scale = 0.2f;
 	int i;
@@ -512,7 +519,7 @@ static int c_renderer_created(c_renderer_t *self)
 	/* c_renderer_set_output(self, "bloom_xy"); */
 	c_renderer_set_output(self, "final");
 
-	return 1;
+	return CONTINUE;
 }
 
 static int c_renderer_update_screen_texture(c_renderer_t *self)
@@ -568,7 +575,7 @@ static int c_renderer_resize(c_renderer_t *self, window_resize_data *event)
 
 	c_renderer_update_screen_texture(self);
 
-	return 1;
+	return CONTINUE;
 }
 
 
@@ -612,9 +619,13 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 	if(!pass->disable_depth)
 	{
 		glEnable(GL_DEPTH_TEST);
-		glDepthMask(!pass->disable_depth_update);
-		glDepthFunc(pass->invert_depth?GL_GREATER:GL_LESS);
 	}
+	else
+	{
+		glDisable(GL_DEPTH_TEST);
+	}
+	glDepthMask(!pass->disable_depth_update);
+	glDepthFunc(pass->invert_depth?GL_GREATER:GL_LESS);
 
 	self->bound_light = entity_null;
 
@@ -753,7 +764,7 @@ int c_renderer_global_menu(c_renderer_t *self, void *ctx)
 
 
 
-	return 1;
+	return CONTINUE;
 }
 
 int c_renderer_component_menu(c_renderer_t *self, void *ctx)
@@ -776,7 +787,19 @@ int c_renderer_component_menu(c_renderer_t *self, void *ctx)
 			}
 		}
 	}
-	return 1;
+	return CONTINUE;
+}
+
+int c_renderer_mouse_press(c_renderer_t *self, mouse_button_data *event)
+{
+
+	return CONTINUE;
+}
+
+int c_renderer_mouse_release(c_renderer_t *self, mouse_button_data *event)
+{
+	/* entity_signal(); */
+	return CONTINUE;
 }
 
 REG()
@@ -786,7 +809,7 @@ REG()
 
 	ct_listener(ct, WORLD, sig("window_resize"), c_renderer_resize);
 
-	ct_listener(ct, WORLD, sig("world_draw"), c_renderer_draw);
+	ct_listener(ct, WORLD | 100, sig("world_draw"), c_renderer_draw);
 
 	ct_listener(ct, ENTITY, sig("entity_created"), c_renderer_created);
 
@@ -794,12 +817,16 @@ REG()
 
 	ct_listener(ct, WORLD, sig("global_menu"), c_renderer_global_menu);
 
+	ct_listener(ct, WORLD | 100, sig("mouse_press"), c_renderer_mouse_press);
+	ct_listener(ct, WORLD | 100, sig("mouse_release"), c_renderer_mouse_release);
+
 	signal_init(sig("offscreen_render"), 0);
 	signal_init(sig("render_visible"), sizeof(shader_t));
 	signal_init(sig("render_lights"), sizeof(shader_t));
 	signal_init(sig("render_transparent"), sizeof(shader_t));
 	signal_init(sig("render_quad"), sizeof(shader_t));
 	signal_init(sig("render_decals"), sizeof(shader_t));
+	signal_init(sig("render_xray"), sizeof(shader_t));
 }
 
 
@@ -942,8 +969,8 @@ int c_renderer_draw(c_renderer_t *self)
 {
 	uint i;
 
-	if(self->camera == entity_null) return 1;
-	if(!self->width || !self->height) return 1;
+	if(self->camera == entity_null) return CONTINUE;
+	if(!self->width || !self->height) return CONTINUE;
 
 	self->frame++;
 
@@ -975,6 +1002,6 @@ int c_renderer_draw(c_renderer_t *self)
 
 	/* ------------- */
 
-	return 1;
+	return CONTINUE;
 }
 

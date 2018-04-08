@@ -30,13 +30,13 @@ static int c_editlook_window_resize(c_editlook_t *self,
 {
 	self->win_min_side = (event->width < event->height) ?
 		event->width : event->height;
-	return 1;
+	return CONTINUE;
 }
 
 int c_editlook_mouse_wheel(c_editlook_t *self, mouse_button_data *event)
 {
 	c_editmode_t *edit = c_editmode(&SYS);
-	if(!edit->control) return 1;
+	if(!edit->control) return CONTINUE;
 
 	c_spacial_t *sc = c_spacial(self);
 
@@ -44,7 +44,7 @@ int c_editlook_mouse_wheel(c_editlook_t *self, mouse_button_data *event)
 
 	c_spacial_set_pos(sc, vec3_mix(edit->mouse_position, sc->pos, inc));
 
-	return 1;
+	return CONTINUE;
 }
 
 float fake_x;
@@ -59,7 +59,7 @@ int c_editlook_mouse_press(c_editlook_t *self, mouse_button_data *event)
 
 		candle_grab_mouse(c_entity(self), 0);
 	}
-	return 1;
+	return CONTINUE;
 }
 
 int c_editlook_mouse_release(c_editlook_t *self, mouse_button_data *event)
@@ -73,19 +73,19 @@ int c_editlook_mouse_release(c_editlook_t *self, mouse_button_data *event)
 		self->pressed_r = 0;
 		self->panning = 0;
 	}
-	return 1;
+	return CONTINUE;
 }
 
 int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 {
 	c_editmode_t *edit = c_editmode(&SYS);
 	c_renderer_t *renderer = c_renderer(&SYS);
-	if(!edit->control) return 1;
-	if(!self->pressed_r) return 1;
+	if(!edit->control) return CONTINUE;
+	if(!self->pressed_r) return CONTINUE;
 
 	c_spacial_t *sc = c_spacial(self);
 	c_camera_t *cam = c_camera(self);
-	if(!cam) return 1;
+	if(!cam) return CONTINUE;
 
 	fake_x += event->sx;
 	fake_y += event->sy;
@@ -119,7 +119,7 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 		new_pos = vec3_add(self->pan_diff, edit->mouse_position);
 		c_spacial_set_pos(sc, new_pos);
 
-		return 0;
+		return STOP;
 	}
 
 
@@ -157,7 +157,7 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 	c_spacial_rotate_X(sc, oldx + inc_x);
 	c_spacial_unlock(sc);
 
-	return 0;
+	return STOP;
 }
 
 REG()

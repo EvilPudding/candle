@@ -16,21 +16,25 @@ typedef struct vector_t
 	int free_count;
 
 	int index_matters;
+	int sorted;
 
 	int data_size;
 	int elem_size;
 	struct element *elements;
 	void *fallback;
+
+	vector_compare_cb compare;
 } vector_t;
 
-
-vector_t *vector_new(int size, int index_matters, void *fallback)
+vector_t *vector_new(int size, int fixed_index, void *fallback,
+		vector_compare_cb compare)
 {
 	vector_t *self = malloc(sizeof(*self));
 
-	self->index_matters = index_matters;
+	self->index_matters = fixed_index;
 	/* self->index_matters = 1; */
 
+	self->compare = compare;
 	self->data_size = size;
 	self->elem_size = size + sizeof(struct element);
 	self->free_count = 0;
@@ -67,21 +71,59 @@ void *_vector_value(vector_t *self, int i)
 	return self->fallback;
 }
 
+void *vector_get_item(vector_t *self, void *item)
+{
+	if(self->compare)
+	{
+		struct element *pivot = NULL;
+		char *base = (char *)self->elements;
+		int num = self->count;
+
+		while(num > 0)
+		{
+			num >>= num;
+			pivot = (struct element *)(base + num * self->elem_size);
+			int result = self->compare(item, pivot->data);
+
+			if(result == 0)
+			{
+				return pivot->data;
+			}
+
+			if(result > 0)
+			{
+				base = ((char *)pivot) + self->elem_size;
+				num--;
+			}
+		}
+		if(pivot)
+		{
+			return pivot->data;
+		}
+	}
+	else
+	{
+		int i;
+		for(i = 0; i < self->count; i++)
+		{
+			void *element = vector_get(self, i);
+			if(element)
+			{
+				if(!memcmp(item, element, self->data_size))
+				{
+					return element;
+				}
+			}
+		}
+	}
+	return NULL;
+}
 
 void vector_remove_item(vector_t *self, void *item)
 {
-	int i;
-	for(i = 0; i < self->count; i++)
+	if((item = vector_get_item(self, item)))
 	{
-		void *element = vector_get(self, i);
-		if(element)
-		{
-			if(!memcmp(item, element, self->data_size))
-			{
-				vector_remove(self, i);
-				return;
-			}
-		}
+		vector_remove(self, vector_index_of(self, item));
 	}
 }
 
@@ -103,10 +145,17 @@ void vector_remove(vector_t *self, int i)
 
 		if(i != self->count - 1)
 		{
-			void *data = vector_get(self, i);
-			void *last = vector_get(self, self->count - 1);
+			if(self->compare)
+			{
+				vector_shift(self, i, -1);
+			}
+			else
+			{
+				void *data = vector_get(self, i);
+				void *last = vector_get(self, self->count - 1);
 
-			memcpy(data, last, self->data_size);
+				memmove(data, last, self->data_size);
+			}
 		}
 		self->count--;
 	}
@@ -139,9 +188,36 @@ int vector_count(vector_t *self)
 	return self->count;
 }
 
+void vector_shift(vector_t *self, int id, int count)
+{
+	/* if(id > self->count) exit(1); */
+	if(count > 0)
+	{
+		memmove(_vector_get(self, id + count), _vector_get(self, id),
+				self->elem_size * (self->count - count));
+	}
+	else
+	{
+		count = -count;
+		memmove(_vector_get(self, id), _vector_get(self, id + count),
+				self->elem_size * self->count);
+	}
+}
+
 void vector_add(vector_t *self, void *value)
 {
 	int si = vector_reserve(self);
+	if(self->compare) /* SORTED INSERT */
+	{
+		void *item = vector_get_item(self, value);
+		if(item)
+		{
+			int id = vector_index_of(self, item);
+			vector_shift(self, id, 1);
+			memcpy(item, value, self->data_size);
+			return;
+		}
+	}
 	memcpy(vector_get(self, si), value, self->data_size);
 }
 

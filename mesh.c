@@ -28,11 +28,11 @@ void mesh_modified(mesh_t *self)
 void mesh_selection_init(mesh_selection_t *self)
 {
 	int fallback = -1;
-	self->faces = vector_new(sizeof(int), 0, &fallback);
-	self->edges = vector_new(sizeof(int), 0, &fallback);
-	self->verts = vector_new(sizeof(int), 0, &fallback);
+	self->faces = vector_new(sizeof(int), 0, &fallback, NULL);
+	self->edges = vector_new(sizeof(int), 0, &fallback, NULL);
+	self->verts = vector_new(sizeof(int), 0, &fallback, NULL);
 #ifdef MESH4
-	self->cells = vector_new(sizeof(int), 0, &fallback);
+	self->cells = vector_new(sizeof(int), 0, &fallback, NULL);
 #endif
 }
 
@@ -61,11 +61,11 @@ mesh_t *mesh_new()
 
 	self->support = (support_cb)mesh_support;
 
-	self->verts = vector_new(sizeof(vertex_t), 1, NULL);
-	self->faces = vector_new(sizeof(face_t), 1, NULL);
-	self->edges = vector_new(sizeof(edge_t), 1, NULL);
+	self->verts = vector_new(sizeof(vertex_t), 1, NULL, NULL);
+	self->faces = vector_new(sizeof(face_t), 1, NULL, NULL);
+	self->edges = vector_new(sizeof(edge_t), 1, NULL, NULL);
 #ifdef MESH4
-	self->cells = vector_new(sizeof(cell_t), 1, NULL);
+	self->cells = vector_new(sizeof(cell_t), 1, NULL, NULL);
 
 	vector_alloc(self->cells, 10);
 #endif
@@ -501,6 +501,7 @@ void mesh_unselect(mesh_t *self, int selection, geom_t geom, int id)
 
 void mesh_select(mesh_t *self, int selection, geom_t geom, int id)
 {
+	mesh_unselect(self, selection, geom, id);
 	mesh_selection_t *sel = &self->selections[selection];
 	if(geom == MESH_ANY || geom == MESH_FACE) 
 	{
@@ -1534,8 +1535,8 @@ struct int_int mesh_face_triangulate(mesh_t *self, int i, int flip)
 void mesh_triangulate(mesh_t *self)
 {
 	int i;
-	mesh_lock(self);
 	if(self->triangulated) return;
+	mesh_lock(self);
 	for(i = 0; i < vector_count(self->faces); i++)
 	{
 		face_t *face = m_face(self, i); if(!face) continue;

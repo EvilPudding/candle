@@ -34,14 +34,13 @@ void c_ambient_destroy(c_ambient_t *self)
 int c_ambient_render(c_ambient_t *self)
 {
 	c_probe_t *probe = c_probe(self);
-	if(!probe) return 0;
-	if(!g_shader) return 0;
+	if(!probe || !g_shader) return STOP;
 
 	fs_bind(g_shader);
 
 	c_probe_render(probe, sig("render_visible"));
 
-	return 1;
+	return CONTINUE;
 }
 
 REG()

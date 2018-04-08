@@ -22,7 +22,7 @@ c_bone_t *c_bone_new(int bone_index, mat4_t offset)
 int c_bone_spacial_changed(c_bone_t *self)
 {
 	/* update weights buffer */
-	return 1;
+	return CONTINUE;
 }
 
 REG()

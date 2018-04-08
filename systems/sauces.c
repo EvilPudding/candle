@@ -148,7 +148,7 @@ entity_t c_sauces_model_get(c_sauces_t *self, const char *name, float scale)
 	}
 
 	result = entity_new(c_name_new(name),
-			c_model_new(mesh_new(), mat_new("t"), 1));
+			c_model_new(mesh_new(), mat_new("t"), 1, 1));
 	c_model(&result)->mesh->transformation =
 		mat4_scale_aniso(c_model(&result)->mesh->transformation, scale, scale, scale);
 
@@ -165,7 +165,7 @@ entity_t c_sauces_model_get(c_sauces_t *self, const char *name, float scale)
 			if(!mc)
 			{
 				entity_add_component(node, c_model_new(mesh_new(),
-							mat_new("t"), 1));
+							mat_new("t"), 1, 1));
 				mc = c_model(&node);
 			}
 

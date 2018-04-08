@@ -67,13 +67,13 @@ void c_aabb_update(c_aabb_t *self)
 int c_aabb_on_mesh_change(c_aabb_t *self)
 {
 	c_aabb_update(self);
-	return 1;
+	return CONTINUE;
 }
 
 int c_aabb_spacial_changed(c_aabb_t *self)
 {
 	c_aabb_update(self);
-	return 1;
+	return CONTINUE;
 }
 
 int c_aabb_intersects(c_aabb_t *self, c_aabb_t *other)

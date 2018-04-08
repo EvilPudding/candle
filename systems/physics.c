@@ -232,7 +232,7 @@ static int c_physics_update(c_physics_t *self, float *dt)
 		c_spacial_set_pos(sc, vc->computed_pos);
 	}
 
-	return 1;
+	return CONTINUE;
 }
 
 c_physics_t *c_physics_new()

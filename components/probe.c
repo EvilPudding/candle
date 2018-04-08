@@ -48,17 +48,17 @@ int c_probe_update_position(c_probe_t *self)
 
 	self->last_update = -1;
 
-	return 1;
+	return CONTINUE;
 }
 
 int c_probe_render(c_probe_t *self, uint signal)
 {
 	int face;
 
-	if(!self->map) return 0;
+	if(!self->map) return STOP;
 	c_spacial_t *ps = c_spacial(self);
 
-	if(self->last_update == g_update_id) return 0;
+	if(self->last_update == g_update_id) return STOP;
 
 	c_renderer_t *renderer = c_renderer(&SYS);
 	renderer->bound_probe = c_entity(self);
@@ -78,13 +78,13 @@ int c_probe_render(c_probe_t *self, uint signal)
 		renderer->bound_exposure = 1.0f;
 
 		int res = entity_signal(c_entity(self), signal, NULL);
-		if(!res) return 0;
+		if(res == STOP) return STOP;
 
 	}
 
 	self->last_update = g_update_id;
 	c_renderer(&SYS)->bound_probe = entity_null;
-	return 1;
+	return CONTINUE;
 }
 
 

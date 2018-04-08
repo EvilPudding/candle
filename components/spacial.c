@@ -264,7 +264,7 @@ int c_spacial_menu(c_spacial_t *self, void *ctx)
 		nk_tree_pop(ctx);
 	}
 
-	return 1;
+	return CONTINUE;
 }
 
 

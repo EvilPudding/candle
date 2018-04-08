@@ -132,8 +132,7 @@ int c_window_created(c_window_t *self)
 		g_quad_fs = fs_new("quad");
 	}
 
-	entity_add_component(c_entity(self), c_model_new(mesh_quad(), NULL, 0));
-	c_model(self)->visible = 0;
+	entity_add_component(c_entity(self), c_model_new(mesh_quad(), NULL, 0, 0));
 	c_model_cull_face(c_model(self), 0, 2);
 
 
@@ -142,7 +141,7 @@ int c_window_created(c_window_t *self)
 			.width = self->width,
 			.height = self->height});
 
-	return 1;
+	return CONTINUE;
 }
 
 c_window_t *c_window_new(int width, int height)
@@ -156,7 +155,7 @@ c_window_t *c_window_new(int width, int height)
 int c_window_draw(c_window_t *self)
 {
 	SDL_GL_SwapWindow(self->window);
-	return 1;
+	return CONTINUE;
 }
 
 int c_window_render_quad(c_window_t *self, texture_t *texture)
@@ -164,7 +163,7 @@ int c_window_render_quad(c_window_t *self, texture_t *texture)
 
 	/* fs_bind(g_quad_fs); */
 	shader_t *shader = vs_bind(g_quad_vs);
-	if(!shader || !shader->ready) return 0;
+	if(!shader || !shader->ready) return STOP;
 
 	if(texture)
 	{
@@ -179,7 +178,7 @@ int c_window_render_quad(c_window_t *self, texture_t *texture)
 	}
 
 	c_mesh_gl_draw(c_mesh_gl(self), 0);
-	return 1;
+	return CONTINUE;
 }
 
 void c_window_rect(c_window_t *self, int x, int y, int width, int height,

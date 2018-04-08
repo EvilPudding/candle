@@ -3,6 +3,8 @@
 #include <components/name.h>
 #include <components/node.h>
 #include <components/camera.h>
+#include <components/axis.h>
+#include <components/attach.h>
 #include <components/model.h>
 #include <systems/window.h>
 #include <candle.h>
@@ -67,40 +69,25 @@ void c_editmode_coords(c_editmode_t *self)
 	if(!self->selected) return;
 	if(!arrows)
 	{
-		mesh_t *arrow = mesh_circle(0.01f, 8);
-		mesh_lock(arrow);
-#ifdef MESH4
-		mesh_extrude_edges(arrow, 1, vec4(0.0, 0.5, 0.0, 0.0), 1.0f, NULL);
-		mesh_extrude_edges(arrow, 1, vec4(0.0, 0.0, 0.0, 0.0), 2.00f, NULL);
-		mesh_extrude_edges(arrow, 1, vec4(0.0, 0.05, 0.0, 0.0), 0.01f, NULL);
-#else
-		mesh_extrude_edges(arrow, 1, vec3(0.0, 0.5, 0.0), 1.0f, NULL);
-		mesh_extrude_edges(arrow, 1, vec3(0.0, 0.0, 0.0), 2.00f, NULL);
-		mesh_extrude_edges(arrow, 1, vec3(0.0, 0.05, 0.0), 0.01f, NULL);
-#endif
-		mesh_unlock(arrow);
-
 		arrows = entity_new(c_name_new("Coord System"), c_node_new());
 
-		mat_t *mX = mat_new("X"); mX->diffuse.color.xyz = vec3(1.0, 0.0, 0.0);
-		mat_t *mY = mat_new("Y"); mY->diffuse.color.xyz = vec3(0.0, 1.0, 0.0);
-		mat_t *mZ = mat_new("Z"); mZ->diffuse.color.xyz = vec3(0.0, 0.0, 1.0);
-
-		entity_t X = entity_new(c_name_new("X"), c_model_new(arrow, mX, 0));
+		entity_t X = entity_new(c_name_new("X"), c_axis_new(vec4(1.0f, 0.0f, 0.0f, 0.0f)));
+		entity_t Z = entity_new(c_name_new("Z"), c_axis_new(vec4(0.0f, 0.0f, 1.0f, 0.0f)));
+		entity_t Y = entity_new(c_name_new("Y"), c_axis_new(vec4(0.0f, 1.0f, 0.0f, 0.0f)));
 		c_spacial_rotate_Z(c_spacial(&X), -M_PI / 2.0f);
-		entity_t Z = entity_new(c_name_new("Z"), c_model_new(arrow, mZ, 0));
 		c_spacial_rotate_X(c_spacial(&Z), M_PI / 2.0f);
-		entity_t Y = entity_new(c_name_new("Y"), c_model_new(arrow, mY, 0));
 
 		c_node_add(c_node(&arrows), 3, X, Y, Z);
 	}
-	c_node_t *nc = c_node(&self->selected);
-	if(!nc)
-	{
-		entity_add_component(self->selected, c_node_new());
-		nc = c_node(&self);
-	}
-	c_node_add(nc, 1, arrows);
+	/* c_node_t *nc = c_node(&self->selected); */
+	/* c_attach_target(c_attach(&arrows), self->selected); */
+
+	/* if(!nc) */
+	/* { */
+		/* entity_add_component(self->selected, c_node_new()); */
+		/* nc = c_node(&self); */
+	/* } */
+	/* c_node_add(nc, 1, arrows); */
 }
 
 
@@ -172,7 +159,7 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 	);
 	c_renderer_set_output(c_renderer(self), "rendered");
 
-	return 1;
+	return CONTINUE;
 }
 
 void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
@@ -242,7 +229,7 @@ int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 			c_editmode_update_mouse(self, event->x, event->y);
 		}
 	}
-	return 1;
+	return CONTINUE;
 }
 
 int c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
@@ -251,7 +238,7 @@ int c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 	{
 		self->pressing = 1;
 	}
-	return 1;
+	return CONTINUE;
 }
 
 void c_editmode_open_texture(c_editmode_t *self, texture_t *tex)
@@ -327,7 +314,7 @@ int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 		}
 	}
 	self->pressing = 0;
-	return 1;
+	return CONTINUE;
 }
 
 
@@ -377,7 +364,7 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 				break;
 			}
 	}
-	return 1;
+	return CONTINUE;
 }
 
 int c_editmode_key_down(c_editmode_t *self, char *key)
@@ -385,7 +372,7 @@ int c_editmode_key_down(c_editmode_t *self, char *key)
 	/* switch(*key) */
 	/* { */
 	/* } */
-	return 1;
+	return CONTINUE;
 }
 
 void node_entity(c_editmode_t *self, entity_t entity)
@@ -754,19 +741,19 @@ int c_editmode_draw(c_editmode_t *self)
 
 		nk_candle_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_MEMORY, MAX_ELEMENT_MEMORY);
 	}
-	return 1;
+	return CONTINUE;
 }
 
 int c_editmode_events_begin(c_editmode_t *self)
 {
 	if(self->nk) nk_input_begin(self->nk);
-	return 1;
+	return CONTINUE;
 }
 
 int c_editmode_events_end(c_editmode_t *self)
 {
 	if(self->nk) nk_input_end(self->nk);
-	return 1;
+	return CONTINUE;
 }
 
 int c_editmode_event(c_editmode_t *self, SDL_Event *event)
@@ -777,15 +764,15 @@ int c_editmode_event(c_editmode_t *self, SDL_Event *event)
 		if(nk_window_is_any_hovered(self->nk))
 		{
 			self->over = entity_null;
-			return 0;
+			return STOP;
 		}
 		if(nk_item_is_any_active(self->nk))
 		{
-			return 0;
+			return STOP;
 		}
 	}
 
-	return 1;
+	return CONTINUE;
 }
 
 REG()
@@ -802,7 +789,7 @@ REG()
 
 	ct_listener(ct, WORLD, sig("mouse_move"), c_editmode_mouse_move);
 
-	ct_listener(ct, WORLD, sig("ui_draw"), c_editmode_draw);
+	ct_listener(ct, WORLD, sig("world_draw"), c_editmode_draw);
 
 	ct_listener(ct, WORLD, sig("mouse_press"), c_editmode_mouse_press);
 

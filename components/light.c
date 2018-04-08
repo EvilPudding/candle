@@ -24,7 +24,7 @@ void c_light_init(c_light_t *self)
 	{
 		g_depth_fs = fs_new("depth");
 		g_light = entity_new(c_node_new(),
-				c_model_new(sauces_mesh("light_mesh.obj"), NULL, 0));
+				c_model_new(sauces_mesh("light_mesh.obj"), NULL, 0, 1));
 		c_model(&g_light)->visible = 0;
 
 	}
@@ -47,11 +47,11 @@ int c_light_render(c_light_t *self)
 {
 	c_renderer(&SYS)->bound_light = c_entity(self);
 
-	if(!g_light || !c_mesh_gl(&g_light)) return 0;
+	if(!g_light || !c_mesh_gl(&g_light)) return STOP;
 	if(self->radius > 0.0f)
 	{
 		shader_t *shader = vs_bind(g_model_vs);
-		if(!shader) return 0;
+		if(!shader) return STOP;
 		c_node_t *node = c_node(self);
 		c_spacial_t *sc = c_spacial(self);
 
@@ -66,7 +66,7 @@ int c_light_render(c_light_t *self)
 		shader_update(shader, &model);
 
 		c_mesh_gl_draw(c_mesh_gl(&g_light), 0);
-		return 1;
+		return CONTINUE;
 	}
 	else
 	{
@@ -98,7 +98,7 @@ int c_light_menu(c_light_t *self, void *ctx)
 	union { struct nk_colorf *nk; vec4_t *v; } color = { .v = &self->color };
 	*color.nk = nk_color_picker(ctx, *color.nk, NK_RGBA);
 
-	return 1;
+	return CONTINUE;
 }
 
 void c_light_destroy(c_light_t *self)
@@ -108,22 +108,22 @@ void c_light_destroy(c_light_t *self)
 
 int c_light_probe_render(c_light_t *self)
 {
-	if(self->radius < 0.0f) return 1.0f;
+	if(self->radius < 0.0f) return CONTINUE;
 	c_probe_t *probe = c_probe(self);
 	if(!probe)
 	{
 		entity_add_component(c_entity(self), (c_t*)c_probe_new(self->shadow_size));
 		entity_signal(c_entity(self), sig("spacial_changed"), &c_entity(self));
-		return 0;
+		return STOP;
 	}
-	if(!g_depth_fs) return 0;
+	if(!g_depth_fs) return STOP;
 
 	fs_bind(g_depth_fs);
 
 	glDisable(GL_CULL_FACE);
 	c_probe_render(probe, sig("render_shadows"));
 	glEnable(GL_CULL_FACE);
-	return 1;
+	return CONTINUE;
 }
 
 REG()

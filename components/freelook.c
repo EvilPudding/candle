@@ -38,7 +38,7 @@ static int c_freelook_window_resize(c_freelook_t *self,
 {
 	self->win_min_side = (event->width < event->height) ?
 		event->width : event->height;
-	return 1;
+	return CONTINUE;
 }
 
 static void c_freelook_update(c_freelook_t *self)
@@ -77,7 +77,7 @@ static int c_freelook_mouse_move(c_freelook_t *self, mouse_move_data *event)
 
 	c_freelook_update(self);
 
-	return 1;
+	return CONTINUE;
 }
 
 REG()

@@ -3,23 +3,18 @@
 #line 4
 
 layout (location = 0) out vec4 FragColor;
-uniform pass_t rendered;
 uniform pass_t transp;
 
 void main()
 {
-	vec4 col = pass_sample(rendered, texcoord);
-	vec4 trans = pass_sample(transp, texcoord);
-	if(trans.a > 0)
-		col = trans;
-	/* col = mix(col, trans, trans.a); */
+	vec4 trans = pass_sample(transp, pixel_pos());
+	/* transp = mix(transp, trans, trans.a); */
 
-	/* vec4 col = vec4(0.0f); */
+	/* vec4 trans = vec4(0.0f); */
 	vec4 refl = get_specular(gbuffer);
-	vec4 ssred = ssr(rendered.texture);
+	vec4 ssred = ssr(transp.texture);
 
-	/* vec3 final = mix(color.rgb, ssred.rgb, ssred.a); */
-	vec3 final = (col.rgb) + ssred.rgb * ssred.a * refl.rgb;
+	vec3 final = (trans.rgb) + ssred.rgb * ssred.a * refl.rgb;
 
 	/* FragColor = vec4(trans.xyz, 1.0f); return; */
 	/* FragColor = vec4(ssred.rgb, 1.0f); return; */

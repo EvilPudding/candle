@@ -14,24 +14,22 @@ void main()
 
 	vec3 c_pos = get_position(gbuffer);
 
-	if(trans.a != 0.0f)
+	if(trans.r != 0.0f || trans.g != 0.0f || trans.b != 0.0f)
 	{
 		/* FragColor = vec4(nor, 1.0f); return; */
 		float dist_to_eye = length(c_pos);
-		/* vec3 hit = v_pos - nor / (dist_to_eye + 2.0); */
-		vec3 hit = c_pos + nor * 0.08;
 
-		vec2 coord = pixel_pos() + nor.xy * 0.03;
+		vec2 coord = pixel_pos() + nor.xy * (trans.a * 0.03);
 
 		vec3 color = //pass_sample(rendered, coord).rgb;
-		textureLod(rendered.texture, coord.xy, (1.0f - spec.a) * 3).rgb;
+		textureLod(rendered.texture, coord.xy, trans.a * 3).rgb;
 		/* vec3 color = vec3(c_pos.xy, 0.0f); */
 
 		FragColor = vec4(color * trans.rgb, 1.0);
 	}
 	else
 	{
-		FragColor = vec4(0.0);
+		FragColor = pass_sample(rendered, pixel_pos());
 	}
 }
 

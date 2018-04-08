@@ -30,7 +30,7 @@ c_decal_t *c_decal_new(mat_t *mat)
 	if(!c_mesh_gl(self))
 	{
 		entity_add_component(c_entity(self),
-				c_model_new(g_decal_mesh, mat, 0));
+				c_model_new(g_decal_mesh, mat, 0, 1));
 		c_model(self)->visible = 0;
 		
 		c_model_cull_face(c_model(self), 0, 1);

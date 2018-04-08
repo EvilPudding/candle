@@ -51,8 +51,11 @@ typedef int(*before_draw_cb)(c_t *self);
 		code;												\
 	} }
 
-#define WORLD 0x00
-#define ENTITY 0x01
+#define CONTINUE			0x0000
+#define STOP				0x0001
+#define WORLD				0x0000
+#define ENTITY				0x0100
+
 /* #define RENDER_THREAD 0x02 */
 
 typedef struct
@@ -61,6 +64,7 @@ typedef struct
 	signal_cb cb;
 	int flags;
 	uint comp_type;
+	int priority;
 } listener_t;
 
 typedef struct
@@ -99,15 +103,8 @@ typedef struct ct_t
 	dep_t *depends;
 	uint depends_size;
 
-	listener_t *listeners;
-	uint listeners_size;
-
 	int is_interaction;
 
-	/* struct hsearch_data *listeners_table; */
-
-	/* void *system_info; */
-	/* uint system_info_size; */
 } ct_t;
 
 typedef struct
@@ -116,8 +113,7 @@ typedef struct
 
 	uint *cts;
 	uint cts_size;
-	listener_t *listeners;
-	uint listeners_size;
+	vector_t *listeners;
 
 } signal_t;
 

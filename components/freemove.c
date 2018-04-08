@@ -68,7 +68,7 @@ static int c_freemove_update(c_freemove_t *self, float *dt)
 
 	entity_signal(self->super.entity, sig("spacial_changed"), &self->super.entity);
 
-	return 1;
+	return CONTINUE;
 }
 
 static int c_freemove_key_up(c_freemove_t *self, char *key)
@@ -80,7 +80,7 @@ static int c_freemove_key_up(c_freemove_t *self, char *key)
 		case 'D': case 'd': self->right = 0; break;
 		case 'S': case 's': self->backward = 0; break;
 	}
-	return 1;
+	return CONTINUE;
 }
 
 static int c_freemove_key_down(c_freemove_t *self, char *key)
@@ -93,7 +93,7 @@ static int c_freemove_key_down(c_freemove_t *self, char *key)
 		case 'S': case 's': self->backward = 1; break;
 		default: printf("key: %d pressed\n", *key); break;
 	}
-	return 1;
+	return CONTINUE;
 }
 
 REG()

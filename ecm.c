@@ -13,19 +13,17 @@
 static int steps = 0;
 static SDL_sem *sem1 = NULL;
 static SDL_sem *sem2 = NULL;
-
-
-SDL_sem *sem;
+static SDL_sem *sem;
 
 listener_t *ct_get_listener(ct_t *self, uint signal)
 {
-	if(signal == IDENT_NULL) return NULL;
+	signal_t *sig = ecm_get_signal(signal);
 	if(!self) return NULL;
 	uint i;
-	for(i = 0; i < self->listeners_size; i++)
+	for(i = 0; i < vector_count(sig->listeners); i++)
 	{
-		listener_t *listener = &self->listeners[i];
-		if(listener->signal == signal)
+		listener_t *listener = vector_get(sig->listeners, i);
+		if(listener->comp_type == self->id)
 		{
 			return listener;
 		}
@@ -104,6 +102,11 @@ void ecm_register_all()
 	}
 }
 
+int listeners_compare(listener_t *a, listener_t *b)
+{
+	return a->priority - b->priority;
+}
+
 signal_t *ecm_get_signal(uint signal)
 {
 	khiter_t k = kh_get(sig, g_ecm->signals, signal);
@@ -112,7 +115,10 @@ signal_t *ecm_get_signal(uint signal)
 		int ret;
 		k = kh_put(sig, g_ecm->signals, signal, &ret);
 		signal_t *sig = &kh_value(g_ecm->signals, k);
-		*sig = (signal_t){0};
+		*sig = (signal_t){
+			.listeners = vector_new(sizeof(listener_t), 0, NULL,
+					(vector_compare_cb)listeners_compare)
+		};
 	}
 	return &kh_value(g_ecm->signals, k);
 }
@@ -120,27 +126,18 @@ signal_t *ecm_get_signal(uint signal)
 void _ct_listener(ct_t *self, int flags, uint signal, signal_cb cb)
 {
 	signal_t *sig = ecm_get_signal(signal);
-	if(!sig) exit(1);
 	if(!self) exit(1);
 	if(ct_get_listener(self, signal)) exit(1);
 
-	uint i = self->listeners_size++;
-	self->listeners = realloc(self->listeners, sizeof(*self->listeners) *
-			self->listeners_size);
-
 	listener_t lis = {.signal = signal, .cb = (signal_cb)cb,
-		.flags = flags, .comp_type = self->id};
-	self->listeners[i] = lis;
+		.flags = flags & 0xFF00, .priority = flags & 0x00FF,
+		.comp_type = self->id};
 
-
-	i = sig->cts_size++;
+	uint i = sig->cts_size++;
 	sig->cts = realloc(sig->cts, sizeof(*sig->cts) * sig->cts_size);
 	sig->cts[i] = self->id;
 
-	i = sig->listeners_size++;
-	sig->listeners = realloc(sig->listeners, sizeof(*sig->listeners) *
-			sig->listeners_size);
-	sig->listeners[i] = lis;
+	vector_add(sig->listeners, &lis);
 }
 
 void _signal_init(uint id, uint size)
@@ -154,7 +151,10 @@ void _signal_init(uint id, uint size)
 
 	int ret;
 	khiter_t k = kh_put(sig, g_ecm->signals, id, &ret);
-	kh_value(g_ecm->signals, k) = (signal_t){.size = size};
+	kh_value(g_ecm->signals, k) = (signal_t){
+		.size = size,
+		.listeners = vector_new(sizeof(listener_t), 0, NULL,
+				(vector_compare_cb)listeners_compare)};
 }
 
 entity_t ecm_new_entity()

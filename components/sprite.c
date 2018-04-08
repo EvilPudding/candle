@@ -61,8 +61,7 @@ c_sprite_t *c_sprite_new(mat_t *mat, int cast_shadow)
 	self->cast_shadow = cast_shadow;
 
 	entity_add_component(c_entity(self),
-			c_model_new(g_sprite_mesh, mat, 0));
-	c_model(self)->visible = 0;
+			c_model_new(g_sprite_mesh, mat, 0, 0));
 
 	return self;
 }
@@ -71,22 +70,22 @@ int c_sprite_created(c_sprite_t *self)
 {
 	g_update_id++;
 	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
-	return 1;
+	return CONTINUE;
 }
 
 /* #include "components/name.h" */
 static int c_sprite_render_shadows(c_sprite_t *self)
 {
 	if(self->cast_shadow) c_sprite_render_visible(self);
-	return 1;
+	return CONTINUE;
 }
 
 static int c_sprite_render_transparent(c_sprite_t *self)
 {
-	if(!self->visible) return 1;
+	if(!self->visible) return CONTINUE;
 
 	shader_t *shader = vs_bind(g_sprite_vs);
-	if(!shader) return 0;
+	if(!shader) return STOP;
 	c_node_t *node = c_node(self);
 	if(node)
 	{
@@ -95,15 +94,15 @@ static int c_sprite_render_transparent(c_sprite_t *self)
 	}
 
 	c_mesh_gl_draw(c_mesh_gl(self), 1);
-	return 1;
+	return CONTINUE;
 }
 
 static int c_sprite_render_visible(c_sprite_t *self)
 {
-	if(!self->visible) return 1;
+	if(!self->visible) return CONTINUE;
 
 	shader_t *shader = vs_bind(g_sprite_vs);
-	if(!shader) return 0;
+	if(!shader) return STOP;
 	c_node_t *node = c_node(self);
 	if(node)
 	{
@@ -112,7 +111,7 @@ static int c_sprite_render_visible(c_sprite_t *self)
 	}
 
 	c_mesh_gl_draw(c_mesh_gl(self), 0);
-	return 1;
+	return CONTINUE;
 }
 
 int c_sprite_scene_changed(c_sprite_t *self, entity_t *entity)
@@ -121,7 +120,7 @@ int c_sprite_scene_changed(c_sprite_t *self, entity_t *entity)
 	{
 		g_update_id++;
 	}
-	return 1;
+	return CONTINUE;
 }
 
 

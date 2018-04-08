@@ -168,9 +168,19 @@ float get_depth(gbuffer_t buffer)
 	return textureLod(buffer.depth, pixel_pos(), 0).r;
 }
 
+vec4 get_specular()
+{
+	return resolveProperty(specular, texcoord);
+}
+
 vec4 get_specular(gbuffer_t buffer)
 {
 	return textureLod(buffer.specular, pixel_pos(), 0);
+}
+
+vec4 get_transparency()
+{
+	return resolveProperty(transparency, texcoord);
 }
 
 vec4 get_transparency(gbuffer_t buffer)
@@ -221,8 +231,7 @@ vec3 get_normal()
 {
 	if(has_tex > 0.5)
 	{
-		vec3 texcolor = resolveProperty(normal,
-				vec2(texcoord.x, texcoord.y)).rgb * 2.0f - 1.0f;
+		vec3 texcolor = resolveProperty(normal, texcoord).rgb * 2.0f - 1.0f;
 		/* vec3 normalColor = resolveProperty(normal, texcoord).rgb * 2.0f - 1.0f; */
 		/* normalColor = vec3(normalColor.y, normalColor.x, normalColor.z); */
 		return normalize(TM * texcolor);

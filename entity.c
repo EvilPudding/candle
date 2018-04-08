@@ -19,7 +19,7 @@ void _entity_new_pre(void)
 
 int filter_listener(listener_t *self)
 {
-	return 1;
+	return CONTINUE;
 	/* unsigned long thr = SDL_ThreadID(); */
 	/* int is_render_thread = thr == candle->render_id; */
 	/* if(is_render_thread) */
@@ -77,10 +77,10 @@ int listener_signal(listener_t *self, entity_t ent, void *data)
 			if((self->flags & ENTITY) && c_entity(c) != ent)
 				continue;
 
-			if(self->cb(c, data) == 0) return 0;
+			if(self->cb(c, data) == STOP) return STOP;
 		}
 	}
-	return 1;
+	return CONTINUE;
 }
 
 int listener_signal_same(listener_t *self, entity_t ent, void *data)
@@ -90,7 +90,7 @@ int listener_signal_same(listener_t *self, entity_t ent, void *data)
 	{
 		return self->cb(c, data);
 	}
-	return 1;
+	return CONTINUE;
 }
 
 int component_signal(c_t *comp, ct_t *ct, uint signal, void *data)
@@ -100,67 +100,32 @@ int component_signal(c_t *comp, ct_t *ct, uint signal, void *data)
 	{
 		listener->cb(comp, data);
 	}
-	return 1;
+	return CONTINUE;
 }
 
 int entity_signal_same(entity_t self, uint signal, void *data)
 {
-	uint i;
-
+	int i;
 	signal_t *sig = ecm_get_signal(signal);
-
-	for(i = 0; i < sig->listeners_size; i++)
+	for(i = vector_count(sig->listeners) - 1; i >= 0; i--)
 	{
-		listener_t *lis = &sig->listeners[i];
+		listener_t *lis = vector_get(sig->listeners, i);
 		int res = listener_signal_same(lis, self, data);
-		if(res == 0) return 0;
+		if(res == STOP) return STOP;
 	}
-	return 1;
+	return CONTINUE;
 }
-
-/* void entity_filter(entity_t self, uint signal, void *data, */
-/* 		filter_cb cb, c_t *c_caller, void *cb_data) */
-/* { */
-/* 	uint i, j, p; */
-
-/* 	signal_t *sig = &g_ecm->signals[signal]; */
-
-/* 	for(i = 0; i < sig->cts_size; i++) */
-/* 	{ */
-/* 		uint ct_id = sig->cts[i]; */
-/* 		ct_t *ct = ecm_get(ct_id); */
-/* 		listener_t *listener = ct_get_listener(ct, signal); */
-/* 		if(listener) */
-/* 		{ */
-/* 			for(p = 0; p < ct->pages_size; p++) */
-/* 			{ */
-/* 				for(j = 0; j < ct->pages[p].components_size; j++) */
-/* 				{ */
-/* 					c_t *c = ct_get_at(ct, p, j); */
-
-/* 					if((listener->flags & SAME_ENTITY) && c_entity(c) != self) */
-/* 					if(listener->cb(c, data)) */
-/* 					{ */
-/* 						cb(c_caller, c, cb_data); */
-/* 					} */
-/* 				} */
-/* 			} */
-/* 		} */
-/* 	} */
-/* } */
 
 int entity_signal(entity_t self, uint signal, void *data)
 {
-	uint i;
-
+	int i;
 	signal_t *sig = ecm_get_signal(signal);
-	if(!sig) exit(1);
-	for(i = 0; i < sig->listeners_size; i++)
+	for(i = vector_count(sig->listeners) - 1; i >= 0; i--)
 	{
-		listener_t *lis = &sig->listeners[i];
-		if(listener_signal(lis, self, data) == 0) return 0;
+		listener_t *lis = vector_get(sig->listeners, i);
+		if(listener_signal(lis, self, data) == STOP) return STOP;
 	}
-	return 1;
+	return CONTINUE;
 }
 
 

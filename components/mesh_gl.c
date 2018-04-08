@@ -35,7 +35,7 @@ static void mesh_gl_add_group(c_mesh_gl_t *self)
 	group->update_id = -1;
 	group->updated = 1;
 	group->vao = 0;
-	group->vbo_num = 7;
+	group->vbo_num = 6;
 	group->entity = c_entity(self);
 	group->layer_id = i;
 
@@ -344,7 +344,7 @@ int c_mesh_gl_on_mesh_changed(c_mesh_gl_t *self)
 		group->update_id = -1;
 	}
 
-	return 1;
+	return CONTINUE;
 }
 
 #ifdef MESH4
@@ -385,7 +385,6 @@ int glg_update_ram(glg_t *self)
 	mesh_selection_t *sel = &mesh->selections[selection];
 	if(selection != -1) faces = sel->faces;
 	if(selection != -1) edges = sel->edges;
-	/* if(sel->visible == 0) return 1; */
 
 	int i;
 	if(vector_count(faces))
@@ -444,9 +443,9 @@ int c_mesh_gl_updated(c_mesh_gl_t *self)
 	int i;
 	for(i = 0; i < self->groups_num; i++)
 	{
-		if(!self->groups[i].updated) return 0;
+		if(!self->groups[i].updated) return STOP;
 	}
-	return 1;
+	return CONTINUE;
 }
 
 static int glg_update_buffers(glg_t *self)
@@ -501,7 +500,7 @@ static int glg_update_buffers(glg_t *self)
 	if(self->ind_num > self->gl_ind_num)
 	{
 
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self->vbo[i]);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self->vbo[5]);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, self->ind_num *
 				sizeof(*self->ind), self->ind, GL_STATIC_DRAW);
 
@@ -558,13 +557,9 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 {
 	mesh_t *mesh = c_model(&self->entity)->mesh;
 
-	if(!mesh)
+	if(!mesh || !self->ready)
 	{
-		return 0;
-	}
-	if(!self->ready)
-	{
-		return 0;
+		return STOP;
 	}
 
 	int cull_face;
@@ -574,7 +569,10 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 
 	if(layer->mat && shader)
 	{
-		if((layer->mat->transparency.color.a != 0.0f) != transparent) return 0;
+		if(( layer->mat->transparency.color.r != 0.0f ||
+			layer->mat->transparency.color.g != 0.0f ||
+			layer->mat->transparency.color.b != 0.0f
+		   ) != transparent) return STOP;
 
 		mat_bind(layer->mat, shader);
 	}
@@ -672,19 +670,19 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 		glEnable(GL_CULL_FACE);
 	}
 	/* printf("/GLG_DRAW\n"); */
-	return 1;
+	return CONTINUE;
 
 }
 
 int c_mesh_gl_draw(c_mesh_gl_t *self, int transparent)
 {
 	int i;
-	int res = 1;
+	int res = CONTINUE;
 		glerr();
 
 	if(!self->mesh)
 	{
-		return 0;
+		return STOP;
 	}
 
 	c_mesh_gl_update(self);
@@ -701,7 +699,7 @@ int c_mesh_gl_draw(c_mesh_gl_t *self, int transparent)
 
 	for(i = 0; i < self->groups_num; i++)
 	{
-		res |= glg_draw(&self->groups[i], shader, transparent);
+		res &= glg_draw(&self->groups[i], shader, transparent);
 	}
 	return res;
 }

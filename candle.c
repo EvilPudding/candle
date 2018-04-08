@@ -35,16 +35,16 @@ int handle_event(SDL_Event event)
 	if(g_candle->mouse_owners[0] != entity_null)
 	{
 		if(entity_signal_same(g_candle->mouse_owners[0], sig("event_handle"),
-					&event) == 0)
+					&event) == STOP)
 		{
-			return 1;
+			return CONTINUE;
 		}
 	}
 	else
 	{
-		if(entity_signal(entity_null, sig("event_handle"), &event) == 0)
+		if(entity_signal(entity_null, sig("event_handle"), &event) == STOP)
 		{
-			return 1;
+			return CONTINUE;
 		}
 	}
 	mouse_button_data bdata;
@@ -124,7 +124,7 @@ int handle_event(SDL_Event event)
 	}
 	/* break; */
 
-	return 0;
+	return STOP;
 }
 static void candle_handle_events(void)
 {
@@ -181,7 +181,6 @@ static int render_loop(void)
 			/* candle_handle_events(self); */
 			/* printf("\t%ld\n", self->render_id); */
 			entity_signal(entity_null, sig("world_draw"), NULL);
-			entity_signal(entity_null, sig("ui_draw"), NULL);
 
 			ecm_clean();
 
@@ -213,9 +212,6 @@ void candle_register()
 	signal_init(sig("event_handle"), sizeof(void*));
 	signal_init(sig("events_end"), sizeof(void*));
 	signal_init(sig("events_begin"), sizeof(void*));
-
-	/* TODO remove ui_draw in favour of sorted by priority listeners */
-	signal_init(sig("ui_draw"), sizeof(void*));
 }
 
 static int ticker_loop(void)

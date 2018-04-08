@@ -30,7 +30,7 @@ static int c_node_changed(c_node_t *self)
 	{
 		c_node_changed(c_node(&self->children[i]));
 	}
-	return 1;
+	return CONTINUE;
 }
 
 entity_t c_node_get_by_name(c_node_t *self, uint hash)

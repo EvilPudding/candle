@@ -65,15 +65,15 @@ void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset)
 	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
 }
 
-c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow)
+c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow, int visible)
 {
 	c_model_t *self = component_new("model");
 
-	self->layers_num = 0;
+	c_model_add_layer(self, mat, -1, 0);
+
 	self->mesh = mesh;
 	self->cast_shadow = cast_shadow;
-
-	c_model_add_layer(self, mat, -1, 0);
+	self->visible = visible;
 
 	return self;
 }
@@ -129,25 +129,26 @@ void c_model_set_mesh(c_model_t *self, mesh_t *mesh)
 
 int c_model_created(c_model_t *self)
 {
+
 	if(self->mesh)
 	{
 		g_update_id++;
 		entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
 	}
-	return 1;
+	return CONTINUE;
 }
 
 /* #include "components/name.h" */
 int c_model_render_shadows(c_model_t *self)
 {
 	if(self->cast_shadow) c_model_render_visible(self);
-	return 1;
+	return CONTINUE;
 }
 
 int c_model_render_transparent(c_model_t *self)
 {
-	if(!self->mesh || !self->visible) return 1;
-	if(self->before_draw) if(!self->before_draw((c_t*)self)) return 1;
+	if(!self->mesh || !self->visible) return CONTINUE;
+	if(self->before_draw) if(!self->before_draw((c_t*)self)) return CONTINUE;
 
 	return c_model_render(self, 1);
 }
@@ -160,7 +161,7 @@ int c_model_render(c_model_t *self, int transp)
 int c_model_render_at(c_model_t *self, c_node_t *node, int transp)
 {
 	shader_t *shader = vs_bind(g_model_vs);
-	if(!shader) return 0;
+	if(!shader) return STOP;
 	if(node)
 	{
 		c_node_update_model(node);
@@ -168,13 +169,13 @@ int c_model_render_at(c_model_t *self, c_node_t *node, int transp)
 		shader_update(shader, &node->model);
 	}
 	c_mesh_gl_draw(c_mesh_gl(self), transp);
-	return 1;
+	return CONTINUE;
 }
 
 int c_model_render_visible(c_model_t *self)
 {
-	if(!self->mesh || !self->visible) return 1;
-	if(self->before_draw) if(!self->before_draw((c_t*)self)) return 1;
+	if(!self->mesh || !self->visible) return CONTINUE;
+	if(self->before_draw) if(!self->before_draw((c_t*)self)) return CONTINUE;
 
 	return c_model_render(self, 0);
 }
@@ -235,7 +236,7 @@ int c_model_menu(c_model_t *self, void *ctx)
 	}
 
 
-	return 1;
+	return CONTINUE;
 }
 
 int c_model_scene_changed(c_model_t *self, entity_t *entity)
@@ -244,7 +245,7 @@ int c_model_scene_changed(c_model_t *self, entity_t *entity)
 	{
 		g_update_id++;
 	}
-	return 1;
+	return CONTINUE;
 }
 
 

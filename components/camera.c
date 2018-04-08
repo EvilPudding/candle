@@ -43,7 +43,7 @@ c_camera_t *c_camera_clone(c_camera_t *self)
 int c_camera_changed(c_camera_t *self)
 {
 	self->view_cached = 0;
-	return 1;
+	return CONTINUE;
 }
 
 vec3_t c_camera_real_pos(c_camera_t *self, float depth, vec2_t coord)
@@ -105,7 +105,7 @@ int c_camera_component_menu(c_camera_t *self, void *ctx)
 	{
 		c_camera_update(self, NULL);
 	}
-	return 1;
+	return CONTINUE;
 }
 
 int c_camera_update(c_camera_t *self, void *event)
@@ -122,7 +122,7 @@ int c_camera_update(c_camera_t *self, void *event)
 		self->near, self->far
 	);
 	self->view_cached = 0;
-	return 1;
+	return CONTINUE;
 }
 
 REG()
