@@ -260,6 +260,7 @@ void candle_reg_cmd(const char *key, cmd_cb cb)
 	strncpy(cmd->key, key, sizeof(cmd->key) - 1);
 }
 
+
 entity_t candle_run_command(entity_t root, const char *command)
 {
 	if(command[0] == '\0') return root;

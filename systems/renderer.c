@@ -361,7 +361,7 @@ static int c_renderer_gl(c_renderer_t *self)
 			PASS_DISABLE_DEPTH_UPDATE | PASS_INVERT_DEPTH,
 			c_renderer_buffer(self, ref("gb2")),
 		(bind_t[]){
-			{BIND_BUFFER, "gbuffer", .buffer = c_renderer_buffer(self, ref("gbuffer"))},
+			{BIND_BUFFER, "gbuffer", .buffer = c_renderer_buffer(self, ref("gb1"))},
 			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, self},
 			{BIND_NONE}
 		}
@@ -721,7 +721,6 @@ int c_renderer_mouse_press(c_renderer_t *self, mouse_button_data *event)
 
 	if(ent)
 	{
-		printf("press %d\n", ent);
 		model_button_data ev = {
 			.x = event->x, .y = event->y, .direction = event->direction,
 			.depth = depth, .geom = geom, .button = event->button
