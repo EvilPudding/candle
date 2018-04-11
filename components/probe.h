@@ -1,11 +1,11 @@
 #ifndef PROBE_H
 #define PROBE_H
 
-#include "../glutil.h"
+#include <utils/glutil.h>
 #include <ecm.h>
-#include "../texture.h"
-#include "../material.h"
-#include <shader.h>
+#include <utils/texture.h>
+#include <utils/material.h>
+#include <utils/shader.h>
 
 typedef struct c_probe_t
 {

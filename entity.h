@@ -1,7 +1,7 @@
 #ifndef ENTITY_H
 #define ENTITY_H
 
-#include <macros.h>
+#include <utils/macros.h>
 typedef struct c_t c_t;
 typedef struct ct_t ct_t;
 

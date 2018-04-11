@@ -1,11 +1,11 @@
 #ifndef PHYSICS_H
 #define PHYSICS_H
 
-#include "../glutil.h"
-#include "../material.h"
-#include "../texture.h"
-#include "../mesh.h"
-#include "../shader.h"
+#include <utils/glutil.h>
+#include <utils/material.h>
+#include <utils/texture.h>
+#include <utils/mesh.h>
+#include <utils/shader.h>
 #include <ecm.h>
 
 typedef float(*collider_cb)(c_t *self, vec3_t pos);

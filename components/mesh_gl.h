@@ -2,7 +2,7 @@
 #define MESH_GL_H
 
 #include <ecm.h>
-#include <glutil.h>
+#include <utils/glutil.h>
 
 typedef struct c_mesh_gl_t c_mesh_gl_t;
 

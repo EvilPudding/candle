@@ -1,7 +1,7 @@
 #ifndef NODE_H
 #define NODE_H
 
-#include "../glutil.h"
+#include <utils/glutil.h>
 #include <ecm.h>
 #include <components/spacial.h>
 

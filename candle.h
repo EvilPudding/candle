@@ -1,16 +1,16 @@
 #ifndef CREST_H
 #define CREST_H
 
-#include <glutil.h>
+#include <utils/glutil.h>
 
-#include <loader.h>
+#include <utils/loader.h>
 #include <systems/sauces.h>
 
-#include <texture.h>
+#include <utils/texture.h>
 
-#include <keyboard.h>
-#include <mouse.h>
-#include <khash.h>
+#include <systems/keyboard.h>
+#include <systems/mouse.h>
+#include <utils/khash.h>
 
 void candle_register(void);
 

@@ -2,7 +2,7 @@
 #define WINDOW_H
 
 #include <ecm.h>
-#include <shader.h>
+#include <utils/shader.h>
 
 extern int window_width;
 extern int window_height;

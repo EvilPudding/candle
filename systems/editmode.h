@@ -2,8 +2,8 @@
 #define EDITMODE_H
 
 #include <ecm.h>
-#include <mesh.h>
-#include <nk.h>
+#include <utils/mesh.h>
+#include <utils/nk.h>
 
 typedef struct
 {

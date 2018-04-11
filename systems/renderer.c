@@ -13,8 +13,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <candle.h>
-#include "noise.h"
-#include <nk.h>
+#include <utils/noise.h>
+#include <utils/nk.h>
 
 static void c_renderer_update_probes(c_renderer_t *self);
 

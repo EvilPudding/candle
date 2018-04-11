@@ -2,7 +2,7 @@
 #define FREELOOK_H
 
 #include <ecm.h>
-#include <glutil.h>
+#include <utils/glutil.h>
 
 typedef struct
 {

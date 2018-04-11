@@ -1,5 +1,5 @@
 #include "window.h"
-#include <shader.h>
+#include <utils/shader.h>
 #include <candle.h>
 #include <components/model.h>
 #include <components/mesh_gl.h>

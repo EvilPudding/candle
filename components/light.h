@@ -1,10 +1,10 @@
 #ifndef LIGHT_H
 #define LIGHT_H
 
-#include "../glutil.h"
+#include <utils/glutil.h>
 #include <ecm.h>
-#include "../texture.h"
-#include "../material.h"
+#include <utils/texture.h>
+#include <utils/material.h>
 
 typedef struct
 {

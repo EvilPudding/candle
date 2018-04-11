@@ -3,7 +3,7 @@
 #include <systems/editmode.h>
 #include "spacial.h"
 #include "node.h"
-#include <nk.h>
+#include <utils/nk.h>
 #include <candle.h>
 #include <systems/renderer.h>
 #include <stdio.h>

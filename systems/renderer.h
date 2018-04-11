@@ -1,11 +1,11 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
-#include "../glutil.h"
-#include "../material.h"
-#include "../texture.h"
-#include "../mesh.h"
-#include "../shader.h"
+#include <utils/glutil.h>
+#include <utils/material.h>
+#include <utils/texture.h>
+#include <utils/mesh.h>
+#include <utils/shader.h>
 #include <ecm.h>
 
 typedef struct pass_t pass_t;

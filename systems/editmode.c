@@ -7,9 +7,9 @@
 #include <components/attach.h>
 #include <components/model.h>
 #include <systems/window.h>
+#include <systems/keyboard.h>
 #include <candle.h>
-#include <mesh.h>
-#include <keyboard.h>
+#include <utils/mesh.h>
 #include <stdlib.h>
 #include "renderer.h"
 

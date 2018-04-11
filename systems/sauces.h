@@ -2,9 +2,9 @@
 #define RESAUCES_H
 
 #include <ecm.h>
-#include <mesh.h>
-#include <texture.h>
-#include <material.h>
+#include <utils/mesh.h>
+#include <utils/texture.h>
+#include <utils/material.h>
 
 typedef struct c_sauces_t
 {

@@ -4,7 +4,7 @@
 #include <ecm.h>
 #include <systems/renderer.h>
 #include "node.h"
-#include "shader.h"
+#include <utils/shader.h>
 
 typedef struct
 {

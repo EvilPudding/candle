@@ -6,8 +6,8 @@
 #include <components/spacial.h>
 #include <components/camera.h>
 /* #include <components/camera.h> */
-#include <mouse.h>
-#include <keyboard.h>
+#include <systems/mouse.h>
+#include <systems/keyboard.h>
 #include <math.h>
 
 

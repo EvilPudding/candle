@@ -2,13 +2,13 @@
 #define ECM_H
 
 #include <limits.h>
-#include "material.h"
-#include "texture.h"
-#include "mesh.h"
+#include "utils/material.h"
+#include "utils/texture.h"
+#include "utils/mesh.h"
 #include "entity.h"
-#include "vector.h"
-#include "khash.h"
-#include "macros.h"
+#include "utils/vector.h"
+#include "utils/khash.h"
+#include "utils/macros.h"
 
 #define _GNU_SOURCE
 #include <search.h>

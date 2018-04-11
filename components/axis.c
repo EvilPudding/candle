@@ -4,9 +4,9 @@
 #include "node.h"
 #include "spacial.h"
 #include "light.h"
-#include <nk.h>
+#include <utils/nk.h>
 #include <systems/renderer.h>
-#include "shader.h"
+#include <utils/shader.h>
 #include <systems/editmode.h>
 #include <candle.h>
 

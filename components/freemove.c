@@ -2,7 +2,7 @@
 #include <candle.h>
 #include <components/spacial.h>
 #include <components/velocity.h>
-#include <keyboard.h>
+#include <systems/keyboard.h>
 #include <math.h>
 
 extern int window_width, window_height;

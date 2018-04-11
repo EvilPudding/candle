@@ -7,7 +7,7 @@ SHAD = $(patsubst %.frag, $(DIR)/%.frag.o, $(wildcard shaders/*.frag)) \
 	   $(patsubst %.vert, $(DIR)/%.vert.o, $(wildcard shaders/*.vert)) \
 
 SRCS = $(wildcard *.c) $(wildcard components/*.c) $(wildcard systems/*.c) \
-	   $(wildcard formats/*.c)
+	   $(wildcard formats/*.c) $(wildcard utils/*.c)
 
 OBJS_REL = $(patsubst %.c, $(DIR)/%.o, $(SRCS))
 OBJS_DEB = $(patsubst %.c, $(DIR)/%.debug.o, $(SRCS))
@@ -31,7 +31,7 @@ $(DIR)/%.o: %.c
 
 $(DIR)/%.frag.o: %.frag
 	@xxd -i $< > $(DIR)/$<.c
-	@printf "\n#include <shader.h>\n\
+	@printf "\n#include <utils/shader.h>\n\
 	void shaders_%s_frag_reg(void) { \n\
 	shader_add_source(\"%s.frag\", shaders_%s_frag, shaders_%s_frag_len);}" \
 	$(*F) $(*F) $(*F) $(*F) >> $(DIR)/$<.c
@@ -39,7 +39,7 @@ $(DIR)/%.frag.o: %.frag
 
 $(DIR)/%.vert.o: %.vert
 	@xxd -i $< $(DIR)/$<.c 
-	@printf "\n#include <shader.h>\n\
+	@printf "\n#include <utils/shader.h>\n\
 	void shaders_%s_vert_reg(void) { \n\
 	shader_add_source(\"%s.vert\", shaders_%s_vert, shaders_%s_vert_len);}" \
 	$(*F) $(*F) $(*F) $(*F) >> $(DIR)/$<.c 
@@ -62,6 +62,7 @@ init:
 	mkdir -p $(DIR)
 	mkdir -p $(DIR)/components
 	mkdir -p $(DIR)/systems
+	mkdir -p $(DIR)/utils
 	mkdir -p $(DIR)/formats
 	mkdir -p $(DIR)/shaders
 

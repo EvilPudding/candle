@@ -3,10 +3,10 @@
 #include "node.h"
 #include "spacial.h"
 #include "light.h"
-#include <nk.h>
+#include <utils/nk.h>
 #include <candle.h>
 #include <systems/renderer.h>
-#include "shader.h"
+#include <utils/shader.h>
 #include <systems/editmode.h>
 
 static mat_t *g_missing_mat = NULL;

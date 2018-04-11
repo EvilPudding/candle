@@ -1,5 +1,5 @@
 #include "mesh_gl.h"
-#include "../loader.h"
+#include <utils/loader.h>
 #include "model.h"
 #include <candle.h>
 #include <components/spacial.h>
