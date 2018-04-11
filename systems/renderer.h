@@ -21,28 +21,23 @@ typedef struct uniform_t uniform_t;
 
 enum
 {
-	PASS_MIPMAPED 		   		= 1 << 0,
-	PASS_RECORD_BRIGHTNESS 		= 1 << 1,
-	PASS_GBUFFER		   		= 1 << 2,
-	PASS_CUBEMAP 		   		= 1 << 3,
-	PASS_CLEAR_COLOR	   		= 1 << 4,
-	PASS_CLEAR_DEPTH	   		= 1 << 5,
-	PASS_DISABLE_DEPTH	   		= 1 << 6,
-	PASS_DISABLE_DEPTH_UPDATE	= 1 << 7,
-	PASS_INVERT_DEPTH			= 1 << 8,
-	PASS_ADDITIVE				= 1 << 9
+	PASS_CUBEMAP 		   		= 1 << 0,
+	PASS_CLEAR_COLOR	   		= 1 << 1,
+	PASS_CLEAR_DEPTH	   		= 1 << 2,
+	PASS_DISABLE_DEPTH	   		= 1 << 3,
+	PASS_DISABLE_DEPTH_UPDATE	= 1 << 4,
+	PASS_INVERT_DEPTH			= 1 << 5,
+	PASS_ADDITIVE				= 1 << 6
 } pass_options;
 
 typedef enum
 {
 	BIND_NONE,
-	BIND_PASS_OUTPUT,
-	BIND_PREV_PASS_OUTPUT,
+	BIND_BUFFER,
 	BIND_NUMBER,
 	BIND_VEC2,
 	BIND_VEC3,
 	BIND_INTEGER,
-	BIND_GBUFFER,
 	BIND_CAMERA
 } bind_type_t;
 
@@ -55,14 +50,21 @@ typedef entity_t(*camera_getter)(void *usrptr);
 
 typedef struct
 {
+	float x, y, direction;
+	int button;
+	float depth;
+	unsigned int geom;
+} model_button_data;
+
+typedef struct
+{
 	int cached;
 	union
 	{
 		struct {
 			uint u_brightness;
-			uint u_texture;
-			uint u_depth;
-		} pass_output;
+			uint u_tex[16];
+		} buffer;
 		struct {
 			uint u;
 		} number;
@@ -86,15 +88,6 @@ typedef struct
 			uint u_angle4;
 #endif
 		} camera;
-		struct {
-			uint u_depth;
-			uint u_diffuse;
-			uint u_specular;
-			uint u_transparency;
-			uint u_id;
-			uint u_geomid;
-			uint u_normal;
-		} gbuffer;
 	};
 } shader_bind_t;
 
@@ -106,44 +99,42 @@ typedef struct
 	void *usrptr;
 	union
 	{
-		struct {
-			pass_t *pass;
-			char name[32];
-		} pass_output;
+		texture_t *buffer;
 		float number;
 		vec2_t vec2;
 		vec3_t vec3;
 		int integer;
 		entity_t camera;
-		int gbuffer;
 	};
+	unsigned int hash;
 	shader_bind_t vs_uniforms[16];
 } bind_t;
 
 typedef void(*bind_cb)(uniform_t *self, shader_t *shader);
 
+typedef struct
+{
+	texture_t *buffer;
+	float resolution;
+	unsigned int hash;
+} pass_output_t;
+
 typedef struct pass_t
 {
 	fs_t *shader;
-	texture_t *output;
-	char feed_name[32];
-	int gbuffer;
+	char name[32];
+	unsigned int hash;
 	int additive;
 	int disable_depth;
-	int disable_depth_update;
+	int depth_update;
 	int invert_depth;
 	unsigned int clear;
 	ulong draw_signal;
 
-	float resolution;
 	int binds_size;
 	bind_t *binds;
 
-	int mipmaped;
-	int record_brightness;
-
-	int output_from;
-	int id;
+	texture_t *output;
 
 } pass_t;
 
@@ -159,9 +150,6 @@ typedef struct c_renderer_t
 	texture_t *perlin;
 	int perlin_size;
 
-	/* int gbuffers_size; */
-	/* gbuffer_t gbuffers[16]; */
-
 	int probe_update_id;
 	entity_t bound_probe;
 	vec3_t bound_camera_pos;
@@ -172,10 +160,12 @@ typedef struct c_renderer_t
 	float bound_angle4;
 	entity_t bound_light;
 
+	pass_output_t outputs[32];
+	int outputs_num;
+
 	int passes_size;
 	pass_t passes[32];
-	char output[32];
-	int output_id;
+	texture_t *output;
 
 	pass_t *current_pass;
 	fs_t *frag_bound;
@@ -190,7 +180,6 @@ typedef struct c_renderer_t
 #endif
 
 	int ready;
-	int passes_bound;
 } c_renderer_t;
 
 DEF_CASTER("renderer", c_renderer, c_renderer_t)
@@ -202,14 +191,15 @@ void c_renderer_register(void);
 void c_renderer_set_resolution(c_renderer_t *self, float resolution);
 void c_renderer_add_camera(c_renderer_t *self, entity_t camera);
 
-void c_renderer_set_output(c_renderer_t *self, const char *name);
+void c_renderer_set_output(c_renderer_t *self, unsigned int hash);
 
-void c_renderer_add_pass(c_renderer_t *self, const char *feed_name,
-		const char *shader_name, ulong draw_signal, float resolution,
-		int flags, bind_t binds[]);
-void c_renderer_replace_pass(c_renderer_t *self, const char *feed_name,
-		const char *shader_name, ulong draw_signal, float resolution,
-		int flags, bind_t binds[]);
+texture_t *c_renderer_buffer(c_renderer_t *self, unsigned int hash);
+void c_renderer_add_pass(c_renderer_t *self, const char *name,
+		const char *shader_name, ulong draw_signal,
+		int flags, texture_t *output, bind_t binds[]);
+void c_renderer_replace_pass(c_renderer_t *self, const char *name,
+		const char *shader_name, ulong draw_signal,
+		int flags, texture_t *output, bind_t binds[]);
 
 entity_t c_renderer_get_camera(c_renderer_t *self);
 
@@ -217,7 +207,7 @@ void c_renderer_clear_shader(c_renderer_t *self, shader_t *shader);
 int c_renderer_scene_changed(c_renderer_t *self);
 entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
 		float *depth);
-entity_t c_renderer_geom_at_pixel(c_renderer_t *self, int x, int y,
+unsigned int c_renderer_geom_at_pixel(c_renderer_t *self, int x, int y,
 		float *depth);
 
 void pass_set_model(pass_t *self, mat4_t model);

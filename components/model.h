@@ -29,8 +29,7 @@ typedef struct
 	int visible;
 	int cast_shadow;
 	before_draw_cb before_draw;
-	int decal;
-	int sprite;
+	int xray;
 } c_model_t;
 
 DEF_CASTER("model", c_model, c_model_t)

@@ -23,6 +23,7 @@ typedef struct
 	prop_t specular;
 	prop_t transparency;
 	prop_t normal;
+	prop_t emissive;
 	/* prop_t position; */
 	/* prop_t position; */
 	/* prop_t cnormal; */

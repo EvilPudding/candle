@@ -569,11 +569,14 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 
 	if(layer->mat && shader)
 	{
-		if(( layer->mat->transparency.color.r != 0.0f ||
-			layer->mat->transparency.color.g != 0.0f ||
-			layer->mat->transparency.color.b != 0.0f
+		if(layer->mat->emissive.color.a > 0.0f && transparent) goto render;
+
+		if((layer->mat->transparency.color.r > 0.0f ||
+					layer->mat->transparency.color.g > 0.0f ||
+					layer->mat->transparency.color.b > 0.0f
 		   ) != transparent) return STOP;
 
+render:
 		mat_bind(layer->mat, shader);
 	}
 	/* printf("GLG_DRAW\n"); */

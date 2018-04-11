@@ -23,7 +23,6 @@ static void c_model_init(c_model_t *self)
 		mat_set_diffuse(g_missing_mat, (prop_t){.color=vec4(0.0, 0.9, 1.0, 1.0)});
 	}
 
-	self->sprite = 0;
 	self->visible = 1;
 	self->layers = malloc(sizeof(*self->layers) * 16);
 
@@ -145,6 +144,13 @@ int c_model_render_shadows(c_model_t *self)
 	return CONTINUE;
 }
 
+int c_model_render_selectable(c_model_t *self)
+{
+	c_model_render_visible(self);
+	c_model_render_transparent(self);
+	return CONTINUE;
+}
+
 int c_model_render_transparent(c_model_t *self)
 {
 	if(!self->mesh || !self->visible) return CONTINUE;
@@ -168,7 +174,10 @@ int c_model_render_at(c_model_t *self, c_node_t *node, int transp)
 
 		shader_update(shader, &node->model);
 	}
+	int depth_was_enabled = glIsEnabled(GL_DEPTH_TEST);
+	if(self->xray) glDisable(GL_DEPTH_TEST);
 	c_mesh_gl_draw(c_mesh_gl(self), transp);
+	if(self->xray && depth_was_enabled ) glEnable(GL_DEPTH_TEST);
 	return CONTINUE;
 }
 
@@ -268,4 +277,6 @@ REG()
 	ct_listener(ct, WORLD, sig("render_transparent"), c_model_render_transparent);
 
 	ct_listener(ct, WORLD, sig("render_shadows"), c_model_render_shadows);
+
+	ct_listener(ct, WORLD, sig("render_selectable"), c_model_render_selectable);
 }

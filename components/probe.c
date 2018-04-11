@@ -53,7 +53,7 @@ int c_probe_update_position(c_probe_t *self)
 
 int c_probe_render(c_probe_t *self, uint signal)
 {
-	int face;
+	int f;
 
 	if(!self->map) return STOP;
 	c_spacial_t *ps = c_spacial(self);
@@ -68,22 +68,24 @@ int c_probe_render(c_probe_t *self, uint signal)
 	renderer->bound_angle4 = renderer->angle4;
 #endif
 
-	for(face = 0; face < 6; face++)
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+	glDepthMask(GL_TRUE);
+	for(f = 0; f < 6; f++)
 	{
-		texture_target(self->map, face);
+		texture_target(self->map, f);
 		glClear(GL_DEPTH_BUFFER_BIT);
 
-		renderer->bound_view = &self->views[face];
-		renderer->bound_camera_model = &self->models[face];
+		renderer->bound_view = &self->views[f];
+		renderer->bound_camera_model = &self->models[f];
 		renderer->bound_exposure = 1.0f;
 
 		int res = entity_signal(c_entity(self), signal, NULL);
 		if(res == STOP) return STOP;
-
 	}
 
 	self->last_update = g_update_id;
-	c_renderer(&SYS)->bound_probe = entity_null;
+	renderer->bound_probe = entity_null;
 	return CONTINUE;
 }
 

@@ -13,7 +13,7 @@ uniform pass_t buf;
 void main()
 {
 	vec2 pp = pixel_pos();
-	vec2 tex_offset = 1.0f / textureSize(buf.texture, 0);
+	vec2 tex_offset = 1.0f / textureSize(buf.diffuse, 0);
 	vec3 c = pass_sample(buf, pp).rgb * weight[0];
 
 	if(horizontal)

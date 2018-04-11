@@ -16,6 +16,7 @@ typedef struct
 	ulong children_size;
 
 	entity_t parent;
+	int inherit_scale;
 } c_node_t;
 
 DEF_CASTER("node", c_node, c_node_t)

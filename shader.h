@@ -80,8 +80,9 @@ typedef struct shader_t
 
 	u_prop_t u_diffuse;
 	u_prop_t u_specular;
-	u_prop_t u_normal;
 	u_prop_t u_transparency;
+	u_prop_t u_normal;
+	u_prop_t u_emissive;
 
 	GLuint u_horizontal_blur; /* TODO: make this dynamic */
 	GLuint u_output_size;

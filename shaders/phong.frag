@@ -42,6 +42,7 @@ void main()
 
 		/* FragColor = vec4(vec3(nor) * 0.5 + 0.5, 1.0); return; */
 
+		/* FragColor = vec4(w_light_dir, 1.0f); return; */
 		float sd = get_shadow(w_light_dir, point_to_light, dist_to_eye);
 
 		/* FragColor = vec4(vec3(sd), 1.0); return; */

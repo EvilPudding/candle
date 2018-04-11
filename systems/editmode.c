@@ -79,15 +79,15 @@ void c_editmode_coords(c_editmode_t *self)
 
 		c_node_add(c_node(&arrows), 3, X, Y, Z);
 	}
-	/* c_node_t *nc = c_node(&self->selected); */
+	c_node_t *nc = c_node(&self->selected);
 	/* c_attach_target(c_attach(&arrows), self->selected); */
 
-	/* if(!nc) */
-	/* { */
-		/* entity_add_component(self->selected, c_node_new()); */
-		/* nc = c_node(&self); */
-	/* } */
-	/* c_node_add(nc, 1, arrows); */
+	if(!nc)
+	{
+		entity_add_component(self->selected, c_node_new());
+		nc = c_node(&self);
+	}
+	c_node_add(nc, 1, arrows);
 }
 
 
@@ -146,18 +146,18 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 		/* nk_style_set_font(self->nk, &roboto->handle); */
 	} 
 
-	c_renderer_add_pass(c_renderer(self), "rendered", "highlight",
-			sig("render_quad"), 1.0f, PASS_DISABLE_DEPTH,
+	c_renderer_t *renderer = c_renderer(self);
+	c_renderer_add_pass(renderer, "highlights", "highlight", sig("render_quad"),
+			PASS_ADDITIVE | PASS_DISABLE_DEPTH,
+			c_renderer_buffer(renderer, ref("final")),
 		(bind_t[]){
-			{BIND_GBUFFER, "gb2"},
-			{BIND_PREV_PASS_OUTPUT, "final"},
+			{BIND_BUFFER, "sbuffer", .buffer = c_renderer_buffer(renderer, ref("selectable"))},
 			{BIND_INTEGER, "mode", (getter_cb)c_editmode_bind_mode, self},
 			{BIND_VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
 			{BIND_VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
 			{BIND_NONE}
 		}
 	);
-	c_renderer_set_output(c_renderer(self), "rendered");
 
 	return CONTINUE;
 }

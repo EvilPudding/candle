@@ -25,7 +25,6 @@ typedef struct
 	uint attachments[16];
 	uint attachments_ready[16];
 	char *texNames[16];
-	uint depth_attachment;
 
 	int color_buffers_size;
 
@@ -37,6 +36,7 @@ typedef struct
 	int framebuffer_ready;
 	int draw_id;
 	int prev_id;
+	int mipmaped;
 } texture_t;
 
 texture_t *texture_from_file(const char *filename);
@@ -48,7 +48,8 @@ texture_t *texture_new_2D
 	uint dims,
 	uint depth_buffer,
 	uint repeat,
-	uint is_float
+	uint is_float,
+	uint mipmaped
 );
 
 texture_t *texture_new_3D
@@ -65,6 +66,8 @@ texture_t *texture_cubemap
 	uint height,
 	uint depth_buffer
 );
+
+int texture_2D_resize(texture_t *self, int width, int height);
 
 void texture_bind(texture_t *self, int tex);
 int texture_target(texture_t *self, int id);
@@ -85,6 +88,6 @@ uint texture_get_pixel(texture_t *self, int buffer, int x, int y,
 void texture_draw_id(texture_t *self, int tex);
 
 int texture_add_buffer(texture_t *self, const char *name, int is_float,
-		int dims, int mipmaped);
+		int dims);
 
 #endif /* !TEXTURE_H */

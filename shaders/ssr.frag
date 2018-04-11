@@ -3,20 +3,18 @@
 #line 4
 
 layout (location = 0) out vec4 FragColor;
-uniform pass_t transp;
+uniform pass_t rendered;
 
 void main()
 {
-	vec4 trans = pass_sample(transp, pixel_pos());
-	/* transp = mix(transp, trans, trans.a); */
+	vec4 cc = pass_sample(rendered, pixel_pos());
 
-	/* vec4 trans = vec4(0.0f); */
 	vec4 refl = get_specular(gbuffer);
-	vec4 ssred = ssr(transp.texture);
+	vec4 ssred = ssr(rendered.diffuse);
 
-	vec3 final = (trans.rgb) + ssred.rgb * ssred.a * refl.rgb;
+	vec3 final = cc.rgb + ssred.rgb * ssred.a * refl.rgb;
 
-	/* FragColor = vec4(trans.xyz, 1.0f); return; */
+	/* FragColor = vec4(cc.xyz, 1.0f); return; */
 	/* FragColor = vec4(ssred.rgb, 1.0f); return; */
 
 	/* final = clamp(final * 1.6f - 0.10f, 0.0, 3.0); */

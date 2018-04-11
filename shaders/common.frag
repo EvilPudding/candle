@@ -13,8 +13,8 @@ struct property_t
 struct pass_t
 {
 	float brightness;
-	sampler2D texture;
 	sampler2D depth;
+	sampler2D diffuse;
 };
 
 uniform vec2 output_size;
@@ -22,21 +22,28 @@ uniform vec2 output_size;
 
 uniform property_t diffuse;
 uniform property_t specular;
-uniform property_t normal;
 uniform property_t transparency;
+uniform property_t normal;
+uniform property_t emissive;
 
 struct gbuffer_t
 {
 	sampler2D depth;
 	sampler2D diffuse;
 	sampler2D specular;
-	sampler2D transparency;
-	sampler2D id;
-	sampler2D geomid;
 	sampler2D normal;
 };
 
+struct sbuffer_t
+{
+	sampler2D depth;
+	sampler2D id;
+	sampler2D geomid;
+};
+
+
 uniform gbuffer_t gbuffer;
+uniform sbuffer_t sbuffer;
 
 uniform float distortion;
 uniform float scattering;
@@ -94,7 +101,7 @@ uniform vec2 screen_size;
 
 vec4 pass_sample(pass_t pass, vec2 coord)
 {
-	return textureLod(pass.texture, coord, 0);
+	return textureLod(pass.diffuse, coord, 0);
 }
 
 vec4 pass_depth(pass_t pass, vec2 coord)
@@ -168,14 +175,14 @@ float get_depth(gbuffer_t buffer)
 	return textureLod(buffer.depth, pixel_pos(), 0).r;
 }
 
+vec4 get_emissive()
+{
+	return resolveProperty(emissive, texcoord);
+}
+
 vec4 get_specular()
 {
 	return resolveProperty(specular, texcoord);
-}
-
-vec4 get_specular(gbuffer_t buffer)
-{
-	return textureLod(buffer.specular, pixel_pos(), 0);
 }
 
 vec4 get_transparency()
@@ -183,17 +190,17 @@ vec4 get_transparency()
 	return resolveProperty(transparency, texcoord);
 }
 
-vec4 get_transparency(gbuffer_t buffer)
+vec4 get_specular(gbuffer_t buffer)
 {
-	return textureLod(buffer.transparency, pixel_pos(), 0);
+	return textureLod(buffer.specular, pixel_pos(), 0);
 }
 
-vec2 get_geomid(gbuffer_t buffer)
+vec2 get_geomid(sbuffer_t buffer)
 {
 	return textureLod(buffer.geomid, pixel_pos(), 0).rg;
 }
 
-vec2 get_id(gbuffer_t buffer)
+vec2 get_id(sbuffer_t buffer)
 {
 	return textureLod(buffer.id, pixel_pos(), 0).rg;
 }

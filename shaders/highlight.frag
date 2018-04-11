@@ -27,16 +27,13 @@ float filtered(vec2 c, vec2 fil)
 	return 1;
 }
 
-uniform pass_t final;
-
 void main()
 {
-	/* vec2 tex_offset = 1.0f / textureSize(gbuffer.id, 0); */
 	vec2 c;
 	vec2 c2;
 
-	c = get_id(gbuffer);
-	c2 = get_geomid(gbuffer);
+	c = get_id(sbuffer);
+	c2 = get_geomid(sbuffer);
 
 	float over = filtered(c, over_id);
 	float selected = filtered(c, sel_id);
@@ -47,9 +44,7 @@ void main()
 	const vec3 sel_color2 = vec3(0.1f, 0.03f, 0.05f);
 	const vec3 over_color = vec3(0.08);
 
-	vec4 color = pass_sample(final, texcoord);
-
-	vec3 final = color.rgb + (sel_color * selected + over_color * over);
+	vec3 final = (sel_color * selected + over_color * over);
 	final += (sel_color2 * overp);
 
 	FragColor = vec4(final, 1.0f);

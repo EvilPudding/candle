@@ -47,6 +47,7 @@ void mat_parse(mat_t *self, FILE *fd)
 		else if(!strcmp(prop, "normal")) prp = &self->normal;
 		else if(!strcmp(prop, "specular")) prp = &self->specular;
 		else if(!strcmp(prop, "transparency")) prp = &self->transparency;
+		else if(!strcmp(prop, "emissive")) prp = &self->emissive;
 		else return;
 
 		do
@@ -139,53 +140,6 @@ void mat_destroy(mat_t *self)
 	free(self);
 }
 
-mat_t *mat_from_dir(const char *name, const char *dirname)
-{
-	/* mat_t *self = mat_new(name); */
-	/* candle_mat_reg(candle, name, self); */
-	/* texture_set_path(dirname); */
-
-	/* printf("importing mat %s from %s\n", name, dirname); */
-
-	/* char buffer[256]; */
-
-	/* texture_t *diffuse = texture_from_file("diffuse"); */
-	/* self->diffuse.texture_blend = (self->diffuse.texture = diffuse) != NULL; */
-	/* self->diffuse.texture_scale = 1.0; */ 
-
-	/* sprintf(buffer, "%s_diffuse", name); */
-	/* candle_texture_reg(candle, buffer, diffuse); */
-
-
-
-	/* texture_t *specular = texture_from_file("specular"); */
-	/* self->specular.texture_blend = (self->specular.texture = specular) != NULL; */
-	/* self->specular.texture_scale = 1.0; */ 
-
-	/* sprintf(buffer, "%s_specular", name); */
-	/* candle_texture_reg(candle, buffer, specular); */
-
-
-	/* texture_t *normal = texture_from_file("normal"); */
-	/* self->normal.texture_blend = (self->normal.texture = normal) != NULL; */
-	/* self->normal.texture_scale = 1.0; */ 
-
-	/* sprintf(buffer, "%s_normal", name); */
-	/* candle_texture_reg(candle, buffer, normal); */
-
-
-	/* texture_t *transparency = texture_from_file("transparency"); */
-	/* self->transparency.texture_blend = (self->transparency.texture = transparency) != NULL; */
-	/* self->transparency.texture_scale = 1.0; */ 
-
-	/* sprintf(buffer, "%s_transparency", name); */
-	/* candle_texture_reg(candle, buffer, transparency); */
-
-
-	/* return self; */
-	return NULL;
-}
-
 void mat_bind_prop(u_prop_t *uniforms, prop_t *prop, int num)
 {
 	glUniform1f(uniforms->texture_blend, prop->texture_blend); glerr();
@@ -231,8 +185,9 @@ void mat_bind(mat_t *self, shader_t *shader)
 {
 	mat_bind_prop(&shader->u_diffuse, &self->diffuse, shader->bound_textures++);
 	mat_bind_prop(&shader->u_specular, &self->specular, shader->bound_textures++);
-	mat_bind_prop(&shader->u_normal, &self->normal, shader->bound_textures++);
 	mat_bind_prop(&shader->u_transparency, &self->transparency, shader->bound_textures++);
+	mat_bind_prop(&shader->u_normal, &self->normal, shader->bound_textures++);
+	mat_bind_prop(&shader->u_emissive, &self->emissive, shader->bound_textures++);
 	/* mat_bind_prop(&shader->u_position, &self->position, 5); */
 	/* mat_bind_prop(&shader->u_position, &self->position, 6); */
 

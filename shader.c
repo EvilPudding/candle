@@ -32,7 +32,7 @@ static int g_sources_num = 0;
 void shaders_common_frag_reg(void);
  void shaders_depth_frag_reg(void);
  void shaders_gbuffer_frag_reg(void);
- void shaders_xray_frag_reg(void);
+ void shaders_select_frag_reg(void);
  void shaders_decals_frag_reg(void);
  void shaders_ambient_frag_reg(void);
  void shaders_bright_frag_reg(void);
@@ -41,7 +41,6 @@ void shaders_common_frag_reg(void);
  void shaders_sprite_frag_reg(void);
  void shaders_ssr_frag_reg(void);
  void shaders_blur_frag_reg(void);
- void shaders_diffuse_frag_reg(void);
 
  void shaders_phong_frag_reg(void);
  void shaders_ssao_frag_reg(void);
@@ -56,7 +55,7 @@ void shaders_reg()
 	shaders_copy_frag_reg();
 	shaders_depth_frag_reg();
 	shaders_gbuffer_frag_reg();
-	shaders_xray_frag_reg();
+	shaders_select_frag_reg();
 	shaders_decals_frag_reg();
 	shaders_phong_frag_reg();
 	shaders_quad_frag_reg();
@@ -65,7 +64,6 @@ void shaders_reg()
 	shaders_transparency_frag_reg();
 	shaders_highlight_frag_reg();
 	shaders_blur_frag_reg();
-	shaders_diffuse_frag_reg();
 
 	shaders_ssao_frag_reg();
 }
@@ -450,8 +448,9 @@ static int shader_new_loader(shader_t *self)
 	/* MATERIALS */
 	shader_get_prop_uniforms(self, &self->u_diffuse, "diffuse");
 	shader_get_prop_uniforms(self, &self->u_specular, "specular");
-	shader_get_prop_uniforms(self, &self->u_normal, "normal");
 	shader_get_prop_uniforms(self, &self->u_transparency, "transparency");
+	shader_get_prop_uniforms(self, &self->u_normal, "normal");
+	shader_get_prop_uniforms(self, &self->u_emissive, "emissive");
 
 	self->ready = 1;
 	printf("shader ready f:%s v:%s\n", self->fs->filename, g_vs[self->index].name);
