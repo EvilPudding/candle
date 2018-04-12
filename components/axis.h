@@ -9,10 +9,11 @@ typedef struct
 	c_t super; /* extends c_t */
 	vec3_t dir;
 	int pressing;
+	int type;
 } c_axis_t;
 
 DEF_CASTER("axis", c_axis, c_axis_t)
 
-c_axis_t *c_axis_new(vec4_t dir);
+c_axis_t *c_axis_new(int type, vec4_t dir);
 
 #endif /* !AXIS_H */

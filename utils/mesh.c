@@ -1944,20 +1944,24 @@ mesh_t *mesh_torus(float radius, float inner_radius, int segments,
 	prev_e = first_e = mesh_add_edge_s(tmp,
 			mesh_add_vert(tmp, VEC3(
 					radius + sin(0) * inner_radius,
-					0.0,	 cos(0) * inner_radius)), -1);
+					cos(0) * inner_radius,
+					0.0
+			)), -1);
 
 	int ai;
 	for(ai = 1, a = inner_inc; ai < inner_segments; a += inner_inc, ai++)
 	{
 		int e = mesh_add_edge_s(tmp, mesh_add_vert(tmp, VEC3(
 					radius + sin(a) * inner_radius,
-					0.0,	 cos(a) * inner_radius)), prev_e);
+					cos(a) * inner_radius,
+					0.0
+		)), prev_e);
 		prev_e = e;
 	}
 
 	if(prev_e != first_e) m_edge(tmp, prev_e)->next = first_e;
 
-	mesh_t *self = mesh_lathe(tmp, M_PI * 2, segments, 0, 0, 1);
+	mesh_t *self = mesh_lathe(tmp, M_PI * 2, segments, 0, 1, 0);
 
 	mesh_destroy(tmp);
 

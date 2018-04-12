@@ -11,12 +11,13 @@
 #include <candle.h>
 
 static mesh_t *g_axis_mesh = NULL;
+static mesh_t *g_rot_axis_mesh = NULL;
 
 static void c_axis_init(c_axis_t *self)
 {
 	if(!g_axis_mesh)
 	{
-		g_axis_mesh = mesh_circle(0.02f, 8);
+		g_axis_mesh = mesh_circle(0.03f, 8);
 
 		mesh_lock(g_axis_mesh);
 #ifdef MESH4
@@ -36,17 +37,21 @@ static void c_axis_init(c_axis_t *self)
 #endif
 		mesh_unlock(g_axis_mesh);
 
+		g_rot_axis_mesh = mesh_torus(0.6f, 0.03f, 32, 3);
+		g_rot_axis_mesh->has_texcoords = 0;
 	}
 }
 
-c_axis_t *c_axis_new(vec4_t dir)
+c_axis_t *c_axis_new(int type, vec4_t dir)
 {
 	c_axis_t *self = component_new("axis");
 
 	mat_t *m = mat_new("m");
 	m->emissive.color = vec4(_vec3(dir.xyz), 0.4f);
+	self->type = type;
 
-	entity_add_component(c_entity(self), c_model_new(g_axis_mesh, m, 0, 1));
+	entity_add_component(c_entity(self),
+			c_model_new(type?g_rot_axis_mesh:g_axis_mesh, m, 0, !self->type));
 	c_model(self)->xray = 1;
 	c_model(self)->scale_dist = 0.2f;
 
@@ -57,6 +62,7 @@ c_axis_t *c_axis_new(vec4_t dir)
 
 int c_axis_press(c_axis_t *self, model_button_data *event)
 {
+	if(event->button != SDL_BUTTON_LEFT) return CONTINUE;
 	self->pressing = 1;
 	candle_grab_mouse(c_entity(self), 0);
 	return STOP;
@@ -83,20 +89,38 @@ int c_axis_mouse_move(c_axis_t *self, mouse_move_data *event)
 		{
 			c_spacial_t *sc = c_spacial(&target);
 
-			vec3_t dir = self->dir;
-			if(parent)
+			if(self->type == 0)
 			{
-				c_node_t *nc = c_node(&parent);
+				vec3_t dir = self->dir;
+				if(parent)
+				{
+					c_node_t *nc = c_node(&parent);
 
-				vec3_t world_dir = c_node_dir_to_global(c_node(&target), dir);
+					vec3_t world_dir = c_node_dir_to_global(c_node(&target), dir);
 
-				world_dir = vec3_norm(world_dir);
+					world_dir = vec3_norm(world_dir);
 
-				dir = c_node_dir_to_local(nc, world_dir);
+					dir = c_node_dir_to_local(nc, world_dir);
+				}
+				dir = vec3_scale(dir, -event->sy * 0.04);
+
+				c_spacial_set_pos(sc, vec3_add(dir, sc->pos));
 			}
-			dir = vec3_scale(dir, -event->sy * 0.04);
-
-			c_spacial_set_pos(sc, vec3_add(dir, sc->pos));
+			else
+			{
+				if(self->dir.x > 0.0f)
+				{
+					c_spacial_rotate_X(sc, -event->sy * 0.04);
+				}
+				else if(self->dir.y > 0.0f)
+				{
+					c_spacial_rotate_Y(sc, -event->sy * 0.04);
+				}
+				else if(self->dir.z > 0.0f)
+				{
+					c_spacial_rotate_Z(sc, -event->sy * 0.04);
+				}
+			}
 		}
 	}
 

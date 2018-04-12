@@ -22,6 +22,7 @@ static int c_editmode_activate_loader(c_editmode_t *self);
 
 mat_t *g_sel_mat = NULL;
 
+entity_t arrows, X, Y, Z, RX, RY, RZ;
 void c_editmode_init(c_editmode_t *self)
 {
 	self->spawn_pos = vec2(25, 25);
@@ -63,7 +64,6 @@ vec2_t c_editmode_bind_selected(c_editmode_t *self)
 /* { */
 /* 	return int_to_vec2(self->selected); */
 /* } */
-entity_t arrows;
 void c_editmode_coords(c_editmode_t *self)
 {
 	if(!self->selected) return;
@@ -73,13 +73,21 @@ void c_editmode_coords(c_editmode_t *self)
 		c_node(&arrows)->inherit_scale = 0;
 		c_node(&arrows)->ghost = 1;
 
-		entity_t X = entity_new(c_name_new("X"), c_axis_new(vec4(1.0f, 0.0f, 0.0f, 0.0f)));
-		entity_t Z = entity_new(c_name_new("Z"), c_axis_new(vec4(0.0f, 0.0f, 1.0f, 0.0f)));
-		entity_t Y = entity_new(c_name_new("Y"), c_axis_new(vec4(0.0f, 1.0f, 0.0f, 0.0f)));
+		X = entity_new(c_name_new("X"), c_axis_new(0, vec4(1.0f, 0.0f, 0.0f, 0.0f)));
+		Z = entity_new(c_name_new("Z"), c_axis_new(0, vec4(0.0f, 0.0f, 1.0f, 0.0f)));
+		Y = entity_new(c_name_new("Y"), c_axis_new(0, vec4(0.0f, 1.0f, 0.0f, 0.0f)));
+
+		RX = entity_new(c_name_new("RX"), c_axis_new(1, vec4(1.0f, 0.0f, 0.0f, 0.0f)));
+		RZ = entity_new(c_name_new("RZ"), c_axis_new(1, vec4(0.0f, 0.0f, 1.0f, 0.0f)));
+		RY = entity_new(c_name_new("RY"), c_axis_new(1, vec4(0.0f, 1.0f, 0.0f, 0.0f)));
+
 		c_spacial_rotate_Z(c_spacial(&X), -M_PI / 2.0f);
 		c_spacial_rotate_X(c_spacial(&Z), M_PI / 2.0f);
 
-		c_node_add(c_node(&arrows), 3, X, Y, Z);
+		c_spacial_rotate_Z(c_spacial(&RX), -M_PI / 2.0f);
+		c_spacial_rotate_X(c_spacial(&RZ), M_PI / 2.0f);
+
+		c_node_add(c_node(&arrows), 6, X, Y, Z, RX, RY, RZ);
 	}
 	c_node_t *nc = c_node(&self->selected);
 	/* c_attach_target(c_attach(&arrows), self->selected); */
@@ -359,6 +367,25 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 				{
 					self->mode = EDIT_OBJECT; 
 				}
+			}
+			break;
+		case 't':
+				c_model(&RX)->visible = 0;
+				c_model(&RY)->visible = 0;
+				c_model(&RZ)->visible = 0;
+				c_model(&X)->visible = 1;
+				c_model(&Y)->visible = 1;
+				c_model(&Z)->visible = 1;
+			break;
+		case 'r':
+			if(self->selected)
+			{
+				c_model(&RX)->visible = 1;
+				c_model(&RY)->visible = 1;
+				c_model(&RZ)->visible = 1;
+				c_model(&X)->visible = 0;
+				c_model(&Y)->visible = 0;
+				c_model(&Z)->visible = 0;
 			}
 			break;
 		case '`':
