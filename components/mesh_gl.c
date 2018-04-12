@@ -553,7 +553,7 @@ void c_mesh_gl_update(c_mesh_gl_t *self)
 	SDL_SemPost(self->mesh->sem);
 }
 
-int glg_draw(glg_t *self, shader_t *shader, int transparent)
+int glg_draw(glg_t *self, shader_t *shader, int flags)
 {
 	mesh_t *mesh = c_model(&self->entity)->mesh;
 
@@ -569,12 +569,16 @@ int glg_draw(glg_t *self, shader_t *shader, int transparent)
 
 	if(layer->mat && shader)
 	{
-		if(layer->mat->emissive.color.a > 0.0f && transparent) goto render;
+		if(layer->mat->emissive.color.a > 0.0f && (flags & 2)) goto render;
 
 		if((layer->mat->transparency.color.r > 0.0f ||
 					layer->mat->transparency.color.g > 0.0f ||
 					layer->mat->transparency.color.b > 0.0f
-		   ) != transparent) return STOP;
+		   ) && (flags & 1)) goto render;
+
+		if(!flags || flags == 3) goto render;
+
+		return CONTINUE;
 
 render:
 		mat_bind(layer->mat, shader);

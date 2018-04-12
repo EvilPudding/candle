@@ -493,13 +493,13 @@ static inline mat4_t mat4_scale(mat4_t a, n_t k)
 		M._[i] = vec4_scale(a._[i], k);
 	return M;
 }
-static inline mat4_t mat4_scale_aniso(mat4_t a, n_t x, n_t y, n_t z)
+static inline mat4_t mat4_scale_aniso(mat4_t a, vec3_t s)
 {
 	mat4_t M;
 	int i;
-	M._[0] = vec4_scale(a._[0], x);
-	M._[1] = vec4_scale(a._[1], y);
-	M._[2] = vec4_scale(a._[2], z);
+	M._[0] = vec4_scale(a._[0], s.x);
+	M._[1] = vec4_scale(a._[1], s.y);
+	M._[2] = vec4_scale(a._[2], s.z);
 	for(i = 0; i < 4; ++i) {
 		M._[3]._[i] = a._[3]._[i];
 	}
@@ -534,17 +534,17 @@ static inline vec4_t mat4_mul_vec4(mat4_t M, vec4_t v)
 	}
 	return r;
 }
-static inline mat4_t mat4_translate(n_t x, n_t y, n_t z)
+static inline mat4_t mat4_translate(vec3_t pos)
 {
 	mat4_t T = mat4();
-	T._[3]._[0] = x;
-	T._[3]._[1] = y;
-	T._[3]._[2] = z;
+	T._[3]._[0] = pos.x;
+	T._[3]._[1] = pos.y;
+	T._[3]._[2] = pos.z;
 	return T;
 }
-static inline mat4_t mat4_translate_in_place(mat4_t M, n_t x, n_t y, n_t z)
+static inline mat4_t mat4_translate_in_place(mat4_t M, vec3_t pos)
 {
-	vec4_t t = vec4(x, y, z, 0);
+	vec4_t t = vec4(pos.x, pos.y, pos.z, 0);
 	vec4_t r;
 	int i;
 	for (i = 0; i < 4; ++i) {
@@ -837,7 +837,7 @@ static inline mat4_t mat4_look_at(vec3_t eye, vec3_t center, vec3_t up)
 	M._[3]._[2] =  0.f;
 	M._[3]._[3] =  1.f;
 
-	return mat4_translate_in_place(M, -eye.x, -eye.y, -eye.z);
+	return mat4_translate_in_place(M, vec3_inv(eye));
 }
 
 static inline vec4_t quat(void)
@@ -961,6 +961,29 @@ static inline mat4_t mat4_from_quat(vec4_t q)
 	return M;
 }
 
+static inline vec3_t quat_to_euler(vec4_t q)
+{
+	vec3_t result;
+
+	// roll (x-axis rotation)
+	float sinr = +2.0 * (q.w * q.x + q.y * q.z);
+	float cosr = +1.0 - 2.0 * (q.x * q.x + q.y * q.y);
+	result.x = atan2f(sinr, cosr);
+
+	// pitch (y-axis rotation)
+	float sinp = +2.0 * (q.w * q.y - q.z * q.x);
+	if (fabs(sinp) >= 1)
+		result.y = copysignf(M_PI / 2.0f, sinp); // use 90 degrees if out of range
+	else
+		result.y = asin(sinp);
+
+	// yaw (z-axis rotation)
+	float siny = +2.0 * (q.w * q.z + q.x * q.y);
+	float cosy = +1.0 - 2.0 * (q.y * q.y + q.z * q.z);  
+	result.z = atan2f(siny, cosy);
+
+	return result;
+}
 static inline mat4_t mat4_mul_quat(mat4_t M, vec4_t q)
 {
 /*  XXX: The way this is written only works for othogonal matrices. */

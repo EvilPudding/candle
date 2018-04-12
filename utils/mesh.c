@@ -1426,7 +1426,8 @@ static inline float to_radians(float angle)
 
 void mesh_translate(mesh_t *self, float x, float y, float z)
 {
-	self->transformation = mat4_translate_in_place(self->transformation, x, y, z);
+	self->transformation = mat4_translate_in_place(self->transformation,
+			vec3(x, y, z));
 }
 
 void mesh_rotate(mesh_t *self, float angle, int x, int y, int z)
@@ -2164,9 +2165,7 @@ void mesh_load_scene(mesh_t *self, const void *grp)
 		}
 	}
 
-	printf("unlock\n");
 	mesh_unlock(self);
-
 }
 
 void mesh_load(mesh_t *self, const char *filename)

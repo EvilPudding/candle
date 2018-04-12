@@ -70,6 +70,8 @@ void c_editmode_coords(c_editmode_t *self)
 	if(!arrows)
 	{
 		arrows = entity_new(c_name_new("Coord System"), c_node_new());
+		c_node(&arrows)->inherit_scale = 0;
+		c_node(&arrows)->ghost = 1;
 
 		entity_t X = entity_new(c_name_new("X"), c_axis_new(vec4(1.0f, 0.0f, 0.0f, 0.0f)));
 		entity_t Z = entity_new(c_name_new("Z"), c_axis_new(vec4(0.0f, 0.0f, 1.0f, 0.0f)));
@@ -206,18 +208,33 @@ int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 				c_camera_t *cam = c_camera(&renderer->camera);
 
 				c_spacial_t *sc = c_spacial(&self->selected);
+				entity_t parent = c_node(&self->selected)->parent;
 				if(!self->dragging)
 				{
 					self->dragging = 1;
-					self->drag_diff = vec3_sub(sc->pos, self->mouse_position);
+
+					if(parent)
+					{
+						c_node_t *nc = c_node(&parent);
+						vec3_t local_pos = c_node_global_to_local(nc, self->mouse_position);
+						self->drag_diff = vec3_sub(sc->pos, local_pos);
+					}
+					else
+					{
+						self->drag_diff = vec3_sub(sc->pos, self->mouse_position);
+					}
 				}
 				float px = event->x / renderer->width;
 				float py = 1.0f - event->y / renderer->height;
 
 				vec3_t pos = c_camera_real_pos(cam, self->mouse_depth, vec2(px, py));
+				if(parent)
+				{
+					c_node_t *nc = c_node(&parent);
+					pos = c_node_global_to_local(nc, pos);
+				}
 
-				vec3_t new_pos = vec3_add(self->drag_diff, pos);
-				c_spacial_set_pos(sc, new_pos);
+				c_spacial_set_pos(sc, vec3_add(self->drag_diff, pos));
 			}
 			else
 			{
@@ -389,6 +406,7 @@ void node_entity(c_editmode_t *self, entity_t entity)
 		sprintf(buffer, "NODE_%ld", entity);
 	}
 	c_node_t *node = c_node(&entity);
+	if(node->ghost) return;
 	if(node)
 	{
 		if(nk_tree_push_id(self->nk, NK_TREE_NODE, final_name, NK_MINIMIZED,

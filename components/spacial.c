@@ -187,12 +187,38 @@ void c_spacial_set_rot(c_spacial_t *self, float x, float y, float z, float angle
 	c_spacial_unlock(self);
 }
 
-void c_spacial_set_model(c_spacial_t *self, mat4_t model)
+void c_spacial_set_model(c_spacial_t *self, mat4_t m)
 {
 	c_spacial_lock(self);
-	self->pos = mat4_mul_vec4(model, vec4(0,0,0,1)).xyz;
+	vec3_t v0 = mat4_mul_vec4(m, vec4(1,0,0,0)).xyz;
+	vec3_t v1 = mat4_mul_vec4(m, vec4(0,1,0,0)).xyz;
+	vec3_t v2 = mat4_mul_vec4(m, vec4(0,0,1,0)).xyz;
+	vec3_t v3 = mat4_mul_vec4(m, vec4(0,0,0,1)).xyz;
 
-	/* self->model_matrix = model; */
+	self->scale = vec3(vec3_len(v0), vec3_len(v1), vec3_len(v2));
+	self->pos = v3;
+
+	m._[0]._[0] /= self->scale.x;
+	m._[1]._[0] /= self->scale.y;
+	m._[2]._[0] /= self->scale.z;
+	m._[3]._[0] = 0;
+
+	m._[0]._[1] /= self->scale.x;
+	m._[1]._[1] /= self->scale.y;
+	m._[2]._[1] /= self->scale.z;
+	m._[3]._[1] = 0;
+
+	m._[0]._[2] /= self->scale.x;
+	m._[1]._[2] /= self->scale.y;
+	m._[2]._[2] /= self->scale.z;
+	m._[3]._[2] = 0;
+
+	vec4_t quat = quat_from_mat4(m);
+	self->rot = quat_to_euler(quat);
+
+	self->rot_matrix = m;
+
+	/* self->model_matrix = m; */
 	self->modified = 1;
 	c_spacial_unlock(self);
 
@@ -270,11 +296,9 @@ int c_spacial_menu(c_spacial_t *self, void *ctx)
 
 void c_spacial_update_model_matrix(c_spacial_t *self)
 {
-	self->model_matrix = mat4_translate(self->pos.x, self->pos.y,
-			self->pos.z);
+	self->model_matrix = mat4_translate(self->pos);
 	self->model_matrix = mat4_mul(self->model_matrix, self->rot_matrix);
-	self->model_matrix = mat4_scale_aniso(self->model_matrix, self->scale.x,
-			self->scale.y, self->scale.z);
+	self->model_matrix = mat4_scale_aniso(self->model_matrix, self->scale);
 
 	entity_signal(c_entity(self), sig("spacial_changed"), &c_entity(self));
 }

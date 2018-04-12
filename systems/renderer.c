@@ -75,6 +75,8 @@ static void c_renderer_bind_camera(c_renderer_t *self, pass_t *pass,
 
 	glUniformMatrix4fv(sb->camera.u_view, 1, GL_FALSE,
 			(void*)cam->view_matrix._);
+	self->bound_camera_pos = cam->pos;
+
 	glUniform3f(sb->camera.u_pos, cam->pos.x, cam->pos.y, cam->pos.z);
 #ifdef MESH4
 	glUniform1f(sb->camera.u_angle4, self->angle4);
@@ -400,6 +402,16 @@ static int c_renderer_gl(c_renderer_t *self)
 
 	c_renderer_add_pass(self, "transp", "transparency", sig("render_transparent"),
 			PASS_DISABLE_DEPTH_UPDATE | PASS_DISABLE_DEPTH,
+			c_renderer_buffer(self, ref("rendered")),
+		(bind_t[]){
+			{BIND_BUFFER, "refr", .buffer = c_renderer_buffer(self, ref("refr"))},
+			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, self},
+			{BIND_NONE}
+		}
+	);
+
+	c_renderer_add_pass(self, "emissive", "transparency", sig("render_emissive"),
+			PASS_ADDITIVE | PASS_DISABLE_DEPTH_UPDATE | PASS_DISABLE_DEPTH,
 			c_renderer_buffer(self, ref("rendered")),
 		(bind_t[]){
 			{BIND_BUFFER, "refr", .buffer = c_renderer_buffer(self, ref("refr"))},
@@ -774,6 +786,7 @@ REG()
 	signal_init(sig("render_selectable"), sizeof(shader_t));
 	signal_init(sig("render_lights"), sizeof(shader_t));
 	signal_init(sig("render_transparent"), sizeof(shader_t));
+	signal_init(sig("render_emissive"), sizeof(shader_t));
 	signal_init(sig("render_quad"), sizeof(shader_t));
 	signal_init(sig("render_decals"), sizeof(shader_t));
 }

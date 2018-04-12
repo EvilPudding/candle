@@ -37,7 +37,6 @@ static void c_axis_init(c_axis_t *self)
 		mesh_unlock(g_axis_mesh);
 
 	}
-	c_node(self)->inherit_scale = 0;
 }
 
 c_axis_t *c_axis_new(vec4_t dir)
@@ -45,10 +44,11 @@ c_axis_t *c_axis_new(vec4_t dir)
 	c_axis_t *self = component_new("axis");
 
 	mat_t *m = mat_new("m");
-	m->emissive.color = vec4(_vec3(dir.xyz), 1.0f);
+	m->emissive.color = vec4(_vec3(dir.xyz), 0.4f);
 
 	entity_add_component(c_entity(self), c_model_new(g_axis_mesh, m, 0, 1));
 	c_model(self)->xray = 1;
+	c_model(self)->scale_dist = 0.2f;
 
 	self->dir = dir.xyz;
 
@@ -76,12 +76,26 @@ int c_axis_mouse_move(c_axis_t *self, mouse_move_data *event)
 {
 	if(self->pressing)
 	{
-		entity_t parent = c_node(&c_node(self)->parent)->parent;
-		if(parent)
+		entity_t arrows = c_node(self)->parent;
+		entity_t target = c_node(&arrows)->parent;
+		entity_t parent = c_node(&target)->parent;
+		if(target)
 		{
-			c_spacial_t *sc = c_spacial(&parent);
+			c_spacial_t *sc = c_spacial(&target);
 
-			vec3_t dir = vec3_scale(self->dir, -event->sy * 0.04);
+			vec3_t dir = self->dir;
+			if(parent)
+			{
+				c_node_t *nc = c_node(&parent);
+
+				vec3_t world_dir = c_node_dir_to_global(c_node(&target), dir);
+
+				world_dir = vec3_norm(world_dir);
+
+				dir = c_node_dir_to_local(nc, world_dir);
+			}
+			dir = vec3_scale(dir, -event->sy * 0.04);
+
 			c_spacial_set_pos(sc, vec3_add(dir, sc->pos));
 		}
 	}

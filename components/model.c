@@ -146,9 +146,17 @@ int c_model_render_shadows(c_model_t *self)
 
 int c_model_render_selectable(c_model_t *self)
 {
-	c_model_render_visible(self);
-	c_model_render_transparent(self);
+	if(!self->mesh || !self->visible) return CONTINUE;
+	c_model_render(self, 3);
 	return CONTINUE;
+}
+
+int c_model_render_emissive(c_model_t *self)
+{
+	if(!self->mesh || !self->visible) return CONTINUE;
+	if(self->before_draw) if(!self->before_draw((c_t*)self)) return CONTINUE;
+
+	return c_model_render(self, 2);
 }
 
 int c_model_render_transparent(c_model_t *self)
@@ -159,12 +167,12 @@ int c_model_render_transparent(c_model_t *self)
 	return c_model_render(self, 1);
 }
 
-int c_model_render(c_model_t *self, int transp)
+int c_model_render(c_model_t *self, int flags)
 {
-	return c_model_render_at(self, c_node(self), transp);
+	return c_model_render_at(self, c_node(self), flags);
 }
 
-int c_model_render_at(c_model_t *self, c_node_t *node, int transp)
+int c_model_render_at(c_model_t *self, c_node_t *node, int flags)
 {
 	shader_t *shader = vs_bind(g_model_vs);
 	if(!shader) return STOP;
@@ -172,12 +180,40 @@ int c_model_render_at(c_model_t *self, c_node_t *node, int transp)
 	{
 		c_node_update_model(node);
 
-		shader_update(shader, &node->model);
+		if(self->scale_dist > 0.0f)
+		{
+			vec3_t pos = mat4_mul_vec4(node->model, vec4(0,0,0,1)).xyz;
+			float dist = vec3_dist(pos, c_renderer(&SYS)->bound_camera_pos);
+			mat4_t model = mat4_scale_aniso(node->model, vec3(dist * self->scale_dist));
+			shader_update(shader, &model);
+		}
+		else
+		{
+			shader_update(shader, &node->model);
+		}
 	}
 	int depth_was_enabled = glIsEnabled(GL_DEPTH_TEST);
-	if(self->xray) glDisable(GL_DEPTH_TEST);
-	c_mesh_gl_draw(c_mesh_gl(self), transp);
-	if(self->xray && depth_was_enabled ) glEnable(GL_DEPTH_TEST);
+	int additive_was_enabled = glIsEnabled(GL_BLEND);
+
+	if(self->xray)
+	{
+		glDisable(GL_DEPTH_TEST);
+		/* glEnable(GL_BLEND); */
+		/* glBlendFunc(GL_SRC_ALPHA, GL_ONE); */
+	}
+	c_mesh_gl_draw(c_mesh_gl(self), flags);
+	if(self->xray)
+	{
+		if(!additive_was_enabled)
+		{
+			/* glDisable(GL_BLEND); */
+		}
+		if(depth_was_enabled)
+		{
+			glEnable(GL_DEPTH_TEST);
+		}
+	}
+
 	return CONTINUE;
 }
 
@@ -275,6 +311,8 @@ REG()
 	ct_listener(ct, WORLD, sig("render_visible"), c_model_render_visible);
 
 	ct_listener(ct, WORLD, sig("render_transparent"), c_model_render_transparent);
+
+	ct_listener(ct, WORLD, sig("render_emissive"), c_model_render_emissive);
 
 	ct_listener(ct, WORLD, sig("render_shadows"), c_model_render_shadows);
 

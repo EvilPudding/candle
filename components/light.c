@@ -60,7 +60,7 @@ int c_light_render(c_light_t *self)
 		float rad = self->radius * 1.1f;
 		/* float rad = self->radius * 0.5f; */
 		mat4_t model = mat4_scale_aniso(node->model,
-				rad / sc->scale.x, rad / sc->scale.y, rad / sc->scale.z);
+				vec3(rad / sc->scale.x, rad / sc->scale.y, rad / sc->scale.z));
 
 		/* mat4_t model = node->model; */
 		shader_update(shader, &model);

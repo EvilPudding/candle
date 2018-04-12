@@ -100,13 +100,29 @@ static inline mat4_t mat4_from_ai(const struct aiMatrix4x4 m, float scale)
 	return r;
 }
 
-void load_node(entity_t entity, const struct aiNode *anode, float scale)
+void load_node(entity_t entity, const struct aiScene *scene,
+		const struct aiNode *anode, float scale)
 {
 	int i;
 	c_node_t *node = c_node(&entity);
 	c_spacial_t *spacial = c_spacial(&entity);
 
 	c_spacial_set_model(spacial, mat4_from_ai(anode->mTransformation, scale));
+
+	for(i = 0; i < anode->mNumMeshes; i++)
+	{
+		const struct aiMesh *mesh = scene->mMeshes[anode->mMeshes[i]];
+		c_model_t *mc = c_model(&entity);
+		if(!mc)
+		{
+			entity_add_component(entity, c_model_new(mesh_new(),
+						mat_new("t"), 1, 1));
+
+			mc = c_model(&entity);
+		}
+
+		mesh_load_scene(mc->mesh, mesh);
+	}
 
 	for(i = 0; i < anode->mNumChildren; i++)
 	{
@@ -124,7 +140,7 @@ void load_node(entity_t entity, const struct aiNode *anode, float scale)
 			/* c_node_add(c_node(&n), 1, m); */
 		}
 		c_node_add(node, 1, n);
-		load_node(n, cnode, scale);
+		load_node(n, scene, cnode, scale);
 	}
 }
 
@@ -137,7 +153,7 @@ entity_t c_sauces_model_get(c_sauces_t *self, const char *name, float scale)
 	entity_t result;
 	const struct aiScene *scene = aiImportFile(buffer,
 			/* aiProcess_CalcTangentSpace  		| */
-			/* aiProcess_Triangulate			| */
+			aiProcess_Triangulate			|
 			/* aiProcess_GenSmoothNormals		| */
 			aiProcess_JoinIdenticalVertices 	|
 			aiProcess_SortByPType);
@@ -150,33 +166,10 @@ entity_t c_sauces_model_get(c_sauces_t *self, const char *name, float scale)
 	result = entity_new(c_name_new(name),
 			c_model_new(mesh_new(), mat_new("t"), 1, 1));
 	c_model(&result)->mesh->transformation =
-		mat4_scale_aniso(c_model(&result)->mesh->transformation, scale, scale, scale);
+		mat4_scale_aniso(c_model(&result)->mesh->transformation, vec3(scale));
 
-	load_node(result, scene->mRootNode, scale);
+	load_node(result, scene, scene->mRootNode, scale);
 	c_node_t *root = c_node(&result);
-
-	for(i = 0; i < scene->mNumMeshes; i++)
-	{
-		const struct aiMesh *mesh = scene->mMeshes[i];
-		entity_t node = c_node_get_by_name(root, ref(mesh->mName.data));
-		if(node)
-		{
-			c_model_t *mc = c_model(&node);
-			if(!mc)
-			{
-				entity_add_component(node, c_model_new(mesh_new(),
-							mat_new("t"), 1, 1));
-				mc = c_model(&node);
-			}
-
-			mesh_load_scene(mc->mesh, mesh);
-		}
-		else
-		{
-			printf("%s not found\n", mesh->mName.data);
-			mesh_load_scene(c_model(&result)->mesh, mesh);
-		}
-	}
 
 	for(i = 0; i < scene->mNumLights; i++)
 	{

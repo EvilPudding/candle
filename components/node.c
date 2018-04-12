@@ -14,6 +14,7 @@ static void c_node_init(c_node_t *self)
 	self->model = mat4();
 	self->cached = 0;
 	self->parent = entity_null;
+	self->inherit_scale = 1;
 }
 
 c_node_t *c_node_new()
@@ -79,34 +80,33 @@ void c_node_remove(c_node_t *self, entity_t child)
 void c_node_add(c_node_t *self, int num, ...)
 {
 	va_list children;
-
-	ulong i = self->children_size;
-	self->children_size += num;
-	self->children = realloc(self->children,
-			(sizeof *self->children) * self->children_size);
-
-
-    va_start(children, num);
-
-	for(; i < self->children_size; i++)
+	va_start(children, num);
+	while(num--)
 	{
 		entity_t child = va_arg(children, entity_t);
-
-		self->children[i] = child;
 		c_node_t *child_node = c_node(&child);
 		if(!child_node)
 		{
 			entity_add_component(child, c_node_new());
 			child_node = c_node(&child);
 		}
-		if(child_node->parent && child_node->parent != c_entity(self))
+		else if(child_node->parent)
 		{
+			if(child_node->parent == c_entity(self))
+			{
+				continue;
+			}
 			c_node_remove(c_node(&child_node->parent), child);
 		}
-		child_node->parent = self->super.entity;
+
+		int i = self->children_size++;
+		self->children = realloc(self->children,
+				(sizeof *self->children) * self->children_size);
+		self->children[i] = child;
+		child_node->parent = c_entity(self);
+
 		c_node_changed(child_node);
 	}
-
 	va_end(children);
 }
 
@@ -125,19 +125,35 @@ void c_node_update_model(c_node_t *self)
 	self->cached = 1;
 
 	entity_t parent = self->parent;
+	c_spacial_t *sc = c_spacial(self);
 
 	if(self->parent != entity_null)
 	{
 		c_node_t *parent_node = c_node(&parent);
 		c_node_update_model(parent_node);
 
-		self->model = mat4_mul(parent_node->model,
-				c_spacial(self)->model_matrix);
+		self->rot = mat4_mul(parent_node->rot, sc->rot_matrix);
+
+		if(self->inherit_scale)
+		{
+			self->model = mat4_mul(parent_node->model, sc->model_matrix);
+		}
+		else
+		{
+			vec3_t pos = mat4_mul_vec4(parent_node->model, vec4(_vec3(sc->pos), 1.0f)).xyz;
+
+			mat4_t model = mat4_translate(pos);
+			model = mat4_mul(model, parent_node->rot);
+
+			self->model = mat4_mul(model, sc->rot_matrix);
+		}
+
 	}
 	else
 	{
 		/* self->model = mat4(); */
-		self->model = c_spacial(self)->model_matrix;
+		self->model = sc->model_matrix;
+		self->rot = sc->rot_matrix;
 	}
 }
 
@@ -147,4 +163,26 @@ vec3_t c_node_global_to_local(c_node_t *self, vec3_t vec)
 	c_node_update_model(self);
 	inv = mat4_invert(self->model);
 	return mat4_mul_vec4(inv, vec4(vec.x, vec.y, vec.z, 1.0)).xyz;
+}
+
+vec3_t c_node_local_to_global(c_node_t *self, vec3_t vec)
+{
+	mat4_t inv;
+	c_node_update_model(self);
+	return mat4_mul_vec4(self->model, vec4(vec.x, vec.y, vec.z, 1.0)).xyz;
+}
+
+vec3_t c_node_dir_to_local(c_node_t *self, vec3_t vec)
+{
+	mat4_t inv;
+	c_node_update_model(self);
+	inv = mat4_invert(self->model);
+	return mat4_mul_vec4(inv, vec4(vec.x, vec.y, vec.z, 0.0)).xyz;
+}
+
+vec3_t c_node_dir_to_global(c_node_t *self, vec3_t vec)
+{
+	mat4_t inv;
+	c_node_update_model(self);
+	return mat4_mul_vec4(self->model, vec4(vec.x, vec.y, vec.z, 0.0)).xyz;
 }

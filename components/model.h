@@ -25,6 +25,7 @@ typedef struct
 
 	mat_layer_t *layers;
 	int layers_num;
+	float scale_dist;
 
 	int visible;
 	int cast_shadow;
