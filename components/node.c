@@ -147,7 +147,6 @@ void c_node_update_model(c_node_t *self)
 
 			self->model = mat4_mul(model, sc->rot_matrix);
 		}
-
 	}
 	else
 	{
@@ -167,7 +166,6 @@ vec3_t c_node_global_to_local(c_node_t *self, vec3_t vec)
 
 vec3_t c_node_local_to_global(c_node_t *self, vec3_t vec)
 {
-	mat4_t inv;
 	c_node_update_model(self);
 	return mat4_mul_vec4(self->model, vec4(vec.x, vec.y, vec.z, 1.0)).xyz;
 }
@@ -182,7 +180,6 @@ vec3_t c_node_dir_to_local(c_node_t *self, vec3_t vec)
 
 vec3_t c_node_dir_to_global(c_node_t *self, vec3_t vec)
 {
-	mat4_t inv;
 	c_node_update_model(self);
 	return mat4_mul_vec4(self->model, vec4(vec.x, vec.y, vec.z, 0.0)).xyz;
 }

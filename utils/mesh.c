@@ -430,7 +430,6 @@ int mesh_update_flips(mesh_t *self)
 	{
 		int fixes = 0;
 
-
 		vector_t *selected_edges = self->selections[SEL_EDITING].edges;
 
 		int si;
@@ -1662,8 +1661,7 @@ void mesh_check_pairs(mesh_t *self)
 	}
 }
 
-int mesh_add_tetrahedral_prism(mesh_t *self,
-		face_t *f, int v0, int v1, int v2)
+int mesh_add_tetrahedral_prism(mesh_t *self, int fid, int v0, int v1, int v2)
 /* returns the new exposed face */
 {
 	const int table[8][3][4] = {
@@ -1677,21 +1675,22 @@ int mesh_add_tetrahedral_prism(mesh_t *self,
 		{{-1, -1, -1, -1}, {-1, -1, -1, -1}, {-1, -1, -1, -1}}
 	};
 
+	face_t *f = m_face(self, fid);
 	edge_t *e0 = f_edge(f, 0, self),
 		   *e1 = f_edge(f, 1, self),
 		   *e2 = f_edge(f, 2, self);
 
 	int verts[6] = { v0, v1, v2, e0->v, e1->v, e2->v };
 
-/* 	for(int i = 0; i < 5; i++) for(int j = i+1; j < 6; j++) */
-/* 	{ */
-/* 		if(verts[i] == verts[j]) */
-/* 		{ */
-/* 			printf("EQUALS %d %d %d %d %d %d\n", v0, v1, v2, verts[3], */
-/* 					verts[4], verts[5]); */
-/* 			exit(1); */
-/* 		} */
-/* 	} */
+	for(int i = 0; i < 5; i++) for(int j = i+1; j < 6; j++)
+	{
+		if(verts[i] == verts[j])
+		{
+			printf("EQUALS %d %d %d %d %d %d\n", v0, v1, v2, verts[3],
+					verts[4], verts[5]);
+			exit(1);
+		}
+	}
 
 	int i = (e0->tmp << 2) | (e1->tmp << 1) | (e2->tmp << 0);
 
@@ -1711,8 +1710,14 @@ int mesh_add_tetrahedral_prism(mesh_t *self,
 		if(next == -1) next = tet;
 	}
 
-	/* return mesh_get_face_from_verts(self, v0, v1, v2); */
-	return m_cell(self, next)->f[0];
+	f = m_face(self, fid);
+	int new_f = m_cell(self, next)->f[0];
+	face_t *face = m_face(self, new_f);
+	f_edge(face, 0, self)->tmp = f_edge(f, 0, self)->tmp;
+	f_edge(face, 1, self)->tmp = f_edge(f, 1, self)->tmp;
+	f_edge(face, 2, self)->tmp = f_edge(f, 2, self)->tmp;
+	
+	return new_f;
 }
 #endif
 
@@ -1781,6 +1786,14 @@ void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 	vecN_t inc = vecN_(scale)(offset, percent_inc);
 	float prev_factor = 1.0f;
 	/* vecN_t center = mesh_get_selection_center(self); */
+
+	if(!mesh_update_flips(self))
+	{
+		printf("Extrude tetrahedral not possible in this mesh.\n");
+		mesh_unlock(self);
+		return;
+	}
+
 	for(step = 0; step < steps; step++)
 	{
 		mesh_selection_t *editing = &self->selections[SEL_EDITING];
@@ -1790,11 +1803,6 @@ void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 		self->current_surface++;
 		printf("step %d %d %d\n", step, vector_count(editing->faces),
 				vector_count(editing->edges));
-		if(!mesh_update_flips(self))
-		{
-			printf("Extrude tetrahedral not possible in this mesh.\n");
-			break;
-		}
 
 		vecN_t center = mesh_get_selection_center(self);
 
@@ -1822,7 +1830,7 @@ void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 			int v2 = f_vert(f, 2, self)->tmp;
 
 			int new_exposed_face =
-				mesh_add_tetrahedral_prism(self, f, v0, v1, v2);
+				mesh_add_tetrahedral_prism(self, f_id, v0, v1, v2);
 
 			mesh_select(self, TMP, MESH_FACE, new_exposed_face);
 

@@ -262,8 +262,7 @@ int mesh_add_triangle(mesh_t *self,
 		int v1, vec3_t v1n, vec2_t v1t,
 		int v2, vec3_t v2n, vec2_t v2t);
 int mesh_add_tetrahedron(mesh_t *self, int v0, int v1, int v2, int v3);
-int mesh_add_tetrahedral_prism(mesh_t *self,
-		face_t *f, int v0, int v1, int v2);
+int mesh_add_tetrahedral_prism(mesh_t *self, int fid, int v0, int v1, int v2);
 int mesh_add_triangle_s(mesh_t *self, int v0, int v1, int v2);
 void mesh_check_pairs(mesh_t *self);
 int mesh_remove_lone_faces(mesh_t *self);

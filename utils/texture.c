@@ -28,7 +28,7 @@ static void texture_update_gl_loader(texture_t *self)
 	}
 	if(self->target == GL_TEXTURE_3D)
 	{
-		glActiveTexture(GL_TEXTURE15);
+		glActiveTexture(GL_TEXTURE17);
 		glBindTexture(self->target, self->texId[COLOR_TEX]);
 
 		glTexSubImage3D(self->target, 0, 0, 0, 0,
@@ -282,8 +282,7 @@ texture_t *texture_new_2D
 	}
 	self->width = width;
 	self->height = height;
-	self->depth_buffer = 1;
-	/* self->depth_buffer = depth_buffer; */
+	self->depth_buffer = depth_buffer;
 
 	if(self->depth_buffer)
 	{
@@ -310,7 +309,7 @@ texture_t *texture_new_2D
 
 static void texture_new_3D_loader(texture_t *self)
 {
-	glActiveTexture(GL_TEXTURE15);
+	glActiveTexture(GL_TEXTURE17);
 
 	glGenTextures(1, &self->texId[COLOR_TEX]); glerr();
 	glBindTexture(self->target, self->texId[COLOR_TEX]); glerr();
@@ -634,7 +633,7 @@ static int texture_cubemap_frame_buffer(texture_t *self)
 static int texture_cubemap_loader(texture_t *self)
 {
 	int i;
-	glActiveTexture(GL_TEXTURE15);
+	glActiveTexture(GL_TEXTURE16);
 
 	if(self->depth_buffer)
 	{
