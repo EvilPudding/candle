@@ -5,6 +5,7 @@
 #include "mafs.h"
 #include "material.h"
 #include "vector.h"
+#include "khash.h"
 
 typedef struct mesh_t mesh_t;
 typedef struct face_t face_t;
@@ -44,7 +45,8 @@ typedef int(*iter_cb)(mesh_t *mesh, void *selection);
 
 #define SEL_UNSELECTED 0
 #define SEL_EDITING 1
-#define SEL_UNPAIRED 2
+
+KHASH_MAP_INIT_INT(id, int)
 
 typedef enum
 {
@@ -58,13 +60,14 @@ typedef struct vertex_t
 {
 	vecN_t pos;
 	vec4_t color;
-	int halves[32]; /* for pair creation */
+	/* int halves[32]; /1* for pair creation *1/ */
+	int half;
 
 	int tmp;
 	
 } vertex_t;
 
-#define v_half(v, m) (m_edge(m, mesh_vert_get_half(m, v)))
+#define v_half(v, m) (m_edge(m, v->half))
 
 typedef struct edge_t /* Half edge */
 {
@@ -78,7 +81,7 @@ typedef struct edge_t /* Half edge */
 	int prev; /* edge_t id								 */
 	int cell_pair; /* edge_t id		for triangle meshes only */
 
-	int extrude_flip;
+	int tmp;
 
 } edge_t;
 
@@ -182,6 +185,9 @@ typedef struct mesh_t
 
 	mesh_selection_t selections[16];
 
+	khash_t(id) *faces_hash;
+	khash_t(id) *edges_hash;
+
 	int has_texcoords;
 	int triangulated;
 	int current_cell;
@@ -252,14 +258,13 @@ int mesh_append_edge(mesh_t *self, vecN_t p);
 int mesh_add_edge_s(mesh_t *self, int v, int next);
 int mesh_add_edge(mesh_t *self, int v, int next, int prev, vec3_t vn, vec2_t vt);
 int mesh_add_triangle(mesh_t *self,
+		int v0, vec3_t v0n, vec2_t v0t,
 		int v1, vec3_t v1n, vec2_t v1t,
-		int v2, vec3_t v2n, vec2_t v2t,
-		int v3, vec3_t v3n, vec2_t v3t, int pair_up);
+		int v2, vec3_t v2n, vec2_t v2t);
 int mesh_add_tetrahedron(mesh_t *self, int v0, int v1, int v2, int v3);
 int mesh_add_tetrahedral_prism(mesh_t *self,
 		face_t *f, int v0, int v1, int v2);
-int mesh_add_triangle_s(mesh_t *self, int v1, int v2, int v3,
-		int pair_up);
+int mesh_add_triangle_s(mesh_t *self, int v0, int v1, int v2);
 void mesh_check_pairs(mesh_t *self);
 int mesh_remove_lone_faces(mesh_t *self);
 int mesh_remove_lone_edges(mesh_t *self);
@@ -280,10 +285,10 @@ void mesh_invert_normals(mesh_t *self);
 int mesh_edge_rotate_to_unpaired(mesh_t *self, int edge_id);
 
 void mesh_add_quad(mesh_t *self,
+		int v0, vec3_t v0n, vec2_t v0t,
 		int v1, vec3_t v1n, vec2_t v1t,
 		int v2, vec3_t v2n, vec2_t v2t,
-		int v3, vec3_t v3n, vec2_t v3t,
-		int v4, vec3_t v4n, vec2_t v4t, int pair_up);
+		int v3, vec3_t v3n, vec2_t v3t);
 int mesh_add_regular_quad( mesh_t *self,
 	vecN_t p1, vec3_t n1, vec2_t t1, vecN_t p2, vec3_t n2, vec2_t t2,
 	vecN_t p3, vec3_t n3, vec2_t t3, vecN_t p4, vec3_t n4, vec2_t t4
@@ -295,7 +300,6 @@ void mesh_faces_prealloc(mesh_t *self, int size);
 
 int mesh_update_unpaired_edges(mesh_t *self);
 int mesh_update_unpaired_faces(mesh_t *self);
-int mesh_vert_get_half(mesh_t *self, vertex_t *vert);
 int mesh_vert_has_face(mesh_t *self, vertex_t *vert, int face_id);
 
 void mesh_translate(mesh_t *self, float x, float y, float z);

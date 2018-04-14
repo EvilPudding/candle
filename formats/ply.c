@@ -285,14 +285,14 @@ void mesh_load_ply(mesh_t *self, const char *filename)
 							id[0], z3, z2,
 							id[1], z3, z2,
 							id[2], z3, z2,
-							id[3], z3, z2, 1);
+							id[3], z3, z2);
 				}
 				else
 				{
 					mesh_add_triangle(self,
 							id[0], z3, z2,
 							id[1], z3, z2,
-							id[2], z3, z2, 1);
+							id[2], z3, z2);
 				}
 			}
 		}

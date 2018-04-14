@@ -206,7 +206,7 @@ void mesh_load_obj(mesh_t *self, const char *filename)
 			mesh_add_triangle(self,
 					face->v[0].v, tempNorm[face->v[0].n], tempText[face->v[0].t],
 					face->v[1].v, tempNorm[face->v[1].n], tempText[face->v[1].t],
-					face->v[2].v, tempNorm[face->v[2].n], tempText[face->v[2].t], 1);
+					face->v[2].v, tempNorm[face->v[2].n], tempText[face->v[2].t]);
 		}
 		else if(face->nv == 4)
 		{
@@ -214,7 +214,7 @@ void mesh_load_obj(mesh_t *self, const char *filename)
 					face->v[0].v, tempNorm[face->v[0].n], tempText[face->v[0].t],
 					face->v[1].v, tempNorm[face->v[1].n], tempText[face->v[1].t],
 					face->v[2].v, tempNorm[face->v[2].n], tempText[face->v[2].t],
-					face->v[3].v, tempNorm[face->v[3].n], tempText[face->v[3].t], 1);
+					face->v[3].v, tempNorm[face->v[3].n], tempText[face->v[3].t]);
 		}
 	}
 

@@ -91,11 +91,10 @@ void c_editmode_coords(c_editmode_t *self)
 	}
 	c_node_t *nc = c_node(&self->selected);
 	/* c_attach_target(c_attach(&arrows), self->selected); */
-
 	if(!nc)
 	{
 		entity_add_component(self->selected, c_node_new());
-		nc = c_node(&self);
+		nc = c_node(&self->selected);
 	}
 	c_node_add(nc, 1, arrows);
 }
@@ -433,31 +432,37 @@ void node_entity(c_editmode_t *self, entity_t entity)
 		sprintf(buffer, "NODE_%ld", entity);
 	}
 	c_node_t *node = c_node(&entity);
-	if(node->ghost) return;
 	if(node)
 	{
-		if(nk_tree_push_id(self->nk, NK_TREE_NODE, final_name, NK_MINIMIZED,
-					(int)entity))
+		int i;
+		if(node->ghost) return;
+		int count = 0;
+		for(i = 0; i < node->children_size; i++)
 		{
-			if(nk_button_label(self->nk, "select"))
+			count += !c_node(&node->children[i])->ghost;
+		}
+		if(count)
+		{
+			if(nk_tree_push_id(self->nk, NK_TREE_NODE, final_name,
+						NK_MINIMIZED, (int)entity))
 			{
-				c_editmode_select(self, entity);
+				if(nk_button_label(self->nk, "select"))
+				{
+					c_editmode_select(self, entity);
+				}
+				for(i = 0; i < node->children_size; i++)
+				{
+					node_entity(self, node->children[i]);
+				}
+				nk_tree_pop(self->nk);
 			}
-			int i;
-			for(i = 0; i < node->children_size; i++)
-			{
-				node_entity(self, node->children[i]);
-			}
-			nk_tree_pop(self->nk);
+			return;
 		}
 	}
-	else
+	int is_selected = self->selected == entity;
+	if(nk_selectable_label(self->nk, final_name, NK_TEXT_ALIGN_LEFT, &is_selected))
 	{
-		int is_selected = self->selected == entity;
-		if(nk_selectable_label(self->nk, final_name, NK_TEXT_ALIGN_LEFT, &is_selected))
-		{
-			c_editmode_select(self, entity);
-		}
+		c_editmode_select(self, entity);
 	}
 }
 
