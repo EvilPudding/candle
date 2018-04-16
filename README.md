@@ -10,7 +10,7 @@ Barebones C engine with rendering and basic collision detection.
 * libpng
 
 ## Screenshots
-![Screenshot](https://i.imgur.com/fAHxCTd.gifv)
+[Imgur](https://i.imgur.com/fAHxCTd.gifv)
 ![Screenshot](https://i.imgur.com/E2Qxp4Q.png)
 ![Screenshot](https://i.imgur.com/X8JEI8x.png)
 ![Screenshot](https://i.imgur.com/UfvwsHN.png)
