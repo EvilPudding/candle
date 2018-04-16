@@ -573,14 +573,18 @@ int glg_draw(glg_t *self, shader_t *shader, int flags)
 
 	if(layer->mat && shader)
 	{
-		if(layer->mat->emissive.color.a > 0.0f && (flags & 2)) goto render;
+		int is_emissive = layer->mat->emissive.color.a > 0.0f;
+		int is_transparent = layer->mat->transparency.color.r > 0.0f ||
+			layer->mat->transparency.color.g > 0.0f ||
+			layer->mat->transparency.color.b > 0.0f;
 
-		if((layer->mat->transparency.color.r > 0.0f ||
-					layer->mat->transparency.color.g > 0.0f ||
-					layer->mat->transparency.color.b > 0.0f
-		   ) && (flags & 1)) goto render;
+		if(flags == 3) goto render;
 
-		if(!flags || flags == 3) goto render;
+		if(is_emissive && (flags & 2)) goto render;
+
+		if(is_transparent && (flags & 1)) goto render;
+
+		if(!is_transparent && !flags) goto render;
 
 		return CONTINUE;
 

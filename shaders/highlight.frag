@@ -27,6 +27,14 @@ float filtered(vec2 c, vec2 fil)
 	return 1;
 }
 
+bool is_equal(vec2 a, vec2 b)
+{
+	a = round(a * 255); 
+	b = round(b * 255); 
+
+	return (b.x == a.x && b.y == a.y);
+}
+
 void main()
 {
 	vec2 c;
@@ -45,7 +53,10 @@ void main()
 	const vec3 over_color = vec3(0.08);
 
 	vec3 final = (sel_color * selected + over_color * over);
-	final += (sel_color2 * overp);
+	if(is_equal(sel_id, c))
+	{
+		final += (sel_color2 * overp);
+	}
 
 	FragColor = vec4(final, 1.0f);
 	/* FragColor = vec4(c * 30, 0.0f, 1.0f); */

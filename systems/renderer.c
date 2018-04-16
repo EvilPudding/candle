@@ -360,7 +360,7 @@ static int c_renderer_gl(c_renderer_t *self)
 
 	/* DECAL PASS */
 	c_renderer_add_pass(self, "decals_pass", "decals", sig("render_decals"),
-			PASS_DISABLE_DEPTH_UPDATE | PASS_INVERT_DEPTH,
+			PASS_DISABLE_DEPTH_UPDATE,
 			c_renderer_buffer(self, ref("gb2")),
 		(bind_t[]){
 			{BIND_BUFFER, "gbuffer", .buffer = c_renderer_buffer(self, ref("gb1"))},

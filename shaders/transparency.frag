@@ -7,7 +7,6 @@ uniform pass_t refr;
 
 void main()
 {
-
 	vec4 trans = get_transparency();
 	vec4 emit = get_emissive();
 	vec4 spec = get_specular();

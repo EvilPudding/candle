@@ -2,8 +2,6 @@
 layout (location = 0) out vec4 DiffuseColor;
 layout (location = 1) out vec4 SpecularColor;
 layout (location = 2) out vec2 Normal;
-/* layout (location = 3) out vec2 ID; */
-/* layout (location = 4) out vec2 GeomID; */
 
 #include "common.frag"
 

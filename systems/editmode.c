@@ -60,10 +60,10 @@ vec2_t c_editmode_bind_selected(c_editmode_t *self)
 /* 	return int_to_vec2(self->over); */
 /* } */
 
-/* vec2_t c_editmode_bind_selected(c_editmode_t *self) */
-/* { */
-/* 	return int_to_vec2(self->selected); */
-/* } */
+vec2_t c_editmode_bind_sel(c_editmode_t *self)
+{
+	return int_to_vec2(self->selected);
+}
 void c_editmode_coords(c_editmode_t *self)
 {
 	if(!self->selected) return;
@@ -165,6 +165,7 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 			{BIND_INTEGER, "mode", (getter_cb)c_editmode_bind_mode, self},
 			{BIND_VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
 			{BIND_VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
+			{BIND_VEC2, "sel_id", (getter_cb)c_editmode_bind_sel, self},
 			{BIND_NONE}
 		}
 	);
@@ -533,12 +534,14 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 		/* slider color combobox */
 
 
+		nk_value_int(self->nk, "glid: ", tex->texId[tex->prev_id]);
 		struct nk_image im = nk_image_id(tex->texId[tex->prev_id]);
 		/* im.handle.ptr = 1; */
 		struct nk_command_buffer *canvas = nk_window_get_canvas(self->nk);
 		struct nk_rect total_space = nk_window_get_content_region(self->nk);
-		total_space.y += 50;
-		total_space.h -= 50;
+
+		total_space.y += 70;
+		total_space.h -= 70;
 		nk_draw_image_ext(canvas, total_space, &im, nk_rgba(255, 255, 255, 255), 1);
 	}
 	nk_end(self->nk);

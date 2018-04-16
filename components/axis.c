@@ -27,14 +27,14 @@ static void c_axis_init(c_axis_t *self)
 				vec4(0.0, 0.0, 0.0, 0.0), 2.00f, NULL);
 		/* mesh_weld(g_axis_mesh, MESH_EDGE); */
 		mesh_extrude_edges(g_axis_mesh, 1,
-				vec4(0.0, 0.10, 0.0, 0.0), 0.01f, NULL);
+				vec4(0.0, 0.1, 0.0, 0.0), 0.01f, NULL);
 #else
 		mesh_extrude_edges(g_axis_mesh, 1,
 				vec3(0.0, 0.5, 0.0), 1.0f, NULL);
 		mesh_extrude_edges(g_axis_mesh, 1,
 				vec3(0.0, 0.0, 0.0), 2.00f, NULL);
 		mesh_extrude_edges(g_axis_mesh, 1,
-				vec3(0.0, 0.05, 0.0), 0.01f, NULL);
+				vec3(0.0, 0.1, 0.0), 0.01f, NULL);
 #endif
 		mesh_unlock(g_axis_mesh);
 

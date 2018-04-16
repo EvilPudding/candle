@@ -1,12 +1,9 @@
 
 layout (location = 0) out vec4 DiffuseColor;
 layout (location = 1) out vec4 SpecularColor;
-layout (location = 2) out vec4 Transparency;
-layout (location = 3) out vec2 Normal;
-layout (location = 4) out vec2 ID;
+layout (location = 2) out vec2 Normal;
 
 #include "common.frag"
-#line 10
 
 void main()
 {
@@ -31,9 +28,7 @@ void main()
 
 	DiffuseColor = resolveProperty(diffuse, tc);
 	SpecularColor = resolveProperty(specular, tc);
-	Transparency = vec4(0.0f);
 	Normal = encode_normal(norm);
-	ID = object_id;
 
 }
 
