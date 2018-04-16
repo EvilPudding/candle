@@ -555,11 +555,21 @@ void mesh_weld(mesh_t *self, geom_t geom)
 		vector_t *selected_edges = self->selections[SEL_EDITING].edges;
 
 		int si;
+		int vert_id = -1;
 		for(si = 0; si < vector_count(selected_edges); si++)
 		{
 			int e_id = vector_value(selected_edges, si, int);
 			edge_t *e = m_edge(self, e_id); if(!e) continue;
+			if(vert_id == -1) vert_id = e->v;
+			e->v = vert_id;
 
+			edge_t *prev = e_prev(e, self);
+			edge_t *next = e_next(e, self);
+
+			prev->next = e->next;
+			next->prev = e->prev;
+			e->next = -1;
+			e->prev = -1;
 			/* mesh_edge_select(self, e_id, SEL_EDITING); */
 			mesh_remove_edge(self, e_id);
 		}
@@ -2099,7 +2109,6 @@ void mesh_load_scene(mesh_t *self, const void *grp)
 	mesh_lock(self);
 	const struct aiMesh *group = grp;
 	strcpy(self->name, "load_result");
-	self->has_texcoords = 0;
 
 	int offset = vector_count(self->verts);
 	int j;

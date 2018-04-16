@@ -248,8 +248,17 @@ vec3 get_normal()
 	return normalize(vertex_normal);
 }
 
+float rand(vec2 co)
+{
+    return fract(sin(dot(co.xy, vec2(12.9898,78.233))) * 43758.5453);
+}
+
 float shadow_at_dist_no_tan(vec3 vec, float i)
 {
+	/* vec3 rnd = (vec3(rand(vec.xy), rand(vec.yz), rand(vec.xz)) - 0.5) * i; */
+	/* if(lookup(-vec,  rnd) > 0.5) return 1.0; */
+	/* return 0.0; */
+
 	vec3 x = vec3(1.0, 0.0, 0.0) * i;
 	vec3 y = vec3(0.0, 1.0, 0.0) * i;
 	vec3 z = vec3(0.0, 0.0, 1.0) * i;
@@ -316,11 +325,6 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye)
 	}
 	sd = 0.0;
 	return sd;
-}
-
-float rand(vec2 co)
-{
-    return fract(sin(dot(co.xy, vec2(12.9898,78.233))) * 43758.5453);
 }
 
 float doAmbientOcclusion(vec2 tcoord, vec2 uv, vec3 p, vec3 cnorm)

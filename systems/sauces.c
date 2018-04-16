@@ -79,7 +79,7 @@ mesh_t *c_sauces_mesh_get(c_sauces_t *self, const char *name)
 	return mesh;
 }
 
-static inline mat4_t mat4_from_ai(const struct aiMatrix4x4 m, float scale)
+static inline mat4_t mat4_from_ai(const struct aiMatrix4x4 m)
 {
 	mat4_t r;
 
@@ -96,7 +96,6 @@ static inline mat4_t mat4_from_ai(const struct aiMatrix4x4 m, float scale)
 	r._[3]._[2] = m.d3; r._[3]._[3] = m.d4;
 
 	r = mat4_transpose(r);
-	r = mat4_scale(r, scale);
 	return r;
 }
 
@@ -107,7 +106,7 @@ void load_node(entity_t entity, const struct aiScene *scene,
 	c_node_t *node = c_node(&entity);
 	c_spacial_t *spacial = c_spacial(&entity);
 
-	c_spacial_set_model(spacial, mat4_from_ai(anode->mTransformation, scale));
+	c_spacial_set_model(spacial, mat4_from_ai(anode->mTransformation));
 
 	for(i = 0; i < anode->mNumMeshes; i++)
 	{

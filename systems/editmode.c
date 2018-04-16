@@ -25,7 +25,7 @@ mat_t *g_sel_mat = NULL;
 entity_t arrows, X, Y, Z, RX, RY, RZ;
 void c_editmode_init(c_editmode_t *self)
 {
-	self->spawn_pos = vec2(25, 25);
+	self->spawn_pos = vec2(10, 10);
 	self->mode = EDIT_OBJECT;
 	if(!g_sel_mat)
 	{
@@ -140,6 +140,7 @@ void c_editmode_activate(c_editmode_t *self)
 static int c_editmode_activate_loader(c_editmode_t *self)
 {
 	self->nk = nk_candle_init(c_window(self)->window); 
+
 
 	{ 
 		struct nk_font_atlas *atlas; 
@@ -441,29 +442,34 @@ void node_entity(c_editmode_t *self, entity_t entity)
 		{
 			count += !c_node(&node->children[i])->ghost;
 		}
-		if(count)
+		/* if(count) */
 		{
-			if(nk_tree_push_id(self->nk, NK_TREE_NODE, final_name,
-						NK_MINIMIZED, (int)entity))
+			int is_selected = self->selected == entity;
+			int res = nk_tree_entity_push_id(self->nk, NK_TREE_NODE, final_name,
+						NK_MINIMIZED, &is_selected, count, (int)entity);
+			if(is_selected)
 			{
-				if(nk_button_label(self->nk, "select"))
+				if(is_selected && self->selected != entity)
 				{
 					c_editmode_select(self, entity);
 				}
+			}
+			if(res)
+			{
 				for(i = 0; i < node->children_size; i++)
 				{
 					node_entity(self, node->children[i]);
 				}
-				nk_tree_pop(self->nk);
+
+				nk_tree_entity_pop(self->nk);
 			}
-			return;
 		}
 	}
-	int is_selected = self->selected == entity;
-	if(nk_selectable_label(self->nk, final_name, NK_TEXT_ALIGN_LEFT, &is_selected))
-	{
-		c_editmode_select(self, entity);
-	}
+	/* int is_selected = self->selected == entity; */
+	/* if(nk_selectable_label(self->nk, final_name, NK_TEXT_ALIGN_LEFT, &is_selected)) */
+	/* { */
+		/* c_editmode_select(self, entity); */
+	/* } */
 }
 
 void tools_gui(c_editmode_t *self)
@@ -477,7 +483,7 @@ void node_tree(c_editmode_t *self)
 {
 	unsigned long i;
 
-	if(nk_tree_push(self->nk, NK_TREE_TAB, "entities", NK_MINIMIZED))
+	if(nk_tree_push(self->nk, NK_TREE_TAB, "Hierarchy System", NK_MAXIMIZED))
 	{
 		for(i = 1; i < g_ecm->entities_busy_size; i++)
 		{
@@ -634,7 +640,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 		title = name->name;
 	}
 	res = nk_begin_titled(self->nk, buffer, title,
-			nk_rect(self->spawn_pos.x, self->spawn_pos.y, 230, 280),
+			nk_rect(c_renderer(self)->width - 240, 10, 230, 580),
 			NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
 			NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE);
 	if (res)
@@ -650,7 +656,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 			if(comp && !ct->is_interaction)
 			{
 				if(nk_tree_push_id(self->nk, NK_TREE_TAB, ct->name,
-							NK_MINIMIZED, i))
+							NK_MAXIMIZED, i))
 				{
 					component_signal(comp, ct, sig("component_menu"), self->nk);
 					nk_tree_pop(self->nk);
@@ -734,7 +740,7 @@ int c_editmode_draw(c_editmode_t *self)
 	if(self->nk && (self->visible || self->control))
 	{
 		if (nk_begin(self->nk, "Edit menu",
-					nk_rect(self->spawn_pos.x, self->spawn_pos.y, 230, 380),
+					nk_rect(self->spawn_pos.x, self->spawn_pos.y, 230, 580),
 					NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
 					NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE))
 		{
@@ -747,8 +753,6 @@ int c_editmode_draw(c_editmode_t *self)
 			}
 
 			entity_signal(c_entity(self), sig("global_menu"), self->nk);
-
-			node_tree(self);
 
 			tools_gui(self);
 
@@ -763,6 +767,8 @@ int c_editmode_draw(c_editmode_t *self)
 					c_editmode_select(self, instance);
 				}
 			}
+			node_tree(self);
+
 		}
 		nk_end(self->nk);
 

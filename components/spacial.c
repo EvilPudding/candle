@@ -218,6 +218,10 @@ void c_spacial_set_model(c_spacial_t *self, mat4_t m)
 
 	self->rot_matrix = m;
 
+	self->upwards = mat4_mul_vec4(m, vec4(0, 1, 0, 0)).xyz;
+	self->forward = mat4_mul_vec4(m, vec4(1, 0, 0, 0)).xyz;
+	self->sideways = mat4_mul_vec4(m, vec4(0, 0, 1, 0)).xyz;
+
 	/* self->model_matrix = m; */
 	self->modified = 1;
 	c_spacial_unlock(self);

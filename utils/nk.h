@@ -19,4 +19,10 @@ void nk_candle_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
 void nk_draw_image_ext(struct nk_command_buffer *b, struct nk_rect r,
     const struct nk_image *img, struct nk_color col, int no_blending);
 
+#define nk_tree_entity_push(ctx, type, title, state, sel) nk_tree_entity_push_hashed(ctx, type, title, state, sel, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),__LINE__)
+#define nk_tree_entity_push_id(ctx, type, title, state, sel, chil, id) nk_tree_entity_push_hashed(ctx, type, title, state, sel, chil, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
+NK_API int nk_tree_entity_push_hashed(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states initial_state, int *selected, int has_children, const char *hash, int len, int seed);
+NK_API int nk_tree_entity_image_push_hashed(struct nk_context*, enum nk_tree_type, struct nk_image, const char *title, enum nk_collapse_states initial_state, int *selected, int has_children, const char *hash, int len,int seed);
+NK_API void nk_tree_entity_pop(struct nk_context*);
+
 #endif /* !NK_H */
