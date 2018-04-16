@@ -48,10 +48,13 @@ static void c_renderer_bind_buffer(c_renderer_t *self, pass_t *pass,
 
 	for(t = 0; t < buffer->color_buffers_size + 1; t++)
 	{
-		glUniform1i(sb->buffer.u_tex[t], (*i));
-		glActiveTexture(GL_TEXTURE0 + (*i));
-		texture_bind(buffer, t);
-		(*i)++;
+		if(((int)sb->buffer.u_tex[t]) != -1)
+		{
+			glUniform1i(sb->buffer.u_tex[t], (*i) + 64);
+			glActiveTexture(GL_TEXTURE0 + (*i) + 64);
+			texture_bind(buffer, t);
+			(*i)++;
+		}
 	}
 }
 
@@ -125,6 +128,7 @@ void c_renderer_bind_get_uniforms(c_renderer_t *self, bind_t *bind,
 			{
 				sb->buffer.u_tex[t] = shader_uniform(self->shader, bind->name,
 						bind->buffer->texNames[t]);
+				printf("%s %s %d\n", bind->name, bind->buffer->texNames[t], sb->buffer.u_tex[t] );
 			}
 			sb->buffer.u_brightness = shader_uniform(self->shader,
 					bind->name, "brightness"); glerr();
@@ -172,6 +176,7 @@ int c_renderer_bind_pass(c_renderer_t *self, pass_t *pass)
 		shader_bind_t *sb = &bind->vs_uniforms[self->shader->index];
 		if(!sb->cached)
 		{
+			printf("\t%s\n", pass->name);
 			c_renderer_bind_get_uniforms(self, bind, sb);
 		}
 
@@ -247,7 +252,6 @@ shader_t *vs_bind(vs_t *vs)
 	{
 		shader_bind(renderer->shader);
 		c_renderer_bind_pass(renderer, renderer->current_pass);
-		renderer->shader->bound_textures = 0;
 		return renderer->shader;
 	}
 	/* printf("vs_bind %s\n", vs->name); */
@@ -260,7 +264,6 @@ shader_t *vs_bind(vs_t *vs)
 	if(!(*sh)->ready) return NULL;
 
 	renderer->shader = *sh; 
-	renderer->shader->bound_textures = 0;
 
 	shader_bind(renderer->shader);
 

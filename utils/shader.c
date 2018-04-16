@@ -575,8 +575,8 @@ void shader_bind_light(shader_t *self, entity_t light)
 	if(probe_c && probe_c->map)
 	{
 		/* int i = self->bound_textures++; */
-		glUniform1i(self->u_shadow_map, 19); glerr();
-		glActiveTexture(GL_TEXTURE0 + 19); glerr();
+		glUniform1i(self->u_shadow_map, 32); glerr();
+		glActiveTexture(GL_TEXTURE0 + 32); glerr();
 		texture_bind(probe_c->map, COLOR_TEX);
 	}
 
@@ -639,6 +639,7 @@ void shader_bind_screen(shader_t *self, texture_t *buffer, float sx, float sy)
 void shader_bind(shader_t *self)
 {
 	/* printf("shader bound f:%s v:%s\n", self->fs->filename, g_vs[self->index].name); */
+	self->bound_textures = 0;
 	glUseProgram(self->program);
 }
 

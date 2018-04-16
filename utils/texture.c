@@ -14,12 +14,15 @@ char g_texture_paths[][256] = {"", "resauces/textures", "resauces/materials"};
 int g_texture_paths_size = 3;
 int g_tex_num = 0;
 
+#define ID_2D 31
+#define ID_CUBE 32
+#define ID_3D 33
 static void texture_update_gl_loader(texture_t *self)
 {
 
 	if(self->target == GL_TEXTURE_2D)
 	{
-		glActiveTexture(GL_TEXTURE15);
+		glActiveTexture(GL_TEXTURE0 + ID_2D);
 		glBindTexture(self->target, self->texId[COLOR_TEX]);
 
 		glTexSubImage2D(self->target, 0, 0, 0, self->width, self->height,
@@ -28,7 +31,7 @@ static void texture_update_gl_loader(texture_t *self)
 	}
 	if(self->target == GL_TEXTURE_3D)
 	{
-		glActiveTexture(GL_TEXTURE17);
+		glActiveTexture(GL_TEXTURE0 + ID_3D);
 		glBindTexture(self->target, self->texId[COLOR_TEX]);
 
 		glTexSubImage3D(self->target, 0, 0, 0, 0,
@@ -37,6 +40,7 @@ static void texture_update_gl_loader(texture_t *self)
 		glerr();
 	}
 	glBindTexture(self->target, 0); glerr();
+	glActiveTexture(GL_TEXTURE0 + 0);
 }
 
 void texture_update_gl(texture_t *self)
@@ -95,7 +99,7 @@ void texture_update_brightness(texture_t *self)
 
 static int texture_from_file_loader(texture_t *self)
 {
-	glActiveTexture(GL_TEXTURE15);
+	glActiveTexture(GL_TEXTURE0 + ID_2D);
 
 	glGenTextures(1, &self->texId[COLOR_TEX]); glerr();
 	glBindTexture(self->target, self->texId[COLOR_TEX]); glerr();
@@ -139,7 +143,7 @@ static int texture_from_file_loader(texture_t *self)
 
 static void texture_new_2D_loader(texture_t *self)
 {
-	glActiveTexture(GL_TEXTURE15);
+	glActiveTexture(GL_TEXTURE0 + ID_2D);
 
 	if(self->depth_buffer)
 	{
@@ -191,6 +195,7 @@ static void texture_new_2D_loader(texture_t *self)
 
 	glBindTexture(self->target, 0); glerr();
 
+	glActiveTexture(GL_TEXTURE0);
 	self->ready = 1;
 }
 
@@ -198,7 +203,7 @@ int texture_add_buffer(texture_t *self, const char *name, int is_float,
 		int dims)
 {
 	GLuint targ = self->target;
-	glActiveTexture(GL_TEXTURE15);
+	glActiveTexture(GL_TEXTURE0 + ID_2D);
 
 	int i = self->color_buffers_size++;
 	self->texNames[COLOR_TEX + i] = strdup(name);
@@ -243,6 +248,7 @@ int texture_add_buffer(texture_t *self, const char *name, int is_float,
 
 
 	glBindTexture(targ, 0);
+	glActiveTexture(GL_TEXTURE0);
 	self->framebuffer_ready = 0;
 	return i;
 }
@@ -309,7 +315,7 @@ texture_t *texture_new_2D
 
 static void texture_new_3D_loader(texture_t *self)
 {
-	glActiveTexture(GL_TEXTURE17);
+	glActiveTexture(GL_TEXTURE0 + ID_3D);
 
 	glGenTextures(1, &self->texId[COLOR_TEX]); glerr();
 	glBindTexture(self->target, self->texId[COLOR_TEX]); glerr();
@@ -328,6 +334,7 @@ static void texture_new_3D_loader(texture_t *self)
 			0, self->format, GL_UNSIGNED_BYTE, self->imageData); glerr();
 
 	glBindTexture(self->target, 0); glerr();
+	glActiveTexture(GL_TEXTURE0);
 
 	self->ready = 1;
 }
@@ -515,7 +522,7 @@ void texture_destroy(texture_t *self)
 int texture_2D_resize(texture_t *self, int width, int height)
 {
 	if(self->width == width && self->height == height) return 0;
-	glActiveTexture(GL_TEXTURE15);
+	glActiveTexture(GL_TEXTURE0 + ID_2D);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	self->width = width;
 	self->height = height;
@@ -545,6 +552,7 @@ int texture_2D_resize(texture_t *self, int width, int height)
 		glTexImage2D(self->target, 0, GL_DEPTH_COMPONENT, self->width,
 				self->height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL); glerr();
 	}
+	glActiveTexture(GL_TEXTURE0);
 
 	return 1;
 }
@@ -594,7 +602,7 @@ static int texture_2D_frame_buffer(texture_t *self)
 static int texture_cubemap_frame_buffer(texture_t *self)
 {
 	int f;
-	/* glActiveTexture(GL_TEXTURE16); */
+	glActiveTexture(GL_TEXTURE0 + ID_CUBE);
 	/* glBindTexture(self->target, self->texId[COLOR_TEX]); */
 
 	if(!self->frame_buffer[0])
@@ -625,6 +633,7 @@ static int texture_cubemap_frame_buffer(texture_t *self)
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	glerr();
+	glActiveTexture(GL_TEXTURE0);
 
 	self->framebuffer_ready = 1;
 	return 1;
@@ -633,7 +642,7 @@ static int texture_cubemap_frame_buffer(texture_t *self)
 static int texture_cubemap_loader(texture_t *self)
 {
 	int i;
-	glActiveTexture(GL_TEXTURE16);
+	glActiveTexture(GL_TEXTURE0 + ID_CUBE);
 
 	if(self->depth_buffer)
 	{
@@ -677,6 +686,7 @@ static int texture_cubemap_loader(texture_t *self)
 		}
 	}
 
+	glBindTexture(self->target, 0); glerr();
 	/* texture_cubemap_frame_buffer(self); */
 
 	self->ready = 1;
@@ -772,7 +782,8 @@ int LoadTGA(texture_t *self, const char * filename)
 	self->height = tga.header[3] * 256 + tga.header[2];
 	self->bpp	 = tga.header[4];
 
-	if((self->width <= 0) || (self->height <= 0) || ((self->bpp != 24) && (self->bpp !=32)))
+	if((self->width <= 0) || (self->height <= 0) ||
+			((self->bpp != 24) && (self->bpp != 32)))
 	{
 		printf("Invalid texture information\n");
 		goto fail;

@@ -140,25 +140,21 @@ void mat_destroy(mat_t *self)
 	free(self);
 }
 
-void mat_bind_prop(u_prop_t *uniforms, prop_t *prop, int num)
+void mat_bind_prop(u_prop_t *uniforms, prop_t *prop, int *num)
 {
 	glUniform1f(uniforms->texture_blend, prop->texture_blend); glerr();
 	glUniform1f(uniforms->texture_scale, prop->texture_scale); glerr();
-
-	glUniform1i(uniforms->texture, num); glerr();
-	glActiveTexture(GL_TEXTURE0 + num); glerr();
-
-	if(prop->texture_blend)
-	{
-		texture_bind(prop->texture, COLOR_TEX);
-	}
-	else
-	{
-		glBindTexture(GL_TEXTURE_2D, 0);
-	}
-
 	glUniform4f(uniforms->color, prop->color.r, prop->color.g, prop->color.b,
 			prop->color.a); glerr();
+
+	if(prop->texture_blend && ((int)uniforms->texture) != -1)
+	{
+		glUniform1i(uniforms->texture, (*num)); glerr();
+		glActiveTexture(GL_TEXTURE0 + (*num)); glerr();
+		texture_bind(prop->texture, COLOR_TEX);
+		(*num)++;
+	}
+
 }
 
 void mat_set_specular(mat_t *self, prop_t specular)
@@ -183,11 +179,11 @@ void mat_set_diffuse(mat_t *self, prop_t diffuse)
 
 void mat_bind(mat_t *self, shader_t *shader)
 {
-	mat_bind_prop(&shader->u_diffuse, &self->diffuse, shader->bound_textures++);
-	mat_bind_prop(&shader->u_specular, &self->specular, shader->bound_textures++);
-	mat_bind_prop(&shader->u_transparency, &self->transparency, shader->bound_textures++);
-	mat_bind_prop(&shader->u_normal, &self->normal, shader->bound_textures++);
-	mat_bind_prop(&shader->u_emissive, &self->emissive, shader->bound_textures++);
+	mat_bind_prop(&shader->u_diffuse, &self->diffuse, &shader->bound_textures);
+	mat_bind_prop(&shader->u_specular, &self->specular, &shader->bound_textures);
+	mat_bind_prop(&shader->u_transparency, &self->transparency, &shader->bound_textures);
+	mat_bind_prop(&shader->u_normal, &self->normal, &shader->bound_textures);
+	mat_bind_prop(&shader->u_emissive, &self->emissive, &shader->bound_textures);
 	/* mat_bind_prop(&shader->u_position, &self->position, 5); */
 	/* mat_bind_prop(&shader->u_position, &self->position, 6); */
 
