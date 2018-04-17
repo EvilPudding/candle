@@ -3,7 +3,10 @@
 #line 4
 
 layout (location = 0) out vec4 FragColor;
-uniform pass_t refr;
+
+BUFFER {
+	sampler2D color;
+} refr;
 
 void main()
 {
@@ -17,8 +20,7 @@ void main()
 	{
 		vec2 coord = pixel_pos() + nor.xy * (trans.a * 0.03);
 
-		vec3 color = //pass_sample(refr, coord).rgb;
-		textureLod(refr.diffuse, coord.xy, trans.a * 3).rgb;
+		vec3 color = textureLod(refr.color, coord.xy, trans.a * 3).rgb;
 
 		final += vec4(color * trans.rgb, 1.0f);
 	}

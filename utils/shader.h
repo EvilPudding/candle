@@ -106,6 +106,7 @@ void shader_bind(shader_t *self);
 void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
 		mat4_t *projection, mat4_t *model, float exposure, float angle4);
 GLuint shader_uniform(shader_t *self, const char *uniform, const char *member);
+GLuint _shader_uniform(shader_t *self, const char *uniform, const char *member);
 void shader_bind_light(shader_t *self, entity_t light);
 void shader_bind_mesh(shader_t *self, mesh_t *mesh, unsigned int id);
 void shader_bind_gbuffer(shader_t *self, texture_t *buffer);

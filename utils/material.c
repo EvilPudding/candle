@@ -151,7 +151,7 @@ void mat_bind_prop(u_prop_t *uniforms, prop_t *prop, int *num)
 	{
 		glUniform1i(uniforms->texture, (*num)); glerr();
 		glActiveTexture(GL_TEXTURE0 + (*num)); glerr();
-		texture_bind(prop->texture, COLOR_TEX);
+		texture_bind(prop->texture, 0);
 		(*num)++;
 	}
 

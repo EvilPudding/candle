@@ -2,6 +2,9 @@
 #define FRAG_COMMON
 #line 3
 
+#define _CAT(a, b) a ## b
+#define CAT(a, b) _CAT(a,b)
+#define BUFFER uniform struct 
 struct property_t
 {
 	float texture_blend;
@@ -10,15 +13,7 @@ struct property_t
 	vec4 color;
 };
 
-struct pass_t
-{
-	float brightness;
-	sampler2D depth;
-	sampler2D diffuse;
-};
-
 uniform vec2 output_size;
-
 
 uniform property_t diffuse;
 uniform property_t specular;
@@ -26,24 +21,9 @@ uniform property_t transparency;
 uniform property_t normal;
 uniform property_t emissive;
 
-struct gbuffer_t
-{
-	sampler2D depth;
-	sampler2D diffuse;
-	sampler2D specular;
-	sampler2D normal;
-};
 
-struct sbuffer_t
-{
-	sampler2D depth;
-	sampler2D id;
-	sampler2D geomid;
-};
-
-
-uniform gbuffer_t gbuffer;
-uniform sbuffer_t sbuffer;
+/* uniform gbuffer_t gbuffer; */
+/* uniform sbuffer_t sbuffer; */
 
 uniform float distortion;
 uniform float scattering;
@@ -98,16 +78,6 @@ in mat4 model;
 in mat3 TM;
 
 uniform vec2 screen_size;
-
-vec4 pass_sample(pass_t pass, vec2 coord)
-{
-	return textureLod(pass.diffuse, coord, 0);
-}
-
-vec4 pass_depth(pass_t pass, vec2 coord)
-{
-	return textureLod(pass.depth, coord, 0);
-}
 
 vec2 pixel_pos()
 {
@@ -170,11 +140,6 @@ vec3 decode_normal(vec2 enc)
 
 /* ------------------- */
 
-float get_depth(gbuffer_t buffer)
-{
-	return textureLod(buffer.depth, pixel_pos(), 0).r;
-}
-
 vec4 get_emissive()
 {
 	return resolveProperty(emissive, texcoord);
@@ -190,50 +155,49 @@ vec4 get_transparency()
 	return resolveProperty(transparency, texcoord);
 }
 
-vec4 get_specular(gbuffer_t buffer)
-{
-	return textureLod(buffer.specular, pixel_pos(), 0);
-}
+/* float get_depth(gbuffer_t buffer) */
+/* { */
+/* 	return textureLod(buffer.depth, pixel_pos(), 0).r; */
+/* } */
+/* vec2 get_geomid(sbuffer_t buffer) */
+/* { */
+/* 	return textureLod(buffer.geomid, pixel_pos(), 0).rg; */
+/* } */
+/* vec2 get_id(sbuffer_t buffer) */
+/* { */
+/* 	return textureLod(buffer.id, pixel_pos(), 0).rg; */
+/* } */
+/* vec3 get_diffuse(gbuffer_t buffer) */
+/* { */
+/* 	return textureLod(buffer.diffuse, pixel_pos(), 0).rgb; */
+/* } */
+/* vec3 get_normal(gbuffer_t buffer) */
+/* { */
+/* 	return decode_normal(textureLod(buffer.normal, pixel_pos(), 0).rg); */
+/* } */
 
-vec2 get_geomid(sbuffer_t buffer)
-{
-	return textureLod(buffer.geomid, pixel_pos(), 0).rg;
-}
 
-vec2 get_id(sbuffer_t buffer)
-{
-	return textureLod(buffer.id, pixel_pos(), 0).rg;
-}
-
-vec3 get_diffuse(gbuffer_t buffer)
-{
-	return textureLod(buffer.diffuse, pixel_pos(), 0).rgb;
-}
-
-vec3 get_position(gbuffer_t buffer, vec2 pos)
-{
-	vec3 raw_pos = vec3(pos, textureLod(buffer.depth, pos, 0).r);
-	vec4 clip_pos = vec4(raw_pos * 2.0 - 1.0, 1.0);
-	vec4 view_pos = camera.inv_projection * clip_pos;
-
-	return view_pos.xyz / view_pos.w;
-}
-vec3 get_position(gbuffer_t buffer)
+vec3 get_position(sampler2D depth)
 {
 	vec2 pos = pixel_pos();
-
-	vec3 raw_pos = vec3(pos, textureLod(buffer.depth, pos, 0).r);
+	vec3 raw_pos = vec3(pos, textureLod(depth, pos, 0).r);
 	vec4 clip_pos = vec4(raw_pos * 2.0 - 1.0, 1.0);
 	vec4 view_pos = camera.inv_projection * clip_pos;
-
 	return view_pos.xyz / view_pos.w;
 }
 
-vec3 get_normal(gbuffer_t buffer)
+vec3 get_position(sampler2D depth, vec2 pos)
 {
-	return decode_normal(textureLod(buffer.normal, pixel_pos(), 0).rg);
+	vec3 raw_pos = vec3(pos, textureLod(depth, pos, 0).r);
+	vec4 clip_pos = vec4(raw_pos * 2.0 - 1.0, 1.0);
+	vec4 view_pos = camera.inv_projection * clip_pos;
+	return view_pos.xyz / view_pos.w;
 }
 
+vec3 get_normal(sampler2D buffer)
+{
+	return decode_normal(textureLod(buffer, pixel_pos(), 0).rg);
+}
 vec3 get_normal()
 {
 	if(has_tex > 0.5)
@@ -327,10 +291,10 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye)
 	return sd;
 }
 
-float doAmbientOcclusion(vec2 tcoord, vec2 uv, vec3 p, vec3 cnorm)
+float doAmbientOcclusion(sampler2D depth, vec2 tcoord, vec2 uv, vec3 p, vec3 cnorm)
 {
     float scale = 1.2, bias = 0.01, intensity = 5; 
-    vec3 diff = get_position(gbuffer, tcoord + uv) - p;
+    vec3 diff = get_position(depth, tcoord + uv) - p;
     vec3 v = normalize(diff);
 	float dist = length(diff);
 	/* if(dist > 0.7) return 0.0f; */
@@ -340,7 +304,7 @@ float doAmbientOcclusion(vec2 tcoord, vec2 uv, vec3 p, vec3 cnorm)
 }
 
 
-float ambientOcclusion(vec3 p, vec3 n, float dist_to_eye)
+float ambientOcclusion(sampler2D depth, vec3 p, vec3 n, float dist_to_eye)
 {
 	vec2 rnd = normalize(vec2(rand(p.xy), rand(n.xy)));
 
@@ -366,10 +330,10 @@ float ambientOcclusion(vec3 p, vec3 n, float dist_to_eye)
 		vec2 coord2 = vec2(coord1.x * 0.707 - coord1.y * 0.707,
 				coord1.x * 0.707 + coord1.y * 0.707);
 
-		ao += doAmbientOcclusion(texcoord,coord1 * 0.25, p, n);
-		ao += doAmbientOcclusion(texcoord,coord2 * 0.5, p, n);
-		ao += doAmbientOcclusion(texcoord,coord1 * 0.75, p, n);
-		ao += doAmbientOcclusion(texcoord,coord2, p, n);
+		ao += doAmbientOcclusion(depth, texcoord,coord1 * 0.25, p, n);
+		ao += doAmbientOcclusion(depth, texcoord,coord2 * 0.5, p, n);
+		ao += doAmbientOcclusion(depth, texcoord,coord1 * 0.75, p, n);
+		ao += doAmbientOcclusion(depth, texcoord,coord2, p, n);
 	}
 	ao /= float(iterations) * 4.0f;
 	return clamp(1.0f - ao * 0.7f, 0.0f, 1.0f); 
@@ -381,24 +345,22 @@ const float maxSteps = 20;
 const float searchDist = 20;
 const float searchDistInv = 1.0f / searchDist;
 
-vec3 get_proj_coord(vec3 hitCoord) // z = hitCoord.z - depth
+vec3 get_proj_coord(sampler2D depthmap, vec3 hitCoord) // z = hitCoord.z - depth
 {
 	vec4 projectedCoord     = camera.projection * vec4(hitCoord, 1.0); \
 	projectedCoord.xy      /= projectedCoord.w; \
 	projectedCoord.xy       = projectedCoord.xy * 0.5 + 0.5;  \
-	float depth             = get_position(gbuffer, projectedCoord.xy).z; \
+	float depth             = get_position(depthmap, projectedCoord.xy).z; \
 	return vec3(projectedCoord.xy, hitCoord.z - depth);
 }
 
-vec3 BinarySearch(vec3 dir, inout vec3 hitCoord)
+vec3 BinarySearch(sampler2D depthmap, vec3 dir, inout vec3 hitCoord)
 {
     float depth;
- 
- 
 	vec3 pc;
     for(int i = 0; i < 16; i++)
     {
-		pc = get_proj_coord(hitCoord);
+		pc = get_proj_coord(depthmap, hitCoord);
 		if(pc.x > 1.0 || pc.y > 1.0 || pc.x < 0.0 || pc.y < 0.0) break;
 		if(abs(pc.z) <= 0.01f)
 		{
@@ -412,7 +374,7 @@ vec3 BinarySearch(vec3 dir, inout vec3 hitCoord)
     return vec3(pc.xy, 1.0f);
 }
 
-vec3 RayCast(vec3 dir, inout vec3 hitCoord)
+vec3 RayCast(sampler2D depth, vec3 dir, inout vec3 hitCoord)
 {
     dir *= 0.1f;  
 
@@ -420,7 +382,7 @@ vec3 RayCast(vec3 dir, inout vec3 hitCoord)
         hitCoord               += dir; 
 		dir *= 1.1f;
 
-		vec3 pc = get_proj_coord(hitCoord);
+		vec3 pc = get_proj_coord(depth, hitCoord);
 		if(pc.x > 1.0 || pc.y > 1.0 || pc.x < 0.0 || pc.y < 0.0) break;
 
 		if(pc.z < -2.0f) break;
@@ -429,8 +391,6 @@ vec3 RayCast(vec3 dir, inout vec3 hitCoord)
 			return vec3(pc.xy, 1.0f);
 			/* return BinarySearch(dir, hitCoord); */
 		}
-
-
     }
 
     return vec3(0.0f);
@@ -468,12 +428,12 @@ float isoscelesTriangleInRadius(float a, float h)
     return (a * (sqrt(a2 + fh2) - a)) / (4.0f * h);
 }
 
-vec4 ssr(sampler2D screen)
+vec4 ssr(sampler2D depth, sampler2D screen, sampler2D normal, sampler2D specular)
 {
-	vec3 nor = get_normal(gbuffer);
-	vec3 pos = get_position(gbuffer);
+	vec3 nor = get_normal(normal);
+	vec3 pos = get_position(depth, pixel_pos());
 
-	vec4 specularAll = get_specular(gbuffer);
+	vec4 specularAll = textureLod(specular, pixel_pos(), 0);
 	if(specularAll.a > 0.9) return vec4(0.0);
 
 	vec3 w_pos = (camera.model * vec4(pos, 1.0f)).xyz;
@@ -492,7 +452,7 @@ vec4 ssr(sampler2D screen)
 	vec3 hitPos = pos.xyz; // + vec3(0.0, 0.0, rand(camPos.xz) * 0.2 - 0.1);
 
 
-	vec3 coords = RayCast(reflected, hitPos);
+	vec3 coords = RayCast(depth, reflected, hitPos);
 
 	vec2 dCoords = abs(vec2(0.5, 0.5) - coords.xy) * 2;
 	/* vec2 dCoords = abs((vec2(0.5, 0.5) - texcoord.xy) * 2 ); */

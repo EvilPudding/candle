@@ -1,20 +1,30 @@
 
 #include "common.frag"
-#line 5
+#line 4
 
 layout (location = 0) out vec4 FragColor;
-uniform pass_t ssao;
+
+BUFFER {
+	sampler2D occlusion;
+} ssao;
+
+BUFFER {
+	sampler2D depth;
+	sampler2D diffuse;
+	sampler2D specular;
+	sampler2D normal;
+} gbuffer;
 
 void main()
 {
-	vec3 dif = get_diffuse(gbuffer);
-	vec3 c_pos = get_position(gbuffer);
+	vec3 dif = textureLod(gbuffer.diffuse, pixel_pos(), 0).rgb;
+	vec3 c_pos = get_position(gbuffer.depth);
 	vec3 w_pos = (camera.model * vec4(c_pos, 1.0f)).xyz;
 
 	/* vec3 c_pos2 = get_position2(gbuffer); */
 
 	/* FragColor = vec4(vec3(length(c_pos2 - c_pos)*10), 1); return; */
-	vec3 c_nor = get_normal(gbuffer);
+	vec3 c_nor = get_normal(gbuffer.normal);
 
 
 	float dist_to_eye = length(c_pos);
@@ -69,7 +79,7 @@ void main()
 
 			if(diffuseCoefficient > 0.005 && attenuation > 0.01)
 			{
-				vec4 spe = get_specular(gbuffer);
+				vec4 spe = textureLod(gbuffer.specular, pixel_pos(), 0);
 
 				vec3 eye_dir = normalize(-c_pos);
 
@@ -90,7 +100,7 @@ void main()
 		}
 	}
 
-    color *= pass_sample(ssao, pixel_pos()).rgb;
+    color *= textureLod(ssao.occlusion, pixel_pos(), 0).rgb;
 
 	FragColor = vec4(color, 1.0);
 }  

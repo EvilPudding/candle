@@ -158,11 +158,11 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 
 	c_renderer_t *renderer = c_renderer(self);
 	c_renderer_add_pass(renderer, "highlights", "highlight", sig("render_quad"),
-			PASS_ADDITIVE | PASS_DISABLE_DEPTH,
-			c_renderer_buffer(renderer, ref("final")),
+			PASS_ADDITIVE,
 		(bind_t[]){
-			{BIND_BUFFER, "sbuffer", .buffer = c_renderer_buffer(renderer, ref("selectable"))},
-			{BIND_INTEGER, "mode", (getter_cb)c_editmode_bind_mode, self},
+			{BIND_OUT, .buffer = c_renderer_tex(renderer, ref("final"))},
+			{BIND_TEX, "sbuffer", .buffer = c_renderer_tex(renderer, ref("selectable"))},
+			{BIND_INT, "mode", (getter_cb)c_editmode_bind_mode, self},
 			{BIND_VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
 			{BIND_VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
 			{BIND_VEC2, "sel_id", (getter_cb)c_editmode_bind_sel, self},
@@ -503,7 +503,7 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 {
 	int res;
 	char buffer[64];
-	sprintf(buffer, "TEX_%u", tex->id);
+	sprintf(buffer, "TEX_%u", tex->bufs[0].id);
 	char *title = buffer;
 	if(tex->name[0])
 	{
@@ -519,29 +519,28 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 	{
 		const char *bufs[16];
 		int i;
-		int num = tex->color_buffers_size + 1;
-		for(i = 0; i < num; i++)
+		for(i = 0; i < tex->bufs_size; i++)
 		{
-			char *name = tex->texNames[i];
-			bufs[i] = name?name:"unnamed buffer";
+			bufs[i] = tex->bufs[i].name;
 		}
 
 		nk_layout_row_static(self->nk, 25, 200, 1);
-		tex->prev_id = nk_combo(self->nk, bufs, num, tex->prev_id, 25,
-				nk_vec2(200,200));
+		tex->prev_id = nk_combo(self->nk, bufs, tex->bufs_size,
+				tex->prev_id, 25, nk_vec2(200,200));
 
 
 		/* slider color combobox */
 
 
-		nk_value_int(self->nk, "glid: ", tex->texId[tex->prev_id]);
-		struct nk_image im = nk_image_id(tex->texId[tex->prev_id]);
+		nk_value_int(self->nk, "glid: ", tex->bufs[tex->prev_id].id);
+		nk_value_int(self->nk, "dims: ", tex->bufs[tex->prev_id].dims);
+		struct nk_image im = nk_image_id(tex->bufs[tex->prev_id].id);
 		/* im.handle.ptr = 1; */
 		struct nk_command_buffer *canvas = nk_window_get_canvas(self->nk);
 		struct nk_rect total_space = nk_window_get_content_region(self->nk);
 
-		total_space.y += 70;
-		total_space.h -= 70;
+		total_space.y += 85;
+		total_space.h -= 85;
 		nk_draw_image_ext(canvas, total_space, &im, nk_rgba(255, 255, 255, 255), 1);
 	}
 	nk_end(self->nk);

@@ -21,24 +21,25 @@ typedef struct uniform_t uniform_t;
 
 enum
 {
-	PASS_CUBEMAP 		   		= 1 << 0,
-	PASS_CLEAR_COLOR	   		= 1 << 1,
-	PASS_CLEAR_DEPTH	   		= 1 << 2,
-	PASS_DISABLE_DEPTH	   		= 1 << 3,
-	PASS_DISABLE_DEPTH_UPDATE	= 1 << 4,
-	PASS_INVERT_DEPTH			= 1 << 5,
-	PASS_ADDITIVE				= 1 << 6
+	PASS_CUBEMAP   		= 1 << 0,
+	PASS_CLEAR_COLOR	= 1 << 1,
+	PASS_CLEAR_DEPTH	= 1 << 2,
+	PASS_LOCK_DEPTH		= 1 << 4,
+	PASS_INVERT_DEPTH	= 1 << 5,
+	PASS_ADDITIVE		= 1 << 6
 } pass_options;
 
 typedef enum
 {
 	BIND_NONE,
-	BIND_BUFFER,
-	BIND_NUMBER,
+	BIND_OUT,
+	BIND_DEPTH,
+	BIND_TEX,
+	BIND_NUM,
 	BIND_VEC2,
 	BIND_VEC3,
-	BIND_INTEGER,
-	BIND_CAMERA
+	BIND_INT,
+	BIND_CAM
 } bind_type_t;
 
 typedef vec2_t(*vec2_getter)(void *usrptr);
@@ -125,7 +126,6 @@ typedef struct pass_t
 	char name[32];
 	unsigned int hash;
 	int additive;
-	int disable_depth;
 	int depth_update;
 	int invert_depth;
 	unsigned int clear;
@@ -135,6 +135,7 @@ typedef struct pass_t
 	bind_t *binds;
 
 	texture_t *output;
+	texture_t *depth;
 
 } pass_t;
 
@@ -166,6 +167,7 @@ typedef struct c_renderer_t
 	int passes_size;
 	pass_t passes[32];
 	texture_t *output;
+	texture_t *fallback_depth;
 
 	pass_t *current_pass;
 	fs_t *frag_bound;
@@ -193,13 +195,13 @@ void c_renderer_add_camera(c_renderer_t *self, entity_t camera);
 
 void c_renderer_set_output(c_renderer_t *self, unsigned int hash);
 
-texture_t *c_renderer_buffer(c_renderer_t *self, unsigned int hash);
+texture_t *c_renderer_tex(c_renderer_t *self, unsigned int hash);
 void c_renderer_add_pass(c_renderer_t *self, const char *name,
 		const char *shader_name, ulong draw_signal,
-		int flags, texture_t *output, bind_t binds[]);
+		int flags, bind_t binds[]);
 void c_renderer_replace_pass(c_renderer_t *self, const char *name,
 		const char *shader_name, ulong draw_signal,
-		int flags, texture_t *output, bind_t binds[]);
+		int flags, bind_t binds[]);
 
 entity_t c_renderer_get_camera(c_renderer_t *self);
 

@@ -35,13 +35,18 @@ bool is_equal(vec2 a, vec2 b)
 	return (b.x == a.x && b.y == a.y);
 }
 
+BUFFER {
+	sampler2D id;
+	sampler2D geomid;
+} sbuffer;
+
 void main()
 {
 	vec2 c;
 	vec2 c2;
 
-	c = get_id(sbuffer);
-	c2 = get_geomid(sbuffer);
+	c = textureLod(sbuffer.id, pixel_pos(), 0).rg;
+	c2 = textureLod(sbuffer.geomid, pixel_pos(), 0).rg;
 
 	float over = filtered(c, over_id);
 	float selected = filtered(c, sel_id);

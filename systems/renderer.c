@@ -46,7 +46,7 @@ static void c_renderer_bind_buffer(c_renderer_t *self, pass_t *pass,
 	int t;
 	int (*i) = &self->shader->bound_textures;
 
-	for(t = 0; t < buffer->color_buffers_size + 1; t++)
+	for(t = 0; t < buffer->bufs_size; t++)
 	{
 		if(((int)sb->buffer.u_tex[t]) != -1)
 		{
@@ -104,7 +104,7 @@ void c_renderer_bind_get_uniforms(c_renderer_t *self, bind_t *bind,
 		case BIND_NONE:
 			printf("Empty bind??\n");
 			break;
-		case BIND_CAMERA:
+		case BIND_CAM:
 			sb->camera.u_view =
 				shader_uniform(self->shader, bind->name, "view");
 			sb->camera.u_pos =
@@ -123,12 +123,11 @@ void c_renderer_bind_get_uniforms(c_renderer_t *self, bind_t *bind,
 #endif
 
 			break;
-		case BIND_BUFFER:
-			for(t = 0; t < bind->buffer->color_buffers_size + 1; t++)
+		case BIND_TEX:
+			for(t = 0; t < bind->buffer->bufs_size; t++)
 			{
 				sb->buffer.u_tex[t] = shader_uniform(self->shader, bind->name,
-						bind->buffer->texNames[t]);
-				printf("%s %s %d\n", bind->name, bind->buffer->texNames[t], sb->buffer.u_tex[t] );
+						bind->buffer->bufs[t].name);
 			}
 			sb->buffer.u_brightness = shader_uniform(self->shader,
 					bind->name, "brightness"); glerr();
@@ -176,17 +175,16 @@ int c_renderer_bind_pass(c_renderer_t *self, pass_t *pass)
 		shader_bind_t *sb = &bind->vs_uniforms[self->shader->index];
 		if(!sb->cached)
 		{
-			printf("\t%s\n", pass->name);
 			c_renderer_bind_get_uniforms(self, bind, sb);
 		}
 
 		switch(bind->type)
 		{
 		case BIND_NONE: printf("error\n"); break;
-		case BIND_BUFFER:
+		case BIND_TEX:
 			c_renderer_bind_buffer(self, pass, bind);
 			break;
-		case BIND_NUMBER:
+		case BIND_NUM:
 			if(bind->getter)
 			{
 				bind->number = ((number_getter)bind->getter)(bind->usrptr);
@@ -194,7 +192,7 @@ int c_renderer_bind_pass(c_renderer_t *self, pass_t *pass)
 			glUniform1f(sb->number.u, bind->number); glerr();
 			glerr();
 			break;
-		case BIND_INTEGER:
+		case BIND_INT:
 			if(bind->getter)
 			{
 				bind->integer = ((integer_getter)bind->getter)(bind->usrptr);
@@ -202,7 +200,7 @@ int c_renderer_bind_pass(c_renderer_t *self, pass_t *pass)
 			glUniform1i(sb->integer.u, bind->integer); glerr();
 			glerr();
 			break;
-		case BIND_CAMERA: c_renderer_bind_camera(self, pass, bind); break;
+		case BIND_CAM: c_renderer_bind_camera(self, pass, bind); break;
 		case BIND_VEC2:
 			if(bind->getter)
 			{
@@ -219,6 +217,8 @@ int c_renderer_bind_pass(c_renderer_t *self, pass_t *pass)
 			glUniform3f(sb->vec3.u, bind->vec3.r, bind->vec3.g, bind->vec3.b);
 			glerr();
 			break;
+		case BIND_OUT: break;
+		case BIND_DEPTH: break;
 		}
 
 	}
@@ -278,11 +278,11 @@ entity_t c_renderer_get_camera(c_renderer_t *self)
 
 void c_renderer_set_output(c_renderer_t *self, unsigned int hash)
 {
-	self->output = c_renderer_buffer(self, hash);
+	self->output = c_renderer_tex(self, hash);
 }
 
 
-texture_t *c_renderer_buffer(c_renderer_t *self, unsigned int hash)
+texture_t *c_renderer_tex(c_renderer_t *self, unsigned int hash)
 {
 	int i;
 	if(!hash) return NULL;
@@ -295,7 +295,7 @@ texture_t *c_renderer_buffer(c_renderer_t *self, unsigned int hash)
 }
 
 
-void c_renderer_add_buffer(c_renderer_t *self, const char *name,
+void c_renderer_add_tex(c_renderer_t *self, const char *name,
 		float resolution, texture_t *buffer)
 {
 	self->outputs[self->outputs_num++] = (pass_output_t){
@@ -306,173 +306,179 @@ void c_renderer_add_buffer(c_renderer_t *self, const char *name,
 
 static int c_renderer_gl(c_renderer_t *self)
 {
-	texture_t *gb1 =		texture_new_2D(1, 1, 4, 1, 0, 1, 0);
-	texture_t *gb2 =		texture_new_2D(1, 1, 4, 1, 0, 1, 0);
-	texture_t *ssao =		texture_new_2D(1, 1, 4, 1, 0, 1, 0);
-	texture_t *rendered =	texture_new_2D(1, 1, 4, 1, 0, 1, 0);
-	texture_t *refr =		texture_new_2D(1, 1, 4, 1, 0, 1, 1);
-	texture_t *final =		texture_new_2D(1, 1, 4, 1, 0, 1, 0);
-	texture_t *bloom =		texture_new_2D(1, 1, 4, 1, 0, 1, 0);
-	texture_t *bloom2 =		texture_new_2D(1, 1, 4, 1, 0, 1, 0);
+	self->fallback_depth =	texture_new_2D(1, 1, 0, 0,
+		buffer_new("depth",	1, -1)
+	);
+	c_renderer_add_tex(self, "fallback_depth", 1.0f, self->fallback_depth);
 
-	texture_t *selectable =	texture_new_2D(1, 1, 4, 1, 0, 1, 0);
 
-	c_renderer_add_buffer(self, "gb1",			1.0f, gb1);
-	c_renderer_add_buffer(self, "gb2",			1.0f, gb2);
-	c_renderer_add_buffer(self, "ssao",			1.0f, ssao);
-	c_renderer_add_buffer(self, "rendered",		1.0f, rendered);
-	c_renderer_add_buffer(self, "refr",			1.0f, refr);
-	c_renderer_add_buffer(self, "final",		1.0f, final);
-	c_renderer_add_buffer(self, "selectable",	1.0f, selectable);
-	c_renderer_add_buffer(self, "bloom",		0.2f, bloom);
-	c_renderer_add_buffer(self, "bloom2",		0.2f, bloom2);
+	texture_t *gbuffer =	texture_new_2D(1, 1, 0, 0,
+		buffer_new("normal",	1, 2),
+		buffer_new("specular",	1, 4),
+		buffer_new("diffuse",	1, 4),
+		buffer_new("depth",		1, -1)
+	);
+	texture_t *ssao =		texture_new_2D(1, 1, 0, 0,
+		buffer_new("occlusion",	1, 4)
+	);
+	texture_t *rendered =	texture_new_2D(1, 1, 0, 0,
+		buffer_new("color",	1, 4)
+	);
+	texture_t *refr =		texture_new_2D(1, 1, 0, 1,
+		buffer_new("color",	1, 4)
+	);
+	texture_t *final =		texture_new_2D(1, 1, 0, 0,
+		buffer_new("color",	1, 4)
+	);
+	texture_t *bloom =		texture_new_2D(1, 1, 0, 0,
+		buffer_new("color",	1, 4)
+	);
+	texture_t *bloom2 =		texture_new_2D(1, 1, 0, 0,
+		buffer_new("color",	1, 4)
+	);
+	texture_t *selectable =	texture_new_2D(1, 1, 0, 0,
+		buffer_new("geomid",	1, 2),
+		buffer_new("id",		1, 2),
+		buffer_new("depth",		1, -1)
+	);
 
-	texture_add_buffer(gb1, "specular",	1, 4);
-	texture_add_buffer(gb1, "normal",	1, 2);
+	c_renderer_add_tex(self, "gbuffer",		1.0f, gbuffer);
+	c_renderer_add_tex(self, "ssao",		1.0f, ssao);
+	c_renderer_add_tex(self, "rendered",	1.0f, rendered);
+	c_renderer_add_tex(self, "refr",		1.0f, refr);
+	c_renderer_add_tex(self, "final",		1.0f, final);
+	c_renderer_add_tex(self, "selectable",	1.0f, selectable);
+	c_renderer_add_tex(self, "bloom",		0.2f, bloom);
+	c_renderer_add_tex(self, "bloom2",		0.2f, bloom2);
 
-	texture_add_buffer(gb2, "specular",	1, 4);
-	texture_add_buffer(gb2, "normal",	1, 2);
-
-	texture_add_buffer(selectable, "id",		1, 2);
-	texture_add_buffer(selectable, "geomid",	1, 2);
-
-	c_renderer_add_pass(self, "gb1", "gbuffer", sig("render_visible"),
+	c_renderer_add_pass(self, "gbuffer", "gbuffer", sig("render_visible"),
 			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR,
-			c_renderer_buffer(self, ref("gb1")),
 		(bind_t[]){
-			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, self},
+			{BIND_OUT, .buffer = c_renderer_tex(self, ref("gbuffer"))},
+			{BIND_DEPTH, .buffer = c_renderer_tex(self, ref("gbuffer"))},
+			{BIND_CAM, "camera", (getter_cb)c_renderer_get_camera, self},
 			{BIND_NONE}
 		}
 	);
-	c_renderer_add_pass(self, "gb2", "gbuffer", sig("render_visible"),
-			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR,
-			c_renderer_buffer(self, ref("gb2")),
-		(bind_t[]){
-			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, self},
-			{BIND_NONE}
-		}
-	);
+
 	c_renderer_add_pass(self, "selectable", "select", sig("render_selectable"),
 			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR,
-			c_renderer_buffer(self, ref("selectable")),
 		(bind_t[]){
-			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, self},
+			{BIND_OUT, .buffer = c_renderer_tex(self, ref("selectable"))},
+			{BIND_DEPTH, .buffer = c_renderer_tex(self, ref("selectable"))},
+			{BIND_CAM, "camera", (getter_cb)c_renderer_get_camera, self},
 			{BIND_NONE}
 		}
 	);
 
 	/* DECAL PASS */
 	c_renderer_add_pass(self, "decals_pass", "decals", sig("render_decals"),
-			PASS_DISABLE_DEPTH_UPDATE,
-			c_renderer_buffer(self, ref("gb2")),
+			PASS_LOCK_DEPTH,
 		(bind_t[]){
-			{BIND_BUFFER, "gbuffer", .buffer = c_renderer_buffer(self, ref("gb1"))},
-			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, self},
+			{BIND_OUT, .buffer = c_renderer_tex(self, ref("gbuffer"))},
+			{BIND_TEX, "gbuffer", .buffer = c_renderer_tex(self, ref("gbuffer"))},
+			{BIND_CAM, "camera", (getter_cb)c_renderer_get_camera, self},
 			{BIND_NONE}
 		}
 	);
 
-	c_renderer_add_pass(self, "ssao_pass", "ssao", sig("render_quad"),
-			PASS_DISABLE_DEPTH | PASS_DISABLE_DEPTH_UPDATE,
-			c_renderer_buffer(self, ref("ssao")),
+
+	c_renderer_add_pass(self, "ssao_pass", "ssao", sig("render_quad"), 0,
 		(bind_t[]){
-			{BIND_BUFFER, "gbuffer", .buffer = c_renderer_buffer(self, ref("gb2"))},
-			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, self},
+			{BIND_OUT, .buffer = c_renderer_tex(self, ref("ssao"))},
+			{BIND_TEX, "gbuffer", .buffer = c_renderer_tex(self, ref("gbuffer"))},
+			{BIND_CAM, "camera", (getter_cb)c_renderer_get_camera, self},
 			{BIND_NONE}
 		}
 	);
 
-	c_renderer_add_pass(self, "rendered_pass", "phong", sig("render_lights"),
-			PASS_DISABLE_DEPTH | PASS_DISABLE_DEPTH_UPDATE |
+	c_renderer_add_pass(self, "render_pass", "phong", sig("render_lights"),
 			PASS_ADDITIVE | PASS_CLEAR_COLOR,
-			c_renderer_buffer(self, ref("rendered")),
 		(bind_t[]){
-			{BIND_BUFFER, "gbuffer", .buffer = c_renderer_buffer(self, ref("gb2"))},
-			{BIND_BUFFER, "ssao", .buffer = c_renderer_buffer(self, ref("ssao"))},
-			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, self},
+			{BIND_OUT, .buffer = c_renderer_tex(self, ref("rendered"))},
+			{BIND_TEX, "gbuffer", .buffer = c_renderer_tex(self, ref("gbuffer"))},
+			{BIND_TEX, "ssao", .buffer = c_renderer_tex(self, ref("ssao"))},
+			{BIND_CAM, "camera", (getter_cb)c_renderer_get_camera, self},
 			{BIND_NONE}
 		}
 	);
 
 	c_renderer_add_pass(self, "refraction", "copy", sig("render_quad"),
-			PASS_DISABLE_DEPTH_UPDATE | PASS_DISABLE_DEPTH,
-			c_renderer_buffer(self, ref("refr")),
+			0,
 		(bind_t[]){
-				{BIND_BUFFER, "buf", .buffer = c_renderer_buffer(self, ref("rendered"))},
-				{BIND_NONE}
+			{BIND_OUT, .buffer = c_renderer_tex(self, ref("refr"))},
+			{BIND_TEX, "buf", .buffer = c_renderer_tex(self, ref("rendered"))},
+			{BIND_NONE}
 		}
 	);
 
 	c_renderer_add_pass(self, "transp", "transparency", sig("render_transparent"),
-			PASS_DISABLE_DEPTH_UPDATE | PASS_DISABLE_DEPTH,
-			c_renderer_buffer(self, ref("rendered")),
+			0,
 		(bind_t[]){
-			{BIND_BUFFER, "refr", .buffer = c_renderer_buffer(self, ref("refr"))},
-			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, self},
+			{BIND_OUT, .buffer = c_renderer_tex(self, ref("rendered"))},
+			{BIND_DEPTH, .buffer = c_renderer_tex(self, ref("gbuffer"))},
+			{BIND_TEX, "refr", .buffer = c_renderer_tex(self, ref("refr"))},
+			{BIND_CAM, "camera", (getter_cb)c_renderer_get_camera, self},
 			{BIND_NONE}
 		}
 	);
 
 	c_renderer_add_pass(self, "emissive", "transparency", sig("render_emissive"),
-			PASS_ADDITIVE | PASS_DISABLE_DEPTH_UPDATE | PASS_DISABLE_DEPTH,
-			c_renderer_buffer(self, ref("rendered")),
+			PASS_ADDITIVE,
 		(bind_t[]){
-			{BIND_BUFFER, "refr", .buffer = c_renderer_buffer(self, ref("refr"))},
-			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, self},
+			{BIND_OUT, .buffer = c_renderer_tex(self, ref("rendered"))},
+			{BIND_TEX, "refr", .buffer = c_renderer_tex(self, ref("refr"))},
+			{BIND_CAM, "camera", (getter_cb)c_renderer_get_camera, self},
 			{BIND_NONE}
 		}
 	);
 
 	c_renderer_add_pass(self, "final", "ssr", sig("render_quad"),
-			PASS_DISABLE_DEPTH | PASS_DISABLE_DEPTH_UPDATE |
 			PASS_CLEAR_COLOR,
-			c_renderer_buffer(self, ref("final")),
 		(bind_t[]){
-			{BIND_BUFFER, "gbuffer", .buffer = c_renderer_buffer(self, ref("gb2"))},
-			{BIND_BUFFER, "rendered", .buffer = c_renderer_buffer(self, ref("rendered"))},
-			{BIND_CAMERA, "camera", (getter_cb)c_renderer_get_camera, self},
+			{BIND_OUT, .buffer = c_renderer_tex(self, ref("final"))},
+			{BIND_TEX, "gbuffer", .buffer = c_renderer_tex(self, ref("gbuffer"))},
+			{BIND_TEX, "rendered", .buffer = c_renderer_tex(self, ref("rendered"))},
+			{BIND_CAM, "camera", (getter_cb)c_renderer_get_camera, self},
 			{BIND_NONE}
 		}
 	);
 
-	c_renderer_add_pass(self, "bloom_%d", "bright", sig("render_quad"),
-			PASS_DISABLE_DEPTH | PASS_DISABLE_DEPTH_UPDATE,
-			c_renderer_buffer(self, ref("bloom")),
+	c_renderer_add_pass(self, "bloom_%d", "bright", sig("render_quad"), 0,
 		(bind_t[]){
-			{BIND_BUFFER, "buf", .buffer = c_renderer_buffer(self, ref("rendered"))},
+			{BIND_OUT, .buffer = c_renderer_tex(self, ref("bloom"))},
+			{BIND_TEX, "buf", .buffer = c_renderer_tex(self, ref("rendered"))},
 			{BIND_NONE}
 		}
 	);
-	int i;
-	for(i = 0; i < 2; i++)
-	{
-		c_renderer_add_pass(self, "bloom_%d", "blur", sig("render_quad"),
-				PASS_DISABLE_DEPTH | PASS_DISABLE_DEPTH_UPDATE,
-				c_renderer_buffer(self, ref("bloom2")),
-			(bind_t[]){
-				{BIND_BUFFER, "buf", .buffer = c_renderer_buffer(self, ref("bloom"))},
-				{BIND_INTEGER, "horizontal", .integer = 1},
-				{BIND_NONE}
-			}
-		);
-		c_renderer_add_pass(self, "bloom_%d", "blur", sig("render_quad"),
-				PASS_DISABLE_DEPTH | PASS_DISABLE_DEPTH_UPDATE,
-				c_renderer_buffer(self, ref("bloom")),
-			(bind_t[]){
-				{BIND_BUFFER, "buf", .buffer = c_renderer_buffer(self, ref("bloom2"))},
-				{BIND_INTEGER, "horizontal", .integer = 0},
-				{BIND_NONE}
-			}
-		);
-	}
-	c_renderer_add_pass(self, "bloom_%d", "copy", sig("render_quad"),
-			PASS_ADDITIVE | PASS_DISABLE_DEPTH | PASS_DISABLE_DEPTH_UPDATE,
-			c_renderer_buffer(self, ref("final")),
-		(bind_t[]){
-			{BIND_BUFFER, "buf", .buffer = c_renderer_buffer(self, ref("bloom"))},
-			{BIND_NONE}
-		}
-	);
+	/* int i; */
+	/* for(i = 0; i < 2; i++) */
+	/* { */
+	/* 	c_renderer_add_pass(self, "bloom_%d", "blur", sig("render_quad"), 0, */
+	/* 		(bind_t[]){ */
+	/* 			{BIND_OUTPUT, .buffer = c_renderer_tex(self, ref("bloom2"))}, */
+	/* 			{BIND_TEX, "buf", .buffer = c_renderer_tex(self, ref("bloom"))}, */
+	/* 			{BIND_INTEGER, "horizontal", .integer = 1}, */
+	/* 			{BIND_NONE} */
+	/* 		} */
+	/* 	); */
+	/* 	c_renderer_add_pass(self, "bloom_%d", "blur", sig("render_quad"), 0, */
+	/* 		(bind_t[]){ */
+	/* 			{BIND_OUTPUT, .buffer = c_renderer_tex(self, ref("bloom"))}, */
+	/* 			{BIND_TEX, "buf", .buffer = c_renderer_tex(self, ref("bloom2"))}, */
+	/* 			{BIND_INTEGER, "horizontal", .integer = 0}, */
+	/* 			{BIND_NONE} */
+	/* 		} */
+	/* 	); */
+	/* } */
+	/* c_renderer_add_pass(self, "bloom_%d", "copy", sig("render_quad"), */
+	/* 		PASS_ADDITIVE, */
+	/* 	(bind_t[]){ */
+	/* 		{BIND_OUTPUT, .buffer = c_renderer_tex(self, ref("final"))}, */
+	/* 		{BIND_TEX, "buf", .buffer = c_renderer_tex(self, ref("bloom"))}, */
+	/* 		{BIND_NONE} */
+	/* 	} */
+	/* ); */
 
 	c_renderer_set_output(self, ref("final"));
 
@@ -529,8 +535,10 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 
 	if(!pass->output) exit(1);
 
-	if(!texture_target(pass->output, 0))
+	if(!texture_target(pass->output,
+				pass->depth ? pass->depth : self->fallback_depth, 0))
 	{
+		printf("could not target\n");
 		return NULL;
 	}
 
@@ -544,7 +552,6 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 
 	fs_bind(pass->shader);
 
-	/* pass->shader.vp = mat4(); */
 	glerr();
 
 	if(pass->additive)
@@ -554,17 +561,16 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 	}
 	glEnable(GL_CULL_FACE); glerr();
 
-	glDepthFunc(pass->invert_depth ? GL_GREATER : GL_LESS);
-	glDepthMask(pass->depth_update);
+	glDepthMask(pass->depth_update); glerr();
 
 	if(pass->clear)
 	{
 		glClear(pass->clear); glerr();
 	}
-	if(!pass->disable_depth)
+	if(pass->depth)
 	{
+		glDepthFunc(pass->invert_depth ? GL_GREATER : GL_LESS);
 		glEnable(GL_DEPTH_TEST);
-
 	}
 
 	self->bound_light = entity_null;
@@ -577,7 +583,7 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 
 	if(pass->output->mipmaped)
 	{
-		texture_bind(pass->output, COLOR_TEX);
+		texture_bind(pass->output, 0);
 		glGenerateMipmap(pass->output->target); glerr();
 
 		{
@@ -592,6 +598,8 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 		}
 	}
 	self->current_pass = NULL;
+
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
 
 	return pass->output;
 }
@@ -653,10 +661,10 @@ unsigned int c_renderer_geom_at_pixel(c_renderer_t *self, int x, int y,
 		float *depth)
 {
 	entity_t result;
-	texture_t *tex = c_renderer_buffer(self, ref("selectable"));
+	texture_t *tex = c_renderer_tex(self, ref("selectable"));
 	if(!tex) return entity_null;
 
-	unsigned int res = texture_get_pixel(tex, 2,
+	unsigned int res = texture_get_pixel(tex, 1,
 			x * self->resolution, y * self->resolution, depth) & 0xFFFF;
 	result = res - 1;
 	return result;
@@ -666,10 +674,10 @@ entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
 		float *depth)
 {
 	entity_t result;
-	texture_t *tex = c_renderer_buffer(self, ref("selectable"));
+	texture_t *tex = c_renderer_tex(self, ref("selectable"));
 	if(!tex) return entity_null;
 
-	unsigned int res = texture_get_pixel(tex, 1,
+	unsigned int res = texture_get_pixel(tex, 0,
 			x * self->resolution, y * self->resolution, depth) & 0xFFFF;
 	result = res - 1;
 	return result;
@@ -829,8 +837,7 @@ static int c_renderer_pass(c_renderer_t *self, unsigned int hash)
 }
 
 void c_renderer_add_pass(c_renderer_t *self, const char *name,
-		const char *shader_name, ulong draw_signal,
-		int flags, texture_t *output, bind_t binds[])
+		const char *shader_name, ulong draw_signal, int flags, bind_t binds[])
 {
 	char buffer[32];
 	snprintf(buffer, sizeof(buffer), name, self->passes_size);
@@ -848,14 +855,13 @@ void c_renderer_add_pass(c_renderer_t *self, const char *name,
 	pass_t *pass = &self->passes[i];
 	pass->shader = fs_new(shader_name);
 	pass->hash = hash;
-	pass->output = output;
 
 	pass->clear = 0;
 	if(flags & PASS_CLEAR_COLOR) pass->clear |= GL_COLOR_BUFFER_BIT;
 	if(flags & PASS_CLEAR_DEPTH) pass->clear |= GL_DEPTH_BUFFER_BIT;
 
-	pass->depth_update =	!(flags & PASS_DISABLE_DEPTH_UPDATE);
-	pass->disable_depth = 	!!(flags & PASS_DISABLE_DEPTH);
+	pass->depth_update =	!(flags & PASS_LOCK_DEPTH);
+	pass->depth = NULL;
 
 	pass->invert_depth = flags & PASS_INVERT_DEPTH;
 
@@ -875,6 +881,14 @@ void c_renderer_add_pass(c_renderer_t *self, const char *name,
 		{
 			pass->binds[i].vs_uniforms[j].cached = 0;
 			pass->binds[i].hash = ref(pass->binds[i].name);
+		}
+		if(pass->binds[i].type == BIND_OUT)
+		{
+			pass->output = pass->binds[i].buffer;
+		}
+		else if(pass->binds[i].type == BIND_DEPTH)
+		{
+			pass->depth = pass->binds[i].buffer;
 		}
 	}
 	self->ready = 0;

@@ -521,7 +521,7 @@ void shader_bind_ambient(shader_t *self, texture_t *ambient)
 	int i = self->bound_textures++;
 	glUniform1i(self->u_ambient_map, i); glerr();
 	glActiveTexture(GL_TEXTURE0 + i); glerr();
-	texture_bind(ambient, COLOR_TEX);
+	texture_bind(ambient, 0);
 
 	glerr();
 }
@@ -577,7 +577,7 @@ void shader_bind_light(shader_t *self, entity_t light)
 		/* int i = self->bound_textures++; */
 		glUniform1i(self->u_shadow_map, 32); glerr();
 		glActiveTexture(GL_TEXTURE0 + 32); glerr();
-		texture_bind(probe_c->map, COLOR_TEX);
+		texture_bind(probe_c->map, 1);
 	}
 
 }
@@ -633,7 +633,7 @@ void shader_bind_screen(shader_t *self, texture_t *buffer, float sx, float sy)
 	glUniform1i(self->u_diffuse.texture, i); glerr();
 	glActiveTexture(GL_TEXTURE0 + i); glerr();
 
-	texture_bind(buffer, COLOR_TEX);
+	texture_bind(buffer, -1);
 }
 
 void shader_bind(shader_t *self)
@@ -649,6 +649,17 @@ void shader_bind_mesh(shader_t *self, mesh_t *mesh, unsigned int id)
 	vec2_t id_color = int_to_vec2(id);
 
 	glUniform2f(self->u_id, id_color.x, id_color.y);
+}
+
+GLuint _shader_uniform(shader_t *self, const char *uniform, const char *member)
+{
+	if(member)
+	{
+		char buffer[256];
+		snprintf(buffer, sizeof(buffer), "%s_%s", uniform, member);
+		return glGetUniformLocation(self->program, buffer); glerr();
+	}
+	return glGetUniformLocation(self->program, uniform); glerr();
 }
 
 GLuint shader_uniform(shader_t *self, const char *uniform, const char *member)

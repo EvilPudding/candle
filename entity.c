@@ -29,27 +29,9 @@ int filter_listener(listener_t *self)
 	/* return !(self->flags & RENDER_THREAD); */
 }
 
-entity_t _entity_new(int comp_num, ...)
+entity_t _entity_new(int ignore, ...)
 {
-	/* int i; */
-	/* va_list comps; */
 	entity_t self = _g_creating[--_g_creating_num];
-
-    /* va_start(comps, comp_num); */
-	/* for(i = 0; i < comp_num; i++) */
-	/* { */
-		/* c_t *c = va_arg(comps, c_t*); */
-		/* _entity_add_component(self, c, 1); */
-		/* free(c); */
-	/* } */
-	/* va_end(comps); */
-
-	/* entity_check_missing_dependencies(self); */
-
-	/* if(c_name(&self) && !strcmp(c_name(&self)->name, "grid")) */
-	/* { */
-		/* printf("new %s entity %ld\n", c_name(&self)->name, self); */
-	/* } */
 	entity_signal_same(self, sig("entity_created"), NULL);
 
 	return self;

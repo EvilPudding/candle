@@ -1,6 +1,6 @@
 
-layout (location = 1) out vec2 ID;
-layout (location = 2) out vec2 GeomID;
+layout (location = 0) out vec2 ID;
+layout (location = 1) out vec2 GeomID;
 
 #include "common.frag"
 

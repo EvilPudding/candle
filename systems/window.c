@@ -185,6 +185,7 @@ void c_window_rect(c_window_t *self, int x, int y, int width, int height,
 		texture_t *texture)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); glerr();
+	glClear(GL_DEPTH_BUFFER_BIT);
 	if(!texture) return;
 	fs_bind(g_quad_fs);
 	shader_t *shader = vs_bind(g_quad_vs);

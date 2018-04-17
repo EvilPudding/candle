@@ -73,7 +73,7 @@ int c_probe_render(c_probe_t *self, uint signal)
 	glDepthMask(GL_TRUE);
 	for(f = 0; f < 6; f++)
 	{
-		texture_target(self->map, f);
+		texture_target(self->map, NULL, f);
 		glClear(GL_DEPTH_BUFFER_BIT);
 
 		renderer->bound_view = &self->views[f];
