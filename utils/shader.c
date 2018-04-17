@@ -30,22 +30,22 @@ static struct source *g_sources = NULL;
 static int g_sources_num = 0;
 
 void shaders_common_frag_reg(void);
- void shaders_depth_frag_reg(void);
- void shaders_gbuffer_frag_reg(void);
- void shaders_select_frag_reg(void);
- void shaders_decals_frag_reg(void);
- void shaders_ambient_frag_reg(void);
- void shaders_bright_frag_reg(void);
- void shaders_copy_frag_reg(void);
- void shaders_quad_frag_reg(void);
- void shaders_sprite_frag_reg(void);
- void shaders_ssr_frag_reg(void);
- void shaders_blur_frag_reg(void);
+void shaders_depth_frag_reg(void);
+void shaders_gbuffer_frag_reg(void);
+void shaders_select_frag_reg(void);
+void shaders_decals_frag_reg(void);
+void shaders_ambient_frag_reg(void);
+void shaders_bright_frag_reg(void);
+void shaders_copy_frag_reg(void);
+void shaders_quad_frag_reg(void);
+void shaders_sprite_frag_reg(void);
+void shaders_ssr_frag_reg(void);
+void shaders_blur_frag_reg(void);
 
- void shaders_phong_frag_reg(void);
- void shaders_ssao_frag_reg(void);
- void shaders_transparency_frag_reg(void);
- void shaders_highlight_frag_reg(void);
+void shaders_phong_frag_reg(void);
+void shaders_ssao_frag_reg(void);
+void shaders_transparency_frag_reg(void);
+void shaders_highlight_frag_reg(void);
 
 void shaders_reg()
 {
@@ -143,14 +143,14 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"	mat4 inv_projection;\n"
 			"	mat4 view;\n"
 			"	mat4 model;\n"
-			"#ifdef MESH4\n"
-			"	float angle4;\n"
-			"#endif\n"
 			"};\n"
 			"\n"
 			"\n"
 			"uniform mat4 MVP;\n"
 			"uniform mat4 M;\n"
+			"#ifdef MESH4\n"
+			"uniform float angle4;\n"
+			"#endif\n"
 			"uniform camera_t camera;\n"
 			"uniform vec2 id;\n"
 			"uniform float cameraspace_normals;\n"
@@ -410,6 +410,9 @@ static int shader_new_loader(shader_t *self)
 	self->u_mvp = glGetUniformLocation(self->program, "MVP"); glerr();
 	self->u_m = glGetUniformLocation(self->program, "M"); glerr();
 	/* self->u_mv = glGetUniformLocation(self->program, "MV"); glerr(); */
+#ifdef MESH4
+	self->u_angle4 = glGetUniformLocation(self->program, "angle4"); glerr();
+#endif
 
 	self->u_perlin_map = glGetUniformLocation(self->program, "perlin_map"); glerr();
 
@@ -423,9 +426,6 @@ static int shader_new_loader(shader_t *self)
 	self->u_camera_pos = glGetUniformLocation(self->program, "camera.pos"); glerr();
 	self->u_camera_model = glGetUniformLocation(self->program, "camera.model"); glerr();
 	self->u_exposure = glGetUniformLocation(self->program, "camera.exposure"); glerr();
-#ifdef MESH4
-	self->u_angle4 = glGetUniformLocation(self->program, "angle4"); glerr();
-#endif
 
 	self->u_shadow_map = glGetUniformLocation(self->program, "light_shadow_map"); glerr();
 	self->u_light_pos = glGetUniformLocation(self->program, "light_pos"); glerr();
@@ -583,7 +583,7 @@ void shader_bind_light(shader_t *self, entity_t light)
 }
 
 void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
-		mat4_t *projection, mat4_t *model, float exposure, float angle4)
+		mat4_t *projection, mat4_t *model, float exposure)
 {
 	/* shader_t *self = c_renderer(&g_systems)->shader; */
 	self->vp = mat4_mul(*projection, *view);
@@ -591,9 +591,6 @@ void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
 	glUniformMatrix4fv(self->u_v, 1, GL_FALSE, (void*)view->_);
 	glUniformMatrix4fv(self->u_v, 1, GL_FALSE, (void*)model->_);
 	glUniform3f(self->u_camera_pos, pos.x, pos.y, pos.z);
-#ifdef MESH4
-	glUniform1f(self->u_angle4, angle4);
-#endif
 	glUniform1f(self->u_exposure, exposure);
 
 	/* TODO unnecessary? */
@@ -604,13 +601,20 @@ void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
 	glerr();
 }
 
+#ifdef MESH4
+void shader_update(shader_t *self, mat4_t *model_matrix, float angle4)
+#else
 void shader_update(shader_t *self, mat4_t *model_matrix)
+#endif
 {
 	/* shader_t *self = c_renderer(&g_systems)->shader; */
 	mat4_t mvp = mat4_mul(self->vp, *model_matrix);
 
 	glUniformMatrix4fv(self->u_mvp, 1, GL_FALSE, (void*)mvp._);
 	glUniformMatrix4fv(self->u_m, 1, GL_FALSE, (void*)model_matrix->_);
+#ifdef MESH4
+	glUniform1f(self->u_angle4, angle4);
+#endif
 	glerr();
 
 	/* if(perlin) */

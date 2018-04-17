@@ -11,6 +11,9 @@ typedef struct
 
 	mat4_t model;
 	mat4_t rot;
+#ifdef MESH4
+	float angle4;
+#endif
 	int cached;
 	int ghost;
 

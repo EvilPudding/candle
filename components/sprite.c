@@ -90,7 +90,11 @@ static int c_sprite_render_transparent(c_sprite_t *self)
 	if(node)
 	{
 		c_node_update_model(node);
+#ifdef MESH4
+		shader_update(shader, &node->model, node->angle4);
+#else
 		shader_update(shader, &node->model);
+#endif
 	}
 
 	c_mesh_gl_draw(c_mesh_gl(self), 1);
@@ -107,7 +111,11 @@ static int c_sprite_render_visible(c_sprite_t *self)
 	if(node)
 	{
 		c_node_update_model(node);
+#ifdef MESH4
+		shader_update(shader, &node->model, node->angle4);
+#else
 		shader_update(shader, &node->model);
+#endif
 	}
 
 	c_mesh_gl_draw(c_mesh_gl(self), 0);

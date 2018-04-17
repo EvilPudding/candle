@@ -62,8 +62,11 @@ int c_light_render(c_light_t *self)
 		mat4_t model = mat4_scale_aniso(node->model,
 				vec3(rad / sc->scale.x, rad / sc->scale.y, rad / sc->scale.z));
 
-		/* mat4_t model = node->model; */
+#ifdef MESH4
+		shader_update(shader, &model, node->angle4);
+#else
 		shader_update(shader, &model);
+#endif
 
 		c_mesh_gl_draw(c_mesh_gl(&g_light), 0);
 		return CONTINUE;

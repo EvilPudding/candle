@@ -24,9 +24,6 @@ typedef struct
 	prop_t transparency;
 	prop_t normal;
 	prop_t emissive;
-	/* prop_t position; */
-	/* prop_t position; */
-	/* prop_t cnormal; */
 
 } mat_t;
 
@@ -41,5 +38,6 @@ void mat_set_normal(mat_t *self, prop_t normal);
 void mat_set_specular(mat_t *self, prop_t specular);
 void mat_set_transparency(mat_t *self, prop_t transparency);
 void mat_destroy(mat_t *self);
+void mat_menu(mat_t *self, void *ctx);
 
 #endif /* !MATERIAL_H */

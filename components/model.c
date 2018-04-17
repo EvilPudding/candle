@@ -31,8 +31,8 @@ static void c_model_init(c_model_t *self)
 		g_model_vs = vs_new("model", 1, vertex_modifier_new(
 			"	{\n"
 			"#ifdef MESH4\n"
-			"		float Y = cos(camera.angle4);\n"
-			"		float W = sin(camera.angle4);\n"
+			"		float Y = cos(angle4);\n"
+			"		float W = sin(angle4);\n"
 			"		pos = vec4(vec3(P.x, P.y * Y + P.w * W, P.z), 1.0);\n"
 			"#endif\n"
 			"		vertex_position = (camera.view * M * pos).xyz;\n"
@@ -185,11 +185,11 @@ int c_model_render_at(c_model_t *self, c_node_t *node, int flags)
 			vec3_t pos = mat4_mul_vec4(node->model, vec4(0,0,0,1)).xyz;
 			float dist = vec3_dist(pos, c_renderer(&SYS)->bound_camera_pos);
 			mat4_t model = mat4_scale_aniso(node->model, vec3(dist * self->scale_dist));
-			shader_update(shader, &model);
+			shader_update(shader, &model, node->angle4);
 		}
 		else
 		{
-			shader_update(shader, &node->model);
+			shader_update(shader, &node->model, node->angle4);
 		}
 	}
 	int depth_was_enabled = glIsEnabled(GL_DEPTH_TEST);
@@ -274,6 +274,11 @@ int c_model_menu(c_model_t *self, void *ctx)
 			{
 				layer->cull_back = new_value;
 				g_update_id++;
+			}
+
+			if(layer->mat)
+			{
+				mat_menu(layer->mat, ctx);
 			}
 
 			nk_tree_pop(ctx);

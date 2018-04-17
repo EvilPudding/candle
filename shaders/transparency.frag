@@ -22,7 +22,7 @@ void main()
 
 		vec3 color = textureLod(refr.color, coord.xy, trans.a * 3).rgb;
 
-		final += vec4(color * trans.rgb, 1.0f);
+		final += vec4(color * (1.0f - trans.rgb), 1.0f);
 	}
 	else if(emit.a > 0.0f)
 	{

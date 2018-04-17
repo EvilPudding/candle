@@ -143,6 +143,7 @@ typedef struct c_t
 {
 	entity_t entity;
 	uint comp_type;
+	uint ghost;
 } c_t;
 
 #define c_entity(c) (((c_t*)c)->entity)

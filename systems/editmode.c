@@ -16,6 +16,7 @@
 void nk_candle_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
 		int max_element_buffer);
 static int c_editmode_activate_loader(c_editmode_t *self);
+void c_editmode_open_entity(c_editmode_t *self, entity_t ent);
 
 #define MAX_VERTEX_MEMORY 512 * 1024
 #define MAX_ELEMENT_MEMORY 128 * 1024
@@ -30,7 +31,9 @@ void c_editmode_init(c_editmode_t *self)
 	if(!g_sel_mat)
 	{
 		g_sel_mat = mat_new("sel_mat");
-		g_sel_mat->diffuse.color = vec4(0, 2, 0, 1);
+		/* g_sel_mat->diffuse.color = vec4(0, 0.1, 0.4, 1); */
+		g_sel_mat->diffuse.color = vec4(0.0, 0.0, 0.0, 0.0);
+		g_sel_mat->transparency.color = vec4(0.6, 0.3, 0.1, 0.0f);
 				/* sauces_mat("pack1/white"); */
 	}
 }
@@ -62,7 +65,7 @@ vec2_t c_editmode_bind_selected(c_editmode_t *self)
 
 vec2_t c_editmode_bind_sel(c_editmode_t *self)
 {
-	return int_to_vec2(self->selected);
+	return self->selected ? int_to_vec2(self->selected) : vec2(0.0f);
 }
 void c_editmode_coords(c_editmode_t *self)
 {
@@ -110,6 +113,8 @@ c_editmode_t *c_editmode_new()
 
 void c_editmode_activate(c_editmode_t *self)
 {
+	c_editmode_open_entity(self, c_entity(self));
+
 	loader_push_wait(g_candle->loader, (loader_cb)c_editmode_activate_loader,
 			NULL, (c_t*)self);
 
@@ -158,7 +163,7 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 
 	c_renderer_t *renderer = c_renderer(self);
 	c_renderer_add_pass(renderer, "highlights", "highlight", sig("render_quad"),
-			PASS_ADDITIVE,
+			PASS_MULTIPLY,
 		(bind_t[]){
 			{BIND_OUT, .buffer = c_renderer_tex(renderer, ref("final"))},
 			{BIND_TEX, "sbuffer", .buffer = c_renderer_tex(renderer, ref("selectable"))},
@@ -300,9 +305,16 @@ void c_editmode_open_entity(c_editmode_t *self, entity_t ent)
 void c_editmode_select(c_editmode_t *self, entity_t select)
 {
 	self->selected = select;
-	c_editmode_coords(self);
+	if(self->selected)
+	{
+		c_editmode_coords(self);
+		c_editmode_open_entity(self, self->selected);
+	}
+	else
+	{
+		c_editmode_open_entity(self, SYS);
+	}
 
-	c_editmode_open_entity(self, self->selected);
 }
 
 int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
@@ -408,6 +420,9 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 				}
 				break;
 			}
+		case 27:
+			c_editmode_select(self, entity_null);
+			break;
 	}
 	return CONTINUE;
 }
@@ -466,11 +481,6 @@ void node_entity(c_editmode_t *self, entity_t entity)
 			}
 		}
 	}
-	/* int is_selected = self->selected == entity; */
-	/* if(nk_selectable_label(self->nk, final_name, NK_TEXT_ALIGN_LEFT, &is_selected)) */
-	/* { */
-		/* c_editmode_select(self, entity); */
-	/* } */
 }
 
 void tools_gui(c_editmode_t *self)
@@ -630,6 +640,24 @@ static void insert_ct(c_editmode_t *self, int ct, int dist)
 	}
 }
 
+void c_editmode_shell(c_editmode_t *self)
+{
+	nk_layout_row_dynamic(self->nk, 25, 1);
+	if(nk_edit_string_zero_terminated(self->nk, NK_EDIT_FIELD |
+				NK_EDIT_SIG_ENTER |
+				NK_EDIT_ALWAYS_INSERT_MODE,
+				self->shell, sizeof(self->shell),
+				nk_filter_ascii) & NK_EDIT_COMMITED)
+	{
+		entity_t instance = candle_run_command(entity_null, self->shell);
+		self->shell[0] = '\0';
+		if(instance)
+		{
+			c_editmode_select(self, instance);
+		}
+	}
+}
+
 int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 {
 	c_name_t *name = c_name(&ent);
@@ -641,12 +669,13 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 	{
 		title = name->name;
 	}
-	res = nk_begin_titled(self->nk, buffer, title,
-			nk_rect(c_renderer(self)->width - 240, 10, 230, 580),
+	res = nk_begin_titled(self->nk, "entity", title,
+			nk_rect(10, 10, 230, 580),
 			NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
 			NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE);
 	if (res)
 	{
+		c_editmode_shell(self);
 		int i;
 
 		signal_t *sig = ecm_get_signal(sig("component_menu"));
@@ -655,7 +684,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 		{
 			ct_t *ct = ecm_get(sig->cts[i]);
 			c_t *comp = ct_get(ct, &ent);
-			if(comp && !ct->is_interaction)
+			if(comp && !comp->ghost && !ct->is_interaction)
 			{
 				if(nk_tree_push_id(self->nk, NK_TREE_TAB, ct->name,
 							NK_MAXIMIZED, i))
@@ -741,39 +770,6 @@ int c_editmode_draw(c_editmode_t *self)
 
 	if(self->nk && (self->visible || self->control))
 	{
-		if (nk_begin(self->nk, "Edit menu",
-					nk_rect(self->spawn_pos.x, self->spawn_pos.y, 230, 580),
-					NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
-					NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE))
-		{
-
-
-			nk_layout_row_static(self->nk, 30, 110, 1);
-			if (nk_button_label(self->nk, "systems"))
-			{
-				c_editmode_open_entity(self, c_entity(self));
-			}
-
-			entity_signal(c_entity(self), sig("global_menu"), self->nk);
-
-			tools_gui(self);
-
-			if(nk_edit_string_zero_terminated(self->nk, NK_EDIT_FIELD |
-						NK_EDIT_SIG_ENTER, self->shell, sizeof(self->shell),
-						nk_filter_ascii) & NK_EDIT_COMMITED)
-			{
-				entity_t instance = candle_run_command(entity_null, self->shell);
-				self->shell[0] = '\0';
-				if(instance)
-				{
-					c_editmode_select(self, instance);
-				}
-			}
-			node_tree(self);
-
-		}
-		nk_end(self->nk);
-
 		int e;
 		for(e = 0; e < self->open_textures_count; e++)
 		{
@@ -789,10 +785,12 @@ int c_editmode_draw(c_editmode_t *self)
 		{
 			if(!c_editmode_entity_window(self, self->open_entities[e]))
 			{
-				self->open_entities_count--;
-				self->open_entities[e] =
-					self->open_entities[self->open_entities_count];
-				e--;
+				/* self->open_entities_count--; */
+				/* self->open_entities[e] = */
+					/* self->open_entities[self->open_entities_count]; */
+				self->open_entities[e] = self->open_entities[SYS];
+				/* e--; */
+				c_editmode_open_entity(self, c_entity(self));
 			}
 		}
 
@@ -838,7 +836,6 @@ REG()
 	ct_t *ct = ct_new("editmode", sizeof(c_editmode_t),
 			c_editmode_init, NULL, 0);
 
-	signal_init(sig("global_menu"), sizeof(struct nk_context*));
 	signal_init(sig("component_menu"), sizeof(struct nk_context*));
 
 	ct_listener(ct, WORLD, sig("key_up"), c_editmode_key_up);

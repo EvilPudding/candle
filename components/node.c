@@ -133,6 +133,9 @@ void c_node_update_model(c_node_t *self)
 		c_node_update_model(parent_node);
 
 		self->rot = mat4_mul(parent_node->rot, sc->rot_matrix);
+#ifdef MESH4
+		self->angle4 = parent_node->angle4 + sc->angle4;
+#endif
 
 		if(self->inherit_scale)
 		{
@@ -150,9 +153,11 @@ void c_node_update_model(c_node_t *self)
 	}
 	else
 	{
-		/* self->model = mat4(); */
 		self->model = sc->model_matrix;
 		self->rot = sc->rot_matrix;
+#ifdef MESH4
+		self->angle4 = sc->angle4;
+#endif
 	}
 }
 

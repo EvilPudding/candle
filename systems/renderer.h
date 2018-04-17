@@ -26,7 +26,8 @@ enum
 	PASS_CLEAR_DEPTH	= 1 << 2,
 	PASS_LOCK_DEPTH		= 1 << 4,
 	PASS_INVERT_DEPTH	= 1 << 5,
-	PASS_ADDITIVE		= 1 << 6
+	PASS_ADDITIVE		= 1 << 6,
+	PASS_MULTIPLY		= 1 << 7
 } pass_options;
 
 typedef enum
@@ -85,9 +86,6 @@ typedef struct
 			uint u_exposure;
 			uint u_projection;
 			uint u_inv_projection;
-#ifdef MESH4
-			uint u_angle4;
-#endif
 		} camera;
 	};
 } shader_bind_t;
@@ -126,6 +124,7 @@ typedef struct pass_t
 	char name[32];
 	unsigned int hash;
 	int additive;
+	int multiply;
 	int depth_update;
 	int invert_depth;
 	unsigned int clear;
@@ -158,7 +157,6 @@ typedef struct c_renderer_t
 	mat4_t *bound_projection;
 	mat4_t *bound_camera_model;
 	float bound_exposure;
-	float bound_angle4;
 	entity_t bound_light;
 
 	pass_output_t outputs[32];
@@ -177,9 +175,6 @@ typedef struct c_renderer_t
 	int roughness; /* ssr roughness */
 
 	entity_t camera;
-#ifdef MESH4
-	float angle4;
-#endif
 
 	int ready;
 } c_renderer_t;

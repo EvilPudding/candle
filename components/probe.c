@@ -64,9 +64,6 @@ int c_probe_render(c_probe_t *self, uint signal)
 	renderer->bound_probe = c_entity(self);
 	renderer->bound_camera_pos = ps->pos;
 	renderer->bound_projection = &self->projection;
-#ifdef MESH4
-	renderer->bound_angle4 = renderer->angle4;
-#endif
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);

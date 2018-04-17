@@ -40,9 +40,6 @@ struct camera_t
 	mat4 inv_projection;
 	mat4 view;
 	mat4 model;
-#ifdef MESH4
-	float angle4;
-#endif
 };
 
 uniform mat4 MVP;

@@ -10,6 +10,7 @@
 #include <systems/sauces.h>
 
 #include <components/node.h>
+#include <components/name.h>
 
 #ifndef WIN32
 #include <unistd.h>
@@ -18,7 +19,6 @@
 #include <fcntl.h>
 
 candle_t *g_candle;
-entity_t g_systems;
 
 void candle_reset_dir()
 {
@@ -117,7 +117,7 @@ int handle_event(SDL_Event event)
 			switch(event.window.event)
 			{
 				case SDL_WINDOWEVENT_RESIZED:
-				c_window_handle_resize(c_window(&g_systems), event);
+				c_window_handle_resize(c_window(&SYS), event);
 					break; 
 			}
 			break;
@@ -167,7 +167,7 @@ static int render_loop(void)
 	g_candle->render_id = SDL_ThreadID();
 	//SDL_GL_MakeCurrent(state->renderer->window, state->renderer->context); 
 	/* SDL_LockMutex(g_candle->mut); */
-	entity_add_component(g_systems, c_window_new(0, 0));
+	entity_add_component(SYS, c_window_new(0, 0));
 	/* printf("unlock 2\n"); */
 	SDL_SemPost(g_candle->sem);
 
@@ -184,7 +184,7 @@ static int render_loop(void)
 
 			ecm_clean();
 
-			c_window_draw(c_window(&g_systems));
+			c_window_draw(c_window(&SYS));
 
 			fps++;
 			/* candle_handle_events(self); */
@@ -376,7 +376,7 @@ void candle_init(void)
 
 	ecm_init();
 
-	g_systems = g_candle->systems = entity_new();
+	entity_new();
 
 	g_candle->cmds = kh_init(cmd);
 
@@ -397,10 +397,11 @@ void candle_init2(void)
 	g_candle->mouse_owners[0] = entity_null;
 	g_candle->mouse_visible[0] = 1;
 
-	entity_add_component(g_systems, c_mouse_new());
-	entity_add_component(g_systems, c_keyboard_new());
-	entity_add_component(g_systems, c_physics_new());
-	entity_add_component(g_systems, c_sauces_new());
+	entity_add_component(SYS, c_name_new("Candle"));
+	entity_add_component(SYS, c_mouse_new());
+	entity_add_component(SYS, c_keyboard_new());
+	entity_add_component(SYS, c_physics_new());
+	entity_add_component(SYS, c_sauces_new());
 
 	//int res = pipe(candle->events);
 	//if(res == -1) exit(1);

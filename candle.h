@@ -27,7 +27,6 @@ KHASH_MAP_INIT_INT(cmd, cmd_t)
 
 typedef struct candle_t
 {
-	entity_t systems;
 	loader_t *loader;
 
 	int events[2];

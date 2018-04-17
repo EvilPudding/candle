@@ -262,6 +262,16 @@ int c_spacial_menu(c_spacial_t *self, void *ctx)
 		nk_property_float(ctx, "rx:", -1000, &tmp.x, 1000, 0.1, 0.01);
 		nk_property_float(ctx, "ry:", -1000, &tmp.y, 1000, 0.1, 0.01);
 		nk_property_float(ctx, "rz:", -1000, &tmp.z, 1000, 0.1, 0.01);
+#ifdef MESH4
+		float tmpw = self->angle4;
+		nk_property_float(ctx, "rw:", 0, &tmpw, M_PI, 0.1, 0.01);
+		if(self->angle4 != tmpw)
+		{
+			self->angle4 = tmpw;
+			entity_signal(c_entity(self), sig("spacial_changed"),
+					&c_entity(self));
+		}
+#endif
 
 		if(self->rot.x != tmp.x)
 		{

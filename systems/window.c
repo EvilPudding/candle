@@ -134,6 +134,9 @@ int c_window_created(c_window_t *self)
 
 	entity_add_component(c_entity(self), c_model_new(mesh_quad(), NULL, 0, 0));
 	c_model_cull_face(c_model(self), 0, 2);
+	c_model(self)->super.ghost = 1;
+	c_spacial(self)->super.ghost = 1;
+	c_node(self)->super.ghost = 1;
 
 
 	entity_signal(entity_null, sig("window_resize"),
@@ -174,7 +177,7 @@ int c_window_render_quad(c_window_t *self, texture_t *texture)
 	{
 		c_node_update_model(node);
 
-		shader_update(shader, &node->model);
+		shader_update(shader, &node->model, node->angle4);
 	}
 
 	c_mesh_gl_draw(c_mesh_gl(self), 0);

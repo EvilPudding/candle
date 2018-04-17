@@ -5,6 +5,7 @@
 #include "file.h"
 #include "shader.h"
 #include <candle.h>
+#include <systems/editmode.h>
 #include <dirent.h>
 
 char g_mats_path[256] = "resauces/materials";
@@ -175,6 +176,28 @@ void mat_set_normal(mat_t *self, prop_t normal)
 void mat_set_diffuse(mat_t *self, prop_t diffuse)
 {
 	self->diffuse = diffuse;
+}
+
+void mat_prop_menu(mat_t *self, const char *name, prop_t *prop, void *ctx)
+{
+	uint id = murmur_hash(&prop, 8, 0);
+	if(nk_tree_push_id(ctx, NK_TREE_NODE, name, NK_MINIMIZED, id))
+	{
+		nk_property_float(ctx, "blend:", 0, &prop->texture_blend, 1, 0.1, 0.05);
+		nk_layout_row_dynamic(ctx, 180, 1);
+		union { struct nk_colorf *nk; vec4_t *v; } color = { .v = &prop->color };
+		*color.nk = nk_color_picker(ctx, *color.nk, NK_RGBA);
+		nk_tree_pop(ctx);
+	}
+}
+
+void mat_menu(mat_t *self, void *ctx)
+{
+	mat_prop_menu(self, "diffuse", &self->diffuse, ctx); 
+	mat_prop_menu(self, "specular", &self->specular, ctx); 
+	mat_prop_menu(self, "transparency", &self->transparency, ctx); 
+	mat_prop_menu(self, "normal", &self->normal, ctx); 
+	mat_prop_menu(self, "emissive", &self->emissive, ctx); 
 }
 
 void mat_bind(mat_t *self, shader_t *shader)

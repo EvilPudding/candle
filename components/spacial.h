@@ -19,6 +19,10 @@ typedef struct
 	mat4_t model_matrix;
 	int lock_count;
 	int modified;
+
+#ifdef MESH4
+	float angle4;
+#endif
 } c_spacial_t;
 
 DEF_CASTER("spacial", c_spacial, c_spacial_t)

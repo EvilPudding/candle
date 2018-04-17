@@ -81,9 +81,6 @@ static void c_renderer_bind_camera(c_renderer_t *self, pass_t *pass,
 	self->bound_camera_pos = cam->pos;
 
 	glUniform3f(sb->camera.u_pos, cam->pos.x, cam->pos.y, cam->pos.z);
-#ifdef MESH4
-	glUniform1f(sb->camera.u_angle4, self->angle4);
-#endif
 	glUniform1f(sb->camera.u_exposure, cam->exposure);
 
 	/* TODO unnecessary? */
@@ -117,10 +114,6 @@ void c_renderer_bind_get_uniforms(c_renderer_t *self, bind_t *bind,
 				shader_uniform(self->shader, bind->name, "projection");
 			sb->camera.u_inv_projection =
 				shader_uniform(self->shader, bind->name, "inv_projection");
-#ifdef MESH4
-			sb->camera.u_angle4 =
-				shader_uniform(self->shader, bind->name, "angle4");
-#endif
 
 			break;
 		case BIND_TEX:
@@ -152,8 +145,7 @@ int c_renderer_bind_pass(c_renderer_t *self, pass_t *pass)
 		shader_bind_probe(self->shader, self->bound_probe);
 		shader_bind_camera(self->shader, self->bound_camera_pos,
 				self->bound_view, self->bound_projection,
-				self->bound_camera_model, self->bound_exposure,
-				self->bound_angle4);
+				self->bound_camera_model, self->bound_exposure);
 	}
 	if(self->bound_light)
 	{
@@ -559,6 +551,11 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	}
+	if(pass->multiply)
+	{
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_DST_COLOR, GL_ZERO);
+	}
 	glEnable(GL_CULL_FACE); glerr();
 
 	glDepthMask(pass->depth_update); glerr();
@@ -683,35 +680,6 @@ entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
 	return result;
 }
 
-int c_renderer_global_menu(c_renderer_t *self, void *ctx)
-{
-#ifdef MESH4
-	nk_layout_row_begin(ctx, NK_DYNAMIC, 0, 2);
-		nk_layout_row_push(ctx, 0.35);
-		nk_label(ctx, "4D angle:", NK_TEXT_LEFT);
-		nk_layout_row_push(ctx, 0.65);
-		float before = self->angle4;
-		nk_slider_float(ctx, 0, &self->angle4, M_PI / 2, 0.01);
-		if(self->angle4 != before)
-		{
-			g_update_id++;
-		}
-	nk_layout_row_end(ctx);
-#endif
-
-	char fps[12]; sprintf(fps, "%d", g_candle->fps);
-
-	nk_layout_row_begin(ctx, NK_DYNAMIC, 30, 2);
-		nk_layout_row_push(ctx, 0.35);
-		nk_label(ctx, "FPS: ", NK_TEXT_LEFT);
-		nk_layout_row_push(ctx, 0.65);
-		nk_label(ctx, fps, NK_TEXT_RIGHT);
-	nk_layout_row_end(ctx);
-
-
-
-	return CONTINUE;
-}
 
 int c_renderer_component_menu(c_renderer_t *self, void *ctx)
 {
@@ -722,7 +690,16 @@ int c_renderer_component_menu(c_renderer_t *self, void *ctx)
 		c_window_toggle_fullscreen(c_window(self));
 	}
 
-	for(i = 0; i < self->outputs_num; i++)
+	char fps[12]; sprintf(fps, "%d", g_candle->fps);
+	nk_layout_row_begin(ctx, NK_DYNAMIC, 30, 2);
+		nk_layout_row_push(ctx, 0.35);
+		nk_label(ctx, "FPS: ", NK_TEXT_LEFT);
+		nk_layout_row_push(ctx, 0.65);
+		nk_label(ctx, fps, NK_TEXT_RIGHT);
+	nk_layout_row_end(ctx);
+	nk_layout_row_dynamic(ctx, 0, 1);
+
+	for(i = 1; i < self->outputs_num; i++)
 	{
 		pass_output_t *output = &self->outputs[i];
 		if(output->buffer)
@@ -783,8 +760,6 @@ REG()
 	ct_listener(ct, ENTITY, sig("entity_created"), c_renderer_created);
 
 	ct_listener(ct, WORLD, sig("component_menu"), c_renderer_component_menu);
-
-	ct_listener(ct, WORLD, sig("global_menu"), c_renderer_global_menu);
 
 	ct_listener(ct, WORLD | 100, sig("mouse_press"), c_renderer_mouse_press);
 	ct_listener(ct, WORLD | 100, sig("mouse_release"), c_renderer_mouse_release);
@@ -867,6 +842,7 @@ void c_renderer_add_pass(c_renderer_t *self, const char *name,
 
 	pass->draw_signal = draw_signal;
 	pass->additive = flags & PASS_ADDITIVE;
+	pass->multiply = flags & PASS_MULTIPLY;
 	strncpy(pass->name, buffer, sizeof(pass->name));
 
 	for(pass->binds_size = 0; binds[pass->binds_size].type != BIND_NONE;

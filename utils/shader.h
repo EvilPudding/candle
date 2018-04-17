@@ -101,10 +101,14 @@ fs_t *fs_new(const char *filename);
 vertex_modifier_t vertex_modifier_new(const char *code);
 
 shader_t *shader_new(fs_t *fs, vs_t *vs);
+#ifdef MESH4
+void shader_update(shader_t *self, mat4_t *model_matrix, float angle4);
+#else
 void shader_update(shader_t *self, mat4_t *model_matrix);
+#endif
 void shader_bind(shader_t *self);
 void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
-		mat4_t *projection, mat4_t *model, float exposure, float angle4);
+		mat4_t *projection, mat4_t *model, float exposure);
 GLuint shader_uniform(shader_t *self, const char *uniform, const char *member);
 GLuint _shader_uniform(shader_t *self, const char *uniform, const char *member);
 void shader_bind_light(shader_t *self, entity_t light);
