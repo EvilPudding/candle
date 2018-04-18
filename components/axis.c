@@ -104,7 +104,7 @@ int c_axis_mouse_move(c_axis_t *self, mouse_move_data *event)
 					dir = c_node_dir_to_local(nc, world_dir);
 				}
 				dir = vec3_scale(dir, -event->sy * 0.04);
-				/* dir = mat4_mul_vec4(sc->rot_matrix, vec4(_vec3(dir), 0.0f)).xyz; */
+				dir = mat4_mul_vec4(sc->rot_matrix, vec4(_vec3(dir), 0.0f)).xyz;
 				c_spacial_set_pos(sc, vec3_add(dir, sc->pos));
 			}
 			else
