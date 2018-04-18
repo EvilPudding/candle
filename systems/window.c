@@ -177,7 +177,11 @@ int c_window_render_quad(c_window_t *self, texture_t *texture)
 	{
 		c_node_update_model(node);
 
-		shader_update(shader, &node->model, node->angle4);
+#ifdef MESH4
+			shader_update(shader, &node->model, node->angle4);
+#else
+			shader_update(shader, &node->model);
+#endif
 	}
 
 	c_mesh_gl_draw(c_mesh_gl(self), 0);

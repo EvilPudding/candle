@@ -185,11 +185,19 @@ int c_model_render_at(c_model_t *self, c_node_t *node, int flags)
 			vec3_t pos = mat4_mul_vec4(node->model, vec4(0,0,0,1)).xyz;
 			float dist = vec3_dist(pos, c_renderer(&SYS)->bound_camera_pos);
 			mat4_t model = mat4_scale_aniso(node->model, vec3(dist * self->scale_dist));
+#ifdef MESH4
 			shader_update(shader, &model, node->angle4);
+#else
+			shader_update(shader, &model);
+#endif
 		}
 		else
 		{
+#ifdef MESH4
 			shader_update(shader, &node->model, node->angle4);
+#else
+			shader_update(shader, &node->model);
+#endif
 		}
 	}
 	int depth_was_enabled = glIsEnabled(GL_DEPTH_TEST);
