@@ -271,6 +271,10 @@ entity_t c_renderer_get_camera(c_renderer_t *self)
 void c_renderer_set_output(c_renderer_t *self, unsigned int hash)
 {
 	self->output = c_renderer_tex(self, hash);
+
+	texture_bind(self->output, -1);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 }
 
 
