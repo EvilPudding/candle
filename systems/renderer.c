@@ -340,8 +340,8 @@ static int c_renderer_gl(c_renderer_t *self)
 	c_renderer_add_tex(self, "refr",		1.0f, refr);
 	c_renderer_add_tex(self, "final",		1.0f, final);
 	c_renderer_add_tex(self, "selectable",	1.0f, selectable);
-	c_renderer_add_tex(self, "bloom",		0.2f, bloom);
-	c_renderer_add_tex(self, "bloom2",		0.2f, bloom2);
+	c_renderer_add_tex(self, "bloom",		0.3f, bloom);
+	c_renderer_add_tex(self, "bloom2",		0.3f, bloom2);
 
 	c_renderer_add_pass(self, "gbuffer", "gbuffer", sig("render_visible"),
 			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR,
@@ -439,38 +439,38 @@ static int c_renderer_gl(c_renderer_t *self)
 	c_renderer_add_pass(self, "bloom_%d", "bright", sig("render_quad"), 0,
 		(bind_t[]){
 			{BIND_OUT, .buffer = c_renderer_tex(self, ref("bloom"))},
-			{BIND_TEX, "buf", .buffer = c_renderer_tex(self, ref("rendered"))},
+			{BIND_TEX, "buf", .buffer = c_renderer_tex(self, ref("final"))},
 			{BIND_NONE}
 		}
 	);
-	/* int i; */
-	/* for(i = 0; i < 2; i++) */
-	/* { */
-	/* 	c_renderer_add_pass(self, "bloom_%d", "blur", sig("render_quad"), 0, */
-	/* 		(bind_t[]){ */
-	/* 			{BIND_OUTPUT, .buffer = c_renderer_tex(self, ref("bloom2"))}, */
-	/* 			{BIND_TEX, "buf", .buffer = c_renderer_tex(self, ref("bloom"))}, */
-	/* 			{BIND_INTEGER, "horizontal", .integer = 1}, */
-	/* 			{BIND_NONE} */
-	/* 		} */
-	/* 	); */
-	/* 	c_renderer_add_pass(self, "bloom_%d", "blur", sig("render_quad"), 0, */
-	/* 		(bind_t[]){ */
-	/* 			{BIND_OUTPUT, .buffer = c_renderer_tex(self, ref("bloom"))}, */
-	/* 			{BIND_TEX, "buf", .buffer = c_renderer_tex(self, ref("bloom2"))}, */
-	/* 			{BIND_INTEGER, "horizontal", .integer = 0}, */
-	/* 			{BIND_NONE} */
-	/* 		} */
-	/* 	); */
-	/* } */
-	/* c_renderer_add_pass(self, "bloom_%d", "copy", sig("render_quad"), */
-	/* 		PASS_ADDITIVE, */
-	/* 	(bind_t[]){ */
-	/* 		{BIND_OUTPUT, .buffer = c_renderer_tex(self, ref("final"))}, */
-	/* 		{BIND_TEX, "buf", .buffer = c_renderer_tex(self, ref("bloom"))}, */
-	/* 		{BIND_NONE} */
-	/* 	} */
-	/* ); */
+	int i;
+	for(i = 0; i < 2; i++)
+	{
+		c_renderer_add_pass(self, "bloom_%d", "blur", sig("render_quad"), 0,
+			(bind_t[]){
+				{BIND_OUT, .buffer = c_renderer_tex(self, ref("bloom2"))},
+				{BIND_TEX, "buf", .buffer = c_renderer_tex(self, ref("bloom"))},
+				{BIND_INT, "horizontal", .integer = 1},
+				{BIND_NONE}
+			}
+		);
+		c_renderer_add_pass(self, "bloom_%d", "blur", sig("render_quad"), 0,
+			(bind_t[]){
+				{BIND_OUT, .buffer = c_renderer_tex(self, ref("bloom"))},
+				{BIND_TEX, "buf", .buffer = c_renderer_tex(self, ref("bloom2"))},
+				{BIND_INT, "horizontal", .integer = 0},
+				{BIND_NONE}
+			}
+		);
+	}
+	c_renderer_add_pass(self, "bloom_%d", "copy", sig("render_quad"),
+			PASS_ADDITIVE,
+		(bind_t[]){
+			{BIND_OUT, .buffer = c_renderer_tex(self, ref("final"))},
+			{BIND_TEX, "buf", .buffer = c_renderer_tex(self, ref("bloom"))},
+			{BIND_NONE}
+		}
+	);
 
 	c_renderer_set_output(self, ref("final"));
 

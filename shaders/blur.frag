@@ -14,7 +14,7 @@ BUFFER {
 
 void main()
 {
-	vec2 pp = pixel_pos();
+	vec2 pp = texcoord;
 	vec2 tex_offset = 1.0f / textureSize(buf.color, 0);
 	vec3 c = textureLod(buf.color, pp, 0).rgb * weight[0];
 
