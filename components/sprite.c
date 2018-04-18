@@ -80,6 +80,27 @@ static int c_sprite_render_shadows(c_sprite_t *self)
 	return CONTINUE;
 }
 
+static int c_sprite_render_selectable(c_sprite_t *self)
+{
+	if(!self->visible) return CONTINUE;
+
+	shader_t *shader = vs_bind(g_sprite_vs);
+	if(!shader) return STOP;
+	c_node_t *node = c_node(self);
+	if(node)
+	{
+		c_node_update_model(node);
+#ifdef MESH4
+		shader_update(shader, &node->model, node->angle4);
+#else
+		shader_update(shader, &node->model);
+#endif
+	}
+
+	c_mesh_gl_draw(c_mesh_gl(self), 3);
+	return CONTINUE;
+}
+
 static int c_sprite_render_transparent(c_sprite_t *self)
 {
 	if(!self->visible) return CONTINUE;
@@ -148,4 +169,6 @@ REG()
 	ct_listener(ct, WORLD, sig("render_transparent"), c_sprite_render_transparent);
 
 	ct_listener(ct, WORLD, sig("render_shadows"), c_sprite_render_shadows);
+
+	ct_listener(ct, WORLD, sig("render_selectable"), c_sprite_render_selectable);
 }
