@@ -75,22 +75,26 @@ void *vector_get_item(vector_t *self, void *item)
 {
 	if(self->compare)
 	{
+		int res;
 		struct element *pivot = NULL;
 		char *base = (char *)self->elements;
 		int num = self->count;
 
 		while(num > 0)
 		{
-			num >>= num;
+			num >>= 1;
 			pivot = (struct element *)(base + num * self->elem_size);
-			int result = self->compare(item, pivot->data);
+			res = self->compare(item, pivot->data);
 
-			if(result == 0)
+			if(res == 0)
 			{
 				return pivot->data;
 			}
-
-			if(result > 0)
+			else if(res < 0)
+			{
+				pivot = (struct element *)(base + (num + 1) * self->elem_size);
+			}
+			else if(res > 0)
 			{
 				base = ((char *)pivot) + self->elem_size;
 				num--;
@@ -194,29 +198,66 @@ void vector_shift(vector_t *self, int id, int count)
 	if(count > 0)
 	{
 		memmove(_vector_get(self, id + count), _vector_get(self, id),
-				self->elem_size * (self->count - count));
+				self->elem_size * (self->count - count - id));
 	}
 	else
 	{
 		count = -count;
 		memmove(_vector_get(self, id), _vector_get(self, id + count),
-				self->elem_size * self->count);
+				self->elem_size * (self->count - count - id));
 	}
 }
 
+
+int vector_get_insert(vector_t *self, void *value)
+{
+	if(vector_count(self) == 0)
+	{
+		return 0;
+	}
+	int lower = 0;
+	int upper = vector_count(self) - 1;
+	int cur = 0;
+
+	char *base = (char *)self->elements;
+	while(1)
+	{
+		cur = (upper + lower) / 2;
+		struct element *pivot = (struct element *)(base + cur * self->elem_size);
+		int result = self->compare(pivot->data, value);
+
+		if(result == 0)
+		{
+			return cur;
+		}
+		else if(result < 0)
+		{
+			lower = cur + 1; // its in the upper
+			if(lower > upper) return cur + 1;
+		}
+		else
+		{
+			upper = cur - 1; // its in the lower
+			if(lower > upper) return cur;
+		}
+	}
+}
+
+
 void vector_add(vector_t *self, void *value)
 {
-	int si = vector_reserve(self);
+	int count = self->count;
+	int si = count;
 	if(self->compare) /* SORTED INSERT */
 	{
-		void *item = vector_get_item(self, value);
-		if(item)
-		{
-			int id = vector_index_of(self, item);
-			vector_shift(self, id, 1);
-			memcpy(item, value, self->data_size);
-			return;
-		}
+		si = vector_get_insert(self, value);
+	}
+
+	vector_reserve(self);
+
+	if(si < count)
+	{
+		vector_shift(self, si, 1);
 	}
 	memcpy(vector_get(self, si), value, self->data_size);
 }

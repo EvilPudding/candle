@@ -8,6 +8,7 @@
 #include <systems/physics.h>
 #include <systems/window.h>
 #include <systems/sauces.h>
+#include <systems/nodegraph.h>
 
 #include <components/node.h>
 #include <components/name.h>
@@ -398,6 +399,7 @@ void candle_init2(void)
 	g_candle->mouse_visible[0] = 1;
 
 	entity_add_component(SYS, c_name_new("Candle"));
+	entity_add_component(SYS, c_nodegraph_new());
 	entity_add_component(SYS, c_mouse_new());
 	entity_add_component(SYS, c_keyboard_new());
 	entity_add_component(SYS, c_physics_new());

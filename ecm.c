@@ -126,18 +126,14 @@ signal_t *ecm_get_signal(uint signal)
 void _ct_listener(ct_t *self, int flags, uint signal, signal_cb cb)
 {
 	signal_t *sig = ecm_get_signal(signal);
-	if(!self) exit(1);
 	if(ct_get_listener(self, signal)) exit(1);
 
 	listener_t lis = {.signal = signal, .cb = (signal_cb)cb,
 		.flags = flags & 0xFF00, .priority = flags & 0x00FF,
 		.comp_type = self->id};
 
-	uint i = sig->cts_size++;
-	sig->cts = realloc(sig->cts, sizeof(*sig->cts) * sig->cts_size);
-	sig->cts[i] = self->id;
-
 	vector_add(sig->listeners, &lis);
+
 }
 
 void _signal_init(uint id, uint size)

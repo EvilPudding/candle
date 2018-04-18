@@ -111,8 +111,6 @@ typedef struct
 {
 	uint size;
 
-	uint *cts;
-	uint cts_size;
 	vector_t *listeners;
 
 } signal_t;

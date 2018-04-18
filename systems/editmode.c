@@ -435,78 +435,10 @@ int c_editmode_key_down(c_editmode_t *self, char *key)
 	return CONTINUE;
 }
 
-void node_entity(c_editmode_t *self, entity_t entity)
-{
-	char buffer[64];
-	char *final_name = buffer;
-	c_name_t *name = c_name(&entity);
-	if(name)
-	{
-		final_name = name->name;
-	}
-	else
-	{
-		sprintf(buffer, "NODE_%ld", entity);
-	}
-	c_node_t *node = c_node(&entity);
-	if(node)
-	{
-		int i;
-		if(node->ghost) return;
-		int count = 0;
-		for(i = 0; i < node->children_size; i++)
-		{
-			count += !c_node(&node->children[i])->ghost;
-		}
-		/* if(count) */
-		{
-			int is_selected = self->selected == entity;
-			int res = nk_tree_entity_push_id(self->nk, NK_TREE_NODE, final_name,
-						NK_MINIMIZED, &is_selected, count, (int)entity);
-			if(is_selected)
-			{
-				if(is_selected && self->selected != entity)
-				{
-					c_editmode_select(self, entity);
-				}
-			}
-			if(res)
-			{
-				for(i = 0; i < node->children_size; i++)
-				{
-					node_entity(self, node->children[i]);
-				}
-
-				nk_tree_entity_pop(self->nk);
-			}
-		}
-	}
-}
-
 void tools_gui(c_editmode_t *self)
 {
 	/* unsigned long i; */
 
-
-}
-
-void node_tree(c_editmode_t *self)
-{
-	unsigned long i;
-
-	if(nk_tree_push(self->nk, NK_TREE_TAB, "Hierarchy System", NK_MAXIMIZED))
-	{
-		for(i = 1; i < g_ecm->entities_busy_size; i++)
-		{
-			if(!g_ecm->entities_busy[i]) continue;
-			c_node_t *node = c_node(&i);
-
-			if(node && node->parent != entity_null) continue;
-			node_entity(self, i);
-		}
-
-		nk_tree_pop(self->nk);
-	}
 }
 
 int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
@@ -680,11 +612,14 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 
 		signal_t *sig = ecm_get_signal(sig("component_menu"));
 
-		for(i = 0; i < sig->cts_size; i++)
+		/* for(i = 0; i < sig->cts_size; i++) */
+		for(i = vector_count(sig->listeners) - 1; i >= 0; i--)
 		{
-			ct_t *ct = ecm_get(sig->cts[i]);
+			listener_t *lis = vector_get(sig->listeners, i);
+			ct_t *ct = ecm_get(lis->comp_type);
 			c_t *comp = ct_get(ct, &ent);
-			if(comp && !comp->ghost && !ct->is_interaction)
+
+			if(comp && !comp->ghost)
 			{
 				if(nk_tree_push_id(self->nk, NK_TREE_TAB, ct->name,
 							NK_MAXIMIZED, i))
@@ -692,17 +627,17 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 					component_signal(comp, ct, sig("component_menu"), self->nk);
 					nk_tree_pop(self->nk);
 				}
-				int j;
-				for(j = 0; j < ct->depends_size; j++)
-				{
-					if(ct->depends[j].is_interaction)
-					{
-						c_t *inter = ct_get(ct, &ent);
-						ct_t *inter_ct = ecm_get(ct->depends[j].ct);
-						component_signal(inter, inter_ct,
-								sig("component_menu"), self->nk);
-					}
-				}
+				/* int j; */
+				/* for(j = 0; j < ct->depends_size; j++) */
+				/* { */
+				/* 	if(ct->depends[j].is_interaction) */
+				/* 	{ */
+				/* 		c_t *inter = ct_get(ct, &ent); */
+				/* 		ct_t *inter_ct = ecm_get(ct->depends[j].ct); */
+				/* 		component_signal(inter, inter_ct, */
+				/* 				sig("component_menu"), self->nk); */
+				/* 	} */
+				/* } */
 			}
 		}
 		struct nk_rect bounds = nk_window_get_bounds(self->nk);
