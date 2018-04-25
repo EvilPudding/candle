@@ -36,7 +36,6 @@ typedef struct candle_t
 	int exit;
 	int last_update;
 	int pressing;
-	int shift;
 
 	/* TODO move this to mouse.h */
 	int mx, my;

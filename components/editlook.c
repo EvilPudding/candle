@@ -89,7 +89,7 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 
 	fake_x += event->sx;
 	fake_y += event->sy;
-	if(g_candle->shift)
+	if(c_keyboard(&SYS)->shift)
 	{
 		float px = fake_x / renderer->width;
 		float py = 1.0f - fake_y / renderer->height;
@@ -131,7 +131,8 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 
 	/* if(rot > max_up) rot = max_up; */
 	/* if(rot < max_down) rot = max_down; */
-	const vec3_t pivot = edit->mouse_position;
+	const vec3_t pivot = c_keyboard(&SYS)->ctrl ? sc->pos :
+		edit->mouse_position;
 
 	vec3_t diff = vec3_sub(sc->pos, pivot);
 	/* float radius = vec3_len(diff); */

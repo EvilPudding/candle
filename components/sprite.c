@@ -30,7 +30,8 @@ static void c_sprite_init(c_sprite_t *self)
 	}
 	if(!g_sprite_mesh)
 	{
-		g_sprite_mesh = mesh_quad();
+		g_sprite_mesh = mesh_new();
+		mesh_quad(g_sprite_mesh);
 		g_sprite_vs = vs_new("sprite", 1, vertex_modifier_new(
 			"	{\n"
 			"		vec4 center = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"

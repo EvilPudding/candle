@@ -244,9 +244,9 @@ int c_spacial_menu(c_spacial_t *self, void *ctx)
 	if(nk_tree_push(ctx, NK_TREE_NODE, "Position", NK_MINIMIZED))
 	{
 		/* nk_layout_row_dynamic(ctx, 0, 1); */
-		nk_property_float(ctx, "x:", -10000, &tmp.x, 10000, 0.1, 0.05);
-		nk_property_float(ctx, "y:", -10000, &tmp.y, 10000, 0.1, 0.05);
-		nk_property_float(ctx, "z:", -10000, &tmp.z, 10000, 0.1, 0.05);
+		nk_property_float(ctx, "#x:", -10000, &tmp.x, 10000, 0.1, 0.05);
+		nk_property_float(ctx, "#y:", -10000, &tmp.y, 10000, 0.1, 0.05);
+		nk_property_float(ctx, "#z:", -10000, &tmp.z, 10000, 0.1, 0.05);
 
 		if(!vec3_equals(self->pos, tmp))
 		{
@@ -259,12 +259,12 @@ int c_spacial_menu(c_spacial_t *self, void *ctx)
 	if(nk_tree_push(ctx, NK_TREE_NODE, "Rotation", NK_MINIMIZED))
 	{
 		/* nk_layout_row_dynamic(ctx, 0, 1); */
-		nk_property_float(ctx, "rx:", -1000, &tmp.x, 1000, 0.1, 0.01);
-		nk_property_float(ctx, "ry:", -1000, &tmp.y, 1000, 0.1, 0.01);
-		nk_property_float(ctx, "rz:", -1000, &tmp.z, 1000, 0.1, 0.01);
+		nk_property_float(ctx, "#x:", -1000, &tmp.x, 1000, 0.1, 0.01);
+		nk_property_float(ctx, "#y:", -1000, &tmp.y, 1000, 0.1, 0.01);
+		nk_property_float(ctx, "#z:", -1000, &tmp.z, 1000, 0.1, 0.01);
 #ifdef MESH4
 		float tmpw = self->angle4;
-		nk_property_float(ctx, "rw:", 0, &tmpw, M_PI, 0.1, 0.01);
+		nk_property_float(ctx, "#w:", 0, &tmpw, M_PI, 0.1, 0.01);
 		if(self->angle4 != tmpw)
 		{
 			self->angle4 = tmpw;
@@ -292,9 +292,9 @@ int c_spacial_menu(c_spacial_t *self, void *ctx)
 	if(nk_tree_push(ctx, NK_TREE_NODE, "Scale", NK_MINIMIZED))
 	{
 		/* nk_layout_row_dynamic(ctx, 0, 1); */
-		nk_property_float(ctx, "sx:", -1000, &tmp.x, 1000, 0.1, 0.01);
-		nk_property_float(ctx, "sy:", -1000, &tmp.y, 1000, 0.1, 0.01);
-		nk_property_float(ctx, "sz:", -1000, &tmp.z, 1000, 0.1, 0.01);
+		nk_property_float(ctx, "#x:", -1000, &tmp.x, 1000, 0.1, 0.01);
+		nk_property_float(ctx, "#y:", -1000, &tmp.y, 1000, 0.1, 0.01);
+		nk_property_float(ctx, "#z:", -1000, &tmp.z, 1000, 0.1, 0.01);
 
 		if(!vec3_equals(self->scale, tmp))
 		{

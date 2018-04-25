@@ -61,6 +61,25 @@ entity_t c_node_get_by_name(c_node_t *self, uint hash)
 	return entity_null;
 }
 
+void c_node_unparent(c_node_t *self, int inherit_transform)
+{
+	if(self->parent)
+	{
+		c_node_t *parent = c_node(&self->parent);
+		if(inherit_transform)
+		{
+			int prev_inheritance = self->inherit_scale;
+			self->inherit_scale = 0;
+			self->cached = 0;
+			c_node_update_model(self);
+
+			c_spacial_set_model(c_spacial(self), self->model);
+			self->inherit_scale = prev_inheritance;
+		}
+		c_node_remove(parent, c_entity(self));
+	}
+}
+
 void c_node_remove(c_node_t *self, entity_t child)
 {
 	int i;
@@ -68,6 +87,9 @@ void c_node_remove(c_node_t *self, entity_t child)
 	{
 		if(self->children[i] == child)
 		{
+			c_node_t *cn = c_node(&child);
+			cn->cached = 0;
+			cn->parent = entity_null;
 			if(--self->children_size)
 			{
 				self->children[i] = self->children[self->children_size];

@@ -327,8 +327,6 @@ static inline void update_buffer(int id, GLuint vbo, void *arr, int dim, size_t 
 
 int c_mesh_gl_on_mesh_changed(c_mesh_gl_t *self)
 {
-	self->mesh = c_model(self)->mesh;
-
 	/* TODO strange code */
 	if(self->groups[0].vao == 0)
 	{
@@ -375,9 +373,10 @@ int glg_update_ram(glg_t *self)
 	mesh_t *mesh = model->mesh;
 	glg_clear(self);
 
+	mat_layer_t *layer = &model->layers[self->layer_id];
 	glg_vert_prealloc(self, vector_count(mesh->verts));
 
-	int selection = model->layers[self->layer_id].selection;
+	int selection = layer->selection;
 
 	vector_t *faces = mesh->faces;
 	vector_t *edges = mesh->edges;
@@ -389,7 +388,7 @@ int glg_update_ram(glg_t *self)
 	int i;
 	if(vector_count(faces))
 	{
-		mesh_update_smooth_normals(mesh);
+		mesh_update_smooth_normals(mesh, layer->smooth_angle);
 		int triangle_count = 0;
 		for(i = 0; i < vector_count(faces); i++)
 		{
@@ -532,29 +531,30 @@ static int glg_update_buffers(glg_t *self)
 void c_mesh_gl_update(c_mesh_gl_t *self)
 {
 	/* TODO update only dirty group */
-	if(!self->mesh) return;
+	c_model_t *model = c_model(self);
+
+	if(!model->mesh) return;
 	int i;
 	/* if(self->mesh->update_locked) return; */
-	if(self->mesh->mid_load) return;
-	SDL_SemWait(self->mesh->sem);
+	if(model->mesh->mid_load) return;
+	SDL_SemWait(model->mesh->sem);
 
-	c_model_t *model = c_model(self);
 
 	for(i = 0; i < model->layers_num; i++)
 	{
 		if(i >= self->groups_num) mesh_gl_add_group(self);
 
 		glg_t *group = &self->groups[i];
-		if(self->mesh->update_id != group->update_id && group->updated)
+		if(model->mesh->update_id != group->update_id && group->updated)
 		{
 			group->updated = 0;
 			glg_update_ram(group);
-			group->update_id = self->mesh->update_id;
+			group->update_id = model->mesh->update_id;
 
 		}
 
 	}
-	SDL_SemPost(self->mesh->sem);
+	SDL_SemPost(model->mesh->sem);
 }
 
 int glg_draw(glg_t *self, shader_t *shader, int flags)
@@ -695,7 +695,8 @@ int c_mesh_gl_draw(c_mesh_gl_t *self, int transparent)
 	int res = CONTINUE;
 		glerr();
 
-	if(!self->mesh)
+	mesh_t *mesh = c_model(self)->mesh;
+	if(!mesh)
 	{
 		return STOP;
 	}
@@ -705,7 +706,7 @@ int c_mesh_gl_draw(c_mesh_gl_t *self, int transparent)
 	shader_t *shader = c_renderer(&SYS)->shader;
 	if(shader)
 	{
-		glUniform1f(shader->u_has_tex, (float)self->mesh->has_texcoords);
+		glUniform1f(shader->u_has_tex, (float)mesh->has_texcoords);
 		vec2_t id_color = int_to_vec2(c_entity(self));
 
 		glUniform2f(shader->u_id, id_color.x, id_color.y);

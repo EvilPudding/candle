@@ -15,8 +15,8 @@ typedef struct vector_t
 	int alloc;
 	int free_count;
 
-	int index_matters;
-	int sorted;
+	int fixed_index;
+	int fixed_order;
 
 	int data_size;
 	int elem_size;
@@ -26,17 +26,17 @@ typedef struct vector_t
 	vector_compare_cb compare;
 } vector_t;
 
-vector_t *vector_new(int size, int fixed_index, void *fallback,
+vector_t *vector_new(int data_size, int flags, void *fallback,
 		vector_compare_cb compare)
 {
 	vector_t *self = malloc(sizeof(*self));
 
-	self->index_matters = fixed_index;
-	/* self->index_matters = 1; */
+	self->fixed_index = !!(flags & FIXED_INDEX);
+	self->fixed_order = !!(flags & FIXED_ORDER);
 
 	self->compare = compare;
-	self->data_size = size;
-	self->elem_size = size + sizeof(struct element);
+	self->data_size = data_size;
+	self->elem_size = data_size + sizeof(struct element);
 	self->free_count = 0;
 	self->count = 0;
 	self->alloc = 0;
@@ -44,11 +44,26 @@ vector_t *vector_new(int size, int fixed_index, void *fallback,
 	self->fallback = NULL;
 	if(fallback)
 	{
-		self->fallback = malloc(size);
-		memcpy(self->fallback, fallback, size);
+		self->fallback = malloc(data_size);
+		memcpy(self->fallback, fallback, data_size);
 	}
 
 	return self;
+}
+
+vector_t *vector_clone(vector_t *self)
+{
+	vector_t *clone = malloc(sizeof(*self));
+	*clone = *self;
+
+	if(self->fallback)
+	{
+		clone->fallback = malloc(self->data_size);
+		memcpy(clone->fallback, self->fallback, self->data_size);
+	}
+	clone->elements = malloc(self->elem_size * self->alloc);
+	memcpy(clone->elements, self->elements, self->elem_size * self->alloc);
+	return clone;
 }
 
 static struct element *_vector_get(vector_t *self, int i)
@@ -139,7 +154,7 @@ void vector_remove(vector_t *self, int i)
 	{
 		return;
 	}
-	if(self->index_matters)
+	if(self->fixed_index)
 	{
 		element->set = 0;
 		self->free_count++;
@@ -149,7 +164,7 @@ void vector_remove(vector_t *self, int i)
 
 		if(i != self->count - 1)
 		{
-			if(self->compare)
+			if(self->fixed_order)
 			{
 				vector_shift(self, i, -1);
 			}

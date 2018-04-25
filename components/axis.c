@@ -17,7 +17,8 @@ static void c_axis_init(c_axis_t *self)
 {
 	if(!g_axis_mesh)
 	{
-		g_axis_mesh = mesh_circle(0.03f, 8);
+		g_axis_mesh = mesh_new();
+		mesh_circle(g_axis_mesh, 0.03f, 8);
 
 		mesh_lock(g_axis_mesh);
 #ifdef MESH4
@@ -85,9 +86,10 @@ int c_axis_mouse_move(c_axis_t *self, mouse_move_data *event)
 	{
 		entity_t arrows = c_node(self)->parent;
 		entity_t target = c_node(&arrows)->parent;
-		entity_t parent = c_node(&target)->parent;
 		if(target)
 		{
+			entity_t parent = c_node(&target)->parent;
+
 			c_spacial_t *sc = c_spacial(&target);
 
 			if(self->type == 0)

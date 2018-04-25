@@ -408,21 +408,32 @@ static int c_renderer_gl(c_renderer_t *self)
 		}
 	);
 
+	c_renderer_add_pass(self, "gbuffer transp", "gbuffer", sig("render_transparent"), 0,
+		(bind_t[]){
+			{BIND_OUT, .buffer = c_renderer_tex(self, ref("gbuffer"))},
+			{BIND_DEPTH, .buffer = c_renderer_tex(self, ref("gbuffer"))},
+			{BIND_CAM, "camera", (getter_cb)c_renderer_get_camera, self},
+			{BIND_NONE}
+		}
+	);
 	c_renderer_add_pass(self, "transp", "transparency", sig("render_transparent"),
 			0,
 		(bind_t[]){
 			{BIND_OUT, .buffer = c_renderer_tex(self, ref("rendered"))},
-			{BIND_DEPTH, .buffer = c_renderer_tex(self, ref("gbuffer"))},
+			{BIND_TEX, "gbuffer", .buffer = c_renderer_tex(self, ref("gbuffer"))},
+			/* {BIND_DEPTH, .buffer = c_renderer_tex(self, ref("gbuffer"))}, */
 			{BIND_TEX, "refr", .buffer = c_renderer_tex(self, ref("refr"))},
 			{BIND_CAM, "camera", (getter_cb)c_renderer_get_camera, self},
 			{BIND_NONE}
 		}
 	);
 
+
 	c_renderer_add_pass(self, "emissive", "transparency", sig("render_emissive"),
 			PASS_ADDITIVE,
 		(bind_t[]){
 			{BIND_OUT, .buffer = c_renderer_tex(self, ref("rendered"))},
+			{BIND_TEX, "gbuffer", .buffer = c_renderer_tex(self, ref("gbuffer"))},
 			{BIND_TEX, "refr", .buffer = c_renderer_tex(self, ref("refr"))},
 			{BIND_CAM, "camera", (getter_cb)c_renderer_get_camera, self},
 			{BIND_NONE}

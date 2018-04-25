@@ -5,6 +5,8 @@
 typedef struct c_keyboard_t
 {
 	c_t super;
+	int shift;
+	int ctrl;
 	/* currently, keyboard has no options */
 } c_keyboard_t;
 

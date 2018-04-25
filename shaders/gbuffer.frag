@@ -15,10 +15,6 @@ void main()
 	SpecularColor = resolveProperty(specular, texcoord);
 
 	Normal = encode_normal(get_normal());
-
-	/* ID = object_id; */
-
-	/* GeomID = poly_id; */
 }
 
 // vim: set ft=c:

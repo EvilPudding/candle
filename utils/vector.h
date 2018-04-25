@@ -5,12 +5,16 @@ typedef struct vector_t vector_t;
 
 typedef int(*vector_compare_cb)(const void *a, const void *b);
 
-vector_t *vector_new(int size, int fixed_index, void *fallback,
+vector_t *vector_new(int data_size, int fixed_index, void *fallback,
 		vector_compare_cb compare);
 
 #define vector_value(vec, i, type) *((type*)_vector_value(vec, i))
 
+#define FIXED_INDEX 0x01
+#define FIXED_ORDER 0x02
+
 void vector_add(vector_t *self, void *value);
+vector_t *vector_clone(vector_t *self);
 void *vector_get(vector_t *self, int i);
 void *_vector_value(vector_t *self, int i);
 

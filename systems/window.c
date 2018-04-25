@@ -132,7 +132,8 @@ int c_window_created(c_window_t *self)
 		g_quad_fs = fs_new("quad");
 	}
 
-	entity_add_component(c_entity(self), c_model_new(mesh_quad(), NULL, 0, 0));
+	entity_add_component(c_entity(self), c_model_new(mesh_new(), NULL, 0, 0));
+	mesh_quad(c_model(self)->mesh);
 	c_model_cull_face(c_model(self), 0, 2);
 	c_model(self)->super.ghost = 1;
 	c_spacial(self)->super.ghost = 1;

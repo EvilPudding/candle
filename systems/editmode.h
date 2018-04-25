@@ -14,6 +14,7 @@ typedef struct
 	int dragging;
 	int pressing;
 	int activated;
+	int tool;
 	entity_t camera;
 	entity_t backup_camera;
 	/* int outside; */

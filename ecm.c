@@ -90,6 +90,7 @@ void ecm_init()
 
 void ecm_add_reg(c_reg_cb reg)
 {
+	printf("ADD REG\n");
 	g_ecm->regs[g_ecm->regs_size++] = reg;
 }
 
@@ -385,7 +386,7 @@ c_t *ct_add(ct_t *self, entity_t entity)
 	if(entity >= self->offsets_size)
 	{
 		/* printf("increasing offsets %d -> %d\n", self->offsets_size, (int)entity + 1); */
-		uint j, new_size = entity + 1;
+		int j, new_size = entity + 1;
 		self->offsets = realloc(self->offsets, sizeof(*self->offsets) *
 				new_size);
 		for(j = self->offsets_size; j < new_size - 1; j++)

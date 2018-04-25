@@ -100,17 +100,25 @@ int handle_event(SDL_Event event)
 			break;
 		case SDL_KEYUP:
 			key = event.key.keysym.sym;
+			if(key == -32)
+			{
+				c_keyboard(&SYS)->ctrl = 0;
+			}
 			if(key == -31)
 			{
-				g_candle->shift = 0;
+				c_keyboard(&SYS)->shift = 0;
 			}
 			entity_signal(entity_null, sig("key_up"), &key);
 			break;
 		case SDL_KEYDOWN:
 			key = event.key.keysym.sym;
+			if(key == -32)
+			{
+				c_keyboard(&SYS)->ctrl = 1;
+			}
 			if(key == -31)
 			{
-				g_candle->shift = 1;
+				c_keyboard(&SYS)->shift = 1;
 			}
 			entity_signal(entity_null, sig("key_down"), &key);
 			break;

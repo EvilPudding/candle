@@ -162,18 +162,6 @@ typedef struct
 #endif
 } mesh_selection_t;
 
-typedef struct
-{
-	enum {
-		MESH_EXTRUDE,
-		MESH_TRIANGULATE,
-		MESH_SELECT_FACES,
-		MESH_FOR_EACH,
-		MESH_CLEAN,
-		MESH_PAINT
-	} type;
-} mesh_command_t;
-
 typedef struct mesh_t
 {
 	vector_t *faces;
@@ -204,7 +192,6 @@ typedef struct mesh_t
 	int mid_load;
 	int update_id;
 	int changes;
-	float smooth_max;
 
 	SDL_sem *sem;
 } mesh_t;
@@ -218,23 +205,23 @@ typedef struct mesh_t
 #define m_vert(m, i) ((vertex_t*)vector_get(m->verts, i))
 
 mesh_t *mesh_new(void);
+mesh_t *mesh_clone(mesh_t *self);
 void mesh_destroy(mesh_t *self);
 
 void mesh_load(mesh_t *self, const char *filename);
 void mesh_load_scene(mesh_t *self, const void *scene);
-mesh_t *mesh_quad(void);
-mesh_t *mesh_circle(float radius, int segments);
+void mesh_quad(mesh_t *self);
+void mesh_circle(mesh_t *self, float radius, int segments);
 mesh_t *mesh_torus(float radius, float inner_radius, int segments,
 		int inner_segments);
-mesh_t *mesh_cube(float size, float tex_scale, int inverted_normals);
+void mesh_cube(mesh_t *self, float size, float tex_scale, int inverted_normals);
 
 void mesh_clear(mesh_t *self);
 void mesh_sphere_subdivide(mesh_t *mesh, int subdivisions);
 mesh_t *mesh_lathe(mesh_t *mesh, float angle, int segments,
 		float x, float y, float z);
-/* mesh_t *mesh_cube(float size, float tex_scale, int inverted_normals); */
 
-mesh_t *mesh_cuboid(float tex_scale, vec3_t p1, vec3_t p2);
+void mesh_cuboid(mesh_t *self, float tex_scale, vec3_t p1, vec3_t p2);
 /* mesh_t *mesh_cuboid(float tex_scale, */
 		/* float x1, float y1, float z1, */
 		/* float x2, float y2, float z2); */
@@ -250,7 +237,7 @@ void mesh_modified(mesh_t *self);
 
 void mesh_get_tg_bt(mesh_t *self);
 
-void mesh_update_smooth_normals(mesh_t *self);
+void mesh_update_smooth_normals(mesh_t *self, float smooth_max);
 
 int mesh_dup_vert(mesh_t *self, int i);
 int mesh_add_vert(mesh_t *self, vecN_t p);

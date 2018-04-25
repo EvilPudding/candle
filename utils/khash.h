@@ -212,6 +212,26 @@ static const double __ac_HASH_UPPER = 0.77;
 	SCOPE kh_##name##_t *kh_init_##name(void) {							\
 		return (kh_##name##_t*)kcalloc(1, sizeof(kh_##name##_t));		\
 	}																	\
+	SCOPE kh_##name##_t *kh_clone_##name(kh_##name##_t *h)				\
+	{																	\
+		kh_##name##_t *c = kh_init_##name();							\
+		if (h) {														\
+			*c = *h;													\
+			if(h->flags) {												\
+				c->flags = (khint32_t*)kmalloc(__ac_fsize(h->n_buckets) * sizeof(khint32_t));	\
+				memcpy(c->flags, h->flags, __ac_fsize(h->n_buckets) * sizeof(khint32_t)); \
+			}															\
+			if(h->keys) {												\
+				c->keys = (khkey_t*)kmalloc(h->n_buckets * sizeof(khkey_t)); \
+				memcpy(c->keys, h->keys, __ac_fsize(h->n_buckets) * sizeof(khkey_t)); \
+			}															\
+			if(h->vals) {												\
+				c->vals = (khval_t*)kmalloc(h->n_buckets * sizeof(khval_t)); \
+				memcpy(c->vals, h->vals, __ac_fsize(h->n_buckets) * sizeof(khval_t)); \
+			}															\
+		}																\
+		return c;														\
+	}																	\
 	SCOPE void kh_destroy_##name(kh_##name##_t *h)						\
 	{																	\
 		if (h) {														\
@@ -444,6 +464,13 @@ static kh_inline khint_t __ac_Wang_hash(khint_t key)
   @param  h     Pointer to the hash table [khash_t(name)*]
  */
 #define kh_destroy(name, h) kh_destroy_##name(h)
+
+/*! @function
+  @abstract     Clone a hash table.
+  @param  name  Name of the hash table [symbol]
+  @return       Pointer to the clone hash table [khash_t(name)*]
+ */
+#define kh_clone(name, h) kh_clone_##name(h)
 
 /*! @function
   @abstract     Reset a hash table without deallocating memory.

@@ -46,7 +46,6 @@ mesh_t *mesh_new()
 	self->triangulated = 1;
 	self->current_cell = -1;
 	self->current_surface = -1;
-	self->smooth_max = 0.4;
 	self->first_edge = 0;
 
 	self->faces_hash = kh_init(id);
@@ -58,17 +57,13 @@ mesh_t *mesh_new()
 		mesh_selection_init(&self->selections[i]);
 	}
 
-	/* self->unpaired_faces = kl_init(int); */
-	/* self->selected_faces = kl_init(int); */
-	/* self->selected_edges = kl_init(int); */
-
 	self->support = (support_cb)mesh_support;
 
-	self->verts = vector_new(sizeof(vertex_t), 1, NULL, NULL);
-	self->faces = vector_new(sizeof(face_t), 1, NULL, NULL);
-	self->edges = vector_new(sizeof(edge_t), 1, NULL, NULL);
+	self->verts = vector_new(sizeof(vertex_t), FIXED_INDEX, NULL, NULL);
+	self->faces = vector_new(sizeof(face_t), FIXED_INDEX, NULL, NULL);
+	self->edges = vector_new(sizeof(edge_t), FIXED_INDEX, NULL, NULL);
 #ifdef MESH4
-	self->cells = vector_new(sizeof(cell_t), 1, NULL, NULL);
+	self->cells = vector_new(sizeof(cell_t), FIXED_INDEX, NULL, NULL);
 
 	vector_alloc(self->cells, 10);
 #endif
@@ -132,18 +127,33 @@ static void face_init(face_t *self)
 
 void mesh_destroy(mesh_t *self)
 {
+	if(self)
+	{
 #ifdef MESH4
-	if(self->cells) free(self->cells);
+		if(self->cells) free(self->cells);
 #endif
-	if(self->faces) free(self->faces);
-	if(self->verts) free(self->verts);
-	if(self->edges) free(self->edges);
+		if(self->faces) free(self->faces);
+		if(self->verts) free(self->verts);
+		if(self->edges) free(self->edges);
 
-	SDL_DestroySemaphore(self->sem);
-	/* TODO destroy selections */
-	/* kl_destroy(int, self->unpaired_faces); */
-	/* kl_destroy(int, self->selected_faces); */
-	/* kl_destroy(int, self->selected_edges); */
+		SDL_DestroySemaphore(self->sem);
+		/* TODO destroy selections */
+		kh_destroy(id, self->faces_hash);
+		kh_destroy(id, self->edges_hash);
+
+		int i;
+		for(i = 0; i < 16; i++)
+		{
+			vector_destroy(self->selections[i].faces);
+			vector_destroy(self->selections[i].edges);
+			vector_destroy(self->selections[i].verts);
+#ifdef MESH4
+			vector_destroy(self->selections[i].cells);
+#endif
+		}
+		self->sem = NULL;
+		free(self);
+	}
 
 }
 
@@ -162,7 +172,7 @@ static vec3_t get_normal(vec3_t p1, vec3_t p2, vec3_t p3)
 	return vec3_norm(res);
 }
 
-void mesh_update_smooth_normals(mesh_t *self)
+void mesh_update_smooth_normals(mesh_t *self, float smooth_max)
 {
 	int i;
 	for(i = 0; i < vector_count(self->edges); i++)
@@ -202,7 +212,7 @@ void mesh_update_smooth_normals(mesh_t *self)
 			edge = m_edge(self, e);
 			if(!edge) break;
 
-			if(fabs(vec3_dot(edge->n, start_n)) >= self->smooth_max)
+			if(fabs(vec3_dot(edge->n, start_n)) >= smooth_max)
 			{
 				edge->tmp |= 2;
 				smooth_normal = vec3_add(smooth_normal, edge->n);
@@ -821,19 +831,19 @@ void mesh_update(mesh_t *self)
 		face_t *f = m_face(self, i);
 		if(!f) continue;
 
-		vec3_t n = f_edge(f, 0, self)->n;
-		if(vec3_null(n))
+		/* vec3_t n = f_edge(f, 0, self)->n; */
+		/* if(vec3_null(n)) */
 		{
 			mesh_face_calc_flat_normals(self, f);
 		}
-		else
-		{
-			f->n = vec3_unit( vec3_cross(
-						vec3_sub(XYZ(f_vert(f, 1, self)->pos),
-								 XYZ(f_vert(f, 0, self)->pos)),
-						vec3_sub(XYZ(f_vert(f, 2, self)->pos),
-								 XYZ(f_vert(f, 0, self)->pos))));
-		}
+		/* else */
+		/* { */
+		/* 	f->n = vec3_unit( vec3_cross( */
+		/* 				vec3_sub(XYZ(f_vert(f, 1, self)->pos), */
+		/* 						 XYZ(f_vert(f, 0, self)->pos)), */
+		/* 				vec3_sub(XYZ(f_vert(f, 2, self)->pos), */
+		/* 						 XYZ(f_vert(f, 0, self)->pos)))); */
+		/* } */
 	}
 	self->changes = 0;
 	self->update_id++;
@@ -1036,6 +1046,11 @@ static int mesh_get_pair_face(mesh_t *self, int face_id)
 			int pair_id = kh_value(self->faces_hash, k);
 			face_t *pair = m_face(self, pair_id);
 
+			if(!pair)
+			{
+				printf("%p", self->sem);
+				exit(1);
+			}
 			face->pair = pair_id;
 			kh_del(id, self->faces_hash, k);
 
@@ -1228,7 +1243,6 @@ void mesh_add_quad(mesh_t *self,
 	mesh_get_pair_edge(self, ie1);
 	mesh_get_pair_edge(self, ie2);
 	mesh_get_pair_edge(self, ie3);
-
 
 #ifdef MESH4
 	mesh_get_pair_face(self, face_id);
@@ -1460,19 +1474,16 @@ void mesh_scale_uv(mesh_t *self, float scale)
 	mesh_unlock(self);
 }
 
-mesh_t *mesh_quad()
+void mesh_quad(mesh_t *self)
 {
-	mesh_t *self = mesh_new();
-
-	vec3_t n = vec3(0,0,1);
+	const vec3_t n = vec3(0,0,1);
+	mesh_lock(self);
 	mesh_add_regular_quad(self,
 			VEC3(-1.0, -1.0, 0.0), n, vec2(0, 0),
 			VEC3( 1.0, -1.0, 0.0), n, vec2(1, 0),
 			VEC3( 1.0,  1.0, 0.0), n, vec2(1, 1),
 			VEC3(-1.0,  1.0, 0.0), n, vec2(0, 1));
-
-	mesh_update(self);
-	return self;
+	mesh_unlock(self);
 }
 
 struct int_int {int a, b;};
@@ -1554,9 +1565,8 @@ void mesh_triangulate(mesh_t *self)
 	mesh_unlock(self);
 }
 
-mesh_t *mesh_circle(float radius, int segments)
+void mesh_circle(mesh_t *self, float radius, int segments)
 {
-	mesh_t *self = mesh_new();
 	mesh_lock(self);
 
 	int prev_e, first_e;
@@ -1591,8 +1601,6 @@ mesh_t *mesh_circle(float radius, int segments)
 	}
 
 	mesh_unlock(self);
-
-	return self;
 }
 
 vecN_t mesh_get_selection_center(mesh_t *self)
@@ -1753,7 +1761,6 @@ void mesh_vert_dup_and_modify(mesh_t *self, vecN_t pivot,
 {
 	int si;
 
-
 	vector_t *selected_edges = self->selections[SEL_EDITING].edges;
 
 	for(si = 0; si < vector_count(selected_edges); si++)
@@ -1811,14 +1818,14 @@ void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 		/* mesh_lock(self); */
 
 		self->current_surface++;
-		printf("step %d %d %d\n", step, vector_count(editing->faces),
-				vector_count(editing->edges));
+		/* printf("step %d %d %d\n", step, vector_count(editing->faces), */
+				/* vector_count(editing->edges)); */
 
 		vecN_t center = mesh_get_selection_center(self);
 
 		percent += percent_inc;
 		float current_factor = modifier ? modifier(self, percent) : 1.0f;
-		current_factor *= scale;
+		current_factor *= 1 + (scale - 1) * percent;
 		float factor = current_factor / prev_factor;
 
 		mesh_vert_dup_and_modify(self, center, factor, inc);
@@ -1911,10 +1918,6 @@ void mesh_extrude_edges(mesh_t *self, int steps, vecN_t offset,
 			/* mesh_edge_select(self, e_id, SEL_UNSELECTED); */
 
 			e = m_edge(self, e_id);
-			if(!e_pair(e, self))
-			{
-				exit(1);
-			}
 			int new = e_prev(e_pair(e, self), self)->prev;
 			if(new == -1) exit(1);
 			mesh_select(self, TMP, MESH_EDGE, new);
@@ -1928,6 +1931,43 @@ void mesh_extrude_edges(mesh_t *self, int steps, vecN_t offset,
 	}
 
 	mesh_unlock(self);
+}
+
+mesh_t *mesh_clone(mesh_t *self)
+{
+	mesh_t *clone;
+	if(self)
+	{
+		clone = malloc(sizeof(*self));
+		*clone = *self;
+		self->changes = 0;
+		clone->faces_hash = kh_clone(id, self->faces_hash);
+		clone->edges_hash = kh_clone(id, self->edges_hash);
+		clone->verts = vector_clone(self->verts);
+		clone->faces = vector_clone(self->faces);
+		clone->edges = vector_clone(self->edges);
+#ifdef MESH4
+		clone->cells = vector_clone(self->cells);
+#endif
+		clone->sem = SDL_CreateSemaphore(1);
+
+		int i;
+		for(i = 0; i < 16; i++)
+		{
+			clone->selections[i].faces = vector_clone(self->selections[i].faces);
+			clone->selections[i].edges = vector_clone(self->selections[i].edges);
+			clone->selections[i].verts = vector_clone(self->selections[i].verts);
+#ifdef MESH4
+			clone->selections[i].cells = vector_clone(self->selections[i].cells);
+#endif
+		}
+	}
+	else
+	{
+		clone = mesh_new();
+	}
+
+	return clone;
 }
 
 mesh_t *mesh_torus(float radius, float inner_radius, int segments,
@@ -2033,69 +2073,75 @@ mesh_t *mesh_lathe(mesh_t *mesh, float angle, int segments,
 	return self;
 }
 
-mesh_t *mesh_cuboid(float tex_scale, vec3_t p1, vec3_t p2)
+void mesh_cuboid(mesh_t *self, float tex_scale, vec3_t p1, vec3_t p2)
 		/* float x1, float y1, float z1, */
 		/* float x2, float y2, float z2) */
 {
 	vec3_t s = vec3_scale(vec3_sub(p2, p1), 4);
-	mesh_t *self = mesh_new();
 
+	mesh_lock(self);
 	vec3_t n = vec3(0,-1,0);
 	mesh_add_regular_quad(self,
 			VEC3(_vec3(p1)),      n, vec2(0,  0),
 			VEC3(p2.x,p1.y,p1.z), n, vec2(s.x, 0),
 			VEC3(p2.x,p1.y,p2.z), n, vec2(s.x, s.z),
-			VEC3(p1.x,p1.y,p2.z), n, vec2(0,  s.z));
+			VEC3(p1.x,p1.y,p2.z), n, vec2(0,  s.z)
+	);
 
 	n = vec3(0,1,0);
 	mesh_add_regular_quad(self,
 			VEC3(p1.x,p2.y,p2.z), n, vec2( 0,s.z),
 			VEC3(_vec3(p2)),	  n, vec2(s.x,s.z),
 			VEC3(p2.x,p2.y,p1.z), n, vec2(s.x, 0),
-			VEC3(p1.x,p2.y,p1.z), n, vec2( 0, 0));
+			VEC3(p1.x,p2.y,p1.z), n, vec2( 0, 0)
+	);
 
 	n = vec3(0.0, 0.0, -1.0);
 	mesh_add_regular_quad(self,
 			VEC3(p1.x,p2.y,p1.z), n, vec2(s.x,0),
 			VEC3(p2.x,p2.y,p1.z), n, vec2(0,0),
 			VEC3(p2.x,p1.y,p1.z), n, vec2(0, s.y),
-			VEC3(_vec3(p1)),	  n, vec2(s.x, s.y));
+			VEC3(_vec3(p1)),	  n, vec2(s.x, s.y)
+	);
 
 	n = vec3(0.0, 0.0, 1.0);
 	mesh_add_regular_quad(self,
 			VEC3(p1.x,p1.y,p2.z), n, vec2(s.x, s.y),
 			VEC3(p2.x,p1.y,p2.z), n, vec2(0, s.y),
 			VEC3(_vec3(p2)),	  n, vec2(0,0),
-			VEC3(p1.x,p2.y,p2.z), n, vec2(s.x,0));
+			VEC3(p1.x,p2.y,p2.z), n, vec2(s.x,0)
+	);
 
 	n = vec3(-1.0, 0.0, 0.0);
 	mesh_add_regular_quad(self,
 			VEC3(p1.x,p1.y,p2.z), n, vec2( 0,s.z),
 			VEC3(p1.x,p2.y,p2.z), n, vec2(s.y,s.z),
 			VEC3(p1.x,p2.y,p1.z), n, vec2(s.y, 0),
-			VEC3(_vec3(p1)),	  n, vec2( 0, 0));
+			VEC3(_vec3(p1)),	  n, vec2( 0, 0)
+	);
 
 	n = vec3(1.0, 0.0, 0.0);
 	mesh_add_regular_quad(self,
 			VEC3(p2.x,p1.y,p1.z), n, vec2( 0, 0),
 			VEC3(p2.x,p2.y,p1.z), n, vec2(s.y, 0),
 			VEC3(_vec3(p2)),	  n, vec2(s.y,s.z),
-			VEC3(p2.x,p1.y,p2.z), n, vec2( 0,s.z));
+			VEC3(p2.x,p1.y,p2.z), n, vec2( 0,s.z)
+	);
 
 	/* mesh_translate_uv(self, 0.5, 0.5); */
 	mesh_scale_uv(self, tex_scale);
 
-	mesh_update(self);
-
-	return self;
+	mesh_unlock(self);
 }
 
 
-mesh_t *mesh_cube(float size, float tex_scale, int inverted_normals)
+void mesh_cube(mesh_t *self, float size, float tex_scale, int inverted_normals)
 {
 	size /= 2;
-	return mesh_cuboid(tex_scale, vec3(-size, -size, -size),
-			vec3(-size, -size, -size));
+	vec3_t p1 = vec3(-size, -size, -size);
+	vec3_t p2 = vec3(size, size, size);
+	mesh_cuboid(self, tex_scale, inverted_normals?p1:p2,
+			inverted_normals?p2:p1);
 }
 
 void mesh_wait(mesh_t *self)
@@ -2109,6 +2155,7 @@ void mesh_load_scene(mesh_t *self, const void *grp)
 	mesh_lock(self);
 	const struct aiMesh *group = grp;
 	strcpy(self->name, "load_result");
+	/* self->has_texcoords = 0; */
 
 	int offset = vector_count(self->verts);
 	int j;

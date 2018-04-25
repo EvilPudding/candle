@@ -44,8 +44,6 @@ typedef struct c_mesh_gl_t
 {
 	c_t super; /* extends c_t */
 
-	mesh_t *mesh;
-
 	glg_t *groups;
 	int groups_num;
 

@@ -17,6 +17,7 @@ void nk_candle_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
 		int max_element_buffer);
 static int c_editmode_activate_loader(c_editmode_t *self);
 void c_editmode_open_entity(c_editmode_t *self, entity_t ent);
+static void c_editmode_update_axis(c_editmode_t *self);
 
 #define MAX_VERTEX_MEMORY 512 * 1024
 #define MAX_ELEMENT_MEMORY 128 * 1024
@@ -69,7 +70,6 @@ vec2_t c_editmode_bind_sel(c_editmode_t *self)
 }
 void c_editmode_coords(c_editmode_t *self)
 {
-	if(!self->selected) return;
 	if(!arrows)
 	{
 		arrows = entity_new(c_name_new("Coord System"), c_node_new());
@@ -92,14 +92,22 @@ void c_editmode_coords(c_editmode_t *self)
 
 		c_node_add(c_node(&arrows), 6, X, Y, Z, RX, RY, RZ);
 	}
-	c_node_t *nc = c_node(&self->selected);
-	/* c_attach_target(c_attach(&arrows), self->selected); */
-	if(!nc)
+	if(self->selected)
 	{
-		entity_add_component(self->selected, c_node_new());
-		nc = c_node(&self->selected);
+		c_node_t *nc = c_node(&self->selected);
+		/* c_attach_target(c_attach(&arrows), self->selected); */
+		if(!nc)
+		{
+			entity_add_component(self->selected, c_node_new());
+			nc = c_node(&self->selected);
+		}
+		c_node_add(nc, 1, arrows);
 	}
-	c_node_add(nc, 1, arrows);
+	else
+	{
+		c_node_unparent(c_node(&arrows), 0);
+	}
+	c_editmode_update_axis(self);
 }
 
 
@@ -305,9 +313,9 @@ void c_editmode_open_entity(c_editmode_t *self, entity_t ent)
 void c_editmode_select(c_editmode_t *self, entity_t select)
 {
 	self->selected = select;
+	c_editmode_coords(self);
 	if(self->selected)
 	{
-		c_editmode_coords(self);
 		c_editmode_open_entity(self, self->selected);
 	}
 	else
@@ -356,6 +364,16 @@ int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 }
 
 
+static void c_editmode_update_axis(c_editmode_t *self)
+{
+	c_model(&RX)->visible = self->selected && self->tool;
+	c_model(&RY)->visible = self->selected && self->tool;
+	c_model(&RZ)->visible = self->selected && self->tool;
+	c_model(&X)->visible = self->selected && !self->tool;
+	c_model(&Y)->visible = self->selected && !self->tool;
+	c_model(&Z)->visible = self->selected && !self->tool;
+}
+
 int c_editmode_key_up(c_editmode_t *self, char *key)
 {
 	switch(*key)
@@ -383,23 +401,12 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 			}
 			break;
 		case 't':
-				c_model(&RX)->visible = 0;
-				c_model(&RY)->visible = 0;
-				c_model(&RZ)->visible = 0;
-				c_model(&X)->visible = 1;
-				c_model(&Y)->visible = 1;
-				c_model(&Z)->visible = 1;
+			self->tool = 0;
+			c_editmode_update_axis(self);
 			break;
 		case 'r':
-			if(self->selected)
-			{
-				c_model(&RX)->visible = 1;
-				c_model(&RY)->visible = 1;
-				c_model(&RZ)->visible = 1;
-				c_model(&X)->visible = 0;
-				c_model(&Y)->visible = 0;
-				c_model(&Z)->visible = 0;
-			}
+			self->tool = 1;
+			c_editmode_update_axis(self);
 			break;
 		case '`':
 			{
@@ -590,6 +597,68 @@ void c_editmode_shell(c_editmode_t *self)
 	}
 }
 
+int c_editmode_component_menu(c_editmode_t *self, void *ctx)
+{
+	return CONTINUE;
+}
+
+int c_editmode_commands(c_editmode_t *self)
+{
+	int res = nk_begin(self->nk, "tools",
+			nk_rect(c_renderer(self)->width - 240, 10, 230, 300),
+			NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
+			NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE);
+	if (res)
+	{
+		c_editmode_shell(self);
+		if(nk_button_label(self->nk, "circle"))
+		{
+			if(!c_model(&self->selected))
+			{
+				c_editmode_select(self, entity_new(c_model_new(NULL, mat_new("k"), 1, 1)));
+			}
+
+			c_model_edit(c_model(&self->selected), MESH_CIRCLE, MESH_FACE);
+			/* c_model_edit(c_model(&self->selected), MESH_SUBDIVIDE, MESH_FACE); */
+		}
+		if(nk_button_label(self->nk, "cube"))
+		{
+			if(!c_model(&self->selected))
+			{
+				c_editmode_select(self, entity_new(c_model_new(NULL, mat_new("k"), 1, 1)));
+			}
+
+			c_model_edit(c_model(&self->selected), MESH_CUBE, MESH_FACE);
+			/* c_model_edit(c_model(&self->selected), MESH_SUBDIVIDE, MESH_FACE); */
+		}
+		if(nk_button_label(self->nk, "icosphere"))
+		{
+			if(!c_model(&self->selected))
+			{
+				c_editmode_select(self, entity_new(c_model_new(NULL, mat_new("k"), 1, 1)));
+			}
+
+			c_model_edit(c_model(&self->selected), MESH_ICOSPHERE, MESH_FACE);
+		}
+		if(c_model(&self->selected))
+		{
+			if(nk_button_label(self->nk, "extrude"))
+			{
+				c_model_edit(c_model(&self->selected), MESH_EXTRUDE, MESH_FACE);
+			}
+			if(nk_button_label(self->nk, "clone"))
+			{
+				mesh_t *mesh = c_model(&self->selected)->mesh;
+				c_editmode_select(self,
+						entity_new(c_model_new(mesh_clone(mesh), mat_new("k"),
+								1, 1)));
+			}
+		}
+	}
+	nk_end(self->nk);
+	return res;
+}
+
 int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 {
 	c_name_t *name = c_name(&ent);
@@ -607,7 +676,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 			NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE);
 	if (res)
 	{
-		c_editmode_shell(self);
+		/* c_editmode_shell(self); */
 		int i;
 
 		signal_t *sig = ecm_get_signal(sig("component_menu"));
@@ -705,6 +774,7 @@ int c_editmode_draw(c_editmode_t *self)
 
 	if(self->nk && (self->visible || self->control))
 	{
+		c_editmode_commands(self);
 		int e;
 		for(e = 0; e < self->open_textures_count; e++)
 		{
@@ -780,6 +850,8 @@ REG()
 	ct_listener(ct, WORLD, sig("mouse_move"), c_editmode_mouse_move);
 
 	ct_listener(ct, WORLD, sig("world_draw"), c_editmode_draw);
+
+	ct_listener(ct, WORLD | 50, sig("component_menu"), c_editmode_component_menu);
 
 	ct_listener(ct, WORLD, sig("mouse_press"), c_editmode_mouse_press);
 

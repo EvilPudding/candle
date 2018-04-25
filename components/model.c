@@ -15,6 +15,105 @@ int c_model_menu(c_model_t *self, void *ctx);
 int g_update_id = 0;
 vs_t *g_model_vs = NULL;
 
+struct edit_tool g_edit_tools[32];
+int g_edit_tools_count = 0;
+
+static int tool_circle_gui(void *ctx, struct conf_circle *conf)
+{
+	nk_property_float(ctx, "#radius:", -10000, &conf->radius, 10000, 0.1, 0.05);
+	nk_property_int(ctx, "#segments:", 1, &conf->segments, 1000, 1, 1);
+	return 0;
+}
+
+static int tool_sphere_gui(void *ctx, void *conf)
+{
+	return 0;
+}
+
+static int tool_icosphere_gui(void *ctx, struct conf_ico *conf)
+{
+	nk_property_int(ctx, "#subdivisions:", 0, &conf->subdivisions, 4, 1, 1);
+
+	return 0;
+}
+
+static int tool_cube_gui(void *ctx, void *conf)
+{
+	return 0;
+}
+
+static int tool_extrude_gui(void *ctx, struct conf_extrude *conf)
+{
+	nk_property_float(ctx, "#x:", -10000, &conf->offset.x, 10000, 0.1, 0.05);
+	nk_property_float(ctx, "#y:", -10000, &conf->offset.y, 10000, 0.1, 0.05);
+	nk_property_float(ctx, "#z:", -10000, &conf->offset.z, 10000, 0.1, 0.05);
+	nk_property_float(ctx, "#w:", -10000, &conf->offset.w, 10000, 0.1, 0.05);
+	nk_property_float(ctx, "#scale:", -10000, &conf->scale, 10000, 0.1, 0.05);
+	nk_property_int(ctx, "#steps:", 1, &conf->steps, 1000, 1, 1);
+	return 0;
+}
+
+static mesh_t *tool_circle_edit(mesh_t *mesh, struct conf_circle *conf)
+{
+	mesh = mesh_clone(mesh);
+	mesh_circle(mesh, conf->radius, conf->segments);
+	mesh_select(mesh, SEL_EDITING, MESH_EDGE, -1);
+	return mesh;
+}
+
+static int tool_sphere_edit(void)
+{
+	return 0;
+}
+
+static mesh_t *tool_icosphere_edit(
+		mesh_t *last, struct conf_ico *new,
+		mesh_t *state, struct conf_ico *old)
+{
+	if(new->subdivisions > old->subdivisions)
+	{
+		mesh_select(state, SEL_EDITING, MESH_FACE, -1);
+		mesh_sphere_subdivide(state, new->subdivisions - old->subdivisions);
+		mesh_select(state, SEL_EDITING, MESH_FACE, -1);
+	}
+	else
+	{
+		state = mesh_clone(last);
+
+		mesh_lock(state);
+		mesh_load(state, "icosahedron.obj");
+		if(new->subdivisions)
+		{
+			mesh_select(state, SEL_EDITING, MESH_FACE, -1);
+			mesh_sphere_subdivide(state, new->subdivisions);
+		}
+		mesh_unlock(state);
+		mesh_select(state, SEL_EDITING, MESH_FACE, -1);
+	}
+	return state;
+}
+
+static mesh_t *tool_cube_edit(mesh_t *mesh, struct conf_cube *conf)
+{
+	mesh = mesh_clone(mesh);
+	mesh_cube(mesh, conf->size, conf->inverted, 1);
+	return mesh;
+}
+
+static mesh_t *tool_extrude_edit(mesh_t *last, struct conf_extrude *conf)
+{
+	mesh_t *state = mesh_clone(last);
+	if(vector_count(state->faces))
+	{
+		mesh_extrude_faces(state, conf->steps, conf->offset, conf->scale, NULL);
+	}
+	else
+	{
+		mesh_extrude_edges(state, conf->steps, conf->offset, conf->scale, NULL);
+	}
+	return state;
+}
+
 static void c_model_init(c_model_t *self)
 {
 	if(!g_missing_mat)
@@ -61,6 +160,7 @@ void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset)
 	self->layers[i].cull_back = 1;
 	self->layers[i].wireframe = 0;
 	self->layers[i].offset = 0;
+	self->layers[i].smooth_angle = 0.4f;
 	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
 }
 
@@ -73,8 +173,84 @@ c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow, int visible)
 	self->mesh = mesh;
 	self->cast_shadow = cast_shadow;
 	self->visible = visible;
+	self->history = vector_new(sizeof(mesh_history_t), FIXED_ORDER, NULL, NULL);
 
 	return self;
+}
+
+void c_model_run_command(c_model_t *self, mesh_t *last, mesh_history_t *cmd)
+{
+	struct edit_tool *tool = &g_edit_tools[cmd->type];
+	mesh_t *result = tool->edit(last,		cmd->conf_new,
+								cmd->state, cmd->conf_old);
+	if(result != cmd->state)
+	{
+		mesh_destroy(cmd->state);
+	}
+	memcpy(cmd->conf_old, cmd->conf_new, tool->size);
+	cmd->state = result;
+}
+
+void c_model_propagate_edit(c_model_t *self, int cmd_id)
+{
+	if(cmd_id >= vector_count(self->history)) return;
+
+	mesh_t *last = NULL;
+	if(cmd_id > 0)
+	{
+		mesh_history_t *prev = vector_get(self->history, cmd_id - 1);
+		last = prev->state;
+	}
+	int i;
+	for(i = cmd_id; i < vector_count(self->history); i++)
+	{
+		mesh_history_t *cmd = vector_get(self->history, i);
+		if(i > cmd_id)
+		{
+			mesh_destroy(cmd->state);
+			cmd->state = NULL;
+		}
+		c_model_run_command(self, last, cmd);
+		last = cmd->state;
+	}
+	self->mesh = last;
+	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
+}
+
+void c_model_remove_edit(c_model_t *self, int cmd_id)
+{
+	mesh_history_t *cmd = vector_get(self->history, cmd_id);
+	if(cmd->state) mesh_destroy(cmd->state);
+	vector_remove(self->history, cmd_id);
+
+	mesh_history_t *last = vector_get(self->history, vector_count(self->history) - 1);
+	if(last)
+	{
+		self->mesh = last->state;
+	}
+	else
+	{
+		self->mesh = NULL;
+	}
+
+	c_model_propagate_edit(self, cmd_id);
+
+}
+
+
+void c_model_edit(c_model_t *self, mesh_edit_t type, geom_t target)
+{
+	struct edit_tool *tool = &g_edit_tools[type];
+	mesh_history_t command = {NULL, target, type,
+		calloc(1, tool->size), calloc(1, tool->size)};
+
+	if(tool->defaults)
+	{
+		memcpy(command.conf_new, tool->defaults, tool->size);
+	}
+
+	vector_add(self->history, &command); 
+	c_model_propagate_edit(self, vector_count(self->history) - 1);
 }
 
 c_model_t *c_model_paint(c_model_t *self, int layer, mat_t *mat)
@@ -108,6 +284,13 @@ c_model_t *c_model_cull_face(c_model_t *self, int layer, int inverted)
 		self->layers[layer].cull_back = 1;
 	}
 	g_update_id++;
+	return self;
+}
+
+c_model_t *c_model_smooth(c_model_t *self, int layer, int smooth)
+{
+	self->layers[layer].smooth_angle = smooth;
+	mesh_modified(self->mesh);
 	return self;
 }
 
@@ -205,9 +388,7 @@ int c_model_render_at(c_model_t *self, c_node_t *node, int flags)
 
 	if(self->xray)
 	{
-		glDisable(GL_DEPTH_TEST);
-		/* glEnable(GL_BLEND); */
-		/* glBlendFunc(GL_SRC_ALPHA, GL_ONE); */
+		glDepthRange(0, 0.01);
 	}
 	c_mesh_gl_draw(c_mesh_gl(self), flags);
 	if(self->xray)
@@ -221,6 +402,7 @@ int c_model_render_at(c_model_t *self, c_node_t *node, int flags)
 			glEnable(GL_DEPTH_TEST);
 		}
 	}
+	glDepthRange(0.0, 1.00);
 
 	return CONTINUE;
 }
@@ -250,6 +432,31 @@ int c_model_menu(c_model_t *self, void *ctx)
 		self->cast_shadow = new_value;
 		g_update_id++;
 	}
+
+	/* if(nk_tree_push(ctx, NK_TREE_TAB, "Edit", NK_MAXIMIZED)) */
+	/* { */
+		for(i = 0; i < vector_count(self->history); i++)
+		{
+			mesh_history_t *cmd = vector_get(self->history, i);
+			struct edit_tool *tool = &g_edit_tools[cmd->type];
+			if(nk_tree_push_id(ctx, NK_TREE_TAB, tool->name, NK_MAXIMIZED, i))
+			{
+				tool->gui(ctx, cmd->conf_new);
+				if(memcmp(cmd->conf_old, cmd->conf_new, tool->size))
+				{
+					c_model_propagate_edit(self, i);
+				}
+
+				if(nk_button_label(ctx, "remove"))
+				{
+					c_model_remove_edit(self, i);
+				}
+				nk_tree_pop(ctx);
+			}
+		}
+		/* nk_tree_pop(ctx); */
+	/* } */
+
 	for(i = 0; i < self->layers_num; i++)
 	{
 		char buffer[32];
@@ -264,6 +471,17 @@ int c_model_menu(c_model_t *self, void *ctx)
 			{
 				layer->wireframe = new_value;
 				g_update_id++;
+			}
+
+			float smooth = layer->smooth_angle;
+			nk_property_float(ctx, "#smooth:", 0.0f, &smooth,
+					1.0f, 0.05f, 0.05f);
+			if(smooth != layer->smooth_angle)
+			{
+				layer->smooth_angle = smooth;
+				/* self->mesh->update_id++; */
+				mesh_modified(self->mesh);
+				mesh_update(self->mesh);
 			}
 
 			new_value = nk_check_label(ctx, "Cull front",
@@ -306,6 +524,18 @@ int c_model_scene_changed(c_model_t *self, entity_t *entity)
 	return CONTINUE;
 }
 
+void add_tool(char *name, tool_gui_cb gui, tool_edit_cb edit, size_t size,
+		void *defaults)
+{
+	struct edit_tool tool = {gui, edit, size};
+	strcpy(tool.name, name);
+	if(defaults)
+	{
+		tool.defaults = calloc(1, size);
+		memcpy(tool.defaults, defaults, size);
+	}
+	g_edit_tools[g_edit_tools_count++] = tool;
+}
 
 REG()
 {
@@ -330,4 +560,21 @@ REG()
 	ct_listener(ct, WORLD, sig("render_shadows"), c_model_render_shadows);
 
 	ct_listener(ct, WORLD, sig("render_selectable"), c_model_render_selectable);
+
+	add_tool("circle", (tool_gui_cb)tool_circle_gui,
+			(tool_edit_cb)tool_circle_edit,
+		sizeof(struct conf_circle), &(struct conf_circle){2, 10});
+
+	add_tool("sphere", (tool_gui_cb)tool_sphere_gui,
+			(tool_edit_cb)tool_sphere_edit, sizeof(struct conf_sphere), NULL);
+
+	add_tool("cube", (tool_gui_cb)tool_cube_gui, (tool_edit_cb)tool_cube_edit,
+		sizeof(struct conf_cube), NULL);
+
+	add_tool("icosphere", (tool_gui_cb)tool_icosphere_gui,
+			(tool_edit_cb)tool_icosphere_edit, sizeof(struct conf_ico), NULL);
+
+	add_tool("extrude", (tool_gui_cb)tool_extrude_gui,
+		(tool_edit_cb)tool_extrude_edit, sizeof(struct conf_extrude),
+		&(struct conf_extrude){vec4(0.0f, 2.0f, 0.0f, 0.0f), 1.0f, 1});
 }
