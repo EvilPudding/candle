@@ -105,11 +105,13 @@ static mesh_t *tool_extrude_edit(mesh_t *last, struct conf_extrude *conf)
 	mesh_t *state = mesh_clone(last);
 	if(vector_count(state->faces))
 	{
+#ifdef MESH4
 		mesh_extrude_faces(state, conf->steps, conf->offset, conf->scale, NULL);
+#endif
 	}
 	else
 	{
-		mesh_extrude_edges(state, conf->steps, conf->offset, conf->scale, NULL);
+		mesh_extrude_edges(state, conf->steps, conf->offset.xyz, conf->scale, NULL);
 	}
 	return state;
 }
