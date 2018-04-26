@@ -96,7 +96,7 @@ static mesh_t *tool_icosphere_edit(
 static mesh_t *tool_cube_edit(mesh_t *mesh, struct conf_cube *conf)
 {
 	mesh = mesh_clone(mesh);
-	mesh_cube(mesh, conf->size, conf->inverted, 1);
+	mesh_cube(mesh, conf->size, 1, conf->inverted);
 	return mesh;
 }
 
@@ -111,7 +111,7 @@ static mesh_t *tool_extrude_edit(mesh_t *last, struct conf_extrude *conf)
 	}
 	else
 	{
-		mesh_extrude_edges(state, conf->steps, conf->offset.xyz, conf->scale, NULL);
+		mesh_extrude_edges(state, conf->steps, VEC3(_vec3(conf->offset)), conf->scale, NULL);
 	}
 	return state;
 }
@@ -162,7 +162,7 @@ void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset)
 	self->layers[i].cull_back = 1;
 	self->layers[i].wireframe = 0;
 	self->layers[i].offset = 0;
-	self->layers[i].smooth_angle = 0.4f;
+	self->layers[i].smooth_angle = 0.6f;
 	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
 }
 
@@ -571,7 +571,8 @@ REG()
 			(tool_edit_cb)tool_sphere_edit, sizeof(struct conf_sphere), NULL);
 
 	add_tool("cube", (tool_gui_cb)tool_cube_gui, (tool_edit_cb)tool_cube_edit,
-		sizeof(struct conf_cube), NULL);
+		sizeof(struct conf_cube),
+		&(struct conf_cube){1.0f, 0});
 
 	add_tool("icosphere", (tool_gui_cb)tool_icosphere_gui,
 			(tool_edit_cb)tool_icosphere_edit, sizeof(struct conf_ico), NULL);

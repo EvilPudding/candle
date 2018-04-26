@@ -314,25 +314,25 @@ static int c_renderer_gl(c_renderer_t *self)
 		buffer_new("diffuse",	1, 4),
 		buffer_new("depth",		1, -1)
 	);
-	texture_t *ssao =		texture_new_2D(1, 1, 0, 0,
+	texture_t *ssao =		texture_new_2D(1, 1, 0,
 		buffer_new("occlusion",	1, 4)
 	);
-	texture_t *rendered =	texture_new_2D(1, 1, 0, 0,
+	texture_t *rendered =	texture_new_2D(1, 1, 0,
 		buffer_new("color",	1, 4)
 	);
-	texture_t *refr =		texture_new_2D(1, 1, 0, 1,
+	texture_t *refr =		texture_new_2D(1, 1, TEX_MIPMAP,
 		buffer_new("color",	1, 4)
 	);
-	texture_t *final =		texture_new_2D(1, 1, 0, 0,
+	texture_t *final =		texture_new_2D(1, 1, TEX_INTERPOLATE,
 		buffer_new("color",	1, 4)
 	);
-	texture_t *bloom =		texture_new_2D(1, 1, 0, 0,
+	texture_t *bloom =		texture_new_2D(1, 1, 0,
 		buffer_new("color",	1, 4)
 	);
-	texture_t *bloom2 =		texture_new_2D(1, 1, 0, 0,
+	texture_t *bloom2 =		texture_new_2D(1, 1, 0,
 		buffer_new("color",	1, 4)
 	);
-	texture_t *selectable =	texture_new_2D(1, 1, 0, 0,
+	texture_t *selectable =	texture_new_2D(1, 1, 0,
 		buffer_new("geomid",	1, 2),
 		buffer_new("id",		1, 2),
 		buffer_new("depth",		1, -1)

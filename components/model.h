@@ -22,7 +22,7 @@ struct conf_ico
 };
 struct conf_cube
 {
-	int size;
+	float size;
 	int inverted;
 };
 struct conf_extrude

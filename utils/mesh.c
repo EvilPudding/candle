@@ -1277,11 +1277,7 @@ void mesh_remove_edge(mesh_t *self, int edge_i)
 	if(!edge) return;
 
 	edge_t *pair = e_pair(edge, self);
-	if(pair)
-	{
-		pair->pair = -1;
-		mesh_get_pair_edge(self, edge->pair);
-	}
+
 	mesh_edge_remove_from_hash(self, edge);
 
 	edge_t *cpair = e_cpair(edge, self);
@@ -1309,6 +1305,11 @@ void mesh_remove_edge(mesh_t *self, int edge_i)
 	if(face)
 	{
 		mesh_remove_face(self, edge->face);
+	}
+	if(pair)
+	{
+		pair->pair = -1;
+		mesh_get_pair_edge(self, edge->pair);
 	}
 
 	mesh_modified(self);
@@ -2140,8 +2141,8 @@ void mesh_cube(mesh_t *self, float size, float tex_scale, int inverted_normals)
 	size /= 2;
 	vec3_t p1 = vec3(-size, -size, -size);
 	vec3_t p2 = vec3(size, size, size);
-	mesh_cuboid(self, tex_scale, inverted_normals?p1:p2,
-			inverted_normals?p2:p1);
+	mesh_cuboid(self, tex_scale, inverted_normals?p2:p1,
+			inverted_normals?p1:p2);
 }
 
 void mesh_wait(mesh_t *self)
@@ -2155,7 +2156,7 @@ void mesh_load_scene(mesh_t *self, const void *grp)
 	mesh_lock(self);
 	const struct aiMesh *group = grp;
 	strcpy(self->name, "load_result");
-	/* self->has_texcoords = 0; */
+	self->has_texcoords = 0;
 
 	int offset = vector_count(self->verts);
 	int j;

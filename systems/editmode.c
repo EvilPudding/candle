@@ -19,8 +19,8 @@ static int c_editmode_activate_loader(c_editmode_t *self);
 void c_editmode_open_entity(c_editmode_t *self, entity_t ent);
 static void c_editmode_update_axis(c_editmode_t *self);
 
-#define MAX_VERTEX_MEMORY 512 * 1024
-#define MAX_ELEMENT_MEMORY 128 * 1024
+#define MAX_VERTEX_MEMORY (512 * 1024) / 8
+#define MAX_ELEMENT_MEMORY (128 * 1024) / 8
 
 mat_t *g_sel_mat = NULL;
 

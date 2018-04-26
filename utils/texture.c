@@ -111,8 +111,10 @@ void texture_update_brightness(texture_t *self)
 
 	glGetTexImage(self->target, 9, self->bufs[0].format, GL_UNSIGNED_BYTE,
 			self->bufs[0].data);
-	int value = *(char*)self->bufs[0].data;
-	self->brightness = ((float)value) / 256.0f;
+	int r = *(char*)self->bufs[0].data;
+	int g = *(char*)self->bufs[1].data;
+	int b = *(char*)self->bufs[2].data;
+	self->brightness = ((float)(r + g + b)) / 256.0f;
 }
 
 void texture_alloc_buffer(texture_t *self, int i)
@@ -121,7 +123,7 @@ void texture_alloc_buffer(texture_t *self, int i)
 	glTexImage2D(self->target, 0, self->bufs[i].internal,
 			self->width, self->height,
 			0, self->bufs[i].format,
-			self->bufs[i].dims == -1 ? GL_FLOAT : GL_UNSIGNED_BYTE, NULL);
+			(self->bufs[i].dims == -1) ? GL_FLOAT : GL_UNSIGNED_BYTE, NULL);
 
 	self->framebuffer_ready = 0;
 	self->bufs[i].ready = 0;
@@ -193,7 +195,7 @@ int buffer_new(const char *name, int is_float, int dims)
 	}
 
 	glBindTexture(targ, texture->bufs[i].id); glerr();
-	glTexParameterf(targ, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(targ, GL_TEXTURE_MAG_FILTER, texture->interpolate ? GL_LINEAR : GL_NEAREST);
 	glTexParameterf(targ, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(targ, GL_TEXTURE_WRAP_S, wrap);
 	glTexParameteri(targ, GL_TEXTURE_WRAP_T, wrap);
@@ -248,8 +250,7 @@ texture_t *_texture_new_2D_pre
 (
 	uint width,
 	uint height,
-	uint repeat,
-	uint mipmaped
+	uint flags
 )
 {
 	texture_t *self = calloc(1, sizeof *self);
@@ -257,12 +258,12 @@ texture_t *_texture_new_2D_pre
 
 	self->target = GL_TEXTURE_2D;
 
-	self->repeat = repeat;
+	self->repeat = !!(flags & TEX_REPEAT);
+	self->mipmaped = !!(flags & TEX_MIPMAP);
+	self->interpolate = !!(flags & TEX_INTERPOLATE);
 
 	self->width = width;
 	self->height = height;
-
-	self->mipmaped = mipmaped;
 
 	return self;
 }

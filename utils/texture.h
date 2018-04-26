@@ -38,21 +38,24 @@ typedef struct
 	int draw_id;
 	int prev_id;
 	int mipmaped;
+	int interpolate;
 } texture_t;
 
 texture_t *texture_from_file(const char *filename);
+#define TEX_MIPMAP			0x01
+#define TEX_REPEAT			0x02
+#define TEX_INTERPOLATE		0x03
 
 texture_t *_texture_new_2D_pre
 (
 	uint width,
 	uint height,
-	uint repeat,
-	uint mipmaped
+	uint flags
 );
 
 extern __thread texture_t *_g_tex_creating;
-#define texture_new_2D(w, h, r, m, ...) \
-	(_texture_new_2D_pre(w, h, r, m),_texture_new(0, ##__VA_ARGS__))
+#define texture_new_2D(w, h, f, ...) \
+	(_texture_new_2D_pre(w, h, f),_texture_new(0, ##__VA_ARGS__))
 
 texture_t *_texture_new(int ignore, ...);
 

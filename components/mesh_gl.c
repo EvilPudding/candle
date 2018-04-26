@@ -388,7 +388,7 @@ int glg_update_ram(glg_t *self)
 	int i;
 	if(vector_count(faces))
 	{
-		mesh_update_smooth_normals(mesh, layer->smooth_angle);
+		mesh_update_smooth_normals(mesh, 1.0f - layer->smooth_angle);
 		int triangle_count = 0;
 		for(i = 0; i < vector_count(faces); i++)
 		{
