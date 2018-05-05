@@ -154,6 +154,20 @@ void _signal_init(uint id, uint size)
 				(vector_compare_cb)listeners_compare)};
 }
 
+void ecm_destroy_all()
+{
+	uint i;
+	int *iter;
+	for(i = 0, iter = g_ecm->entities_busy;
+			i < g_ecm->entities_busy_size; i++, iter++)
+	{
+		if(*iter)
+		{
+			entity_destroy(i);
+		}
+	}
+}
+
 entity_t ecm_new_entity()
 {
 	uint i;
@@ -286,15 +300,43 @@ ct_t *_ct_new(const char *name, uint hash, uint size, init_cb init,
 	return ct;
 }
 
-void ecm_clean2(void)
+void ecm_clean2(int force)
 {
+	if(force)
+	{
+		int p, i;
+		ct_t *ct;
+		ecm_foreach_ct(ct,
+		{
+			if(ct->destroy)
+			{
+				for(p = 0; p < ct->pages_size; p++)
+				{
+					struct comp_page *page = &ct->pages[p];
+					for(i = 0; i < page->components_size; i++)
+					{
+						c_t *c = ct_get_at(ct, p, i);
+						ct->destroy(c);
+					}
+
+				}
+			}
+		});
+		goto end;
+	}
+
 	ct_t *dest = ecm_get(ref("destroyed"));
 
 	while(dest->pages[0].components_size)
 	{
+
 		c_destroyed_t *dc = (c_destroyed_t*)ct_get_at(dest, 0, 0);
 		entity_t ent = c_entity(dc);
-		if(!ent) continue;
+		if(!ent)
+		{
+			printf("bug\n");
+			exit(1);
+		}
 
 		ct_t *ct;
 		ecm_foreach_ct(ct,
@@ -338,6 +380,7 @@ void ecm_clean2(void)
 			}
 		});
 	}
+end:
 
 	g_ecm->dirty = 0;
 	steps = 0;
@@ -345,18 +388,18 @@ void ecm_clean2(void)
 	SDL_SemPost(sem2);
 }
 
-void ecm_clean()
+void ecm_clean(int force)
 {
-	if(!g_ecm->dirty) return;
+	if(!g_ecm->dirty && !force) return;
 	if(steps == 2)
 	{
-		ecm_clean2();
+		ecm_clean2(force);
 	}
 	else if(steps == 0)
 	{
 		steps++;
 		SDL_SemWait(sem1);
-		ecm_clean2();
+		ecm_clean2(force);
 	}
 	else
 	{

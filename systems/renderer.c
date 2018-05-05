@@ -326,10 +326,10 @@ static int c_renderer_gl(c_renderer_t *self)
 	texture_t *final =		texture_new_2D(1, 1, TEX_INTERPOLATE,
 		buffer_new("color",	1, 4)
 	);
-	texture_t *bloom =		texture_new_2D(1, 1, 0,
+	texture_t *bloom =		texture_new_2D(1, 1, TEX_INTERPOLATE,
 		buffer_new("color",	1, 4)
 	);
-	texture_t *bloom2 =		texture_new_2D(1, 1, 0,
+	texture_t *bloom2 =		texture_new_2D(1, 1, TEX_INTERPOLATE,
 		buffer_new("color",	1, 4)
 	);
 	texture_t *selectable =	texture_new_2D(1, 1, 0,

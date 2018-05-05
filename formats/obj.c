@@ -191,11 +191,13 @@ void mesh_load_obj(mesh_t *self, const char *filename)
 	}
 
     count(fp, &v, &vt, &vn, &f);
-    vec3_t *tempNorm = malloc(vn * sizeof(vec3_t));
-    vec2_t *tempText = malloc(vt * sizeof(vec2_t));
+    vec3_t *tempNorm = malloc((vn + 1) * sizeof(vec3_t));
+    vec2_t *tempText = malloc((vt + 1) * sizeof(vec2_t));
     struct face *tempFace = malloc(f * sizeof(struct face));
 
-    readProperty(self, fp, tempNorm, tempText, tempFace);
+	tempNorm[0] = Z3;
+	tempText[0] = Z2;
+    readProperty(self, fp, &tempNorm[1], &tempText[1], tempFace);
 
 
 	for(i=0;i<f;i++)
@@ -204,17 +206,17 @@ void mesh_load_obj(mesh_t *self, const char *filename)
 		if(face->nv == 3)
 		{
 			mesh_add_triangle(self,
-					face->v[0].v, tempNorm[face->v[0].n], tempText[face->v[0].t],
-					face->v[1].v, tempNorm[face->v[1].n], tempText[face->v[1].t],
-					face->v[2].v, tempNorm[face->v[2].n], tempText[face->v[2].t]);
+					face->v[0].v, tempNorm[face->v[0].n + 1], tempText[face->v[0].t + 1],
+					face->v[1].v, tempNorm[face->v[1].n + 1], tempText[face->v[1].t + 1],
+					face->v[2].v, tempNorm[face->v[2].n + 1], tempText[face->v[2].t + 1]);
 		}
 		else if(face->nv == 4)
 		{
 			mesh_add_quad(self,
-					face->v[0].v, tempNorm[face->v[0].n], tempText[face->v[0].t],
-					face->v[1].v, tempNorm[face->v[1].n], tempText[face->v[1].t],
-					face->v[2].v, tempNorm[face->v[2].n], tempText[face->v[2].t],
-					face->v[3].v, tempNorm[face->v[3].n], tempText[face->v[3].t]);
+					face->v[0].v, tempNorm[face->v[0].n + 1], tempText[face->v[0].t + 1],
+					face->v[1].v, tempNorm[face->v[1].n + 1], tempText[face->v[1].t + 1],
+					face->v[2].v, tempNorm[face->v[2].n + 1], tempText[face->v[2].t + 1],
+					face->v[3].v, tempNorm[face->v[3].n + 1], tempText[face->v[3].t + 1]);
 		}
 	}
 

@@ -191,7 +191,7 @@ static int render_loop(void)
 			/* printf("\t%ld\n", self->render_id); */
 			entity_signal(entity_null, sig("world_draw"), NULL);
 
-			ecm_clean();
+			ecm_clean(0);
 
 			c_window_draw(c_window(&SYS));
 
@@ -211,6 +211,10 @@ static int render_loop(void)
 		/* SDL_Delay(16); */
 		/* SDL_Delay(1); */
 	}
+
+	ecm_clean(1);
+	loader_update(g_candle->loader);
+
 	return 1;
 }
 
@@ -230,11 +234,14 @@ static int ticker_loop(void)
 		int current = SDL_GetTicks();
 		float dt = (current - g_candle->last_update) / 1000.0;
 		entity_signal(entity_null, sig("world_update"), &dt);
-		ecm_clean();
+		ecm_clean(0);
 		g_candle->last_update = current;
 		SDL_Delay(16);
 	}
 	while(!g_candle->exit);
+
+	ecm_clean(1);
+
 	return 1;
 }
 

@@ -409,18 +409,18 @@ int glg_update_ram(glg_t *self)
 
 #ifdef MESH4
 
-			if(face->pair != -1)
-			{
-				cell_t *cell1 = f_cell(f_pair(face, mesh), mesh);
-				cell_t *cell0 = f_cell(face, mesh);
-				if(cell0 && cell1)
-				{
-					vec4_t n0 = get_cell_normal(mesh, cell0);
-					vec4_t n1 = get_cell_normal(mesh, cell1);
-					float dot = vec4_dot(n1, n0);
-					if(dot > 0.999) continue;
-				}
-			}
+			/* if(face->pair != -1) */
+			/* { */
+			/* 	cell_t *cell1 = f_cell(f_pair(face, mesh), mesh); */
+			/* 	cell_t *cell0 = f_cell(face, mesh); */
+			/* 	if(cell0 && cell1) */
+			/* 	{ */
+			/* 		vec4_t n0 = get_cell_normal(mesh, cell0); */
+			/* 		vec4_t n1 = get_cell_normal(mesh, cell1); */
+			/* 		float dot = vec4_dot(n1, n0); */
+			/* 		if(dot > 0.999) continue; */
+			/* 	} */
+			/* } */
 
 #endif
 

@@ -96,7 +96,7 @@ static mesh_t *tool_icosphere_edit(
 static mesh_t *tool_cube_edit(mesh_t *mesh, struct conf_cube *conf)
 {
 	mesh = mesh_clone(mesh);
-	mesh_cube(mesh, conf->size, 1, conf->inverted);
+	mesh_cube(mesh, conf->inverted?-conf->size:conf->size, 1);
 	return mesh;
 }
 

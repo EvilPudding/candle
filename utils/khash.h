@@ -223,11 +223,11 @@ static const double __ac_HASH_UPPER = 0.77;
 			}															\
 			if(h->keys) {												\
 				c->keys = (khkey_t*)kmalloc(h->n_buckets * sizeof(khkey_t)); \
-				memcpy(c->keys, h->keys, __ac_fsize(h->n_buckets) * sizeof(khkey_t)); \
+				memcpy(c->keys, h->keys, h->n_buckets * sizeof(khkey_t)); \
 			}															\
 			if(h->vals) {												\
 				c->vals = (khval_t*)kmalloc(h->n_buckets * sizeof(khval_t)); \
-				memcpy(c->vals, h->vals, __ac_fsize(h->n_buckets) * sizeof(khval_t)); \
+				memcpy(c->vals, h->vals, h->n_buckets * sizeof(khval_t)); \
 			}															\
 		}																\
 		return c;														\

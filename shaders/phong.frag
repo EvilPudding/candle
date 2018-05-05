@@ -60,6 +60,7 @@ void main()
 
 		if(sd < 0.95)
 		{
+			vec3 lcolor = light_intensity * light_color;
 
 
 			float lightAtt = 0.01;
@@ -68,7 +69,7 @@ void main()
 			float diffuseCoefficient = max(0.0, dot(c_nor, normalize(c_light_dir)));
 			/* FragColor = vec4(vec3(diffuseCoefficient / 10), 1.0f); return; */
 
-			vec3 frag_diffuse = light_intensity * diffuseCoefficient * dif * light_color;
+			vec3 frag_diffuse = diffuseCoefficient * dif * lcolor;
 
 			float l = point_to_light / light_radius;
 			float attenuation = clamp(1.0f - pow(l, 2), 0.0f, 1.0f);
@@ -87,7 +88,7 @@ void main()
 
 
 				float specularCoefficient = 0.0;
-				vec3 specularColor = spe.rgb * light_intensity;
+				vec3 specularColor = spe.rgb * light_intensity * lcolor;
 				float power = clamp(roughnessToSpecularPower(spe.a), 0.0f, 1.0f) * 10;
 
 				specularCoefficient = pow(clamp(-dot(eye_dir, reflect_dir), 0.0f, 1.0f), power);

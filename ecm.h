@@ -44,6 +44,13 @@ typedef int(*before_draw_cb)(c_t *self);
 #define REG() \
 	__attribute__((constructor (CONSTR_REG))) static void _register(void)
 
+#define ecm_foreach_c(vvar, code) { khint_t __i;		\
+	for (__i = kh_begin(g_ecm->cs); __i != kh_end(g_ecm->cs); ++__i) {		\
+		if (!kh_exist(g_ecm->cs,__i)) continue;						\
+		(vvar) = &kh_val(g_ecm->cs,__i);								\
+		code;												\
+	} }
+
 #define ecm_foreach_ct(vvar, code) { khint_t __i;		\
 	for (__i = kh_begin(g_ecm->cts); __i != kh_end(g_ecm->cts); ++__i) {		\
 		if (!kh_exist(g_ecm->cts,__i)) continue;						\
@@ -183,7 +190,8 @@ void ecm_init(void);
 entity_t ecm_new_entity(void);
 void ecm_add_reg(c_reg_cb reg);
 void ecm_register_all(void);
-void ecm_clean(void);
+void ecm_clean(int force);
+void ecm_destroy_all(void);
 
 void ecm_add_entity(entity_t *entity);
 /* uint ecm_register_system(ecm_t *self, void *system); */

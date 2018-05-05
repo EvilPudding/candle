@@ -1046,11 +1046,6 @@ static int mesh_get_pair_face(mesh_t *self, int face_id)
 			int pair_id = kh_value(self->faces_hash, k);
 			face_t *pair = m_face(self, pair_id);
 
-			if(!pair)
-			{
-				printf("%p", self->sem);
-				exit(1);
-			}
 			face->pair = pair_id;
 			kh_del(id, self->faces_hash, k);
 
@@ -1063,22 +1058,20 @@ static int mesh_get_pair_face(mesh_t *self, int face_id)
 			int f2 = f_edge(face, 2, self)->v;
 
 			int v0 = f_edge(pair, 0, self)->v;
-			int v1 = f_edge(pair, 1, self)->v;
-			int v2 = f_edge(pair, 2, self)->v;
 
-			if(f0 == v0 && f1 == v2 && f2 == v1 )
+			if(f0 == v0)
 			{
 				mesh_edge_cpair(self, face->e[0], pair->e[2]);
 				mesh_edge_cpair(self, face->e[1], pair->e[1]);
 				mesh_edge_cpair(self, face->e[2], pair->e[0]);
 			}
-			else if(f1 == v0 && f2 == v2 && f0 == v1 )
+			else if(f1 == v0)
 			{
 				mesh_edge_cpair(self, face->e[1], pair->e[2]);
 				mesh_edge_cpair(self, face->e[2], pair->e[1]);
 				mesh_edge_cpair(self, face->e[0], pair->e[0]);
 			}
-			else if(f2 == v0 && f0 == v2 && f1 == v1 )
+			else if(f2 == v0)
 			{
 				mesh_edge_cpair(self, face->e[2], pair->e[2]);
 				mesh_edge_cpair(self, face->e[0], pair->e[1]);
@@ -1701,7 +1694,7 @@ int mesh_add_tetrahedral_prism(mesh_t *self, int fid, int v0, int v1, int v2)
 
 	int verts[6] = { v0, v1, v2, e0->v, e1->v, e2->v };
 
-	for(int i = 0; i < 5; i++) for(int j = i+1; j < 6; j++)
+	for(int i = 0; i < 5; i++) for(int j = i + 1; j < 6; j++)
 	{
 		if(verts[i] == verts[j])
 		{
@@ -1941,7 +1934,7 @@ mesh_t *mesh_clone(mesh_t *self)
 	{
 		clone = malloc(sizeof(*self));
 		*clone = *self;
-		self->changes = 0;
+		clone->changes = 0;
 		clone->faces_hash = kh_clone(id, self->faces_hash);
 		clone->edges_hash = kh_clone(id, self->edges_hash);
 		clone->verts = vector_clone(self->verts);
@@ -2136,13 +2129,26 @@ void mesh_cuboid(mesh_t *self, float tex_scale, vec3_t p1, vec3_t p2)
 }
 
 
-void mesh_cube(mesh_t *self, float size, float tex_scale, int inverted_normals)
+void mesh_cube(mesh_t *self, float size, float tex_scale)
 {
 	size /= 2;
-	vec3_t p1 = vec3(-size, -size, -size);
-	vec3_t p2 = vec3(size, size, size);
-	mesh_cuboid(self, tex_scale, inverted_normals?p2:p1,
-			inverted_normals?p1:p2);
+	int v[8] = {
+		mesh_add_vert(self, VEC3(size, size, size)),
+		mesh_add_vert(self, VEC3(-size, size, size)),
+		mesh_add_vert(self, VEC3(-size, -size, size)),
+		mesh_add_vert(self, VEC3(size, -size, size)),
+		mesh_add_vert(self, VEC3(size, size, -size)),
+		mesh_add_vert(self, VEC3(-size, size, -size)),
+		mesh_add_vert(self, VEC3(-size, -size, -size)),
+		mesh_add_vert(self, VEC3(size, -size, -size))
+	};
+
+	mesh_add_quad(self, v[0], Z3, Z2, v[1], Z3, Z2, v[2], Z3, Z2, v[3], Z3, Z2);
+	mesh_add_quad(self, v[5], Z3, Z2, v[4], Z3, Z2, v[7], Z3, Z2, v[6], Z3, Z2);
+	mesh_add_quad(self, v[6], Z3, Z2, v[2], Z3, Z2, v[1], Z3, Z2, v[5], Z3, Z2);
+	mesh_add_quad(self, v[3], Z3, Z2, v[7], Z3, Z2, v[4], Z3, Z2, v[0], Z3, Z2);
+	mesh_add_quad(self, v[7], Z3, Z2, v[3], Z3, Z2, v[2], Z3, Z2, v[6], Z3, Z2);
+	mesh_add_quad(self, v[5], Z3, Z2, v[1], Z3, Z2, v[0], Z3, Z2, v[4], Z3, Z2);
 }
 
 void mesh_wait(mesh_t *self)
