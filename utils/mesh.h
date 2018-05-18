@@ -34,7 +34,7 @@ typedef struct vec3_t(*support_cb)(mesh_t *self, const vec3_t dir);
 #	define D3(...) d3(__VA_ARGS__)
 #endif
 
-typedef float(*modifier_cb)(mesh_t *mesh, float percent);
+typedef float(*modifier_cb)(mesh_t *mesh, float percent, void *usrptr);
 
 typedef int(*iter_cb)(mesh_t *mesh, void *selection);
 
@@ -196,6 +196,16 @@ typedef struct mesh_t
 	SDL_sem *sem;
 } mesh_t;
 
+typedef enum
+{
+	DIR_X,
+	DIR_Y,
+	DIR_Z,
+#ifdef MESH4
+	DIR_W,
+#endif
+} direction_t;
+
 #ifdef MESH4
 #define m_cell(m, i) ((cell_t*)vector_get(m->cells, i))
 #endif
@@ -211,13 +221,13 @@ void mesh_destroy(mesh_t *self);
 void mesh_load(mesh_t *self, const char *filename);
 void mesh_load_scene(mesh_t *self, const void *scene);
 void mesh_quad(mesh_t *self);
-void mesh_circle(mesh_t *self, float radius, int segments);
+void mesh_circle(mesh_t *self, float radius, int segments, vecN_t dir);
 mesh_t *mesh_torus(float radius, float inner_radius, int segments,
 		int inner_segments);
 void mesh_cube(mesh_t *self, float size, float tex_scale);
 
 void mesh_clear(mesh_t *self);
-void mesh_sphere_subdivide(mesh_t *mesh, int subdivisions);
+void mesh_sphere_subdivide(mesh_t *mesh, float radius, int subdivisions);
 mesh_t *mesh_lathe(mesh_t *mesh, float angle, int segments,
 		float x, float y, float z);
 
@@ -262,10 +272,17 @@ void mesh_unselect(mesh_t *self, int selection, geom_t geom, int id);
 void mesh_paint(mesh_t *self, vec4_t color);
 void mesh_weld(mesh_t *self, geom_t geom);
 void mesh_for_each_selected(mesh_t *self, geom_t geom, iter_cb cb);
+
 void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
-		float scale, modifier_cb modifier);
+		float scale, modifier_cb scale_cb, modifier_cb offset_cb,
+		void *usrptr);
 void mesh_extrude_edges(mesh_t *self, int steps, vecN_t offset,
-		float scale, modifier_cb modifier);
+		float scale, modifier_cb scale_cb, modifier_cb offset_cb,
+		void *usrptr);
+void mesh_translate_points(mesh_t *self, float percent, vecN_t offset,
+		float scale, modifier_cb scale_cb, modifier_cb offset_cb,
+		void *usrptr);
+
 void mesh_triangulate(mesh_t *self);
 void mesh_invert_normals(mesh_t *self);
 int mesh_edge_rotate_to_unpaired(mesh_t *self, int edge_id);
@@ -295,6 +312,7 @@ void mesh_restore(mesh_t *self);
 
 int mesh_update_flips(mesh_t *self);
 vecN_t mesh_get_selection_center(mesh_t *self);
+float mesh_get_selection_radius(mesh_t *self, vecN_t center);
 
 vertex_t *mesh_farthest(mesh_t *self, const vec3_t dir);
 float mesh_get_margin(const mesh_t *self);

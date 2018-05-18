@@ -16,7 +16,6 @@ entity_t g_light = entity_null;
 void c_light_init(c_light_t *self)
 {
 	self->color = vec4(1.0f);
-	self->intensity = 1;
 	self->shadow_size = 512;
 	self->radius = 5.0f;
 
@@ -30,12 +29,11 @@ void c_light_init(c_light_t *self)
 	}
 }
 
-c_light_t *c_light_new(float intensity, float radius,
+c_light_t *c_light_new(float radius,
 		vec4_t color, int shadow_size)
 {
 	c_light_t *self = component_new("light");
 
-	self->intensity = intensity;
 	self->color = color;
 	self->shadow_size = shadow_size;
 	self->radius = radius;
@@ -81,7 +79,6 @@ int c_light_render(c_light_t *self)
 int c_light_menu(c_light_t *self, void *ctx)
 {
 	nk_layout_row_dynamic(ctx, 0, 1);
-	nk_property_float(ctx, "intensity:", 0, &self->intensity, 1000, 0.1, 0.05);
 
 	int ambient = self->radius == -1.0f;
 	nk_checkbox_label(ctx, "ambient", &ambient);

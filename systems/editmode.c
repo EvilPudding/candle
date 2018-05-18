@@ -24,7 +24,7 @@ static void c_editmode_update_axis(c_editmode_t *self);
 
 mat_t *g_sel_mat = NULL;
 
-entity_t arrows, X, Y, Z, RX, RY, RZ;
+entity_t arrows, X, Y, Z, W, RX, RY, RZ;
 void c_editmode_init(c_editmode_t *self)
 {
 	self->spawn_pos = vec2(10, 10);
@@ -84,13 +84,15 @@ void c_editmode_coords(c_editmode_t *self)
 		RZ = entity_new(c_name_new("RZ"), c_axis_new(1, vec4(0.0f, 0.0f, 1.0f, 0.0f)));
 		RY = entity_new(c_name_new("RY"), c_axis_new(1, vec4(0.0f, 1.0f, 0.0f, 0.0f)));
 
-		c_spacial_rotate_Z(c_spacial(&X), -M_PI / 2.0f);
-		c_spacial_rotate_X(c_spacial(&Z), M_PI / 2.0f);
+		c_node_add(c_node(&arrows), 6, X, Y, Z, RX, RY, RZ);
 
 		c_spacial_rotate_Z(c_spacial(&RX), -M_PI / 2.0f);
 		c_spacial_rotate_X(c_spacial(&RZ), M_PI / 2.0f);
 
-		c_node_add(c_node(&arrows), 6, X, Y, Z, RX, RY, RZ);
+#ifdef MESH4
+		W = entity_new(c_name_new("W"), c_axis_new(0, vec4(0.0f, 0.0f, 0.0f, 1.0f)));
+		c_node_add(c_node(&arrows), 1, W);
+#endif
 	}
 	if(self->selected)
 	{
@@ -372,6 +374,9 @@ static void c_editmode_update_axis(c_editmode_t *self)
 	c_model(&X)->visible = self->selected && !self->tool;
 	c_model(&Y)->visible = self->selected && !self->tool;
 	c_model(&Z)->visible = self->selected && !self->tool;
+#ifdef MESH4
+	c_model(&W)->visible = self->selected && !self->tool;
+#endif
 }
 
 int c_editmode_key_up(c_editmode_t *self, char *key)
@@ -629,6 +634,16 @@ int c_editmode_commands(c_editmode_t *self)
 			}
 
 			c_model_edit(c_model(&self->selected), MESH_CUBE, MESH_FACE);
+			/* c_model_edit(c_model(&self->selected), MESH_SUBDIVIDE, MESH_FACE); */
+		}
+		if(nk_button_label(self->nk, "torus"))
+		{
+			if(!c_model(&self->selected))
+			{
+				c_editmode_select(self, entity_new(c_model_new(NULL, mat_new("k"), 1, 1)));
+			}
+
+			c_model_edit(c_model(&self->selected), MESH_TORUS, MESH_FACE);
 			/* c_model_edit(c_model(&self->selected), MESH_SUBDIVIDE, MESH_FACE); */
 		}
 		if(nk_button_label(self->nk, "icosphere"))

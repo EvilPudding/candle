@@ -10,35 +10,12 @@
 #include <systems/editmode.h>
 #include <candle.h>
 
-static mesh_t *g_axis_mesh = NULL;
 static mesh_t *g_rot_axis_mesh = NULL;
 
 static void c_axis_init(c_axis_t *self)
 {
-	if(!g_axis_mesh)
+	if(!g_rot_axis_mesh)
 	{
-		g_axis_mesh = mesh_new();
-		mesh_circle(g_axis_mesh, 0.03f, 8);
-
-		mesh_lock(g_axis_mesh);
-#ifdef MESH4
-		mesh_extrude_edges(g_axis_mesh, 1,
-				vec4(0.0, 0.5, 0.0, 0.0), 1.0f, NULL);
-		mesh_extrude_edges(g_axis_mesh, 1,
-				vec4(0.0, 0.0, 0.0, 0.0), 2.00f, NULL);
-		/* mesh_weld(g_axis_mesh, MESH_EDGE); */
-		mesh_extrude_edges(g_axis_mesh, 1,
-				vec4(0.0, 0.1, 0.0, 0.0), 0.01f, NULL);
-#else
-		mesh_extrude_edges(g_axis_mesh, 1,
-				vec3(0.0, 0.5, 0.0), 1.0f, NULL);
-		mesh_extrude_edges(g_axis_mesh, 1,
-				vec3(0.0, 0.0, 0.0), 2.00f, NULL);
-		mesh_extrude_edges(g_axis_mesh, 1,
-				vec3(0.0, 0.1, 0.0), 0.01f, NULL);
-#endif
-		mesh_unlock(g_axis_mesh);
-
 		g_rot_axis_mesh = mesh_torus(0.6f, 0.03f, 32, 3);
 		g_rot_axis_mesh->has_texcoords = 0;
 	}
@@ -49,11 +26,39 @@ c_axis_t *c_axis_new(int type, vec4_t dir)
 	c_axis_t *self = component_new("axis");
 
 	mat_t *m = mat_new("m");
-	m->emissive.color = vec4(_vec3(dir.xyz), 0.4f);
+	if(dir.w)
+	{
+		m->emissive.color = vec4(1.0f, 0.0f, 0.9f, 0.5f);
+	}
+	else
+	{
+		m->emissive.color = vec4(_vec3(dir.xyz), 0.5f);
+	}
 	self->type = type;
 
+	self->dir_mesh = mesh_new();
+	mesh_circle(self->dir_mesh, 0.03f, 8, dir);
+
+	mesh_lock(self->dir_mesh);
+#ifdef MESH4
+	mesh_extrude_edges(self->dir_mesh, 1,
+			vec4_scale(dir, 0.5), 1.0f, NULL, NULL, NULL);
+	mesh_extrude_edges(self->dir_mesh, 1,
+			vec4(0.0, 0.0, 0.0, 0.0), 1.70f, NULL, NULL, NULL);
+	mesh_extrude_edges(self->dir_mesh, 1,
+			vec4_scale(dir, 0.1), 0.01f, NULL, NULL, NULL);
+#else
+	mesh_extrude_edges(self->dir_mesh, 1,
+			vec4_scale(dir, 0.5).xyz, 1.0f, NULL, NULL, NULL);
+	mesh_extrude_edges(self->dir_mesh, 1,
+			vec4(0.0, 0.0, 0.0, 0.0).xyz, 1.70f, NULL, NULL, NULL);
+	mesh_extrude_edges(self->dir_mesh, 1,
+			vec4_scale(dir, 0.1).xyz, 0.01f, NULL, NULL, NULL);
+#endif
+	mesh_unlock(self->dir_mesh);
+
 	entity_add_component(c_entity(self),
-			c_model_new(type?g_rot_axis_mesh:g_axis_mesh, m, 0, !self->type));
+			c_model_new(type?g_rot_axis_mesh:self->dir_mesh, m, 0, !self->type));
 	c_model(self)->xray = 1;
 	c_model(self)->scale_dist = 0.2f;
 

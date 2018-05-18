@@ -429,7 +429,6 @@ static int shader_new_loader(shader_t *self)
 
 	self->u_shadow_map = glGetUniformLocation(self->program, "light_shadow_map"); glerr();
 	self->u_light_pos = glGetUniformLocation(self->program, "light_pos"); glerr();
-	self->u_light_intensity = glGetUniformLocation(self->program, "light_intensity"); glerr();
 	self->u_light_color = glGetUniformLocation(self->program, "light_color"); glerr();
 	self->u_light_radius = glGetUniformLocation(self->program, "light_radius"); glerr();
 
@@ -561,11 +560,11 @@ void shader_bind_light(shader_t *self, entity_t light)
 	/* if(!light_c->before_draw || light_c->before_draw((c_t*)light_c)) */
 	/* { */
 		glUniform1f(self->u_light_radius, light_c->radius);
-		glUniform1f(self->u_light_intensity, light_c->intensity);
-		glUniform3f(self->u_light_color,
+		glUniform4f(self->u_light_color,
 				light_c->color.r,
 				light_c->color.g,
-				light_c->color.b);
+				light_c->color.b,
+				light_c->color.a);
 	/* } */
 	/* else */
 	/* { */

@@ -185,8 +185,8 @@ entity_t c_sauces_model_get(c_sauces_t *self, const char *name, float scale)
 					light->mColorDiffuse.b,
 					1.0f
 				);
-				entity_add_component(node, c_light_new(1.0f, 40.0f,
-							color, 256));
+				entity_add_component(node, c_light_new(40.0f, color,
+							256));
 			}
 
 			/* load_light(lc, light); */

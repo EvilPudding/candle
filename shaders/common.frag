@@ -47,9 +47,8 @@ uniform mat4 MVP;
 uniform camera_t camera;
 
 uniform vec3 light_pos;
-uniform float light_intensity;
 uniform float light_radius;
-uniform vec3 light_color;
+uniform vec4 light_color;
 uniform samplerCube light_shadow_map;
 
 uniform float has_tex;

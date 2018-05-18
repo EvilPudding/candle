@@ -11,7 +11,6 @@ typedef struct
 	c_t super;
 
 	vec4_t color;
-	float intensity;
 	float shadow_size;
 	float radius;
 
@@ -19,8 +18,7 @@ typedef struct
 
 DEF_CASTER("light", c_light, c_light_t)
 
-c_light_t *c_light_new(float intensity, float radius, vec4_t color,
-		int shadow_size);
+c_light_t *c_light_new(float radius, vec4_t color, int shadow_size);
 void c_light_destroy(c_light_t *self);
 
 #endif /* !LIGHT_H */

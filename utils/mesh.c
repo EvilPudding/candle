@@ -674,13 +674,12 @@ void mesh_lock(mesh_t *self)
 	self->update_locked++;
 }
 
-static void mesh_sphere_1_subdivide(mesh_t *self)
+static void mesh_sphere_1_subdivide(mesh_t *self, float radius)
 {
 	/* mesh has to be triangulated */
 	int si;
 
 	mesh_lock(self);
-	int TMP = 4;
 
 	mesh_selection_t *editing = &self->selections[SEL_EDITING];
 
@@ -701,9 +700,16 @@ static void mesh_sphere_1_subdivide(mesh_t *self)
 		vertex_t *v2 = e_vert(e2, self);
 
 		vecN_t v01, v12, v20;    
-		v01 = vecN_(norm)(vecN_(add)(v0->pos, v1->pos));
-		v12 = vecN_(norm)(vecN_(add)(v1->pos, v2->pos));
-		v20 = vecN_(norm)(vecN_(add)(v2->pos, v0->pos));
+
+		v01 = vecN_(add)(v0->pos, v1->pos);
+		v12 = vecN_(add)(v1->pos, v2->pos);
+		v20 = vecN_(add)(v2->pos, v0->pos);
+		if(!radius)
+		{
+			v01 = vecN_(scale)(vecN_(add)(v0->pos, v1->pos), 0.5);
+			v12 = vecN_(scale)(vecN_(add)(v1->pos, v2->pos), 0.5);
+			v20 = vecN_(scale)(vecN_(add)(v2->pos, v0->pos), 0.5);
+		}
 
 		vec2_t t0 = e0->t, t1 = e1->t, t2 = e2->t;    
 		vec2_t t01, t12, t20;    
@@ -719,46 +725,62 @@ static void mesh_sphere_1_subdivide(mesh_t *self)
 		int i12 = mesh_assert_vert(self, v12);
 		int i20 = mesh_assert_vert(self, v20);
 
-		int f0 = mesh_add_triangle(self, i0, Z3, t0,
+		mesh_add_triangle(self, i0, Z3, t0,
 								i01, Z3, t01,
 								i20, Z3, t20);
 
-		int f1 = mesh_add_triangle(self, i1, Z3, t1,
+		mesh_add_triangle(self, i1, Z3, t1,
 								i12, Z3, t12,
 								i01, Z3, t01);
 
-		int f2 = mesh_add_triangle(self, i2, Z3, t2,
+		mesh_add_triangle(self, i2, Z3, t2,
 								i20, Z3, t20,
 								i12, Z3, t12);
 
-		int f3 = mesh_add_triangle(self, i01, Z3, t01,
+		mesh_add_triangle(self, i01, Z3, t01,
 								i12, Z3, t12,
 								i20, Z3, t20);
 		mesh_remove_face(self, f_id);
 
-		mesh_select(self, TMP, MESH_FACE, f0);
-		mesh_select(self, TMP, MESH_FACE, f1);
-		mesh_select(self, TMP, MESH_FACE, f2);
-		mesh_select(self, TMP, MESH_FACE, f3);
+		/* mesh_select(self, TMP, MESH_FACE, f0); */
+		/* mesh_select(self, TMP, MESH_FACE, f1); */
+		/* mesh_select(self, TMP, MESH_FACE, f2); */
+		/* mesh_select(self, TMP, MESH_FACE, f3); */
 	}
 
-	mesh_unselect(self, SEL_EDITING, MESH_ANY, -1);
+	mesh_select(self, SEL_EDITING, MESH_ANY, -1);
 
-	mesh_selection_t swap = self->selections[SEL_EDITING];
-	self->selections[SEL_EDITING] = self->selections[TMP];
-	self->selections[TMP] = swap;
+	/* mesh_selection_t swap = self->selections[SEL_EDITING]; */
+	/* self->selections[SEL_EDITING] = self->selections[TMP]; */
+	/* self->selections[TMP] = swap; */
+
+	if(radius)
+	{
+		vector_t *selected_edges = editing->edges;
+		for(si = 0; si < vector_count(selected_edges); si++)
+		{
+			int e_id = vector_value(selected_edges, si, int);
+
+			edge_t *e = m_edge(self, e_id); if(!e) continue;
+
+			vertex_t *v = e_vert(e, self);
+
+			v->pos = vecN_(scale)(vecN_(norm)(v->pos), radius);
+
+		}
+	}
 
 	mesh_unlock(self);
 
 }
 
-void mesh_sphere_subdivide(mesh_t *self, int subdivisions)
+void mesh_sphere_subdivide(mesh_t *self, float radius, int subdivisions)
 {
 	int i;
 	mesh_lock(self);
 	for(i = 0; i < subdivisions; i++)
 	{
-		mesh_sphere_1_subdivide(self);
+		mesh_sphere_1_subdivide(self, radius);
 	}
 	mesh_unlock(self);
 }
@@ -1559,14 +1581,19 @@ void mesh_triangulate(mesh_t *self)
 	mesh_unlock(self);
 }
 
-void mesh_circle(mesh_t *self, float radius, int segments)
+void mesh_circle(mesh_t *self, float radius, int segments, vecN_t dir)
 {
+#define DIMS(s, c) \
+	(dir.x ? VEC3(0.0f, c, s) : \
+	 dir.z ? VEC3(c, s, 0.0f) : \
+			 VEC3(s, 0.0f, c))
+
 	mesh_lock(self);
 
 	int prev_e, first_e;
 
 	prev_e = first_e = mesh_add_edge_s(self,
-			mesh_add_vert(self, VEC3(sin(0) * radius, 0.0, cos(0) * radius)), -1);
+			mesh_add_vert(self, DIMS(sin(0) * radius, cos(0) * radius)), -1);
 	mesh_select(self, SEL_EDITING, MESH_EDGE, first_e);
 
 	float inc = (M_PI * 2) / segments;
@@ -1576,9 +1603,8 @@ void mesh_circle(mesh_t *self, float radius, int segments)
 	for(ai = 1, a = inc; ai < segments; a += inc, ai++)
 	{
 		int e = mesh_add_edge_s(self,
-				mesh_add_vert(self, VEC3(
+				mesh_add_vert(self, DIMS(
 						sin(-a) * radius,
-						0.0,
 						cos(-a) * radius)), prev_e);
 		mesh_select(self, SEL_EDITING, MESH_EDGE, e);
 		prev_e = e;
@@ -1595,6 +1621,17 @@ void mesh_circle(mesh_t *self, float radius, int segments)
 	}
 
 	mesh_unlock(self);
+#undef DIMS
+}
+
+float mesh_get_selection_radius(mesh_t *self, vecN_t center)
+{
+	mesh_selection_t *editing = &self->selections[SEL_EDITING];
+
+	int ei = vector_value(editing->edges, 0, int);
+	vecN_t pos = e_vert(m_edge(self, ei), self)->pos;
+
+	return vecN_(len)(vecN_(sub)(pos, center));
 }
 
 vecN_t mesh_get_selection_center(mesh_t *self)
@@ -1750,6 +1787,32 @@ int mesh_check_duplicate_verts(mesh_t *self, int edge_id)
 	return 0;
 }
 
+void mesh_vert_modify(mesh_t *self, vecN_t pivot,
+		float factor, vecN_t offset)
+{
+	int si;
+
+	vector_t *selected_edges = self->selections[SEL_EDITING].edges;
+
+	for(si = 0; si < vector_count(selected_edges); si++)
+	{
+		int e_id = vector_value(selected_edges, si, int);
+		edge_t *e = m_edge(self, e_id); if(!e) continue;
+		/* if(e_vert(e, self)->tmp >= 0) continue; */
+
+		vertex_t *v = e_vert(e, self);
+
+		vecN_t new_pos = vecN_(sub)(v->pos, pivot);
+
+		new_pos = vecN_(add)(vecN_(scale)(new_pos, factor), pivot);
+
+		new_pos = vecN_(add)(new_pos, offset);
+
+		v->pos = new_pos;
+		/* e_vert(e, self)->tmp = 1; */
+	}
+}
+
 void mesh_vert_dup_and_modify(mesh_t *self, vecN_t pivot,
 		float factor, vecN_t offset)
 {
@@ -1778,7 +1841,8 @@ void mesh_vert_dup_and_modify(mesh_t *self, vecN_t pivot,
 
 #ifdef MESH4
 void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
-		float scale, modifier_cb modifier)
+		float scale, modifier_cb scale_cb, modifier_cb offset_cb,
+		void *usrptr)
 {
 	if(!self->triangulated)
 	{
@@ -1794,9 +1858,11 @@ void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 
 	float percent = 0.0f;
 	float percent_inc = 1.0f / steps;
-	vecN_t inc = vecN_(scale)(offset, percent_inc);
 	float prev_factor = 1.0f;
 	/* vecN_t center = mesh_get_selection_center(self); */
+
+	vecN_t center = mesh_get_selection_center(self);
+	float radius = mesh_get_selection_radius(self, center);
 
 	if(!mesh_update_flips(self))
 	{
@@ -1805,30 +1871,45 @@ void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 		return;
 	}
 
+	int TMP = 4;
 	for(step = 0; step < steps; step++)
 	{
+		self->current_surface++;
+
 		mesh_selection_t *editing = &self->selections[SEL_EDITING];
 
-		/* mesh_lock(self); */
-
-		self->current_surface++;
-		/* printf("step %d %d %d\n", step, vector_count(editing->faces), */
-				/* vector_count(editing->edges)); */
-
-		vecN_t center = mesh_get_selection_center(self);
+		center = mesh_get_selection_center(self);
 
 		percent += percent_inc;
-		float current_factor = modifier ? modifier(self, percent) : 1.0f;
-		current_factor *= 1 + (scale - 1) * percent;
-		float factor = current_factor / prev_factor;
+		float factor, current_factor;
+		if(scale_cb)
+		{
+			current_factor = scale_cb(self, percent, usrptr);
+		}
+		else
+		{
+			current_factor = 1.0f + (scale - 1.0f) * percent;
+		}
+		factor = current_factor / prev_factor;
+		float o_current_factor;
+		vecN_t current_offset;
+		if(offset_cb)
+		{
+			radius *= factor;
 
-		mesh_vert_dup_and_modify(self, center, factor, inc);
+			o_current_factor = offset_cb(self, radius, usrptr);
+			current_offset = vecN_(sub)(vecN_(scale)(offset, o_current_factor),
+					center);
+		}
+		else
+		{
+			o_current_factor = percent_inc;
+			current_offset = vecN_(scale)(offset, o_current_factor);
+		}
+
+		mesh_vert_dup_and_modify(self, center, factor, current_offset);
 
 		prev_factor = current_factor;
-
-		/* EXTRUDE FACES */
-
-		int TMP = 4;
 
 		for(si = 0; si < vector_count(editing->faces); si++)
 		{
@@ -1860,8 +1941,26 @@ void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 }
 #endif
 
+void mesh_translate_points(mesh_t *self, float percent, vecN_t offset,
+		float scale, modifier_cb scale_cb, modifier_cb offset_cb, void *usrptr)
+{
+	mesh_lock(self);
+	vecN_t center = mesh_get_selection_center(self);
+
+	float factor = scale_cb ? scale_cb(self, percent, usrptr) : 1.0f;
+	factor *= 1 + (scale - 1) * percent;
+
+	float o_current_factor = offset_cb ? offset_cb(self, factor, usrptr) : 1.0f;
+	float o_factor = o_current_factor;
+	vecN_t inc = vecN_(mul_number)(offset, o_factor);
+
+	mesh_vert_modify(self, center, factor, inc);
+	mesh_unlock(self);
+}
+
 void mesh_extrude_edges(mesh_t *self, int steps, vecN_t offset,
-		float scale, modifier_cb modifier)
+		float scale, modifier_cb scale_cb,
+		modifier_cb offset_cb, void *usrptr)
 {
 	int si, step;
 
@@ -1869,22 +1968,50 @@ void mesh_extrude_edges(mesh_t *self, int steps, vecN_t offset,
 
 	float percent = 0.0f;
 	float percent_inc = 1.0f / steps;
-	vecN_t inc = vecN_(scale)(offset, percent_inc);
 	float prev_factor = 1.0f;
 
-	mesh_selection_t *editing = &self->selections[SEL_EDITING];
+	vecN_t center = mesh_get_selection_center(self);
+	float radius = 0;
+	if(offset_cb)
+	{
+		radius = mesh_get_selection_radius(self, center);
+	}
 
 	int TMP = 4;
 	for(step = 0; step < steps; step++)
 	{
-		vecN_t center = mesh_get_selection_center(self);
+		mesh_selection_t *editing = &self->selections[SEL_EDITING];
+
+		center = mesh_get_selection_center(self);
 
 		percent += percent_inc;
-		float current_factor = modifier ? modifier(self, percent) : 1.0f;
-		current_factor *= scale;
-		float factor = current_factor / prev_factor;
+		float factor, current_factor;
+		if(scale_cb)
+		{
+			current_factor = scale_cb(self, percent, usrptr);
+		}
+		else
+		{
+			current_factor = 1.0f + (scale - 1.0f) * percent;
+		}
+		factor = current_factor / prev_factor;
+		float o_current_factor;
+		vecN_t current_offset;
+		if(offset_cb)
+		{
+			radius *= factor;
 
-		mesh_vert_dup_and_modify(self, center, factor, inc);
+			o_current_factor = offset_cb(self, radius, usrptr);
+			current_offset = vecN_(sub)(vecN_(scale)(offset, o_current_factor),
+					center);
+		}
+		else
+		{
+			o_current_factor = percent_inc;
+			current_offset = vecN_(scale)(offset, o_current_factor);
+		}
+
+		mesh_vert_dup_and_modify(self, center, factor, current_offset);
 
 		prev_factor = current_factor;
 
@@ -2009,6 +2136,8 @@ mesh_t *mesh_lathe(mesh_t *mesh, float angle, int segments,
 	mat4_t  rot = mat4();
 
 	mesh_t *self = mesh_new();
+	mesh_lock(self);
+	self->has_texcoords = 0;
 
 	float inc = angle / segments;
 
@@ -2062,7 +2191,7 @@ mesh_t *mesh_lathe(mesh_t *mesh, float angle, int segments,
 	}
 
 	/* self->wireframe = 1; */
-	mesh_update(self);
+	mesh_unlock(self);
 
 	return self;
 }

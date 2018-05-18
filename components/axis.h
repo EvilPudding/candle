@@ -10,6 +10,7 @@ typedef struct
 	vec3_t dir;
 	int pressing;
 	int type;
+	mesh_t *dir_mesh;
 } c_axis_t;
 
 DEF_CASTER("axis", c_axis, c_axis_t)

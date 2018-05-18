@@ -36,9 +36,9 @@ void main()
 
 	if(light_radius < 0.0f)
 	{
-		color = light_color * light_intensity * dif;
+		color = light_color.rgb * light_color.a * dif;
 	}
-	else if(light_intensity > 0.01)
+	else if(light_color.a > 0.01)
 	{
 		if(dist_to_eye > length(vertex_position)) discard;
 
@@ -60,7 +60,7 @@ void main()
 
 		if(sd < 0.95)
 		{
-			vec3 lcolor = light_intensity * light_color;
+			vec3 lcolor = light_color.rgb * light_color.a;
 
 
 			float lightAtt = 0.01;
@@ -88,7 +88,7 @@ void main()
 
 
 				float specularCoefficient = 0.0;
-				vec3 specularColor = spe.rgb * light_intensity * lcolor;
+				vec3 specularColor = spe.rgb * lcolor;
 				float power = clamp(roughnessToSpecularPower(spe.a), 0.0f, 1.0f) * 10;
 
 				specularCoefficient = pow(clamp(-dot(eye_dir, reflect_dir), 0.0f, 1.0f), power);

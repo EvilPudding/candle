@@ -4,10 +4,11 @@ C Game Engine
 Barebones C engine with rendering and basic collision detection.
 
 ## Dependencies
-* SDL2
 * Assimp
 * GLEW
+* SDL2
 * libpng
+* lua
 
 ## Screenshots
 ![Screenshot](https://i.imgur.com/E2Qxp4Q.png)

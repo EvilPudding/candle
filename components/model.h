@@ -18,7 +18,15 @@ struct conf_circle
 };
 struct conf_ico
 {
+	float radius;
 	int subdivisions;
+};
+struct conf_torus
+{
+	float radius1;
+	float radius2;
+	int segments1;
+	int segments2;
 };
 struct conf_cube
 {
@@ -30,6 +38,10 @@ struct conf_extrude
 	vec4_t offset;
 	float scale;
 	int steps;
+	char scale_e[255];
+	char offset_e[255];
+	int scale_f;
+	int offset_f;
 };
 typedef mesh_t*(*tool_edit_cb)(mesh_t *last, void *new,
 		mesh_t *state, void *old);
@@ -60,6 +72,7 @@ typedef enum
 	MESH_CIRCLE,
 	MESH_SPHERE,
 	MESH_CUBE,
+	MESH_TORUS,
 	MESH_ICOSPHERE,
 	MESH_EXTRUDE
 } mesh_edit_t;

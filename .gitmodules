@@ -1,3 +1,7 @@
 [submodule "nuklear"]
 	path = nuklear
 	url = https://github.com/vurtun/nuklear
+
+[submodule "tinyexpr"]
+	path = tinyexpr
+	url = https://github.com/codeplea/tinyexpr.git

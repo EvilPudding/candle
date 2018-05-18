@@ -8,6 +8,7 @@
 #include <systems/renderer.h>
 #include <utils/shader.h>
 #include <systems/editmode.h>
+#include <systems/lua.h>
 
 static mat_t *g_missing_mat = NULL;
 
@@ -32,8 +33,18 @@ static int tool_sphere_gui(void *ctx, void *conf)
 
 static int tool_icosphere_gui(void *ctx, struct conf_ico *conf)
 {
+	nk_property_float(ctx, "#radius:", -10000, &conf->radius, 10000, 0.1, 0.05);
 	nk_property_int(ctx, "#subdivisions:", 0, &conf->subdivisions, 4, 1, 1);
 
+	return 0;
+}
+
+static int tool_torus_gui(void *ctx, struct conf_torus *conf)
+{
+	nk_property_float(ctx, "#radius:", -10000, &conf->radius1, 10000, 0.1, 0.05);
+	nk_property_int(ctx, "#segments:", 1, &conf->segments1, 1000, 1, 1);
+	nk_property_float(ctx, "#inner radius:", -10000, &conf->radius2, 10000, 0.1, 0.05);
+	nk_property_int(ctx, "#inner segments:", 1, &conf->segments2, 1000, 1, 1);
 	return 0;
 }
 
@@ -50,13 +61,25 @@ static int tool_extrude_gui(void *ctx, struct conf_extrude *conf)
 	nk_property_float(ctx, "#w:", -10000, &conf->offset.w, 10000, 0.1, 0.05);
 	nk_property_float(ctx, "#scale:", -10000, &conf->scale, 10000, 0.1, 0.05);
 	nk_property_int(ctx, "#steps:", 1, &conf->steps, 1000, 1, 1);
+
+	nk_layout_row_dynamic(ctx, 25, 1);
+	nk_edit_string_zero_terminated(ctx,
+			NK_EDIT_FIELD | NK_EDIT_ALWAYS_INSERT_MODE,
+			conf->scale_e, sizeof(conf->scale_e),
+			nk_filter_ascii);
+
+	nk_edit_string_zero_terminated(ctx,
+			NK_EDIT_FIELD | NK_EDIT_ALWAYS_INSERT_MODE,
+			conf->offset_e, sizeof(conf->offset_e),
+			nk_filter_ascii);
+
 	return 0;
 }
 
 static mesh_t *tool_circle_edit(mesh_t *mesh, struct conf_circle *conf)
 {
 	mesh = mesh_clone(mesh);
-	mesh_circle(mesh, conf->radius, conf->segments);
+	mesh_circle(mesh, conf->radius, conf->segments, VEC3(0.0, 1.0, 0.0));
 	mesh_select(mesh, SEL_EDITING, MESH_EDGE, -1);
 	return mesh;
 }
@@ -70,10 +93,11 @@ static mesh_t *tool_icosphere_edit(
 		mesh_t *last, struct conf_ico *new,
 		mesh_t *state, struct conf_ico *old)
 {
-	if(new->subdivisions > old->subdivisions)
+	if(new->subdivisions > old->subdivisions && new->radius == old->radius)
 	{
 		mesh_select(state, SEL_EDITING, MESH_FACE, -1);
-		mesh_sphere_subdivide(state, new->subdivisions - old->subdivisions);
+		mesh_sphere_subdivide(state, new->radius,
+				new->subdivisions - old->subdivisions);
 		mesh_select(state, SEL_EDITING, MESH_FACE, -1);
 	}
 	else
@@ -85,12 +109,19 @@ static mesh_t *tool_icosphere_edit(
 		if(new->subdivisions)
 		{
 			mesh_select(state, SEL_EDITING, MESH_FACE, -1);
-			mesh_sphere_subdivide(state, new->subdivisions);
+			mesh_sphere_subdivide(state, new->radius, new->subdivisions);
 		}
 		mesh_unlock(state);
 		mesh_select(state, SEL_EDITING, MESH_FACE, -1);
 	}
 	return state;
+}
+
+static mesh_t *tool_torus_edit(mesh_t *mesh, struct conf_torus *conf)
+{
+	/* mesh = mesh_clone(mesh); */
+	mesh = mesh_torus(conf->radius1, conf->radius2, conf->segments1, conf->segments2);
+	return mesh;
 }
 
 static mesh_t *tool_cube_edit(mesh_t *mesh, struct conf_cube *conf)
@@ -100,18 +131,102 @@ static mesh_t *tool_cube_edit(mesh_t *mesh, struct conf_cube *conf)
 	return mesh;
 }
 
-static mesh_t *tool_extrude_edit(mesh_t *last, struct conf_extrude *conf)
+struct int_int {int a, b;};
+
+static float interpret_scale(mesh_t *self, float x,
+		struct int_int *interpreters)
 {
-	mesh_t *state = mesh_clone(last);
+	c_lua_t *lua = c_lua(&SYS);
+
+	c_lua_setvar(lua, "x", x);
+	char *msg = NULL;
+	double y = c_lua_eval(lua, interpreters->a, &msg);
+	if (msg) exit(1);
+	return (float)y;
+}
+
+static float interpret_offset(mesh_t *self, float x,
+		struct int_int *interpreters)
+{
+	c_lua_t *lua = c_lua(&SYS);
+
+	c_lua_setvar(lua, "r", x);
+	char *msg = NULL;
+	double y = c_lua_eval(lua, interpreters->b, &msg);
+	if (msg) exit(1);
+	return (float)y;
+}
+
+
+static mesh_t *tool_extrude_edit(
+		mesh_t *last, struct conf_extrude *new,
+		mesh_t *state, struct conf_extrude *old)
+{
+
+	c_lua_t *lua = c_lua(&SYS);
+	char *msg = NULL;
+	if(lua)
+	{
+		c_lua_setvar(lua, "r", 0);
+		c_lua_setvar(lua, "x", 0);
+		if(strcmp(new->scale_e, old->scale_e))
+		{
+			if(old->scale_f) c_lua_unref(lua, old->scale_f);
+
+			new->scale_f = c_lua_loadexpr(lua, new->scale_e, &msg);
+			if(msg)
+			{
+				free(msg);
+				new->scale_f = 0;
+				return state;
+			}
+			c_lua_eval(lua, new->scale_f, &msg);
+			if (msg)
+			{
+				free(msg);
+				new->scale_f = 0;
+				return state;
+			}
+		}
+		if(strcmp(new->offset_e, old->offset_e))
+		{
+			if(old->offset_f) c_lua_unref(lua, old->offset_f);
+
+			new->offset_f = c_lua_loadexpr(lua, new->offset_e, &msg);
+
+			if(msg)
+			{
+				free(msg);
+				new->offset_f = 0;
+				return state;
+			}
+			c_lua_eval(lua, new->offset_f, &msg);
+			if(msg)
+			{
+				free(msg);
+				new->offset_f = 0;
+				return state;
+			}
+		}
+	}
+	state = mesh_clone(last);
+
+	struct int_int args = {new->scale_f, new->offset_f};
+
 	if(vector_count(state->faces))
 	{
 #ifdef MESH4
-		mesh_extrude_faces(state, conf->steps, conf->offset, conf->scale, NULL);
+
+		mesh_extrude_faces(state, new->steps, new->offset, new->scale,
+				new->scale_f ? (modifier_cb)interpret_scale : NULL,
+				new->offset_f ? (modifier_cb)interpret_offset : NULL, &args);
 #endif
 	}
 	else
 	{
-		mesh_extrude_edges(state, conf->steps, VEC3(_vec3(conf->offset)), conf->scale, NULL);
+		mesh_extrude_edges(state, new->steps, new->offset, new->scale,
+				new->scale_f ? (modifier_cb)interpret_scale : NULL,
+				new->offset_f ? (modifier_cb)interpret_offset : NULL, &args);
 	}
 	return state;
 }
@@ -574,8 +689,13 @@ REG()
 		sizeof(struct conf_cube),
 		&(struct conf_cube){1.0f, 0});
 
+	add_tool("torus", (tool_gui_cb)tool_torus_gui, (tool_edit_cb)tool_torus_edit,
+		sizeof(struct conf_torus),
+		&(struct conf_torus){2.0f, 0.2f, 10, 4});
+
 	add_tool("icosphere", (tool_gui_cb)tool_icosphere_gui,
-			(tool_edit_cb)tool_icosphere_edit, sizeof(struct conf_ico), NULL);
+			(tool_edit_cb)tool_icosphere_edit, sizeof(struct conf_ico),
+			&(struct conf_ico){1.0f, 0});
 
 	add_tool("extrude", (tool_gui_cb)tool_extrude_gui,
 		(tool_edit_cb)tool_extrude_edit, sizeof(struct conf_extrude),
