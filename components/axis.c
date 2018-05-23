@@ -37,10 +37,10 @@ c_axis_t *c_axis_new(int type, vec4_t dir)
 	self->type = type;
 
 	self->dir_mesh = mesh_new();
-	mesh_circle(self->dir_mesh, 0.03f, 8, dir);
 
 	mesh_lock(self->dir_mesh);
 #ifdef MESH4
+	mesh_circle(self->dir_mesh, 0.03f, 8, dir);
 	mesh_extrude_edges(self->dir_mesh, 1,
 			vec4_scale(dir, 0.5), 1.0f, NULL, NULL, NULL);
 	mesh_extrude_edges(self->dir_mesh, 1,
@@ -48,6 +48,7 @@ c_axis_t *c_axis_new(int type, vec4_t dir)
 	mesh_extrude_edges(self->dir_mesh, 1,
 			vec4_scale(dir, 0.1), 0.01f, NULL, NULL, NULL);
 #else
+	mesh_circle(self->dir_mesh, 0.03f, 8, dir.xyz);
 	mesh_extrude_edges(self->dir_mesh, 1,
 			vec4_scale(dir, 0.5).xyz, 1.0f, NULL, NULL, NULL);
 	mesh_extrude_edges(self->dir_mesh, 1,
