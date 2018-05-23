@@ -60,11 +60,8 @@ typedef struct vertex_t
 {
 	vecN_t pos;
 	vec4_t color;
-	/* int halves[32]; /1* for pair creation *1/ */
 	int half;
-
 	int tmp;
-	
 } vertex_t;
 
 #define v_half(v, m) (m_edge(m, v->half))
@@ -79,7 +76,7 @@ typedef struct edge_t /* Half edge */
 	int pair; /* edge_t id		for triangle meshes only */
 	int next; /* edge_t id								 */
 	int prev; /* edge_t id								 */
-	int cell_pair; /* edge_t id		for triangle meshes only */
+	int cell_pair; /* edge_t id		for tetrahedral meshes only */
 
 	int tmp;
 
@@ -110,14 +107,13 @@ typedef struct face_t /* Half face */
 
 	vec3_t n; /* flat normal, only applicable to triangles */
 
-	int triangulate_flip;
 
 #ifdef MESH4
 	int pair;
 	int cell;
-	int surface;
 #endif
 
+	int tmp;
 } face_t;
 
 #define f_edge(f, i, m) (m_edge(m, f->e[i]))
@@ -189,11 +185,11 @@ typedef struct mesh_t
 
 	char name[256];
 	int update_locked;
-	int mid_load;
 	int update_id;
 	int changes;
 
-	SDL_sem *sem;
+	void *semaphore;
+	ulong owner_thread;
 } mesh_t;
 
 typedef enum
@@ -227,7 +223,8 @@ mesh_t *mesh_torus(float radius, float inner_radius, int segments,
 void mesh_cube(mesh_t *self, float size, float tex_scale);
 
 void mesh_clear(mesh_t *self);
-void mesh_sphere_subdivide(mesh_t *mesh, float radius, int subdivisions);
+void mesh_subdivide(mesh_t *mesh, int subdivisions);
+void mesh_spherize(mesh_t *mesh, float scale, float roundness);
 mesh_t *mesh_lathe(mesh_t *mesh, float angle, int segments,
 		float x, float y, float z);
 

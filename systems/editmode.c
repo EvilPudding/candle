@@ -19,8 +19,8 @@ static int c_editmode_activate_loader(c_editmode_t *self);
 void c_editmode_open_entity(c_editmode_t *self, entity_t ent);
 static void c_editmode_update_axis(c_editmode_t *self);
 
-#define MAX_VERTEX_MEMORY (512 * 1024) / 8
-#define MAX_ELEMENT_MEMORY (128 * 1024) / 8
+#define MAX_VERTEX_MEMORY (512 * 1024) / 4
+#define MAX_ELEMENT_MEMORY (128 * 1024) / 4
 
 mat_t *g_sel_mat = NULL;
 
@@ -610,7 +610,7 @@ int c_editmode_component_menu(c_editmode_t *self, void *ctx)
 int c_editmode_commands(c_editmode_t *self)
 {
 	int res = nk_begin(self->nk, "tools",
-			nk_rect(c_renderer(self)->width - 240, 10, 230, 300),
+			nk_rect(c_renderer(self)->width - 240, 10, 230, 350),
 			NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
 			NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE);
 	if (res)
@@ -657,6 +657,14 @@ int c_editmode_commands(c_editmode_t *self)
 		}
 		if(c_model(&self->selected))
 		{
+			if(nk_button_label(self->nk, "subdivide"))
+			{
+				c_model_edit(c_model(&self->selected), MESH_SUBDIVIDE, MESH_FACE);
+			}
+			if(nk_button_label(self->nk, "spherize"))
+			{
+				c_model_edit(c_model(&self->selected), MESH_SPHERIZE, MESH_FACE);
+			}
 			if(nk_button_label(self->nk, "extrude"))
 			{
 				c_model_edit(c_model(&self->selected), MESH_EXTRUDE, MESH_FACE);
@@ -686,7 +694,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 		title = name->name;
 	}
 	res = nk_begin_titled(self->nk, "entity", title,
-			nk_rect(10, 10, 230, 580),
+			nk_rect(10, 10, 230, 680),
 			NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
 			NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE);
 	if (res)

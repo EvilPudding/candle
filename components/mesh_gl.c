@@ -536,9 +536,8 @@ void c_mesh_gl_update(c_mesh_gl_t *self)
 	if(!model->mesh) return;
 	int i;
 	/* if(self->mesh->update_locked) return; */
-	if(model->mesh->mid_load) return;
-	SDL_SemWait(model->mesh->sem);
-
+	if(model->mesh->update_locked) return;
+	mesh_lock(model->mesh);
 
 	for(i = 0; i < model->layers_num; i++)
 	{
@@ -554,7 +553,7 @@ void c_mesh_gl_update(c_mesh_gl_t *self)
 		}
 
 	}
-	SDL_SemPost(model->mesh->sem);
+	mesh_unlock(model->mesh);
 }
 
 int glg_draw(glg_t *self, shader_t *shader, int flags)

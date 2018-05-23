@@ -71,7 +71,7 @@ mesh_t *mesh_new()
 	vector_alloc(self->faces, 100);
 	vector_alloc(self->edges, 100);
 
-	self->sem = SDL_CreateSemaphore(1);
+	self->semaphore = SDL_CreateSemaphore(1);
 
 	return self;
 }
@@ -113,13 +113,12 @@ static void face_init(face_t *self)
 {
 	self->n = vec3(0.0f);
 	self->e_size = 0;
-	self->triangulate_flip = 0;
+	self->tmp = 0;
 	self->e[0] = self->e[1] = self->e[2] = -1;
 
 #ifdef MESH4
 	self->pair = -1;
 	self->cell = -1;
-	self->surface = -1;
 #endif
 }
 
@@ -136,7 +135,7 @@ void mesh_destroy(mesh_t *self)
 		if(self->verts) free(self->verts);
 		if(self->edges) free(self->edges);
 
-		SDL_DestroySemaphore(self->sem);
+		SDL_DestroySemaphore(self->semaphore);
 		/* TODO destroy selections */
 		kh_destroy(id, self->faces_hash);
 		kh_destroy(id, self->edges_hash);
@@ -151,7 +150,7 @@ void mesh_destroy(mesh_t *self)
 			vector_destroy(self->selections[i].cells);
 #endif
 		}
-		self->sem = NULL;
+		self->semaphore = NULL;
 		free(self);
 	}
 
@@ -660,21 +659,28 @@ void mesh_unlock(mesh_t *self)
 	self->update_locked--;
 	if(self->update_locked == 0)
 	{
-		SDL_SemPost(self->sem);
+		self->owner_thread = 0;
+		SDL_SemPost(self->semaphore);
 	}
 	mesh_update(self);
 }
 
 void mesh_lock(mesh_t *self)
 {
+	ulong current_thread = SDL_ThreadID();
+	if(self->owner_thread != current_thread)
+	{
+		mesh_wait(self);
+	}
 	if(self->update_locked == 0)
 	{
-		SDL_SemWait(self->sem);
+		SDL_SemWait(self->semaphore);
 	}
+	self->owner_thread = current_thread;
 	self->update_locked++;
 }
 
-static void mesh_sphere_1_subdivide(mesh_t *self, float radius)
+static void mesh_1_subdivide(mesh_t *self)
 {
 	/* mesh has to be triangulated */
 	int si;
@@ -701,15 +707,9 @@ static void mesh_sphere_1_subdivide(mesh_t *self, float radius)
 
 		vecN_t v01, v12, v20;    
 
-		v01 = vecN_(add)(v0->pos, v1->pos);
-		v12 = vecN_(add)(v1->pos, v2->pos);
-		v20 = vecN_(add)(v2->pos, v0->pos);
-		if(!radius)
-		{
-			v01 = vecN_(scale)(vecN_(add)(v0->pos, v1->pos), 0.5);
-			v12 = vecN_(scale)(vecN_(add)(v1->pos, v2->pos), 0.5);
-			v20 = vecN_(scale)(vecN_(add)(v2->pos, v0->pos), 0.5);
-		}
+		v01 = vecN_(scale)(vecN_(add)(v0->pos, v1->pos), 0.5);
+		v12 = vecN_(scale)(vecN_(add)(v1->pos, v2->pos), 0.5);
+		v20 = vecN_(scale)(vecN_(add)(v2->pos, v0->pos), 0.5);
 
 		vec2_t t0 = e0->t, t1 = e1->t, t2 = e2->t;    
 		vec2_t t01, t12, t20;    
@@ -754,34 +754,43 @@ static void mesh_sphere_1_subdivide(mesh_t *self, float radius)
 	/* self->selections[SEL_EDITING] = self->selections[TMP]; */
 	/* self->selections[TMP] = swap; */
 
-	if(radius)
-	{
-		vector_t *selected_edges = editing->edges;
-		for(si = 0; si < vector_count(selected_edges); si++)
-		{
-			int e_id = vector_value(selected_edges, si, int);
-
-			edge_t *e = m_edge(self, e_id); if(!e) continue;
-
-			vertex_t *v = e_vert(e, self);
-
-			v->pos = vecN_(scale)(vecN_(norm)(v->pos), radius);
-
-		}
-	}
-
 	mesh_unlock(self);
 
 }
 
-void mesh_sphere_subdivide(mesh_t *self, float radius, int subdivisions)
+void mesh_spherize(mesh_t *self, float scale, float roundness)
+{
+	mesh_lock(self);
+	int si;
+	mesh_selection_t *editing = &self->selections[SEL_EDITING];
+	vector_t *selected_edges = editing->edges;
+	for(si = 0; si < vector_count(selected_edges); si++)
+	{
+		int e_id = vector_value(selected_edges, si, int);
+
+		edge_t *e = m_edge(self, e_id); if(!e) continue;
+
+		vertex_t *v = e_vert(e, self);
+
+		vecN_t norm = vecN_(norm)(v->pos);
+		v->pos = vecN_(mix)(v->pos, norm, roundness);
+		v->pos = vecN_(scale)(v->pos, scale);
+
+	}
+	mesh_unlock(self);
+}
+
+void mesh_subdivide(mesh_t *self, int subdivisions)
 {
 	int i;
 	mesh_lock(self);
+	mesh_triangulate(self);
+	mesh_select(self, SEL_EDITING, MESH_FACE, -1);
 	for(i = 0; i < subdivisions; i++)
 	{
-		mesh_sphere_1_subdivide(self, radius);
+		mesh_1_subdivide(self);
 	}
+
 	mesh_unlock(self);
 }
 
@@ -1215,7 +1224,6 @@ void mesh_add_quad(mesh_t *self,
 	face_init(face);
 
 #ifdef MESH4
-	face->surface = self->current_surface;
 	face->cell = self->current_cell;
 #endif
 	face->e_size = 4;
@@ -1384,7 +1392,6 @@ int mesh_add_triangle(mesh_t *self,
 
 #ifdef MESH4
 	face->cell = self->current_cell;
-	face->surface = self->current_surface;
 #endif
 
 	face->e_size = 3;
@@ -2070,7 +2077,7 @@ mesh_t *mesh_clone(mesh_t *self)
 #ifdef MESH4
 		clone->cells = vector_clone(self->cells);
 #endif
-		clone->sem = SDL_CreateSemaphore(1);
+		clone->semaphore = SDL_CreateSemaphore(1);
 
 		int i;
 		for(i = 0; i < 16; i++)
@@ -2282,8 +2289,8 @@ void mesh_cube(mesh_t *self, float size, float tex_scale)
 
 void mesh_wait(mesh_t *self)
 {
-	SDL_SemWait(self->sem);
-	SDL_SemPost(self->sem);
+	SDL_SemWait(self->semaphore);
+	SDL_SemPost(self->semaphore);
 }
 
 void mesh_load_scene(mesh_t *self, const void *grp)
@@ -2357,7 +2364,6 @@ void mesh_load_scene(mesh_t *self, const void *grp)
 void mesh_load(mesh_t *self, const char *filename)
 {
 	char ext[16];
-	self->mid_load = 1;
 	mesh_lock(self);
 
 	strncpy(ext, strrchr(filename, '.') + 1, sizeof(ext));
@@ -2372,7 +2378,6 @@ void mesh_load(mesh_t *self, const char *filename)
 		mesh_load_obj(self, filename);
 	}
 	mesh_unlock(self);
-	self->mid_load = 0;
 }
 
 vertex_t *mesh_farthest(mesh_t *self, const vec3_t dir)

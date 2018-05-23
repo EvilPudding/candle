@@ -509,10 +509,13 @@ static int c_renderer_update_screen_texture(c_renderer_t *self)
 	{
 		pass_output_t *output = &self->outputs[i];
 
-		int W = w * output->resolution;
-		int H = h * output->resolution;
+		if(output->resolution)
+		{
+			int W = w * output->resolution;
+			int H = h * output->resolution;
 
-		texture_2D_resize(output->buffer, W, H);
+			texture_2D_resize(output->buffer, W, H);
+		}
 	}
 
 	self->ready = 1;
@@ -530,16 +533,24 @@ static int c_renderer_resize(c_renderer_t *self, window_resize_data *event)
 }
 
 
-static inline void pass_draw_object(c_renderer_t *self, pass_t *pass)
-{
-	entity_signal(c_entity(self), pass->draw_signal, NULL);
-}
-
 static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 {
 	self->frame++;
 
 	if(!pass->output) exit(1);
+
+	if(!pass->shader) /* Maybe drawing without OpenGL */
+	{
+		/* CALL DRAW */
+		entity_signal(c_entity(self), pass->draw_signal, NULL);
+		return pass->output;
+	}
+	else if(!pass->shader->ready)
+	{
+		printf("pass not ready\n");
+		return NULL;
+	}
+
 
 	if(!texture_target(pass->output,
 				pass->depth ? pass->depth : self->fallback_depth, 0))
@@ -549,12 +560,6 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 	}
 
 	self->current_pass = pass;
-
-	if(!pass->shader || !pass->shader->ready)
-	{
-		printf("pass not ready\n");
-		return NULL;
-	}
 
 	fs_bind(pass->shader);
 
@@ -586,7 +591,8 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 
 	self->bound_light = entity_null;
 
-	pass_draw_object(self, pass);
+	/* CALL DRAW */
+	entity_signal(c_entity(self), pass->draw_signal, NULL);
 
 	glDisable(GL_DEPTH_TEST);
 

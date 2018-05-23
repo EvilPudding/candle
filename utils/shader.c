@@ -482,6 +482,7 @@ static int fs_new_loader(fs_t *self)
 
 fs_t *fs_new(const char *filename)
 {
+	if(!filename) return NULL;
 	int i;
 	for(i = 0; i < g_fs_num; i++)
 	{

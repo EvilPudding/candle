@@ -191,6 +191,8 @@ void c_renderer_add_camera(c_renderer_t *self, entity_t camera);
 void c_renderer_set_output(c_renderer_t *self, unsigned int hash);
 
 texture_t *c_renderer_tex(c_renderer_t *self, unsigned int hash);
+void c_renderer_add_tex(c_renderer_t *self, const char *name,
+		float resolution, texture_t *buffer);
 void c_renderer_add_pass(c_renderer_t *self, const char *name,
 		const char *shader_name, ulong draw_signal,
 		int flags, bind_t binds[]);

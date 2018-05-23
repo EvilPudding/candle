@@ -31,6 +31,12 @@ static int tool_sphere_gui(void *ctx, void *conf)
 	return 0;
 }
 
+static int tool_subdivide_gui(void *ctx, struct conf_subdivide *conf)
+{
+	nk_property_int(ctx, "#steps:", 0, &conf->steps, 4, 1, 1);
+	return 0;
+}
+
 static int tool_icosphere_gui(void *ctx, struct conf_ico *conf)
 {
 	nk_property_float(ctx, "#radius:", -10000, &conf->radius, 10000, 0.1, 0.05);
@@ -53,8 +59,16 @@ static int tool_cube_gui(void *ctx, void *conf)
 	return 0;
 }
 
+static int tool_spherize_gui(void *ctx, struct conf_spherize *conf)
+{
+	nk_property_float(ctx, "#scale:", -10000, &conf->scale, 10000, 0.1, 0.05);
+	nk_property_float(ctx, "#roundness:", 0, &conf->roundness, 1, 0.1, 0.05);
+	return 0;
+}
 static int tool_extrude_gui(void *ctx, struct conf_extrude *conf)
 {
+	nk_layout_row_dynamic(ctx, 25, 1);
+
 	nk_property_float(ctx, "#x:", -10000, &conf->offset.x, 10000, 0.1, 0.05);
 	nk_property_float(ctx, "#y:", -10000, &conf->offset.y, 10000, 0.1, 0.05);
 	nk_property_float(ctx, "#z:", -10000, &conf->offset.z, 10000, 0.1, 0.05);
@@ -62,16 +76,11 @@ static int tool_extrude_gui(void *ctx, struct conf_extrude *conf)
 	nk_property_float(ctx, "#scale:", -10000, &conf->scale, 10000, 0.1, 0.05);
 	nk_property_int(ctx, "#steps:", 1, &conf->steps, 1000, 1, 1);
 
-	nk_layout_row_dynamic(ctx, 25, 1);
-	nk_edit_string_zero_terminated(ctx,
-			NK_EDIT_FIELD | NK_EDIT_ALWAYS_INSERT_MODE,
-			conf->scale_e, sizeof(conf->scale_e),
-			nk_filter_ascii);
+	nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD,
+			conf->scale_e, sizeof(conf->scale_e), nk_filter_ascii);
 
-	nk_edit_string_zero_terminated(ctx,
-			NK_EDIT_FIELD | NK_EDIT_ALWAYS_INSERT_MODE,
-			conf->offset_e, sizeof(conf->offset_e),
-			nk_filter_ascii);
+	nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD,
+			conf->offset_e, sizeof(conf->offset_e), nk_filter_ascii);
 
 	return 0;
 }
@@ -89,16 +98,51 @@ static int tool_sphere_edit(void)
 	return 0;
 }
 
+static mesh_t *tool_spherize_edit(mesh_t *last,
+		struct conf_spherize *conf)
+{
+	mesh_t *state = mesh_clone(last);
+	mesh_select(state, SEL_EDITING, MESH_FACE, -1);
+	mesh_spherize(state, conf->scale, conf->roundness);
+	return state;
+}
+static mesh_t *tool_subdivide_edit(
+		mesh_t *last, struct conf_subdivide *new,
+		mesh_t *state, struct conf_subdivide *old)
+{
+	if(state && new->steps > old->steps)
+	{
+		mesh_select(state, SEL_EDITING, MESH_FACE, -1);
+		mesh_subdivide(state, new->steps - old->steps);
+		mesh_select(state, SEL_EDITING, MESH_FACE, -1);
+	}
+	else
+	{
+		state = mesh_clone(last);
+
+		mesh_lock(state);
+		if(new->steps)
+		{
+			mesh_select(state, SEL_EDITING, MESH_FACE, -1);
+			mesh_subdivide(state, new->steps);
+		}
+		mesh_unlock(state);
+	}
+	return state;
+}
+
 static mesh_t *tool_icosphere_edit(
 		mesh_t *last, struct conf_ico *new,
 		mesh_t *state, struct conf_ico *old)
 {
-	if(new->subdivisions > old->subdivisions && new->radius == old->radius)
+	if(state && (new->subdivisions > old->subdivisions || new->radius != old->radius))
 	{
+		mesh_lock(state);
 		mesh_select(state, SEL_EDITING, MESH_FACE, -1);
-		mesh_sphere_subdivide(state, new->radius,
-				new->subdivisions - old->subdivisions);
+		mesh_subdivide(state, new->subdivisions - old->subdivisions);
+		mesh_spherize(state, new->radius, 1);
 		mesh_select(state, SEL_EDITING, MESH_FACE, -1);
+		mesh_unlock(state);
 	}
 	else
 	{
@@ -109,7 +153,8 @@ static mesh_t *tool_icosphere_edit(
 		if(new->subdivisions)
 		{
 			mesh_select(state, SEL_EDITING, MESH_FACE, -1);
-			mesh_sphere_subdivide(state, new->radius, new->subdivisions);
+			mesh_subdivide(state, new->subdivisions);
+			mesh_spherize(state, new->radius, 1);
 		}
 		mesh_unlock(state);
 		mesh_select(state, SEL_EDITING, MESH_FACE, -1);
@@ -127,7 +172,10 @@ static mesh_t *tool_torus_edit(mesh_t *mesh, struct conf_torus *conf)
 static mesh_t *tool_cube_edit(mesh_t *mesh, struct conf_cube *conf)
 {
 	mesh = mesh_clone(mesh);
+	mesh_lock(mesh);
 	mesh_cube(mesh, conf->inverted?-conf->size:conf->size, 1);
+	mesh->has_texcoords = 0;
+	mesh_unlock(mesh);
 	return mesh;
 }
 
@@ -176,6 +224,7 @@ static mesh_t *tool_extrude_edit(
 			new->scale_f = c_lua_loadexpr(lua, new->scale_e, &msg);
 			if(msg)
 			{
+				puts(msg);
 				free(msg);
 				new->scale_f = 0;
 				return state;
@@ -183,6 +232,7 @@ static mesh_t *tool_extrude_edit(
 			c_lua_eval(lua, new->scale_f, &msg);
 			if (msg)
 			{
+				puts(msg);
 				free(msg);
 				new->scale_f = 0;
 				return state;
@@ -312,6 +362,15 @@ void c_model_propagate_edit(c_model_t *self, int cmd_id)
 {
 	if(cmd_id >= vector_count(self->history)) return;
 
+	int update_id;
+	if(self->mesh)
+	{
+		update_id = self->mesh->update_id;
+	}
+	else
+	{
+		update_id = -1;
+	}
 	mesh_t *last = NULL;
 	if(cmd_id > 0)
 	{
@@ -331,6 +390,10 @@ void c_model_propagate_edit(c_model_t *self, int cmd_id)
 		last = cmd->state;
 	}
 	self->mesh = last;
+	if(last->update_id < update_id)
+	{
+		last->update_id = update_id + 1;
+	}
 	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
 }
 
@@ -559,14 +622,17 @@ int c_model_menu(c_model_t *self, void *ctx)
 			if(nk_tree_push_id(ctx, NK_TREE_TAB, tool->name, NK_MAXIMIZED, i))
 			{
 				tool->gui(ctx, cmd->conf_new);
-				if(memcmp(cmd->conf_old, cmd->conf_new, tool->size))
-				{
-					c_model_propagate_edit(self, i);
-				}
 
 				if(nk_button_label(ctx, "remove"))
 				{
 					c_model_remove_edit(self, i);
+					nk_tree_pop(ctx);
+					break;
+				}
+
+				if(memcmp(cmd->conf_old, cmd->conf_new, tool->size))
+				{
+					c_model_propagate_edit(self, i);
 				}
 				nk_tree_pop(ctx);
 			}
@@ -700,4 +766,11 @@ REG()
 	add_tool("extrude", (tool_gui_cb)tool_extrude_gui,
 		(tool_edit_cb)tool_extrude_edit, sizeof(struct conf_extrude),
 		&(struct conf_extrude){vec4(0.0f, 2.0f, 0.0f, 0.0f), 1.0f, 1});
+
+	add_tool("spherize", (tool_gui_cb)tool_spherize_gui,
+		(tool_edit_cb)tool_spherize_edit, sizeof(struct conf_spherize),
+		&(struct conf_spherize){1, 1});
+	add_tool("subdivide", (tool_gui_cb)tool_subdivide_gui,
+		(tool_edit_cb)tool_subdivide_edit, sizeof(struct conf_subdivide),
+		&(struct conf_subdivide){1});
 }

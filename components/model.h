@@ -16,6 +16,11 @@ struct conf_circle
 	float radius;
 	int segments;
 };
+struct conf_spherize
+{
+	float scale;
+	float roundness;
+};
 struct conf_ico
 {
 	float radius;
@@ -27,6 +32,10 @@ struct conf_torus
 	float radius2;
 	int segments1;
 	int segments2;
+};
+struct conf_subdivide
+{
+	int steps;
 };
 struct conf_cube
 {
@@ -74,7 +83,9 @@ typedef enum
 	MESH_CUBE,
 	MESH_TORUS,
 	MESH_ICOSPHERE,
-	MESH_EXTRUDE
+	MESH_EXTRUDE,
+	MESH_SPHERIZE,
+	MESH_SUBDIVIDE
 } mesh_edit_t;
 
 typedef struct
