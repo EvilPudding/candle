@@ -150,11 +150,11 @@ typedef struct cell_t /* Cell */
 
 typedef struct
 {
-	vector_t *faces;
-	vector_t *edges;
-	vector_t *verts;
+	khash_t(id) *faces;
+	khash_t(id) *edges;
+	khash_t(id) *verts;
 #ifdef MESH4
-	vector_t *cells;
+	khash_t(id) *cells;
 #endif
 } mesh_selection_t;
 
@@ -212,6 +212,7 @@ typedef enum
 
 mesh_t *mesh_new(void);
 mesh_t *mesh_clone(mesh_t *self);
+void mesh_assign(mesh_t *self, mesh_t *other);
 void mesh_destroy(mesh_t *self);
 
 void mesh_load(mesh_t *self, const char *filename);

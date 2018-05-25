@@ -266,7 +266,7 @@ static mesh_t *tool_extrude_edit(
 	if(vector_count(state->faces))
 	{
 #ifdef MESH4
-
+		mesh_triangulate(state);
 		mesh_extrude_faces(state, new->steps, new->offset, new->scale,
 				new->scale_f ? (modifier_cb)interpret_scale : NULL,
 				new->offset_f ? (modifier_cb)interpret_offset : NULL, &args);
@@ -362,20 +362,16 @@ void c_model_propagate_edit(c_model_t *self, int cmd_id)
 {
 	if(cmd_id >= vector_count(self->history)) return;
 
-	int update_id;
-	if(self->mesh)
-	{
-		update_id = self->mesh->update_id;
-	}
-	else
-	{
-		update_id = -1;
-	}
+	/* int update_id = -1; */
 	mesh_t *last = NULL;
 	if(cmd_id > 0)
 	{
 		mesh_history_t *prev = vector_get(self->history, cmd_id - 1);
 		last = prev->state;
+	}
+	if(last)
+	{
+		last->update_id++;
 	}
 	int i;
 	for(i = cmd_id; i < vector_count(self->history); i++)
@@ -388,12 +384,16 @@ void c_model_propagate_edit(c_model_t *self, int cmd_id)
 		}
 		c_model_run_command(self, last, cmd);
 		last = cmd->state;
+		/* update_id++; */
 	}
-	self->mesh = last;
-	if(last->update_id < update_id)
-	{
-		last->update_id = update_id + 1;
-	}
+	if(!self->mesh && last) self->mesh = mesh_new();
+
+	mesh_assign(self->mesh, last);
+	/* if(last->update_id < update_id) */
+	/* { */
+		/* last->update_id = update_id + 1; */
+		/* last->changes = 1; */
+	/* } */
 	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
 }
 
@@ -403,15 +403,15 @@ void c_model_remove_edit(c_model_t *self, int cmd_id)
 	if(cmd->state) mesh_destroy(cmd->state);
 	vector_remove(self->history, cmd_id);
 
-	mesh_history_t *last = vector_get(self->history, vector_count(self->history) - 1);
-	if(last)
-	{
-		self->mesh = last->state;
-	}
-	else
-	{
-		self->mesh = NULL;
-	}
+	/* mesh_history_t *last = vector_get(self->history, vector_count(self->history) - 1); */
+	/* if(last) */
+	/* { */
+	/* 	self->mesh = last->state; */
+	/* } */
+	/* else */
+	/* { */
+	/* 	self->mesh = NULL; */
+	/* } */
 
 	c_model_propagate_edit(self, cmd_id);
 
