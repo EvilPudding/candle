@@ -1538,7 +1538,10 @@ struct int_int_int {int a, b;};
 
 struct int_int mesh_face_triangulate(mesh_t *self, int i, int flip)
 {
-	face_t *face = vector_get(self->faces, i);;
+	face_t *face = vector_get(self->faces, i);
+
+	khash_t(id) *sel = self->selections[SEL_EDITING].faces;
+	int selected = kh_get(id, sel, i) != kh_end(sel);
 
 	edge_t *e0 = f_edge(face, 0, self);
 	edge_t *e1 = f_edge(face, 1, self);
@@ -1557,8 +1560,9 @@ struct int_int mesh_face_triangulate(mesh_t *self, int i, int flip)
 
 	mesh_remove_face(self, i);
 
-	if(flip) return (struct int_int)
-	{
+	struct int_int result = 
+
+	result = flip? (struct int_int) {
 		mesh_add_triangle(self, i1, Z3, t1,
 								i2, Z3, t2,
 								i3, Z3, t3),
@@ -1566,9 +1570,7 @@ struct int_int mesh_face_triangulate(mesh_t *self, int i, int flip)
 		mesh_add_triangle(self, i3, Z3, t3,
 								i0, Z3, t0,
 								i1, Z3, t1)
-	};
-	else return (struct int_int)
-	{
+	} : (struct int_int) {
 		mesh_add_triangle(self, i0, Z3, t0,
 								i1, Z3, t1,
 								i2, Z3, t2),
@@ -1577,6 +1579,12 @@ struct int_int mesh_face_triangulate(mesh_t *self, int i, int flip)
 								i3, Z3, t3,
 								i0, Z3, t0)
 	};
+	if(selected)
+	{
+		mesh_select(self, SEL_EDITING, MESH_FACE, result.a);
+		mesh_select(self, SEL_EDITING, MESH_FACE, result.b);
+	}
+	return result;
 }
 
 void mesh_triangulate(mesh_t *self)
@@ -1584,6 +1592,14 @@ void mesh_triangulate(mesh_t *self)
 	int i;
 	if(self->triangulated) return;
 	mesh_lock(self);
+	/* for(i = 0; i < vector_count(self->faces); i++) */
+	/* { */
+	/* 	face_t *face = m_face(self, i); if(!face) continue; */
+	/* 	if(face->e_size == 3) */
+	/* 	{ */
+	/* 		mesh_select(self, 4, MESH_FACE, i); */
+	/* 	} */
+	/* } */
 	for(i = 0; i < vector_count(self->faces); i++)
 	{
 		face_t *face = m_face(self, i); if(!face) continue;
@@ -1608,6 +1624,12 @@ void mesh_triangulate(mesh_t *self)
 		}
 #endif
 	}
+	/* mesh_unselect(self, SEL_EDITING, MESH_ANY, -1); */
+	/* mesh_selection_t swap = self->selections[SEL_EDITING]; */
+	/* self->selections[SEL_EDITING] = self->selections[4]; */
+	/* self->selections[4] = swap; */
+
+
 	self->triangulated = 1;
 	mesh_unlock(self);
 }

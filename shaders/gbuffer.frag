@@ -10,6 +10,7 @@ void main()
 	vec4 dif  = resolveProperty(diffuse, texcoord);
 	if(dif.a == 0.0f) discard;
 
+	dif.rgb += poly_color;
 	DiffuseColor = dif;
 
 	SpecularColor = resolveProperty(specular, texcoord);

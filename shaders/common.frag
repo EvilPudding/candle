@@ -61,6 +61,7 @@ in vec3 cameraspace_light_dir;
 
 in vec2 object_id;
 in vec2 poly_id;
+in vec3 poly_color;
 
 in vec3 vertex_position;
 in vec3 vertex_normal;

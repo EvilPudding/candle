@@ -263,6 +263,8 @@ static mesh_t *tool_extrude_edit(
 
 	struct int_int args = {new->scale_f, new->offset_f};
 
+	mesh_lock(state);
+
 	if(vector_count(state->faces))
 	{
 #ifdef MESH4
@@ -270,6 +272,7 @@ static mesh_t *tool_extrude_edit(
 		mesh_extrude_faces(state, new->steps, new->offset, new->scale,
 				new->scale_f ? (modifier_cb)interpret_scale : NULL,
 				new->offset_f ? (modifier_cb)interpret_offset : NULL, &args);
+		mesh_remove_lone_faces(state);
 #endif
 	}
 	else
@@ -277,7 +280,11 @@ static mesh_t *tool_extrude_edit(
 		mesh_extrude_edges(state, new->steps, new->offset, new->scale,
 				new->scale_f ? (modifier_cb)interpret_scale : NULL,
 				new->offset_f ? (modifier_cb)interpret_offset : NULL, &args);
+		mesh_remove_lone_edges(state);
+		mesh_triangulate(state);
 	}
+	mesh_unlock(state);
+
 	return state;
 }
 
@@ -310,6 +317,7 @@ static void c_model_init(c_model_t *self)
 
 			"		object_id = id;\n"
 			"		poly_id = ID;\n"
+			"		poly_color = COL;\n"
 			"		TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
 
 			"		pos = MVP * pos;\n"
