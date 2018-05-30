@@ -527,11 +527,11 @@ void c_mesh_gl_update(c_mesh_gl_t *self)
 	/* TODO update only dirty group */
 	c_model_t *model = c_model(self);
 
-	if(!model->mesh) return;
 	int i;
-	/* if(self->mesh->update_locked) return; */
-	if(model->mesh->update_locked) return;
-	mesh_lock(model->mesh);
+	if(!model->mesh || model->mesh->locked_read ||
+			self->ram_update_id == model->mesh->update_id) return;
+
+	mesh_lock_write(model->mesh);
 
 	for(i = 0; i < model->layers_num; i++)
 	{
@@ -547,7 +547,8 @@ void c_mesh_gl_update(c_mesh_gl_t *self)
 		}
 
 	}
-	mesh_unlock(model->mesh);
+	self->ram_update_id = model->mesh->update_id;
+	mesh_unlock_write(model->mesh);
 }
 
 int glg_draw(glg_t *self, shader_t *shader, int flags)

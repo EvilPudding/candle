@@ -184,7 +184,8 @@ typedef struct mesh_t
 	support_cb support;
 
 	char name[256];
-	int update_locked;
+	int locked_write;
+	int locked_read;
 	int update_id;
 	int changes;
 
@@ -238,8 +239,10 @@ void mesh_translate_uv(mesh_t *self, vec2_t p);
 void mesh_scale_uv(mesh_t *self, float scale);
 
 void mesh_lock(mesh_t *self);
+void mesh_lock_write(mesh_t *self);
 void mesh_wait(mesh_t *self);
 void mesh_unlock(mesh_t *self);
+void mesh_unlock_write(mesh_t *self);
 void mesh_update(mesh_t *self);
 void mesh_modified(mesh_t *self);
 

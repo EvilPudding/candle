@@ -169,12 +169,32 @@ static mesh_t *tool_torus_edit(mesh_t *mesh, struct conf_torus *conf)
 	return mesh;
 }
 
+static vec2_t encode_normal(vec3_t n)
+{
+    float p = sqrtf(n.z * 8.0f + 8.0f);
+	if(p == 0) p = 1.0f;
+	/* printf("%f ", p); vec3_print(n); */
+    return vec2_add_number(vec2_div_number(n.xy, p), 0.5f);
+}
+
+static int paint_3d_function(mesh_t *mesh, vertex_t *vert)
+{
+	vec3_t norm = vec3_get_unit(vert->pos.xyz);
+	vec2_t n = encode_normal(norm);
+	vert->color = vec4(_vec2(n), vert->pos.w > 0 ? 1.0f : 0.0f, 1.0f);
+	return 1;
+}
+
+
 static mesh_t *tool_cube_edit(mesh_t *mesh, struct conf_cube *conf)
 {
 	mesh = mesh_clone(mesh);
 	mesh_lock(mesh);
 	mesh_cube(mesh, conf->inverted?-conf->size:conf->size, 1);
+	mesh_select(mesh, SEL_EDITING, MESH_EDGE, -1);
 	mesh->has_texcoords = 0;
+
+	mesh_for_each_selected(mesh, MESH_VERT, (iter_cb)paint_3d_function);
 	mesh_unlock(mesh);
 	return mesh;
 }
@@ -272,6 +292,7 @@ static mesh_t *tool_extrude_edit(
 		mesh_extrude_faces(state, new->steps, new->offset, new->scale,
 				new->scale_f ? (modifier_cb)interpret_scale : NULL,
 				new->offset_f ? (modifier_cb)interpret_offset : NULL, &args);
+		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_3d_function);
 		mesh_remove_lone_faces(state);
 #endif
 	}
@@ -280,6 +301,7 @@ static mesh_t *tool_extrude_edit(
 		mesh_extrude_edges(state, new->steps, new->offset, new->scale,
 				new->scale_f ? (modifier_cb)interpret_scale : NULL,
 				new->offset_f ? (modifier_cb)interpret_offset : NULL, &args);
+		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_3d_function);
 		mesh_remove_lone_edges(state);
 		mesh_triangulate(state);
 	}
@@ -392,16 +414,11 @@ void c_model_propagate_edit(c_model_t *self, int cmd_id)
 		}
 		c_model_run_command(self, last, cmd);
 		last = cmd->state;
-		/* update_id++; */
 	}
 	if(!self->mesh && last) self->mesh = mesh_new();
 
 	mesh_assign(self->mesh, last);
-	/* if(last->update_id < update_id) */
-	/* { */
-		/* last->update_id = update_id + 1; */
-		/* last->changes = 1; */
-	/* } */
+
 	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
 }
 
@@ -410,16 +427,6 @@ void c_model_remove_edit(c_model_t *self, int cmd_id)
 	mesh_history_t *cmd = vector_get(self->history, cmd_id);
 	if(cmd->state) mesh_destroy(cmd->state);
 	vector_remove(self->history, cmd_id);
-
-	/* mesh_history_t *last = vector_get(self->history, vector_count(self->history) - 1); */
-	/* if(last) */
-	/* { */
-	/* 	self->mesh = last->state; */
-	/* } */
-	/* else */
-	/* { */
-	/* 	self->mesh = NULL; */
-	/* } */
 
 	c_model_propagate_edit(self, cmd_id);
 

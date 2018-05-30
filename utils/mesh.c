@@ -14,6 +14,8 @@ static vec3_t mesh_support(mesh_t *self, const vec3_t dir);
 static int mesh_get_pair_edge(mesh_t *self, int e);
 int mesh_get_face_from_verts(mesh_t *self, int v0, int v1, int v2);
 static void mesh_update_cell_pairs(mesh_t *self);
+static void _mesh_destroy(mesh_t *self);
+static void _mesh_clone(mesh_t *self, mesh_t *into);
 
 #define CHUNK_CELLS 20
 #define CHUNK_VERTS 30
@@ -128,40 +130,45 @@ static void face_init(face_t *self)
 
 
 
+static void _mesh_destroy(mesh_t *self)
+{
+#ifdef MESH4
+	if(self->cells) free(self->cells);
+#endif
+	if(self->faces) free(self->faces);
+	if(self->verts) free(self->verts);
+	if(self->edges) free(self->edges);
+
+	/* TODO destroy selections */
+	kh_destroy(id, self->faces_hash);
+	kh_destroy(id, self->edges_hash);
+
+	int i;
+	for(i = 0; i < 16; i++)
+	{
+		kh_destroy(id, self->selections[i].faces);
+		kh_destroy(id, self->selections[i].edges);
+		kh_destroy(id, self->selections[i].verts);
+		/* vector_destroy(self->selections[i].faces); */
+		/* vector_destroy(self->selections[i].edges); */
+		/* vector_destroy(self->selections[i].verts); */
+#ifdef MESH4
+		kh_destroy(id, self->selections[i].cells);
+		/* vector_destroy(self->selections[i].cells); */
+#endif
+	}
+}
+
 void mesh_destroy(mesh_t *self)
 {
 	if(self)
 	{
-#ifdef MESH4
-		if(self->cells) free(self->cells);
-#endif
-		if(self->faces) free(self->faces);
-		if(self->verts) free(self->verts);
-		if(self->edges) free(self->edges);
-
+		mesh_lock(self);
+		_mesh_destroy(self);
 		SDL_DestroySemaphore(self->semaphore);
-		/* TODO destroy selections */
-		kh_destroy(id, self->faces_hash);
-		kh_destroy(id, self->edges_hash);
-
-		int i;
-		for(i = 0; i < 16; i++)
-		{
-			kh_destroy(id, self->selections[i].faces);
-			kh_destroy(id, self->selections[i].edges);
-			kh_destroy(id, self->selections[i].verts);
-			/* vector_destroy(self->selections[i].faces); */
-			/* vector_destroy(self->selections[i].edges); */
-			/* vector_destroy(self->selections[i].verts); */
-#ifdef MESH4
-			kh_destroy(id, self->selections[i].cells);
-			/* vector_destroy(self->selections[i].cells); */
-#endif
-		}
 		self->semaphore = NULL;
 		free(self);
 	}
-
 }
 
 static vec3_t get_normal(vec3_t p1, vec3_t p2, vec3_t p3)
@@ -689,10 +696,22 @@ void mesh_paint(mesh_t *self, vec4_t color)
 	mesh_modified(self);
 }
 
+void mesh_unlock_write(mesh_t *self)
+{
+	SDL_AtomicDecRef((SDL_atomic_t*)&self->locked_write);
+	if(self->locked_write == 0) SDL_SemPost(self->semaphore);
+}
+
+void mesh_lock_write(mesh_t *self)
+{
+	if(self->locked_write == 0) SDL_SemWait(self->semaphore);
+	SDL_AtomicIncRef((SDL_atomic_t*)&self->locked_write);
+}
+
 void mesh_unlock(mesh_t *self)
 {
-	self->update_locked--;
-	if(self->update_locked == 0)
+	self->locked_read--;
+	if(self->locked_read == 0)
 	{
 		self->owner_thread = 0;
 		SDL_SemPost(self->semaphore);
@@ -706,13 +725,10 @@ void mesh_lock(mesh_t *self)
 	if(self->owner_thread != current_thread)
 	{
 		mesh_wait(self);
-	}
-	if(self->update_locked == 0)
-	{
 		SDL_SemWait(self->semaphore);
+		self->owner_thread = current_thread;
 	}
-	self->owner_thread = current_thread;
-	self->update_locked++;
+	self->locked_read++;
 }
 
 static void mesh_1_subdivide(mesh_t *self)
@@ -738,11 +754,11 @@ static void mesh_1_subdivide(mesh_t *self)
 		vertex_t *v1 = e_vert(e1, self);
 		vertex_t *v2 = e_vert(e2, self);
 
-		vecN_t v01, v12, v20;    
+		vecN_t p01, p12, p20;    
 
-		v01 = vecN_(scale)(vecN_(add)(v0->pos, v1->pos), 0.5);
-		v12 = vecN_(scale)(vecN_(add)(v1->pos, v2->pos), 0.5);
-		v20 = vecN_(scale)(vecN_(add)(v2->pos, v0->pos), 0.5);
+		p01 = vecN_(scale)(vecN_(add)(v0->pos, v1->pos), 0.5);
+		p12 = vecN_(scale)(vecN_(add)(v1->pos, v2->pos), 0.5);
+		p20 = vecN_(scale)(vecN_(add)(v2->pos, v0->pos), 0.5);
 
 		vec2_t t0 = e0->t, t1 = e1->t, t2 = e2->t;    
 		vec2_t t01, t12, t20;    
@@ -754,9 +770,16 @@ static void mesh_1_subdivide(mesh_t *self)
 		int i1 = e1->v;
 		int i2 = e2->v;
 
-		int i01 = mesh_assert_vert(self, v01);
-		int i12 = mesh_assert_vert(self, v12);
-		int i20 = mesh_assert_vert(self, v20);
+		int i01 = mesh_assert_vert(self, p01);
+		int i12 = mesh_assert_vert(self, p12);
+		int i20 = mesh_assert_vert(self, p20);
+
+		vertex_t *v01 = m_vert(self, i01);
+		vertex_t *v12 = m_vert(self, i12);
+		vertex_t *v20 = m_vert(self, i20);
+		v01->color = vec4_scale(vec4_add(v0->color, v1->color), 0.5);
+		v12->color = vec4_scale(vec4_add(v1->color, v2->color), 0.5);
+		v20->color = vec4_scale(vec4_add(v2->color, v0->color), 0.5);
 
 		mesh_add_triangle(self, i0, Z3, t0,
 								i01, Z3, t01,
@@ -886,7 +909,7 @@ int mesh_vert_has_face(mesh_t *self, vertex_t *vert, int face_id)
 
 void mesh_update(mesh_t *self)
 {
-	if(self->update_locked) return;
+	if(self->locked_read) return;
 	if(!self->changes) return;
 
 	int i;
@@ -934,7 +957,7 @@ int mesh_append_edge(mesh_t *self, vecN_t p)
 {
 	mesh_lock(self);
 	int e = mesh_add_vert(self, p);
-	mesh_add_edge_s(self, vector_count(self->edges), vector_count(self->edges) - 1);
+	mesh_add_edge_s(self, e, vector_count(self->edges) - 1);
 	mesh_unlock(self);
 	return e;
 }
@@ -2133,18 +2156,42 @@ void mesh_assign(mesh_t *self, mesh_t *other)
 
 	void *semaphore = self->semaphore;
 	ulong owner = self->owner_thread;
-	int update_locked = self->update_locked;
-	int update_id = self->update_id;
+	int locked_read = self->locked_read;
 
-	*self = *other;
+	_mesh_destroy(self);
+	_mesh_clone(other, self);
 
 	self->semaphore = semaphore;
 	self->owner_thread = owner;
-	self->update_locked = update_locked;
-	self->update_id = update_id + 1;
+	self->locked_read = locked_read;
 
 	mesh_modified(self);
 	mesh_unlock(self);
+}
+
+void _mesh_clone(mesh_t *self, mesh_t *into)
+{
+	*into = *self;
+	into->changes = 0;
+	into->faces_hash = kh_clone(id, self->faces_hash);
+	into->edges_hash = kh_clone(id, self->edges_hash);
+	into->verts = vector_clone(self->verts);
+	into->faces = vector_clone(self->faces);
+	into->edges = vector_clone(self->edges);
+#ifdef MESH4
+	into->cells = vector_clone(self->cells);
+#endif
+
+	int i;
+	for(i = 0; i < 16; i++)
+	{
+		into->selections[i].faces = kh_clone(id, self->selections[i].faces);
+		into->selections[i].edges = kh_clone(id, self->selections[i].edges);
+		into->selections[i].verts = kh_clone(id, self->selections[i].verts);
+#ifdef MESH4
+		into->selections[i].cells = kh_clone(id, self->selections[i].cells);
+#endif
+	}
 }
 
 mesh_t *mesh_clone(mesh_t *self)
@@ -2153,29 +2200,12 @@ mesh_t *mesh_clone(mesh_t *self)
 	if(self)
 	{
 		clone = malloc(sizeof(*self));
-		*clone = *self;
-		clone->changes = 0;
-		clone->faces_hash = kh_clone(id, self->faces_hash);
-		clone->edges_hash = kh_clone(id, self->edges_hash);
-		clone->verts = vector_clone(self->verts);
-		clone->faces = vector_clone(self->faces);
-		clone->edges = vector_clone(self->edges);
-#ifdef MESH4
-		clone->cells = vector_clone(self->cells);
-#endif
+		_mesh_clone(self, clone);
 		clone->semaphore = SDL_CreateSemaphore(1);
-
-		int i;
-		for(i = 0; i < 16; i++)
+		if(self->locked_read)
 		{
-			clone->selections[i].faces = kh_clone(id, self->selections[i].faces);
-			clone->selections[i].edges = kh_clone(id, self->selections[i].edges);
-			clone->selections[i].verts = kh_clone(id, self->selections[i].verts);
-#ifdef MESH4
-			clone->selections[i].cells = kh_clone(id, self->selections[i].cells);
-#endif
+			SDL_SemWait(clone->semaphore);
 		}
-		if(self->update_locked) SDL_SemWait(clone->semaphore);
 	}
 	else
 	{
