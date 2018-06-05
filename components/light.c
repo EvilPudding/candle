@@ -22,9 +22,16 @@ void c_light_init(c_light_t *self)
 	if(!g_light)
 	{
 		g_depth_fs = fs_new("depth");
-		g_light = entity_new(c_node_new(),
-				c_model_new(sauces_mesh("light_mesh.obj"), NULL, 0, 1));
-		c_model(&g_light)->visible = 0;
+
+		mesh_t *mesh = mesh_new();
+		mesh_lock(mesh);
+		mesh_ico(mesh, -0.5f);
+		mesh_select(mesh, SEL_EDITING, MESH_FACE, -1);
+		mesh_subdivide(mesh, 1);
+		mesh_spherize(mesh, 1.0f);
+
+		mesh_unlock(mesh);
+		g_light = entity_new(c_node_new(), c_model_new(mesh, NULL, 0, 0));
 
 	}
 }

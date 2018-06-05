@@ -18,6 +18,7 @@ typedef struct vec3_t(*support_cb)(mesh_t *self, const vec3_t dir);
 #	define vecN_t vec4_t
 #	define VEC3(...) vec4(__VA_ARGS__, 0.0f)
 #	define XYZ(v) v.xyz
+#	define ZN vec4(0.0f)
 #	define _vecN(a) _vec4(a)
 
 #	define dN d4
@@ -29,6 +30,7 @@ typedef struct vec3_t(*support_cb)(mesh_t *self, const vec3_t dir);
 #	define VEC3(...) vec3(__VA_ARGS__)
 #	define XYZ(v) v
 #	define _vecN(a) _vec(a)
+#	define ZN vec3(0.0f)
 
 #	define dN d3_t
 #	define D3(...) d3(__VA_ARGS__)
@@ -223,10 +225,11 @@ void mesh_circle(mesh_t *self, float radius, int segments, vecN_t dir);
 mesh_t *mesh_torus(float radius, float inner_radius, int segments,
 		int inner_segments);
 void mesh_cube(mesh_t *self, float size, float tex_scale);
+void mesh_ico(mesh_t *self, float size);
 
 void mesh_clear(mesh_t *self);
 void mesh_subdivide(mesh_t *mesh, int subdivisions);
-void mesh_spherize(mesh_t *mesh, float scale, float roundness);
+void mesh_spherize(mesh_t *mesh, float roundness);
 mesh_t *mesh_lathe(mesh_t *mesh, float angle, int segments,
 		float x, float y, float z);
 

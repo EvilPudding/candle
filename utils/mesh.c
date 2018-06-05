@@ -22,6 +22,106 @@ static void _mesh_clone(mesh_t *self, mesh_t *into);
 #define CHUNK_EDGES 20
 #define CHUNK_FACES 10
 
+void mesh_ico(mesh_t *self, float size)
+{
+	mesh_lock(self);
+
+	//The golden ratio
+	const float t = (1.0f + sqrtf(5.0f)) / 2.0f;
+
+	const float tsize = t * size;
+
+	vec3_t p[] = {
+		vec3(-size, tsize, 0), vec3(size, tsize, 0),
+		vec3(-size, -tsize, 0), vec3(size, -tsize, 0),
+		vec3(0, -size, tsize), vec3(0, size, tsize),
+		vec3(0, -size, -tsize), vec3(0, size, -tsize),
+		vec3(tsize, 0, -size), vec3(tsize, 0, size),
+		vec3(-tsize, 0, -size), vec3(-tsize, 0, size)
+	};
+
+	//The number of points horizontally
+	const float w = 1.0f / 5.5f;
+	//The number of points vertically
+	const float h = 1.0f / 3.0f;
+
+	vec2_t uvs[] = {
+
+		vec2(0.5f * w, 0.0f),
+		vec2(1.5f * w, 0.0f),
+		vec2(2.5f * w, 0.0f),
+		vec2(3.5f * w, 0.0f),
+		vec2(4.5f * w, 0.0f),
+
+		vec2(0.0f, h),
+
+		vec2(1.0f * w, h),
+		vec2(2.0f * w, h),
+		vec2(3.0f * w, h),
+		vec2(4.0f * w, h),
+		vec2(5.0f * w, h),
+
+		vec2(0.5f * w, 2.0f * h),
+		vec2(1.5f * w, 2.0f * h),
+		vec2(2.5f * w, 2.0f * h),
+		vec2(3.5f * w, 2.0f * h),
+		vec2(4.5f * w, 2.0f * h),
+
+		vec2(1.0f, 2.0f * h),
+
+		vec2(1.0f * w, 1.0f),
+		vec2(2.0f * w, 1.0f),
+		vec2(3.0f * w, 1.0f),
+		vec2(4.0f * w, 1.0f),
+		vec2(5.0f * w, 1.0f),
+	};
+
+	int v[12] = {
+		mesh_add_vert(self, VEC3(_vec3(p[0]))),
+		mesh_add_vert(self, VEC3(_vec3(p[1]))),
+		mesh_add_vert(self, VEC3(_vec3(p[2]))),
+		mesh_add_vert(self, VEC3(_vec3(p[3]))),
+		mesh_add_vert(self, VEC3(_vec3(p[4]))),
+		mesh_add_vert(self, VEC3(_vec3(p[5]))),
+		mesh_add_vert(self, VEC3(_vec3(p[6]))),
+		mesh_add_vert(self, VEC3(_vec3(p[7]))),
+		mesh_add_vert(self, VEC3(_vec3(p[8]))),
+		mesh_add_vert(self, VEC3(_vec3(p[9]))),
+		mesh_add_vert(self, VEC3(_vec3(p[10]))),
+		mesh_add_vert(self, VEC3(_vec3(p[11])))
+	};
+
+	// 5 faces around point 0
+	mesh_add_triangle(self, v[0], p[0], uvs[0], v[11], p[11], uvs[5], v[5], p[5], uvs[6]);
+	mesh_add_triangle(self, v[0], p[0], uvs[1], v[5], p[5], uvs[6], v[1], p[1], uvs[7]);
+	mesh_add_triangle(self, v[0], p[0], uvs[2], v[1], p[1], uvs[7], v[7], p[7], uvs[8]);
+	mesh_add_triangle(self, v[0], p[0], uvs[3], v[7], p[7], uvs[8], v[10], p[10], uvs[9]);
+	mesh_add_triangle(self, v[0], p[0], uvs[4], v[10], p[10], uvs[9], v[11], p[11], uvs[10]);
+	
+	// 5 adjacent faces
+	mesh_add_triangle(self, v[1], p[1], uvs[7], v[5], p[5], uvs[6], v[9], p[9], uvs[12]);
+	mesh_add_triangle(self, v[5], p[5], uvs[6], v[11], p[11], uvs[5], v[4], p[4], uvs[11]);
+	mesh_add_triangle(self, v[11], p[11], uvs[10], v[10], p[10], uvs[9], v[2], p[2], uvs[15]);
+	mesh_add_triangle(self, v[10], p[10], uvs[9], v[7], p[7], uvs[8], v[6], p[6], uvs[14]);
+	mesh_add_triangle(self, v[7], p[7], uvs[8], v[1], p[1], uvs[7], v[8], p[8], uvs[13]);
+	
+	// 5 faces around point 3
+	mesh_add_triangle(self, v[3], p[3], uvs[17], v[9], p[9], uvs[12], v[4], p[4], uvs[11]);
+	mesh_add_triangle(self, v[3], p[3], uvs[21], v[4], p[4], uvs[16], v[2], p[2], uvs[15]);
+	mesh_add_triangle(self, v[3], p[3], uvs[20], v[2], p[2], uvs[15], v[6], p[6], uvs[14]);
+	mesh_add_triangle(self, v[3], p[3], uvs[19], v[6], p[6], uvs[14], v[8], p[8], uvs[13]);
+	mesh_add_triangle(self, v[3], p[3], uvs[18], v[8], p[8], uvs[13], v[9], p[9], uvs[12]);
+	
+	// 5 adjacent faces
+	mesh_add_triangle(self, v[4], p[4], uvs[11], v[9], p[9], uvs[12], v[5], p[5], uvs[6]);
+	mesh_add_triangle(self, v[2], p[2], uvs[15], v[4], p[4], uvs[16], v[11], p[11], uvs[10]);
+	mesh_add_triangle(self, v[6], p[6], uvs[14], v[2], p[2], uvs[15], v[10], p[10], uvs[9]);
+	mesh_add_triangle(self, v[8], p[8], uvs[13], v[6], p[6], uvs[14], v[7], p[7], uvs[8]);
+	mesh_add_triangle(self, v[9], p[9], uvs[12], v[8], p[8], uvs[13], v[1], p[1], uvs[7]);
+
+	mesh_unlock(self);
+}
+
 void mesh_modified(mesh_t *self)
 {
 	self->changes++;
@@ -814,11 +914,13 @@ static void mesh_1_subdivide(mesh_t *self)
 
 }
 
-void mesh_spherize(mesh_t *self, float scale, float roundness)
+void mesh_spherize(mesh_t *self, float roundness)
 {
 	mesh_lock(self);
 	khash_t(id) *selected_edges = self->selections[SEL_EDITING].edges;
 	khiter_t k;
+
+	float rad = mesh_get_selection_radius(self, ZN);
 	for(k = kh_begin(selected_edges); k != kh_end(selected_edges); ++k)
 	{
 		if(!kh_exist(selected_edges, k)) continue;
@@ -830,7 +932,7 @@ void mesh_spherize(mesh_t *self, float scale, float roundness)
 
 		vecN_t norm = vecN_(norm)(v->pos);
 		v->pos = vecN_(mix)(v->pos, norm, roundness);
-		v->pos = vecN_(scale)(v->pos, scale);
+		v->pos = vecN_(scale)(v->pos, rad);
 
 	}
 	mesh_unlock(self);
@@ -2172,7 +2274,7 @@ void mesh_assign(mesh_t *self, mesh_t *other)
 void _mesh_clone(mesh_t *self, mesh_t *into)
 {
 	*into = *self;
-	into->changes = 0;
+	/* into->changes = 0; */
 	into->faces_hash = kh_clone(id, self->faces_hash);
 	into->edges_hash = kh_clone(id, self->edges_hash);
 	into->verts = vector_clone(self->verts);

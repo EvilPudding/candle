@@ -12,6 +12,7 @@
 
 static mat_t *g_missing_mat = NULL;
 
+static int paint_3d_function(mesh_t *mesh, vertex_t *vert);
 int c_model_menu(c_model_t *self, void *ctx);
 int g_update_id = 0;
 vs_t *g_model_vs = NULL;
@@ -61,8 +62,8 @@ static int tool_cube_gui(void *ctx, void *conf)
 
 static int tool_spherize_gui(void *ctx, struct conf_spherize *conf)
 {
-	nk_property_float(ctx, "#scale:", -10000, &conf->scale, 10000, 0.1, 0.05);
-	nk_property_float(ctx, "#roundness:", 0, &conf->roundness, 1, 0.1, 0.05);
+	/* nk_property_float(ctx, "#scale:", -10000, &conf->scale, 10000, 0.1, 0.05); */
+	nk_property_float(ctx, "#roundness:", 0, &conf->roundness, 1, 0.01, 0.01);
 	return 0;
 }
 static int tool_extrude_gui(void *ctx, struct conf_extrude *conf)
@@ -75,7 +76,7 @@ static int tool_extrude_gui(void *ctx, struct conf_extrude *conf)
 	nk_property_float(ctx, "#w:", -10000, &conf->offset.w, 10000, 0.1, 0.05);
 	nk_property_float(ctx, "#scale:", -10000, &conf->scale, 10000, 0.1, 0.05);
 	nk_property_int(ctx, "#steps:", 1, &conf->steps, 1000, 1, 1);
-
+	/* 0.1+0.9*math.pow(x*2-1,2) */
 	nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD,
 			conf->scale_e, sizeof(conf->scale_e), nk_filter_ascii);
 
@@ -103,7 +104,7 @@ static mesh_t *tool_spherize_edit(mesh_t *last,
 {
 	mesh_t *state = mesh_clone(last);
 	mesh_select(state, SEL_EDITING, MESH_FACE, -1);
-	mesh_spherize(state, conf->scale, conf->roundness);
+	mesh_spherize(state, conf->roundness);
 	return state;
 }
 static mesh_t *tool_subdivide_edit(
@@ -135,12 +136,12 @@ static mesh_t *tool_icosphere_edit(
 		mesh_t *last, struct conf_ico *new,
 		mesh_t *state, struct conf_ico *old)
 {
-	if(state && (new->subdivisions > old->subdivisions || new->radius != old->radius))
+	if(state && (new->subdivisions > old->subdivisions && new->radius == old->radius))
 	{
 		mesh_lock(state);
 		mesh_select(state, SEL_EDITING, MESH_FACE, -1);
 		mesh_subdivide(state, new->subdivisions - old->subdivisions);
-		mesh_spherize(state, new->radius, 1);
+		mesh_spherize(state, 1);
 		mesh_select(state, SEL_EDITING, MESH_FACE, -1);
 		mesh_unlock(state);
 	}
@@ -149,15 +150,16 @@ static mesh_t *tool_icosphere_edit(
 		state = mesh_clone(last);
 
 		mesh_lock(state);
-		mesh_load(state, "icosahedron.obj");
+		mesh_ico(state, new->radius / 2);
 		if(new->subdivisions)
 		{
 			mesh_select(state, SEL_EDITING, MESH_FACE, -1);
 			mesh_subdivide(state, new->subdivisions);
-			mesh_spherize(state, new->radius, 1);
 		}
-		mesh_unlock(state);
+		mesh_spherize(state, 1);
 		mesh_select(state, SEL_EDITING, MESH_FACE, -1);
+		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_3d_function);
+		mesh_unlock(state);
 	}
 	return state;
 }
@@ -288,7 +290,11 @@ static mesh_t *tool_extrude_edit(
 	if(vector_count(state->faces))
 	{
 #ifdef MESH4
-		mesh_triangulate(state);
+		if(!state->triangulated)
+		{
+			mesh_select(state, SEL_EDITING, MESH_FACE, -1);
+			mesh_triangulate(state);
+		}
 		mesh_extrude_faces(state, new->steps, new->offset, new->scale,
 				new->scale_f ? (modifier_cb)interpret_scale : NULL,
 				new->offset_f ? (modifier_cb)interpret_offset : NULL, &args);
@@ -357,7 +363,7 @@ void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset)
 	self->layers[i].cull_back = 1;
 	self->layers[i].wireframe = 0;
 	self->layers[i].offset = 0;
-	self->layers[i].smooth_angle = 0.6f;
+	self->layers[i].smooth_angle = 0.2f;
 	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
 }
 
@@ -391,6 +397,11 @@ void c_model_run_command(c_model_t *self, mesh_t *last, mesh_history_t *cmd)
 void c_model_propagate_edit(c_model_t *self, int cmd_id)
 {
 	if(cmd_id >= vector_count(self->history)) return;
+	int last_update_id = 0;
+	if(self->mesh)
+	{
+		last_update_id = self->mesh->update_id;
+	}
 
 	/* int update_id = -1; */
 	mesh_t *last = NULL;
@@ -417,7 +428,10 @@ void c_model_propagate_edit(c_model_t *self, int cmd_id)
 	}
 	if(!self->mesh && last) self->mesh = mesh_new();
 
+	mesh_lock(self->mesh);
 	mesh_assign(self->mesh, last);
+	self->mesh->update_id = last_update_id + 1;
+	mesh_unlock(self->mesh);
 
 	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
 }
