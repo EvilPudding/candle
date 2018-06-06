@@ -107,6 +107,7 @@ static mesh_t *tool_spherize_edit(mesh_t *last,
 	mesh_spherize(state, conf->roundness);
 	return state;
 }
+
 static mesh_t *tool_subdivide_edit(
 		mesh_t *last, struct conf_subdivide *new,
 		mesh_t *state, struct conf_subdivide *old)
@@ -749,13 +750,19 @@ void add_tool(char *name, tool_gui_cb gui, tool_edit_cb edit, size_t size,
 	g_edit_tools[g_edit_tools_count++] = tool;
 }
 
+static void c_model_destroy(c_model_t *self)
+{
+	g_update_id++;
+}
+
+
 REG()
 {
 	signal_init(sig("mesh_changed"), sizeof(mesh_t));
 
 	/* TODO destroyer */
 	ct_t *ct = ct_new("model", sizeof(c_model_t),
-			c_model_init, NULL, 1, ref("node"));
+			c_model_init, c_model_destroy, 1, ref("node"));
 
 	ct_listener(ct, ENTITY, sig("entity_created"), c_model_created);
 

@@ -132,11 +132,28 @@ void c_node_add(c_node_t *self, int num, ...)
 	va_end(children);
 }
 
+static void c_node_destroy(c_node_t *self)
+{
+	int i;
+	for(i = 0; i < self->children_size; i++)
+	{
+		entity_t child = self->children[i];
+		c_node_t *child_node = c_node(&child);
+		child_node->parent = entity_null;
+		self->children[i] = entity_null;;
+		if(!child_node->ghost)
+		{
+			entity_destroy(child);
+		}
+	}
+	self->children_size = 0;
+}
+
 REG()
 {
 	/* TODO destroyer */
 	ct_t *ct = ct_new("node", sizeof(c_node_t),
-			c_node_init, NULL, 1, ref("spacial"));
+			c_node_init, c_node_destroy, 1, ref("spacial"));
 
 	ct_listener(ct, ENTITY, sig("spacial_changed"), c_node_changed);
 }

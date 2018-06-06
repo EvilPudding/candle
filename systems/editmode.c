@@ -381,6 +381,7 @@ static void c_editmode_update_axis(c_editmode_t *self)
 
 int c_editmode_key_up(c_editmode_t *self, char *key)
 {
+	entity_t prev;
 	switch(*key)
 	{
 		case 'c':
@@ -432,6 +433,11 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 				}
 				break;
 			}
+		case 127:
+			prev = self->selected;
+			c_editmode_select(self, entity_null);
+			entity_destroy(prev);
+			break;
 		case 27:
 			c_editmode_select(self, entity_null);
 			break;
