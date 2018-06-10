@@ -372,6 +372,7 @@ void candle_release_mouse(entity_t ent, int reset)
 void candle_grab_mouse(entity_t ent, int visibility)
 {
 	int i;
+	if(g_candle->mouse_owners[0] == ent) return;
 	for(i = 15; i >= 1; i--)
 	{
 		g_candle->mouse_owners[i] = g_candle->mouse_owners[i - 1];

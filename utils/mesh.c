@@ -931,8 +931,8 @@ void mesh_spherize(mesh_t *self, float roundness)
 		vertex_t *v = e_vert(e, self);
 
 		vecN_t norm = vecN_(norm)(v->pos);
+		norm = vecN_(scale)(norm, rad);
 		v->pos = vecN_(mix)(v->pos, norm, roundness);
-		v->pos = vecN_(scale)(v->pos, rad);
 
 	}
 	mesh_unlock(self);

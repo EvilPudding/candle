@@ -375,6 +375,39 @@ void texture_set_xy(texture_t *self, int x, int y,
 	self->bufs[0].data[i + 3] = a;
 }
 
+texture_t *texture_load(texture_t *self, const char *filename)
+{
+	char buffer[256];
+	texture_t temp = {.target = GL_TEXTURE_2D};
+	int result = 0;
+	int i;
+	for(i = 0; i < g_texture_paths_size; i++)
+	{
+		strncpy(buffer, g_texture_paths[i], sizeof(buffer));
+		path_join(buffer, sizeof(buffer), filename);
+		strncat(buffer, ".tga", sizeof(buffer));
+
+		result = LoadTGA(&temp, buffer);
+		if(result) break;
+	}
+	if(!result)
+	{
+		printf("Could not find texture file: %s\n", filename);
+		return NULL;
+	}
+
+	*self = temp;
+	strncpy(self->name, filename, sizeof(self->name));
+	self->filename = strdup(buffer);
+	self->draw_id = 0;
+	self->prev_id = 0;
+	self->bufs_size = 1;
+	self->bufs[0].name = strdup("color");
+
+	loader_push(g_candle->loader, (loader_cb)texture_from_file_loader, self, NULL);
+
+    return self;
+}
 texture_t *texture_from_file(const char *filename)
 {
 	char buffer[256];

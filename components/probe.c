@@ -90,7 +90,6 @@ int c_probe_render(c_probe_t *self, uint signal)
 void c_probe_destroy(c_probe_t *self)
 {
 	/* TODO free textures */
-	free(self);
 }
 
 REG()

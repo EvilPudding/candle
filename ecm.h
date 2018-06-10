@@ -142,6 +142,7 @@ typedef struct ecm_t
 	c_reg_cb *regs;
 
 	int dirty;
+	int steps;
 } ecm_t; /* Entity Component System */
 
 typedef struct c_t

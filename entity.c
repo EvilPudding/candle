@@ -39,10 +39,56 @@ entity_t _entity_new(int ignore, ...)
 
 void entity_destroy(entity_t self)
 {
-	if(!c_destroyed(&self))
+	if(g_ecm->steps < 2)
 	{
-		entity_add_component(self, c_destroyed_new());
-		g_ecm->dirty = 1;
+		if(!c_destroyed(&self))
+		{
+			entity_add_component(self, c_destroyed_new());
+			g_ecm->dirty = 1;
+		}
+	}
+	else
+	{
+		ct_t *ct;
+		ecm_foreach_ct(ct, {
+			c_t *c = ct_get(ct, &self); if(!c) continue;
+			if(!c) exit(1);
+			if(ct->destroy)
+			{
+				ct->destroy(c);
+			}
+			c->entity = entity_null;
+
+			uint offset = ct->offsets[self].offset;
+			uint page = ct->offsets[self].page;
+
+			struct comp_page *last = &ct->pages[ct->pages_size - 1];
+			struct comp_page *curr = &ct->pages[page];
+			if(ct->pages_size <= page) continue;
+
+			uint last_offset = last->components_size - 1;
+			if(last != curr && offset != last_offset)
+			{
+				memcpy(&curr->components[offset],
+						&last->components[last_offset], ct->size);
+
+				entity_t ent2 = ct_get_at(ct, page, offset)->entity;
+
+				if(ent2)
+				{
+					ct->offsets[ent2].offset = offset;
+					ct->offsets[ent2].page = page;
+				}
+			}
+
+			ct->offsets[self].offset = -1;
+			last->components_size--;
+			if(last->components_size == 0)
+			{
+				free(last->components);
+				ct->pages_size--;
+			}
+		});
 	}
 }
 

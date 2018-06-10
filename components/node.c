@@ -135,18 +135,21 @@ void c_node_add(c_node_t *self, int num, ...)
 static void c_node_destroy(c_node_t *self)
 {
 	int i;
+	c_node_unparent(self, 0);
 	for(i = 0; i < self->children_size; i++)
 	{
 		entity_t child = self->children[i];
 		c_node_t *child_node = c_node(&child);
 		child_node->parent = entity_null;
-		self->children[i] = entity_null;;
+		child_node->cached = 0;
+		self->children[i] = entity_null;
 		if(!child_node->ghost)
 		{
 			entity_destroy(child);
 		}
 	}
 	self->children_size = 0;
+	free(self->children);
 }
 
 REG()

@@ -67,6 +67,7 @@ void mat_parse(mat_t *self, FILE *fd)
 					char buffer[256];
 					strncpy(buffer, self->name, sizeof(buffer));
 					path_join(buffer, sizeof(buffer), arg);
+					printf("%s\n", buffer);
 
 					prp->texture = sauces_tex(buffer);
 					if(!prp->texture)

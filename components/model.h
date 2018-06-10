@@ -40,7 +40,6 @@ struct conf_subdivide
 struct conf_cube
 {
 	float size;
-	int inverted;
 };
 struct conf_extrude
 {

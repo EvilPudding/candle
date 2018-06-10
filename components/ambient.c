@@ -28,7 +28,6 @@ c_ambient_t *c_ambient_new(int map_size)
 
 void c_ambient_destroy(c_ambient_t *self)
 {
-	free(self);
 }
 
 int c_ambient_render(c_ambient_t *self)

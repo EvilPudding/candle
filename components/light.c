@@ -110,7 +110,6 @@ int c_light_menu(c_light_t *self, void *ctx)
 
 void c_light_destroy(c_light_t *self)
 {
-	free(self);
 }
 
 int c_light_probe_render(c_light_t *self)

@@ -12,7 +12,8 @@
 
 static mat_t *g_missing_mat = NULL;
 
-static int paint_3d_function(mesh_t *mesh, vertex_t *vert);
+static int paint_3d(mesh_t *mesh, vertex_t *vert);
+static int paint_2d(mesh_t *mesh, vertex_t *vert);
 int c_model_menu(c_model_t *self, void *ctx);
 int g_update_id = 0;
 vs_t *g_model_vs = NULL;
@@ -55,8 +56,9 @@ static int tool_torus_gui(void *ctx, struct conf_torus *conf)
 	return 0;
 }
 
-static int tool_cube_gui(void *ctx, void *conf)
+static int tool_cube_gui(void *ctx, struct conf_cube *conf)
 {
+	nk_property_float(ctx, "#size:", -10000, &conf->size, 10000, 0.1, 0.05);
 	return 0;
 }
 
@@ -86,12 +88,13 @@ static int tool_extrude_gui(void *ctx, struct conf_extrude *conf)
 	return 0;
 }
 
-static mesh_t *tool_circle_edit(mesh_t *mesh, struct conf_circle *conf)
+static mesh_t *tool_circle_edit(mesh_t *state, struct conf_circle *conf)
 {
-	mesh = mesh_clone(mesh);
-	mesh_circle(mesh, conf->radius, conf->segments, VEC3(0.0, 1.0, 0.0));
-	mesh_select(mesh, SEL_EDITING, MESH_EDGE, -1);
-	return mesh;
+	state = mesh_clone(state);
+	mesh_circle(state, conf->radius, conf->segments, VEC3(0.0, 1.0, 0.0));
+	mesh_select(state, SEL_EDITING, MESH_EDGE, -1);
+	mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_2d);
+	return state;
 }
 
 static int tool_sphere_edit(void)
@@ -144,6 +147,7 @@ static mesh_t *tool_icosphere_edit(
 		mesh_subdivide(state, new->subdivisions - old->subdivisions);
 		mesh_spherize(state, 1);
 		mesh_select(state, SEL_EDITING, MESH_FACE, -1);
+		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_3d);
 		mesh_unlock(state);
 	}
 	else
@@ -159,7 +163,7 @@ static mesh_t *tool_icosphere_edit(
 		}
 		mesh_spherize(state, 1);
 		mesh_select(state, SEL_EDITING, MESH_FACE, -1);
-		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_3d_function);
+		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_3d);
 		mesh_unlock(state);
 	}
 	return state;
@@ -174,17 +178,28 @@ static mesh_t *tool_torus_edit(mesh_t *mesh, struct conf_torus *conf)
 
 static vec2_t encode_normal(vec3_t n)
 {
+	n = vec3_norm(n);
     float p = sqrtf(n.z * 8.0f + 8.0f);
-	if(p == 0) p = 1.0f;
+	if(p == 0) return vec2(0);
 	/* printf("%f ", p); vec3_print(n); */
     return vec2_add_number(vec2_div_number(n.xy, p), 0.5f);
 }
 
-static int paint_3d_function(mesh_t *mesh, vertex_t *vert)
+static int paint_2d(mesh_t *mesh, vertex_t *vert)
 {
 	vec3_t norm = vec3_get_unit(vert->pos.xyz);
 	vec2_t n = encode_normal(norm);
-	vert->color = vec4(_vec2(n), vert->pos.w > 0 ? 1.0f : 0.0f, 1.0f);
+	vert->color = vec4(_vec2(n), vert->pos.y > 0, 1.0f);
+	return 1;
+}
+
+static int paint_3d(mesh_t *mesh, vertex_t *vert)
+{
+	vec3_t norm = vec3_get_unit(vert->pos.xyz);
+	vec2_t n = encode_normal(norm);
+	vert->color = vec4(vert->pos.w > 0, n.y, n.x, 1.0f);
+	/* vert->color.xyz = vec3_add_number(vec3_scale(vert->pos, 0.5f), 0.5f); */
+	/* vert->color.a = vert->pos.w; */
 	return 1;
 }
 
@@ -193,11 +208,11 @@ static mesh_t *tool_cube_edit(mesh_t *mesh, struct conf_cube *conf)
 {
 	mesh = mesh_clone(mesh);
 	mesh_lock(mesh);
-	mesh_cube(mesh, conf->inverted?-conf->size:conf->size, 1);
+	mesh_cube(mesh, conf->size, 1);
 	mesh_select(mesh, SEL_EDITING, MESH_EDGE, -1);
 	mesh->has_texcoords = 0;
 
-	mesh_for_each_selected(mesh, MESH_VERT, (iter_cb)paint_3d_function);
+	mesh_for_each_selected(mesh, MESH_VERT, (iter_cb)paint_3d);
 	mesh_unlock(mesh);
 	return mesh;
 }
@@ -299,7 +314,7 @@ static mesh_t *tool_extrude_edit(
 		mesh_extrude_faces(state, new->steps, new->offset, new->scale,
 				new->scale_f ? (modifier_cb)interpret_scale : NULL,
 				new->offset_f ? (modifier_cb)interpret_offset : NULL, &args);
-		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_3d_function);
+		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_3d);
 		mesh_remove_lone_faces(state);
 #endif
 	}
@@ -308,7 +323,7 @@ static mesh_t *tool_extrude_edit(
 		mesh_extrude_edges(state, new->steps, new->offset, new->scale,
 				new->scale_f ? (modifier_cb)interpret_scale : NULL,
 				new->offset_f ? (modifier_cb)interpret_offset : NULL, &args);
-		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_3d_function);
+		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_2d);
 		mesh_remove_lone_edges(state);
 		mesh_triangulate(state);
 	}
@@ -752,6 +767,17 @@ void add_tool(char *name, tool_gui_cb gui, tool_edit_cb edit, size_t size,
 
 static void c_model_destroy(c_model_t *self)
 {
+	int i;
+	for(i = 0; i < vector_count(self->history); i++)
+	{
+		mesh_history_t *cmd = vector_get(self->history, i);
+		if(cmd->state)
+		{
+			mesh_destroy(cmd->state);
+			cmd->state = NULL;
+		}
+	}
+	if(self->mesh) mesh_destroy(self->mesh);
 	g_update_id++;
 }
 
@@ -789,7 +815,7 @@ REG()
 
 	add_tool("cube", (tool_gui_cb)tool_cube_gui, (tool_edit_cb)tool_cube_edit,
 		sizeof(struct conf_cube),
-		&(struct conf_cube){1.0f, 0});
+		&(struct conf_cube){1.0f});
 
 	add_tool("torus", (tool_gui_cb)tool_torus_gui, (tool_edit_cb)tool_torus_edit,
 		sizeof(struct conf_torus),

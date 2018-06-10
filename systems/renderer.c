@@ -30,7 +30,7 @@ int c_renderer_scene_changed(c_renderer_t *self)
 	return CONTINUE;
 }
 
-static void c_renderer_bind_buffer(c_renderer_t *self, pass_t *pass,
+static int c_renderer_bind_buffer(c_renderer_t *self, pass_t *pass,
 		bind_t *bind)
 {
 
@@ -50,12 +50,13 @@ static void c_renderer_bind_buffer(c_renderer_t *self, pass_t *pass,
 	{
 		if(((int)sb->buffer.u_tex[t]) != -1)
 		{
-			glUniform1i(sb->buffer.u_tex[t], (*i) + 64);
-			glActiveTexture(GL_TEXTURE0 + (*i) + 64);
+			glUniform1i(sb->buffer.u_tex[t], (*i) + 64); glerr();
+			glActiveTexture(GL_TEXTURE0 + (*i) + 64); glerr();
 			texture_bind(buffer, t);
 			(*i)++;
 		}
 	}
+	return 1;
 }
 
 static void c_renderer_bind_camera(c_renderer_t *self, pass_t *pass,
@@ -174,7 +175,7 @@ int c_renderer_bind_pass(c_renderer_t *self, pass_t *pass)
 		{
 		case BIND_NONE: printf("error\n"); break;
 		case BIND_TEX:
-			c_renderer_bind_buffer(self, pass, bind);
+			if(!c_renderer_bind_buffer(self, pass, bind)) return 0;
 			break;
 		case BIND_NUM:
 			if(bind->getter)
@@ -875,7 +876,15 @@ void c_renderer_add_pass(c_renderer_t *self, const char *name,
 		pass->binds[i] = binds[i];
 		for(j = 0; j < 16; j++)
 		{
-			pass->binds[i].vs_uniforms[j].cached = 0;
+			shader_bind_t *sb = &pass->binds[i].vs_uniforms[j];
+
+			sb->cached = 0;
+			sb->buffer.u_brightness = -1;
+			int t;
+			for(t = 0; t < 16; t++)
+			{
+				sb->buffer.u_tex[t] = -1;
+			}
 			pass->binds[i].hash = ref(pass->binds[i].name);
 		}
 		if(pass->binds[i].type == BIND_OUT)

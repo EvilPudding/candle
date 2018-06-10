@@ -753,30 +753,15 @@ static void glg_update_vbos(glg_t *self)
 
 }
 
-/* static void glg_destroy_loader(glg_t *self) */
-/* { */
-/* 	glDeleteBuffers(7, self->vbo); */
-/* #ifdef USE_VAO */
-/* 	glDeleteVertexArrays(1, &self->vao); */
-/* #endif */
-
-/* } */
-
-/* static int c_mesh_gl_destroy_loader(c_mesh_gl_t *self) */
-/* { */
-/* 	int i; */
-/* 	for(i = 0; i < self->groups_num; i++) */
-/* 	{ */
-/* 		glg_destroy_loader(&self->groups[i]); */
-/* 	} */	
-/* 	free(self->groups); */
-/* 	free(self); */
-
-/* 	return 1; */
-/* } */
-
 void glg_destroy(glg_t *self)
 {
+	glDeleteBuffers(self->vbo_num, self->vbo);
+#ifdef USE_VAO
+	if(self->vao)
+	{
+		glDeleteVertexArrays(1, &self->vao);
+	}
+#endif
 	if(self->tex) free(self->tex);
 	if(self->nor) free(self->nor);
 	if(self->pos) free(self->pos);
@@ -789,15 +774,12 @@ void glg_destroy(glg_t *self)
 
 void c_mesh_gl_destroy(c_mesh_gl_t *self)
 {
-	/* TODO fix this destroyer */
-	/* int i; */
-	/* for(i = 0; i < self->groups_num; i++) */
-	/* { */
-		/* glg_destroy(&self->groups[i]); */
-	/* } */
-
-	/* loader_push(candle->loader, (loader_cb)c_mesh_gl_destroy_loader, NULL, */
-			/* (c_t*)self); */
+	int i;
+	for(i = 0; i < self->groups_num; i++)
+	{
+		glg_destroy(&self->groups[i]);
+	}
+	free(self->groups);
 }
 
 REG()

@@ -56,8 +56,6 @@ int c_editlook_mouse_press(c_editlook_t *self, mouse_button_data *event)
 		self->pressed_r = 1;
 		fake_x = event->x;
 		fake_y = event->y;
-
-		candle_grab_mouse(c_entity(self), 0);
 	}
 	return CONTINUE;
 }
@@ -82,6 +80,8 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 	c_renderer_t *renderer = c_renderer(&SYS);
 	if(!edit->control) return CONTINUE;
 	if(!self->pressed_r) return CONTINUE;
+
+	candle_grab_mouse(c_entity(self), 0);
 
 	c_spacial_t *sc = c_spacial(self);
 	c_camera_t *cam = c_camera(self);

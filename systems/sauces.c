@@ -203,6 +203,14 @@ entity_t c_sauces_model_get(c_sauces_t *self, const char *name, float scale)
 	return result;
 }
 
+int load_tex(texture_t *texture)
+{
+	char buffer[256];
+	strcpy(buffer, texture->name);
+	texture_load(texture, buffer);
+	return 1;
+}
+
 texture_t *c_sauces_texture_get(c_sauces_t *self, const char *name)
 {
 	texture_t *texture;
@@ -212,9 +220,13 @@ texture_t *c_sauces_texture_get(c_sauces_t *self, const char *name)
 		texture = self->textures[i];
 		if(!strcmp(texture->name, name)) return texture;
 	}
-	texture = texture_from_file(name);
-	c_sauces_texture_reg(self, name, texture);
 
+	texture = texture_new_2D(0, 0, TEX_INTERPOLATE);
+	strcpy(texture->name, name);
+
+	SDL_CreateThread((int(*)(void*))load_tex, "load_tex", texture);
+
+	c_sauces_texture_reg(self, name, texture);
 	return texture;
 }
 

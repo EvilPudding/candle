@@ -20,6 +20,8 @@ typedef struct
 	/* int outside; */
 
 	vec3_t mouse_position;
+	int menu_x;
+	int menu_y;
 
 	vec3_t drag_diff;
 
