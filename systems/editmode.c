@@ -483,7 +483,7 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 
 
 	res = nk_begin_titled(self->nk, buffer, title,
-			nk_rect(self->spawn_pos.x, self->spawn_pos.y, 230, 280),
+			nk_rect(self->spawn_pos.x, self->spawn_pos.y, tex->width + 30, tex->height + 80),
 			NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
 			NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE);
 	if (res)
@@ -497,7 +497,7 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 
 		nk_layout_row_static(self->nk, 25, 200, 1);
 		tex->prev_id = nk_combo(self->nk, bufs, tex->bufs_size,
-				tex->prev_id, 25, nk_vec2(200,200));
+				tex->prev_id, 25, nk_vec2(200, 200));
 
 
 		/* slider color combobox */

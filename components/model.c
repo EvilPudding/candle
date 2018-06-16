@@ -187,7 +187,7 @@ static vec2_t encode_normal(vec3_t n)
 
 static int paint_2d(mesh_t *mesh, vertex_t *vert)
 {
-	vec3_t norm = vec3_get_unit(vert->pos.xyz);
+	vec3_t norm = vec3_get_unit(XYZ(vert->pos));
 	vec2_t n = encode_normal(norm);
 	vert->color = vec4(_vec2(n), vert->pos.y > 0, 1.0f);
 	return 1;
@@ -195,7 +195,7 @@ static int paint_2d(mesh_t *mesh, vertex_t *vert)
 
 static int paint_3d(mesh_t *mesh, vertex_t *vert)
 {
-	vec3_t norm = vec3_get_unit(vert->pos.xyz);
+	vec3_t norm = vec3_get_unit(XYZ(vert->pos));
 	vec2_t n = encode_normal(norm);
 	vert->color = vec4(vert->pos.w > 0, n.y, n.x, 1.0f);
 	/* vert->color.xyz = vec3_add_number(vec3_scale(vert->pos, 0.5f), 0.5f); */
@@ -320,7 +320,7 @@ static mesh_t *tool_extrude_edit(
 	}
 	else
 	{
-		mesh_extrude_edges(state, new->steps, new->offset.xyz, new->scale,
+		mesh_extrude_edges(state, new->steps, new->offset, new->scale,
 				new->scale_f ? (modifier_cb)interpret_scale : NULL,
 				new->offset_f ? (modifier_cb)interpret_offset : NULL, &args);
 		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_2d);
