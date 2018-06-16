@@ -320,7 +320,7 @@ static mesh_t *tool_extrude_edit(
 	}
 	else
 	{
-		mesh_extrude_edges(state, new->steps, new->offset, new->scale,
+		mesh_extrude_edges(state, new->steps, new->offset.xyz, new->scale,
 				new->scale_f ? (modifier_cb)interpret_scale : NULL,
 				new->offset_f ? (modifier_cb)interpret_offset : NULL, &args);
 		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_2d);
