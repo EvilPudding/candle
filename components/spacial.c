@@ -16,6 +16,7 @@ void c_spacial_init(c_spacial_t *self)
 
 	self->model_matrix = mat4();
 	self->rot_matrix = mat4();
+	self->rot_quat = quat();
 }
 
 c_spacial_t *c_spacial_new()
@@ -63,6 +64,8 @@ void c_spacial_look_at(c_spacial_t *self, vec3_t eye, vec3_t center, vec3_t up)
 	self->pos = eye;
 
 	self->rot_matrix = mat4_look_at(vec3(0,0,0), vec3_sub(center, eye), up);
+	self->rot_quat = quat_from_mat4(self->rot_matrix);
+
 	self->modified = 1;
 	c_spacial_unlock(self);
 }
@@ -79,37 +82,25 @@ void c_spacial_scale(c_spacial_t *self, vec3_t scale)
 	c_spacial_update_model_matrix(self);
 }
 
-void c_spacial_set_rot2(c_spacial_t *self, vec3_t rot)
-{
-	c_spacial_lock(self);
-
-	mat4_t rot_matrix = mat4();
-
-	rot_matrix = mat4_rotate(rot_matrix, 1, 0, 0,
-			rot.x);
-	rot_matrix = mat4_rotate(rot_matrix, 0, 0, 1,
-			rot.z);
-	rot_matrix = mat4_rotate(rot_matrix, 0, 1, 0,
-			rot.y);
-
-	self->rot = rot;
-
-	self->rot_matrix = rot_matrix;
-	self->modified = 1;
-	c_spacial_unlock(self);
-}
-
 void c_spacial_rotate_axis(c_spacial_t *self, vec3_t axis, float angle)
 {
 	c_spacial_lock(self);
-	float s = sinf(angle);
-	float c = cosf(angle);
+	/* float s = sinf(angle); */
+	/* float c = cosf(angle); */
 
-	self->sideways = vec3_unit(vec3_rotate(self->sideways, axis, c, s));
-	self->upwards = vec3_unit(vec3_rotate(self->upwards, axis, c, s));
-	self->forward = vec3_unit(vec3_rotate(self->forward, axis, c, s));
+	vec4_t rot = quat_rotate(axis, angle);
+
+	self->sideways = quat_mul_vec3(rot, self->sideways);
+	self->upwards = quat_mul_vec3(rot, self->upwards);
+	self->forward = quat_mul_vec3(rot, self->forward);
+
+	/* self->sideways = vec3_unit(vec3_rotate(self->sideways, axis, c, s)); */
+	/* self->upwards = vec3_unit(vec3_rotate(self->upwards, axis, c, s)); */
+	/* self->forward = vec3_unit(vec3_rotate(self->forward, axis, c, s)); */
 
 	self->rot_matrix = mat4_from_vecs(self->forward, self->upwards, self->sideways);
+	/* self->rot_quat = quat_mul(self->rot_quat, rot); */
+	self->rot_quat = quat_from_mat4(self->rot_matrix);
 
 	self->modified = 1;
 	c_spacial_unlock(self);
@@ -117,14 +108,14 @@ void c_spacial_rotate_axis(c_spacial_t *self, vec3_t axis, float angle)
 
 void c_spacial_rotate_X(c_spacial_t *self, float angle)
 {
-	float s = sinf(angle);
-	float c = cosf(angle);
 	c_spacial_lock(self);
 
-	self->sideways = vec3_unit(vec3_rotate(self->sideways, self->forward, c, s));
-	self->upwards = vec3_unit(vec3_rotate(self->upwards, self->forward, c, s));
+	vec4_t rot = quat_rotate(self->forward, angle);
+	self->sideways = quat_mul_vec3(rot, self->sideways);
+	self->upwards = quat_mul_vec3(rot, self->upwards);
 
 	self->rot_matrix = mat4_from_vecs(self->forward, self->upwards, self->sideways);
+	self->rot_quat = quat_from_mat4(self->rot_matrix);
 
 	self->rot.x += angle;
 
@@ -134,14 +125,14 @@ void c_spacial_rotate_X(c_spacial_t *self, float angle)
 
 void c_spacial_rotate_Z(c_spacial_t *self, float angle)
 {
-	float s = sinf(angle);
-	float c = cosf(angle);
 	c_spacial_lock(self);
 
-	self->forward = vec3_unit(vec3_rotate(self->forward, self->sideways, c, s));
-	self->upwards = vec3_unit(vec3_rotate(self->upwards, self->sideways, c, s));
+	vec4_t rot = quat_rotate(self->sideways, angle);
+	self->forward = quat_mul_vec3(rot, self->forward);
+	self->upwards = quat_mul_vec3(rot, self->upwards);
 
 	self->rot_matrix = mat4_from_vecs(self->forward, self->upwards, self->sideways);
+	self->rot_quat = quat_from_mat4(self->rot_matrix);
 
 	self->rot.z += angle;
 
@@ -151,14 +142,15 @@ void c_spacial_rotate_Z(c_spacial_t *self, float angle)
 
 void c_spacial_rotate_Y(c_spacial_t *self, float angle)
 {
-	float s = sinf(angle);
-	float c = cosf(angle);
 	c_spacial_lock(self);
 
-	self->sideways = vec3_unit(vec3_rotate(self->sideways, self->upwards, c, s));
-	self->forward = vec3_unit(vec3_rotate(self->forward, self->upwards, c, s));
+
+	vec4_t rot = quat_rotate(self->upwards, angle);
+	self->sideways = quat_mul_vec3(rot, self->sideways);
+	self->forward = quat_mul_vec3(rot, self->forward);
 
 	self->rot_matrix = mat4_from_vecs(self->forward, self->upwards, self->sideways);
+	self->rot_quat = quat_from_mat4(self->rot_matrix);
 	self->rot.y += angle;
 
 	self->modified = 1;
@@ -178,6 +170,7 @@ void c_spacial_set_rot(c_spacial_t *self, float x, float y, float z, float angle
 			new_z - self->rot.z);
 	self->rot_matrix = mat4_rotate(self->rot_matrix, 0, y, 0,
 			new_y - self->rot.y);
+	self->rot_quat = quat_from_mat4(self->rot_matrix);
 
 	if(x) self->rot.x = new_x;
 	if(y) self->rot.y = new_y;
@@ -213,8 +206,8 @@ void c_spacial_set_model(c_spacial_t *self, mat4_t m)
 	m._[2]._[2] /= self->scale.z;
 	m._[3]._[2] = 0;
 
-	vec4_t quat = quat_from_mat4(m);
-	self->rot = quat_to_euler(quat);
+	self->rot_quat = quat_from_mat4(m);
+	self->rot = quat_to_euler(self->rot_quat);
 
 	self->rot_matrix = m;
 
@@ -311,7 +304,12 @@ int c_spacial_menu(c_spacial_t *self, void *ctx)
 void c_spacial_update_model_matrix(c_spacial_t *self)
 {
 	self->model_matrix = mat4_translate(self->pos);
+
+	/* self->rot_quat = quat_from_mat4(self->rot_matrix); */
+	/* self->rot_matrix = mat4_from_quat(self->rot_quat); */
 	self->model_matrix = mat4_mul(self->model_matrix, self->rot_matrix);
+	/* self->model_matrix = mat4_mul_quat(self->model_matrix, self->rot_quat); */
+
 	self->model_matrix = mat4_scale_aniso(self->model_matrix, self->scale);
 
 	entity_signal(c_entity(self), sig("spacial_changed"), &c_entity(self));

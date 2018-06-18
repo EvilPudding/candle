@@ -483,7 +483,8 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 
 
 	res = nk_begin_titled(self->nk, buffer, title,
-			nk_rect(self->spawn_pos.x, self->spawn_pos.y, tex->width + 30, tex->height + 80),
+			nk_rect(self->spawn_pos.x, self->spawn_pos.y, tex->width + 30,
+				tex->height + 80),
 			NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
 			NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE);
 	if (res)

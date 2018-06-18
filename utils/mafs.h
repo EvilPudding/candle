@@ -5,6 +5,7 @@
 #include <math.h>
 #include <float.h>
 #define CONST static const
+void sincosf(float x, float *sin, float *cos);
 #else
 #define nextafterf nextafter
 #define sqrtf sqrt
@@ -96,7 +97,7 @@ static inline void type##n##_print(type##n##_t const a) \
 	printf(")\n"); \
 }
 
-#define MAFS_DEFINE_VEC(n_t, type, n, sqrt, pow) \
+#define MAFS_DEFINE_VEC(n_t, type, n, sqrt, pow, floor, round) \
 static inline type##n##_t type##n##_add_number(type##n##_t const a, n_t b) \
 { \
 	type##n##_t r; \
@@ -415,19 +416,19 @@ static inline type##3_t type##3_rotate(const type##3_t v, const type##3_t a, \
 }
 
 
-#define MAFS_DEFINE_TYPE(n_t, type, format, sqrt, pow) \
+#define MAFS_DEFINE_TYPE(n_t, type, format, sqrt, pow, floor, round) \
 	MAFS_DEFINE_STRUCTS(n_t, type) \
 	MAFS_DEFINE_CONSTRUCTOR(n_t, type) \
-	MAFS_DEFINE_VEC(n_t, type, 2, sqrt, pow) \
-	MAFS_DEFINE_VEC(n_t, type, 3, sqrt, pow) \
-	MAFS_DEFINE_VEC(n_t, type, 4, sqrt, pow) \
+	MAFS_DEFINE_VEC(n_t, type, 2, sqrt, pow, floor, round) \
+	MAFS_DEFINE_VEC(n_t, type, 3, sqrt, pow, floor, round) \
+	MAFS_DEFINE_VEC(n_t, type, 4, sqrt, pow, floor, round) \
 	MAFS_DEFINE_VEC_PRINT(n_t, type, format, 2) \
 	MAFS_DEFINE_VEC_PRINT(n_t, type, format, 3) \
 	MAFS_DEFINE_VEC_PRINT(n_t, type, format, 4) \
 	MAFS_DEFINE_SPECIFIC(n_t, type, sqrt, pow)
 
-MAFS_DEFINE_TYPE(float, vec, "%f", sqrtf, powf)
-MAFS_DEFINE_TYPE(double, d, "%lf", sqrt, pow)
+MAFS_DEFINE_TYPE(float, vec, "%f", sqrtf, powf, floorf, roundf)
+MAFS_DEFINE_TYPE(double, d, "%lf", sqrt, pow, floor, round)
 
 typedef struct mat4_t { union {
 	struct { vec4_t a, b, c, d; };
@@ -897,16 +898,6 @@ static inline vec4_t quat_conj(vec4_t q)
 	r._[3] = q._[3];
 	return r;
 }
-static inline vec4_t quat_rotate(n_t angle, vec3_t axis)
-{
-	vec4_t r;
-	vec3_t v = vec3_scale(axis, sinf(angle / 2));
-	int i;
-	for(i=0; i<3; ++i)
-		r._[i] = v._[i];
-	r._[3] = cosf(angle / 2);
-	return r;
-}
 static inline vec3_t quat_mul_vec3(vec4_t q, vec3_t v)
 {
 	vec3_t r;
@@ -916,13 +907,12 @@ t = 2 * cross(q.xyz, v)
 v' = v + q.w * t + cross(q.xyz, t)
  */
 	vec3_t t;
-	vec3_t q_xyz = q.xyz;
-	vec3_t u = q.xyz;
+	vec3_t u;
 
-	t = vec3_cross(q_xyz, v);
+	t = vec3_cross(q.xyz, v);
 	t = vec3_scale(t, 2);
 
-	u = vec3_cross(q_xyz, t);
+	u = vec3_cross(q.xyz, t);
 	t = vec3_scale(t, q.w);
 
 	r = vec3_add(v, t);
@@ -966,24 +956,52 @@ static inline vec3_t quat_to_euler(vec4_t q)
 	vec3_t result;
 
 	// roll (x-axis rotation)
-	float sinr = +2.0 * (q.w * q.x + q.y * q.z);
-	float cosr = +1.0 - 2.0 * (q.x * q.x + q.y * q.y);
+	n_t sinr = +2.0 * (q.w * q.x + q.y * q.z);
+	n_t cosr = +1.0 - 2.0 * (q.x * q.x + q.y * q.y);
 	result.x = atan2f(sinr, cosr);
 
 	// pitch (y-axis rotation)
-	float sinp = +2.0 * (q.w * q.y - q.z * q.x);
+	n_t sinp = +2.0 * (q.w * q.y - q.z * q.x);
 	if (fabs(sinp) >= 1)
 		result.y = copysignf(M_PI / 2.0f, sinp); // use 90 degrees if out of range
 	else
 		result.y = asin(sinp);
 
 	// yaw (z-axis rotation)
-	float siny = +2.0 * (q.w * q.z + q.x * q.y);
-	float cosy = +1.0 - 2.0 * (q.y * q.y + q.z * q.z);  
+	n_t siny = +2.0 * (q.w * q.z + q.x * q.y);
+	n_t cosy = +1.0 - 2.0 * (q.y * q.y + q.z * q.z);  
 	result.z = atan2f(siny, cosy);
 
 	return result;
 }
+
+static inline vec4_t quat_rotate(vec3_t axis, n_t angle)
+{
+	vec4_t r;
+	n_t s, c;
+	sincosf(angle * 0.5f, &s, &c);
+
+	r.xyz = vec3_scale(axis, s);
+	r.w = c;
+	return r;
+}
+
+static inline vec4_t quat_from_euler(n_t yaw, n_t pitch, n_t roll)
+{
+	n_t yaw_sin, yaw_cos, pitch_sin, pitch_cos, roll_sin, roll_cos;
+	yaw *= 0.5f;
+	pitch *= 0.5f;
+	roll *= 0.5f;
+	sincosf(yaw, &yaw_sin, &yaw_cos);
+	sincosf(pitch, &pitch_sin, &pitch_cos);
+	sincosf(roll, &roll_sin, &roll_cos);
+	return vec4(
+			roll_cos * pitch_sin * yaw_cos + roll_sin * pitch_cos * yaw_sin,
+			roll_cos * pitch_cos * yaw_sin - roll_sin * pitch_sin * yaw_cos,
+			roll_sin * pitch_cos * yaw_cos - roll_cos * pitch_sin * yaw_sin,
+			roll_cos * pitch_cos * yaw_cos + roll_sin * pitch_sin * yaw_sin);
+}
+
 static inline mat4_t mat4_mul_quat(mat4_t M, vec4_t q)
 {
 /*  XXX: The way this is written only works for othogonal matrices. */
@@ -1008,13 +1026,12 @@ static inline vec4_t quat_from_mat4(mat4_t M)
 
 	for(i = 0; i<3; i++) {
 		n_t m = M._[i]._[i];
-		if( m < r )
-			continue;
+		if( m < r ) continue;
 		m = r;
 		p = &perm[i];
 	}
 
-	r = sqrtf(1.f + M._[p[0]]._[p[0]] - M._[p[1]]._[p[1]] - M._[p[2]]._[p[2]] );
+	r = sqrtf(1.f + M._[p[0]]._[p[0]] - M._[p[1]]._[p[1]] - M._[p[2]]._[p[2]]);
 
 	if(r < 1e-6) {
 		q._[0] = 1.f;
