@@ -6,9 +6,12 @@ layout (location = 0) out vec4 FragColor;
 
 BUFFER {
 	sampler2D depth;
-	sampler2D specular;
-	sampler2D normal;
+	sampler2D nrm;
 } gbuffer;
+
+BUFFER {
+	sampler2D occlusion;
+} ssao;
 
 BUFFER {
 	sampler2D color;
@@ -18,11 +21,15 @@ void main()
 {
 	vec4 cc = textureLod(rendered.color, pixel_pos(), 0);
 
-	vec4 refl = textureLod(gbuffer.specular, pixel_pos(), 0);
-	vec4 ssred = ssr(gbuffer.depth, rendered.color, gbuffer.normal,
-			gbuffer.specular);
+	vec4 normal_roughness_metalness = textureLod(gbuffer.nrm, pixel_pos(), 0);
+	vec3 nor = decode_normal(normal_roughness_metalness.rg);
+	float roughness = normal_roughness_metalness.b;
 
-	vec3 final = cc.rgb + ssred.rgb * ssred.a * refl.rgb;
+	vec4 ssred = ssr(gbuffer.depth, rendered.color, roughness, nor);
+
+    cc.rgb *= textureLod(ssao.occlusion, pixel_pos(), 0).r;
+
+	vec3 final = cc.rgb + ssred.rgb * ssred.a;
 
 	/* FragColor = vec4(cc.xyz, 1.0f); return; */
 	/* FragColor = vec4(ssred.rgb, 1.0f); return; */
@@ -31,6 +38,8 @@ void main()
 	final = final * pow(2.0f, camera.exposure);
 	float dist = length(get_position(gbuffer.depth));
 	final.b += (clamp(dist - 5, 0, 1)) / 70;
+
+
 
 	FragColor = vec4(final, 1.0f);
 }

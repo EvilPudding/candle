@@ -33,8 +33,8 @@ void c_editmode_init(c_editmode_t *self)
 	if(!g_sel_mat)
 	{
 		g_sel_mat = mat_new("sel_mat");
-		/* g_sel_mat->diffuse.color = vec4(0, 0.1, 0.4, 1); */
-		g_sel_mat->diffuse.color = vec4(0.0, 0.0, 0.0, 0.0);
+		/* g_sel_mat->albedo.color = vec4(0, 0.1, 0.4, 1); */
+		g_sel_mat->albedo.color = vec4(0.0, 0.0, 0.0, 0.0);
 		g_sel_mat->transparency.color = vec4(0.6, 0.3, 0.1, 0.0f);
 				/* sauces_mat("pack1/white"); */
 	}
@@ -483,8 +483,8 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 
 
 	res = nk_begin_titled(self->nk, buffer, title,
-			nk_rect(self->spawn_pos.x, self->spawn_pos.y, tex->width + 30,
-				tex->height + 80),
+			nk_rect(self->spawn_pos.x, self->spawn_pos.y, tex->width/2 + 30,
+				tex->height/2 + 80),
 			NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
 			NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE);
 	if (res)

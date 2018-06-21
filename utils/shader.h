@@ -78,8 +78,9 @@ typedef struct shader_t
 
 	GLuint u_screen_size;
 
-	u_prop_t u_diffuse;
-	u_prop_t u_specular;
+	u_prop_t u_albedo;
+	u_prop_t u_roughness;
+	u_prop_t u_metalness;
 	u_prop_t u_transparency;
 	u_prop_t u_normal;
 	u_prop_t u_emissive;

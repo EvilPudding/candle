@@ -445,8 +445,9 @@ static int shader_new_loader(shader_t *self)
 	self->u_output_size = glGetUniformLocation(self->program, "output_size"); glerr();
 
 	/* MATERIALS */
-	shader_get_prop_uniforms(self, &self->u_diffuse, "diffuse");
-	shader_get_prop_uniforms(self, &self->u_specular, "specular");
+	shader_get_prop_uniforms(self, &self->u_albedo, "albedo");
+	shader_get_prop_uniforms(self, &self->u_roughness, "roughness");
+	shader_get_prop_uniforms(self, &self->u_metalness, "metalness");
 	shader_get_prop_uniforms(self, &self->u_transparency, "transparency");
 	shader_get_prop_uniforms(self, &self->u_normal, "normal");
 	shader_get_prop_uniforms(self, &self->u_emissive, "emissive");
@@ -634,7 +635,7 @@ void shader_bind_screen(shader_t *self, texture_t *buffer, float sx, float sy)
 	glerr();
 
 	int i = self->bound_textures++;
-	glUniform1i(self->u_diffuse.texture, i); glerr();
+	glUniform1i(self->u_albedo.texture, i); glerr();
 	glActiveTexture(GL_TEXTURE0 + i); glerr();
 
 	texture_bind(buffer, -1);

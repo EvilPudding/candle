@@ -25,7 +25,7 @@ static void c_sprite_init(c_sprite_t *self)
 	if(!g_missing_mat)
 	{
 		g_missing_mat = mat_new("missing");
-		mat_set_diffuse(g_missing_mat, (prop_t){.color=vec4(0.0, 0.9, 1.0, 1.0)});
+		mat_set_albedo(g_missing_mat, (prop_t){.color=vec4(0.0, 0.9, 1.0, 1.0)});
 
 	}
 	if(!g_sprite_mesh)

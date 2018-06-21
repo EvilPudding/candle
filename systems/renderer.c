@@ -310,13 +310,12 @@ static int c_renderer_gl(c_renderer_t *self)
 
 
 	texture_t *gbuffer =	texture_new_2D(1, 1, 0, 0,
-		buffer_new("normal",	1, 2),
-		buffer_new("specular",	1, 4),
-		buffer_new("diffuse",	1, 4),
+		buffer_new("nrm",		1, 4),
+		buffer_new("albedo",	1, 4),
 		buffer_new("depth",		1, -1)
 	);
 	texture_t *ssao =		texture_new_2D(1, 1, 0,
-		buffer_new("occlusion",	1, 4)
+		buffer_new("occlusion",	1, 2)
 	);
 	texture_t *rendered =	texture_new_2D(1, 1, 0,
 		buffer_new("color",	1, 4)
@@ -394,7 +393,6 @@ static int c_renderer_gl(c_renderer_t *self)
 		(bind_t[]){
 			{BIND_OUT, .buffer = c_renderer_tex(self, ref("rendered"))},
 			{BIND_TEX, "gbuffer", .buffer = c_renderer_tex(self, ref("gbuffer"))},
-			{BIND_TEX, "ssao", .buffer = c_renderer_tex(self, ref("ssao"))},
 			{BIND_CAM, "camera", (getter_cb)c_renderer_get_camera, self},
 			{BIND_NONE}
 		}
@@ -446,6 +444,7 @@ static int c_renderer_gl(c_renderer_t *self)
 			{BIND_OUT, .buffer = c_renderer_tex(self, ref("final"))},
 			{BIND_TEX, "gbuffer", .buffer = c_renderer_tex(self, ref("gbuffer"))},
 			{BIND_TEX, "rendered", .buffer = c_renderer_tex(self, ref("rendered"))},
+			{BIND_TEX, "ssao", .buffer = c_renderer_tex(self, ref("ssao"))},
 			{BIND_CAM, "camera", (getter_cb)c_renderer_get_camera, self},
 			{BIND_NONE}
 		}

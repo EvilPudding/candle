@@ -189,7 +189,8 @@ static int paint_2d(mesh_t *mesh, vertex_t *vert)
 {
 	vec3_t norm = vec3_get_unit(XYZ(vert->pos));
 	vec2_t n = encode_normal(norm);
-	vert->color = vec4(_vec2(n), vert->pos.y > 0, 1.0f);
+	vert->color = vec4(vert->pos.y > 0, n.y, n.x, 1.0f);
+	/* vert->color = vec4(_vec2(n), vert->pos.y > 0, 1.0f); */
 	return 1;
 }
 
@@ -337,7 +338,7 @@ static void c_model_init(c_model_t *self)
 	if(!g_missing_mat)
 	{
 		g_missing_mat = mat_new("missing");
-		mat_set_diffuse(g_missing_mat, (prop_t){.color=vec4(0.0, 0.9, 1.0, 1.0)});
+		g_missing_mat->albedo.color = vec4(0.0, 0.9, 1.0, 1.0);
 	}
 
 	self->visible = 1;

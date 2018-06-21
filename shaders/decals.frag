@@ -1,7 +1,6 @@
 
-layout (location = 0) out vec4 DiffuseColor;
-layout (location = 1) out vec4 SpecularColor;
-layout (location = 2) out vec2 Normal;
+layout (location = 0) out vec4 AlbedoColor;
+layout (location = 1) out vec4 NRM; // normal_roughness_metalness
 
 #include "common.frag"
 #line 8
@@ -32,9 +31,11 @@ void main()
 	vec3 norm = ((camera.view * model) * vec4(vnorm, 0.0f)).xyz;
 	if(dot(norm, get_normal(gbuffer.normal)) < 0.5) discard;
 
-	DiffuseColor = resolveProperty(diffuse, tc);
-	SpecularColor = resolveProperty(specular, tc);
-	Normal = encode_normal(norm);
+	AlbedoColor = resolveProperty(albedo, tc);
+
+	NRM.b = resolveProperty(roughness, texcoord).r;
+	NRM.a = resolveProperty(metalness, texcoord).r;
+	NRM.rg = encode_normal(get_normal());
 
 }
 

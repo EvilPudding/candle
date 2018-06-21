@@ -6,7 +6,7 @@ layout (location = 1) out vec2 GeomID;
 
 void main()
 {
-	vec4 dif  = resolveProperty(diffuse, texcoord);
+	vec4 dif  = resolveProperty(albedo, texcoord);
 	if(dif.a == 0.0f) discard;
 
 	ID = object_id;

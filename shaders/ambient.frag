@@ -8,7 +8,7 @@ layout (location = 0) out vec4 FragColor;
 
 void main()
 {
-	vec3 dif = resolveProperty(diffuse, texcoord).rgb;
+	vec3 dif = resolveProperty(albedo, texcoord).rgb;
 
 	/* vec3 normalColor = vec3(0.0, 0.0, 1.0); */
 	/* vec3 l = normalize(LightDirection_tangentspace); */

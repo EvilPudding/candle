@@ -5,8 +5,8 @@ layout (location = 0) out vec4 FragColor;
 
 void main()
 {
-	/* FragColor = ssr(diffuse.texture); */
-	FragColor = texture2D(diffuse.texture, texcoord);
+	/* FragColor = ssr(albedo.texture); */
+	FragColor = texture2D(albedo.texture, texcoord);
 }  
 
 // vim: set ft=c:

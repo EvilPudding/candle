@@ -5,31 +5,24 @@
 layout (location = 0) out vec4 FragColor;
 
 BUFFER {
-	sampler2D occlusion;
-} ssao;
-
-BUFFER {
 	sampler2D depth;
-	sampler2D diffuse;
-	sampler2D specular;
-	sampler2D normal;
+	sampler2D albedo;
+	sampler2D nrm;
 } gbuffer;
 
 void main()
 {
-	vec3 dif = textureLod(gbuffer.diffuse, pixel_pos(), 0).rgb;
+	vec3 dif = textureLod(gbuffer.albedo, pixel_pos(), 0).rgb;
 	vec3 c_pos = get_position(gbuffer.depth);
 	vec3 w_pos = (camera.model * vec4(c_pos, 1.0f)).xyz;
 
 	/* vec3 c_pos2 = get_position2(gbuffer); */
 
-	/* FragColor = vec4(vec3(length(c_pos2 - c_pos)*10), 1); return; */
-	vec3 c_nor = get_normal(gbuffer.normal);
-
+	vec4 normal_roughness_metalness = textureLod(gbuffer.nrm, pixel_pos(), 0);
+	vec3 c_nor = decode_normal(normal_roughness_metalness.rg);
+	float roughness = normal_roughness_metalness.b;
 
 	float dist_to_eye = length(c_pos);
-	/* FragColor = clamp(vec4((nor+1.0f)/2.0f, 1.0),0,1); return; */
-
 
 	vec3 color = vec3(0.0f);
 	/* FragColor = vec4(texcoord - gl_FragCoord.xy / screen_size, 0, 1); return; */
@@ -80,28 +73,25 @@ void main()
 
 			if(diffuseCoefficient > 0.005 && attenuation > 0.01)
 			{
-				vec4 spe = textureLod(gbuffer.specular, pixel_pos(), 0);
+				/* vec4 spe = textureLod(gbuffer.specular, pixel_pos(), 0); */
 
-				vec3 eye_dir = normalize(-c_pos);
+				/* vec3 eye_dir = normalize(-c_pos); */
 
-				vec3 reflect_dir = normalize(reflect(c_light_dir, c_nor));
+				/* vec3 reflect_dir = normalize(reflect(c_light_dir, c_nor)); */
 
 
-				float specularCoefficient = 0.0;
-				vec3 specularColor = spe.rgb * lcolor;
-				float power = clamp(roughnessToSpecularPower(spe.a), 0.0f, 1.0f) * 10;
+				/* float specularCoefficient = 0.0; */
+				/* vec3 specularColor = spe.rgb * lcolor; */
+				/* float power = clamp(roughnessToSpecularPower(spe.a), 0.0f, 1.0f) * 10; */
 
-				specularCoefficient = pow(clamp(-dot(eye_dir, reflect_dir), 0.0f, 1.0f), power);
+				/* specularCoefficient = pow(clamp(-dot(eye_dir, reflect_dir), 0.0f, 1.0f), power); */
 
-				vec3 frag_specular = clamp(specularCoefficient * specularColor, 0.0f, 1.0f);
-				color_lit += attenuation * frag_specular;
-				/* FragColor = vec4(reflect_dir, 1.0); return; */
+				/* vec3 frag_specular = clamp(specularCoefficient * specularColor, 0.0f, 1.0f); */
+				/* color_lit += attenuation * frag_specular; */
 			}
 			color += color_lit * (1.0 - sd);
 		}
 	}
-
-    color *= textureLod(ssao.occlusion, pixel_pos(), 0).rgb;
 
 	FragColor = vec4(color, 1.0);
 }  

@@ -1,21 +1,21 @@
 
-layout (location = 0) out vec4 DiffuseColor;
-layout (location = 1) out vec4 SpecularColor;
-layout (location = 2) out vec2 Normal;
+layout (location = 0) out vec4 AlbedoColor;
+layout (location = 1) out vec4 NRM; // normal_roughness_metalness
 
 #include "common.frag"
 
 void main()
 {
-	vec4 dif  = resolveProperty(diffuse, texcoord);
+	vec4 dif  = resolveProperty(albedo, texcoord);
 	if(dif.a == 0.0f) discard;
 
-	dif.rgb += poly_color * 2;
-	DiffuseColor = dif;
+	dif.rgb += poly_color;
+	AlbedoColor = dif;
 
-	SpecularColor = resolveProperty(specular, texcoord);
+	NRM.b = resolveProperty(roughness, texcoord).r;
+	NRM.a = resolveProperty(metalness, texcoord).r;
 
-	Normal = encode_normal(get_normal());
+	NRM.rg = encode_normal(get_normal());
 }
 
 // vim: set ft=c:

@@ -17,65 +17,39 @@
 c_sauces_t *c_sauces_new()
 {
 	c_sauces_t *self = component_new("sauces");
+	self->files = kh_init(res);
 	return self;
-}
-
-void c_sauces_mat_reg(c_sauces_t *self, const char *name, mat_t *mat)
-{
-	uint i = self->mats_size++;
-	self->mats = realloc(self->mats,
-			sizeof(*self->mats) * self->mats_size);
-	self->mats[i] = mat;
-	if(mat->name != name) strncpy(mat->name, name, sizeof(mat->name));
 }
 
 mat_t *c_sauces_mat_get(c_sauces_t *self, const char *name)
 {
-	mat_t *mat;
-	uint i;
-	for(i = 0; i < self->mats_size; i++)
-	{
-		mat = self->mats[i];
-		if(!strcmp(mat->name, name)) return mat;
-	}
-	mat = mat_from_file(name);
-	if(mat) c_sauces_mat_reg(self, name, mat);
+	resource_t *sauce = c_sauces_get(self, name);
+	if(sauce->data) return sauce->data;
+	mat_t *mat = mat_from_file(name);
+	sauce->data = mat;
 	return mat;
-}
-
-void c_sauces_mesh_reg(c_sauces_t *self, const char *name, mesh_t *mesh)
-{
-	uint i = self->meshes_size++;
-	self->meshes = realloc(self->meshes,
-			sizeof(*self->meshes) * self->meshes_size);
-	self->meshes[i] = mesh;
-	strncpy(mesh->name, name, sizeof(mesh->name));
 }
 
 int load_mesh(mesh_t *mesh)
 {
 	char buffer[256];
 	strcpy(buffer, mesh->name);
+	printf("loading %s\n", mesh->name);
 	mesh_load(mesh, buffer);
 	return 1;
 }
 
 mesh_t *c_sauces_mesh_get(c_sauces_t *self, const char *name)
 {
-	mesh_t *mesh;
-	uint i;
-	for(i = 0; i < self->meshes_size; i++)
-	{
-		mesh = self->meshes[i];
-		if(!strcmp(mesh->name, name)) return mesh;
-	}
-	mesh = mesh_new();
-	strcpy(mesh->name, name);
+	resource_t *sauce = c_sauces_get(self, name);
+	if(sauce->data) return sauce->data;
+	mesh_t *mesh = mesh_new();
+	sauce->data = mesh;
+	strcpy(mesh->name, sauce->path);
 
 	SDL_CreateThread((int(*)(void*))load_mesh, "load_mesh", mesh);
 	/* load_mesh(mesh); */
 
-	c_sauces_mesh_reg(self, name, mesh);
 	return mesh;
 }
 
@@ -146,11 +120,10 @@ void load_node(entity_t entity, const struct aiScene *scene,
 entity_t c_sauces_model_get(c_sauces_t *self, const char *name, float scale)
 {
 	int i;
-	char buffer[2048];
-	snprintf(buffer, sizeof(buffer), "resauces/models/%s", name);
+	resource_t *sauce = c_sauces_get(self, name);
 
 	entity_t result;
-	const struct aiScene *scene = aiImportFile(buffer,
+	const struct aiScene *scene = aiImportFile(sauce->path,
 			/* aiProcess_CalcTangentSpace  		| */
 			aiProcess_Triangulate			|
 			/* aiProcess_GenSmoothNormals		| */
@@ -211,72 +184,70 @@ int load_tex(texture_t *texture)
 	return 1;
 }
 
+resource_t *c_sauces_get(c_sauces_t *self, const char *name)
+{
+	khiter_t k = kh_get(res, self->files, ref(name));
+	if(k == kh_end(self->files))
+	{
+		printf("no indexed sauce named %s\n", name);
+		return NULL;
+	}
+	return &kh_value(self->files, k);
+}
+
 texture_t *c_sauces_texture_get(c_sauces_t *self, const char *name)
 {
+	resource_t *sauce = c_sauces_get(self, name);
+	if(sauce->data) return sauce->data;
+
 	texture_t *texture;
-	uint i;
-	for(i = 0; i < self->textures_size; i++)
-	{
-		texture = self->textures[i];
-		if(!strcmp(texture->name, name)) return texture;
-	}
 
 	texture = texture_new_2D(0, 0, TEX_INTERPOLATE);
-	strcpy(texture->name, name);
+	strcpy(texture->name, sauce->path);
 
 	SDL_CreateThread((int(*)(void*))load_tex, "load_tex", texture);
 
-	c_sauces_texture_reg(self, name, texture);
+	sauce->data = texture;
 	return texture;
 }
 
-void c_sauces_texture_reg(c_sauces_t *self, const char *name, texture_t *texture)
+int c_sauces_index_dir(c_sauces_t *self, const char *dir_name)
 {
-	if(!texture) return;
-	uint i = self->textures_size++;
-	self->textures = realloc(self->textures,
-			sizeof(*self->textures) * self->textures_size);
-	self->textures[i] = texture;
-	strncpy(texture->name, name, sizeof(texture->name));
-}
-
-int c_sauces_get_mats_at(c_sauces_t *self, const char *dir_name)
-{
-	char dir_buffer[2048];
-	strncpy(dir_buffer, g_mats_path, sizeof(dir_buffer));
-
-	path_join(dir_buffer, sizeof(dir_buffer), path_relative(dir_name, g_mats_path));
-
-	DIR *dir = opendir(dir_buffer);
+	DIR *dir = opendir(dir_name);
 	if(dir == NULL) return 0;
 
 	struct dirent *ent;
 	while((ent = readdir(dir)) != NULL)
 	{
-		char buffer[512];
+		char path[512];
+		char name[64];
 
 		if(ent->d_name[0] == '.') continue;
 
-		strncpy(buffer, dir_buffer, sizeof(buffer));
-		path_join(buffer, sizeof(buffer), ent->d_name);
+		strncpy(path, dir_name, sizeof(path));
+		path_join(path, sizeof(path), ent->d_name);
+		if(c_sauces_index_dir(self, path)) continue;
 
-		char *ext = strrchr(ent->d_name, '.');
-		if(ext && ext != ent->d_name && !strcmp(ext, ".mat"))
+		strcpy(name, ent->d_name);
+
+		char *ext = strrchr(name, '.');
+		*ext = '\0';
+
+		printf("%s\n", name);
+		uint key = ref(name);
+		khiter_t k = kh_get(res, self->files, key);
+		if(k != kh_end(self->files))
 		{
-			ext = strrchr(buffer, '.');
-			*ext = '\0';
-			mat_from_file(buffer);
+			printf("Name collision! %s"
+					" Resources should be uniquely named.\n", ent->d_name);
 			continue;
 		}
+		int ret;
+		k = kh_put(res, self->files, key, &ret);
+		resource_t *sauce = &kh_value(self->files, k);
+		strcpy(sauce->path, path);
+		sauce->data = NULL;
 
-		if(is_dir(buffer))
-		{
-			if(!mat_from_file(buffer))
-			{
-				c_sauces_get_mats_at(self, buffer);
-			}
-			continue;
-		}
 
 	}
 	closedir(dir);
@@ -284,20 +255,21 @@ int c_sauces_get_mats_at(c_sauces_t *self, const char *dir_name)
 	return 1;
 }
 
+
 int c_sauces_component_menu(c_sauces_t *self, void *ctx)
 {
-	if(nk_tree_push(ctx, NK_TREE_TAB, "Textures", NK_MINIMIZED))
-	{
-		int i;
-		for(i = 0; i < self->textures_size; i++)
-		{
-			if(nk_button_label(ctx, self->textures[i]->name))
-			{
-				c_editmode_open_texture(c_editmode(self), self->textures[i]);
-			}
-		}
-		nk_tree_pop(ctx);
-	}
+	/* if(nk_tree_push(ctx, NK_TREE_TAB, "Textures", NK_MINIMIZED)) */
+	/* { */
+	/* 	int i; */
+	/* 	for(i = 0; i < self->textures_size; i++) */
+	/* 	{ */
+	/* 		if(nk_button_label(ctx, self->textures[i]->name)) */
+	/* 		{ */
+	/* 			c_editmode_open_texture(c_editmode(self), self->textures[i]); */
+	/* 		} */
+	/* 	} */
+	/* 	nk_tree_pop(ctx); */
+	/* } */
 	return 1;
 }
 

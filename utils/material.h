@@ -19,8 +19,9 @@ typedef struct
 {
 	char name[256];
 
-	prop_t diffuse;
-	prop_t specular;
+	prop_t albedo;
+	prop_t roughness;
+	prop_t metalness;
 	prop_t transparency;
 	prop_t normal;
 	prop_t emissive;
@@ -33,10 +34,7 @@ mat_t *mat_new(const char *name);
 mat_t *mat_from_file(const char *filename);
 mat_t *mat_from_dir(const char *name, const char *dirname);
 void mat_bind(mat_t *self, shader_t *shader);
-void mat_set_diffuse(mat_t *self, prop_t diffuse);
 void mat_set_normal(mat_t *self, prop_t normal);
-void mat_set_specular(mat_t *self, prop_t specular);
-void mat_set_transparency(mat_t *self, prop_t transparency);
 void mat_destroy(mat_t *self);
 void mat_menu(mat_t *self, void *ctx);
 

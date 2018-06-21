@@ -1,6 +1,7 @@
 #ifndef FRAG_COMMON
 #define FRAG_COMMON
 #line 3
+#extension GL_ARB_texture_query_levels : enable
 
 #define _CAT(a, b) a ## b
 #define CAT(a, b) _CAT(a,b)
@@ -15,8 +16,9 @@ struct property_t
 
 uniform vec2 output_size;
 
-uniform property_t diffuse;
-uniform property_t specular;
+uniform property_t albedo;
+uniform property_t roughness;
+uniform property_t metalness;
 uniform property_t transparency;
 uniform property_t normal;
 uniform property_t emissive;
@@ -142,36 +144,21 @@ vec4 get_emissive()
 	return resolveProperty(emissive, texcoord);
 }
 
-vec4 get_specular()
+float get_metalness()
 {
-	return resolveProperty(specular, texcoord);
+	return resolveProperty(metalness, texcoord).r;
 }
+
+float get_roughness()
+{
+	return resolveProperty(roughness, texcoord).r;
+}
+
 
 vec4 get_transparency()
 {
 	return resolveProperty(transparency, texcoord);
 }
-
-/* float get_depth(gbuffer_t buffer) */
-/* { */
-/* 	return textureLod(buffer.depth, pixel_pos(), 0).r; */
-/* } */
-/* vec2 get_geomid(sbuffer_t buffer) */
-/* { */
-/* 	return textureLod(buffer.geomid, pixel_pos(), 0).rg; */
-/* } */
-/* vec2 get_id(sbuffer_t buffer) */
-/* { */
-/* 	return textureLod(buffer.id, pixel_pos(), 0).rg; */
-/* } */
-/* vec3 get_diffuse(gbuffer_t buffer) */
-/* { */
-/* 	return textureLod(buffer.diffuse, pixel_pos(), 0).rgb; */
-/* } */
-/* vec3 get_normal(gbuffer_t buffer) */
-/* { */
-/* 	return decode_normal(textureLod(buffer.normal, pixel_pos(), 0).rg); */
-/* } */
 
 
 vec3 get_position(sampler2D depth)
@@ -425,13 +412,17 @@ float isoscelesTriangleInRadius(float a, float h)
     return (a * (sqrt(a2 + fh2) - a)) / (4.0f * h);
 }
 
-vec4 ssr(sampler2D depth, sampler2D screen, sampler2D normal, sampler2D specular)
+vec3 fresnelSchlick(vec3 F0, float cosTheta)
 {
-	vec3 nor = get_normal(normal);
+	return F0 + (vec3(1.0) - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
+const vec3 Fdielectric = vec3(0.04);
+vec4 ssr(sampler2D depth, sampler2D screen, float roughness, vec3 nor)
+{
 	vec3 pos = get_position(depth, pixel_pos());
 
-	vec4 specularAll = textureLod(specular, pixel_pos(), 0);
-	if(specularAll.a > 0.9) return vec4(0.0);
+	if(roughness > 0.95) return vec4(0.0);
 
 	vec3 w_pos = (camera.model * vec4(pos, 1.0f)).xyz;
 	vec3 w_nor = (camera.model * vec4(nor, 0.0f)).xyz;
@@ -458,39 +449,32 @@ vec4 ssr(sampler2D depth, sampler2D screen, sampler2D normal, sampler2D specular
 	/* return vec5(vec3(screenEdgefactor), 1.0); */
 
 
-
-    /* vec3 deltaP = hitPos - camPos; */
-    vec2 deltaP = coords.xy - texcoord;
-    float adjacentLength = length(deltaP);
-    float specularPower = roughnessToSpecularPower(specularAll.a);
-    float coneTheta = specularPowerToConeAngle(specularPower);
-	float oppositeLength = isoscelesTriangleOpposite(adjacentLength, coneTheta);
-	float incircleSize = isoscelesTriangleInRadius(oppositeLength, adjacentLength);
-	float mipChannel = clamp(log2(incircleSize * 60), 0.0f, 7.0f);
-	/* return vec4(vec3(adjacentLength), 1.0f); */
-	mipChannel = adjacentLength * 3;
 	/* return vec4(vec3(log2(incircleSize * 60)), 1.0f); */
 	/* return vec4(vec3(incircleSize * 50), 1.0f); */
 	/* return vec4(vec3(mipChannel / 7.0f), 1.0f); */
 	/* mipChannel = 0; */
 	/* return vec4(reflected.xy, 0.0f, 1.0f); */
 
-	vec3 reflect_color = textureLod(screen, coords.xy, mipChannel).rgb;
+	int specularTextureLevels = textureQueryLevels(screen);
+	vec3 reflect_color = textureLod(screen, coords.xy, roughness *
+			7.0f).rgb;
 
 	vec3 fallback_color = vec3(0.0f);
 	/* vec3 fallback_color = texture(ambient_map, reflect(eye_dir, nor)).rgb / (mipChannel+1); */
 	/* vec3 fallback_color = vec3(0.0f); */
 
 
+    vec2 deltaP = coords.xy - texcoord;
+    float adjacentLength = length(deltaP);
 	float col = screenEdgefactor * clamp((searchDist - adjacentLength) * searchDistInv,
 			0.0, 1.0);
 	/* return vec4(vec3(col), coef); */
 
 	if(coords.z <= 0.0f)
-		return vec4(specularAll.rgb * fallback_color, coef);
+		return vec4(fallback_color, coef);
 
 
-	return vec4(mix(fallback_color, reflect_color, col) * specularAll.rgb, coef);
+	return vec4(mix(fallback_color, reflect_color, col), coef);
 
 	/* return vec4(reflect_color, col); */
 	/* return vec4(fallback_color * (1.0f - col) + reflect_color * col, 1.0); */
