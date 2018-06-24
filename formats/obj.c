@@ -175,14 +175,12 @@ static void readProperty(mesh_t *self, FILE * fp, vec3_t *tempNorm,
 
 void mesh_load_obj(mesh_t *self, const char *filename)
 {
-	char buffer[2048];
-	snprintf(buffer, sizeof(buffer), "resauces/models/%s", filename);
 
 	strncpy(self->name, filename, sizeof(self->name));
-
     int i;
-    FILE *fp = fopen(buffer, "r");
+    FILE *fp = fopen(filename, "r");
     int v, vt, vn, f;
+
 
 	if(!fp)
 	{

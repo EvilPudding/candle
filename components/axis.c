@@ -113,7 +113,8 @@ int c_axis_mouse_move(c_axis_t *self, mouse_move_data *event)
 				}
 				else
 				{
-					dir = mat4_mul_vec4(sc->rot_matrix, vec4(_vec3(dir), 0.0f)).xyz;
+					/* dir = mat4_mul_vec4(sc->rot_matrix, vec4(_vec3(dir), 0.0f)).xyz; */
+					dir = quat_mul_vec3(sc->rot_quat, dir);
 				}
 				dir = vec3_scale(dir, -event->sy * 0.04);
 				c_spacial_set_pos(sc, vec3_add(dir, sc->pos));

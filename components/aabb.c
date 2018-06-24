@@ -35,7 +35,8 @@ void c_aabb_update(c_aabb_t *self)
 
 	if(!mesh) return;
 
-	inv = mat4_invert(sc->rot_matrix);
+	mat4_t rot_matrix = quat_to_mat4(sc->rot_quat);
+	inv = mat4_invert(rot_matrix);
 
 	vec3_t dir_x = mat4_mul_vec4(inv, vec4(1.0, 0.0, 0.0, 0.0)).xyz;
 	vec3_t dir_y = mat4_mul_vec4(inv, vec4(0.0, 1.0, 0.0, 0.0)).xyz;

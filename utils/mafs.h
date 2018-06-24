@@ -861,18 +861,6 @@ static inline vec4_t quat_sub(vec4_t a, vec4_t b)
 		r._[i] = a._[i] - b._[i];
 	return r;
 }
-static inline vec4_t quat_mul(vec4_t p, vec4_t q)
-{
-	vec4_t r;
-	vec3_t w;
-	r.xyz = vec3_cross(p.xyz, q.xyz);
-	w = vec3_scale(p.xyz, q._[3]);
-	r.xyz = vec3_add(r.xyz, w);
-	w = vec3_scale(q.xyz, p._[3]);
-	r.xyz = vec3_add(r.xyz, w);
-	r.w = p.w*q.w - vec3_dot(p.xyz, q.xyz);
-	return r;
-}
 static inline vec4_t quat_scale(vec4_t v, n_t s)
 {
 	vec4_t r;
@@ -900,56 +888,79 @@ static inline vec4_t quat_conj(vec4_t q)
 }
 static inline vec3_t quat_mul_vec3(vec4_t q, vec3_t v)
 {
-	vec3_t r;
 /*
  * Method by Fabian 'ryg' Giessen (of Farbrausch)
 t = 2 * cross(q.xyz, v)
 v' = v + q.w * t + cross(q.xyz, t)
  */
-	vec3_t t;
-	vec3_t u;
+	vec3_t t = vec3_scale(vec3_cross(q.xyz, v), 2);
 
-	t = vec3_cross(q.xyz, v);
-	t = vec3_scale(t, 2);
-
-	u = vec3_cross(q.xyz, t);
-	t = vec3_scale(t, q.w);
-
-	r = vec3_add(v, t);
-	r = vec3_add(r, u);
-	return r;
+	return vec3_add(vec3_add(v, vec3_scale(t, q.w)), vec3_cross(q.xyz, t));
 }
-static inline mat4_t mat4_from_quat(vec4_t q)
+
+static inline mat4_t quat_to_mat4(vec4_t q)
 {
 	mat4_t M;
-	n_t a = q.w;
-	n_t b = q.x;
-	n_t c = q.y;
-	n_t d = q.z;
-	n_t a2 = a*a;
-	n_t b2 = b*b;
-	n_t c2 = c*c;
-	n_t d2 = d*d;
-	
-	M._[0]._[0] = a2 + b2 - c2 - d2;
-	M._[0]._[1] = 2.f*(b*c + a*d);
-	M._[0]._[2] = 2.f*(b*d - a*c);
-	M._[0]._[3] = 0.f;
+	n_t qxx = q.x * q.x;
+	n_t qyy = q.y * q.y;
+	n_t qzz = q.z * q.z;
+	n_t qxz = q.x * q.z;
+	n_t qxy = q.x * q.y;
+	n_t qyz = q.y * q.z;
+	n_t qwx = q.w * q.x;
+	n_t qwy = q.w * q.y;
+	n_t qwz = q.w * q.z;
 
-	M._[1]._[0] = 2*(b*c - a*d);
-	M._[1]._[1] = a2 - b2 + c2 - d2;
-	M._[1]._[2] = 2.f*(c*d + a*b);
-	M._[1]._[3] = 0.f;
+	M._[0]._[0] = 1.0f - 2.0f * (qyy +  qzz);
+	M._[0]._[1] = 2.0f * (qxy + qwz);
+	M._[0]._[2] = 2.0f * (qxz - qwy);
+	M._[0]._[3] = 0;
 
-	M._[2]._[0] = 2.f*(b*d + a*c);
-	M._[2]._[1] = 2.f*(c*d - a*b);
-	M._[2]._[2] = a2 - b2 - c2 + d2;
-	M._[2]._[3] = 0.f;
+	M._[1]._[0] = 2.0f * (qxy - qwz);
+	M._[1]._[1] = 1.0f - 2.0f * (qxx +  qzz);
+	M._[1]._[2] = 2.0f * (qyz + qwx);
+	M._[1]._[3] = 0;
+
+	M._[2]._[0] = 2.0f * (qxz + qwy);
+	M._[2]._[1] = 2.0f * (qyz - qwx);
+	M._[2]._[2] = 1.0f - 2.0f * (qxx +  qyy);
+	M._[2]._[3] = 0;
 
 	M._[3]._[0] = M._[3]._[1] = M._[3]._[2] = 0.f;
 	M._[3]._[3] = 1.f;
 	return M;
 }
+/* static inline mat4_t mat4_from_quat(vec4_t q) */
+/* { */
+/* 	mat4_t M; */
+/* 	n_t a = q.w; */
+/* 	n_t b = q.x; */
+/* 	n_t c = q.y; */
+/* 	n_t d = q.z; */
+/* 	n_t a2 = a*a; */
+/* 	n_t b2 = b*b; */
+/* 	n_t c2 = c*c; */
+/* 	n_t d2 = d*d; */
+	
+/* 	M._[0]._[0] = a2 + b2 - c2 - d2; */
+/* 	M._[0]._[1] = 2.f*(b*c + a*d); */
+/* 	M._[0]._[2] = 2.f*(b*d - a*c); */
+/* 	M._[0]._[3] = 0.f; */
+
+/* 	M._[1]._[0] = 2*(b*c - a*d); */
+/* 	M._[1]._[1] = a2 - b2 + c2 - d2; */
+/* 	M._[1]._[2] = 2.f*(c*d + a*b); */
+/* 	M._[1]._[3] = 0.f; */
+
+/* 	M._[2]._[0] = 2.f*(b*d + a*c); */
+/* 	M._[2]._[1] = 2.f*(c*d - a*b); */
+/* 	M._[2]._[2] = a2 - b2 - c2 + d2; */
+/* 	M._[2]._[3] = 0.f; */
+
+/* 	M._[3]._[0] = M._[3]._[1] = M._[3]._[2] = 0.f; */
+/* 	M._[3]._[3] = 1.f; */
+/* 	return M; */
+/* } */
 
 static inline vec3_t quat_to_euler(vec4_t q)
 {
@@ -975,6 +986,25 @@ static inline vec3_t quat_to_euler(vec4_t q)
 	return result;
 }
 
+/* static inline vec4_t quat_mul(vec4_t p, vec4_t q) */
+/* { */
+/* 	vec4_t r; */
+/* 	vec3_t w; */
+/* 	r.xyz = vec3_cross(p.xyz, q.xyz); */
+/* 	w = vec3_scale(p.xyz, q._[3]); */
+/* 	r.xyz = vec3_add(r.xyz, w); */
+/* 	w = vec3_scale(q.xyz, p._[3]); */
+/* 	r.xyz = vec3_add(r.xyz, w); */
+/* 	r.w = p.w*q.w - vec3_dot(p.xyz, q.xyz); */
+/* 	return r; */
+/* } */
+static inline vec4_t quat_mul(vec4_t p, vec4_t q)
+{
+	return vec4(p.w * q.x + p.x * q.w + p.y * q.z - p.z * q.y,
+			p.w * q.y + p.y * q.w + p.z * q.x - p.x * q.z,
+			p.w * q.z + p.z * q.w + p.x * q.y - p.y * q.x,
+			p.w * q.w - p.x * q.x - p.y * q.y - p.z * q.z);
+}
 static inline vec4_t quat_rotate(vec3_t axis, n_t angle)
 {
 	vec4_t r;
@@ -1015,35 +1045,78 @@ static inline mat4_t mat4_mul_quat(mat4_t M, vec4_t q)
 	R._[3]._[3] = 1.f;
 	return R;
 }
-static inline vec4_t quat_from_mat4(mat4_t M)
+
+/* static inline vec4_t quat_from_mat4(mat4_t M) */
+/* { */
+/* 	vec4_t q; */
+/* 	n_t r=0.f; */
+/* 	int i; */
+
+/* 	int perm[] = { 0, 1, 2, 0, 1 }; */
+/* 	int *p = perm; */
+
+/* 	for(i = 0; i<3; i++) { */
+/* 		n_t m = M._[i]._[i]; */
+/* 		if( m < r ) continue; */
+/* 		m = r; */
+/* 		p = &perm[i]; */
+/* 	} */
+
+/* 	r = sqrtf(1.f + M._[p[0]]._[p[0]] - M._[p[1]]._[p[1]] - M._[p[2]]._[p[2]]); */
+
+/* 	if(r < 1e-6) { */
+/* 		q._[0] = 1.f; */
+/* 		q._[1] = q._[2] = q._[3] = 0.f; */
+/* 		return q; */
+/* 	} */
+
+/* 	q.x = r/2.f; */
+/* 	q.y = (M._[p[0]]._[p[1]] - M._[p[1]]._[p[0]])/(2.f*r); */
+/* 	q.z = (M._[p[2]]._[p[0]] - M._[p[0]]._[p[2]])/(2.f*r); */
+/* 	q.w = (M._[p[2]]._[p[1]] - M._[p[1]]._[p[2]])/(2.f*r); */
+/* 	return q; */
+/* } */
+static inline vec4_t mat4_to_quat(mat4_t m)
 {
-	vec4_t q;
-	n_t r=0.f;
-	int i;
+	n_t fourXSquaredMinus1 = m._[0]._[0] - m._[1]._[1] - m._[2]._[2];
+	n_t fourYSquaredMinus1 = m._[1]._[1] - m._[0]._[0] - m._[2]._[2];
+	n_t fourZSquaredMinus1 = m._[2]._[2] - m._[0]._[0] - m._[1]._[1];
+	n_t fourWSquaredMinus1 = m._[0]._[0] + m._[1]._[1] + m._[2]._[2];
 
-	int perm[] = { 0, 1, 2, 0, 1 };
-	int *p = perm;
-
-	for(i = 0; i<3; i++) {
-		n_t m = M._[i]._[i];
-		if( m < r ) continue;
-		m = r;
-		p = &perm[i];
+	int biggestIndex = 0;
+	n_t fourBiggestSquaredMinus1 = fourWSquaredMinus1;
+	if(fourXSquaredMinus1 > fourBiggestSquaredMinus1)
+	{
+		fourBiggestSquaredMinus1 = fourXSquaredMinus1;
+		biggestIndex = 1;
+	}
+	if(fourYSquaredMinus1 > fourBiggestSquaredMinus1)
+	{
+		fourBiggestSquaredMinus1 = fourYSquaredMinus1;
+		biggestIndex = 2;
+	}
+	if(fourZSquaredMinus1 > fourBiggestSquaredMinus1)
+	{
+		fourBiggestSquaredMinus1 = fourZSquaredMinus1;
+		biggestIndex = 3;
 	}
 
-	r = sqrtf(1.f + M._[p[0]]._[p[0]] - M._[p[1]]._[p[1]] - M._[p[2]]._[p[2]]);
+	n_t biggestVal = sqrtf(fourBiggestSquaredMinus1 + 1.0f) * 0.5f;
+	n_t mult = 0.25f / biggestVal;
 
-	if(r < 1e-6) {
-		q._[0] = 1.f;
-		q._[1] = q._[2] = q._[3] = 0.f;
-		return q;
+	switch(biggestIndex)
+	{
+		case 0:
+			return vec4((m._[1]._[2] - m._[2]._[1]) * mult, (m._[2]._[0] - m._[0]._[2]) * mult, (m._[0]._[1] - m._[1]._[0]) * mult, biggestVal);
+		case 1:
+			return vec4(biggestVal, (m._[0]._[1] + m._[1]._[0]) * mult, (m._[2]._[0] + m._[0]._[2]) * mult, (m._[1]._[2] - m._[2]._[1]) * mult);
+		case 2:
+			return vec4((m._[0]._[1] + m._[1]._[0]) * mult, biggestVal, (m._[1]._[2] + m._[2]._[1]) * mult, (m._[2]._[0] - m._[0]._[2]) * mult);
+		case 3:
+			return vec4((m._[2]._[0] + m._[0]._[2]) * mult, (m._[1]._[2] + m._[2]._[1]) * mult, biggestVal, (m._[0]._[1] - m._[1]._[0]) * mult);
+		default:
+			return vec4(0, 0, 0, 0);
 	}
-
-	q.x = r/2.f;
-	q.y = (M._[p[0]]._[p[1]] - M._[p[1]]._[p[0]])/(2.f*r);
-	q.z = (M._[p[2]]._[p[0]] - M._[p[0]]._[p[2]])/(2.f*r);
-	q.w = (M._[p[2]]._[p[1]] - M._[p[1]]._[p[2]])/(2.f*r);
-	return q;
 }
 
 typedef struct mat3_t { union {

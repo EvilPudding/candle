@@ -98,12 +98,9 @@ static int get_type(const char *name)
 
 void mesh_load_ply(mesh_t *self, const char *filename)
 {
-	char buffer[2048];
-	snprintf(buffer, sizeof(buffer), "resauces/models/%s", filename);
-
 	strncpy(self->name, filename, sizeof(self->name));
 
-    FILE *fp = fopen(buffer, "r");
+    FILE *fp = fopen(filename, "r");
 
 	if(!fp)
 	{

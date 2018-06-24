@@ -9,8 +9,6 @@ int LoadTGA(texture_t *self, const char * filename);
 static int texture_cubemap_frame_buffer(texture_t *self);
 static int texture_2D_frame_buffer(texture_t *self);
 
-char g_texture_paths[][256] = {"", "resauces/textures", "resauces/materials"};
-int g_texture_paths_size = 3;
 int g_tex_num = 0;
 
 GLenum attachments[16] = {
@@ -377,19 +375,9 @@ void texture_set_xy(texture_t *self, int x, int y,
 
 texture_t *texture_load(texture_t *self, const char *filename)
 {
-	char buffer[256];
 	texture_t temp = {.target = GL_TEXTURE_2D};
 	int result = 0;
-	int i;
-	for(i = 0; i < g_texture_paths_size; i++)
-	{
-		strncpy(buffer, g_texture_paths[i], sizeof(buffer));
-		path_join(buffer, sizeof(buffer), filename);
-		strncat(buffer, ".tga", sizeof(buffer));
-
-		result = LoadTGA(&temp, buffer);
-		if(result) break;
-	}
+	result = LoadTGA(&temp, filename);
 	if(!result)
 	{
 		printf("Could not find texture file: %s\n", filename);
@@ -398,7 +386,7 @@ texture_t *texture_load(texture_t *self, const char *filename)
 
 	*self = temp;
 	strncpy(self->name, filename, sizeof(self->name));
-	self->filename = strdup(buffer);
+	self->filename = strdup(filename);
 	self->draw_id = 0;
 	self->prev_id = 0;
 	self->bufs_size = 1;
@@ -410,19 +398,11 @@ texture_t *texture_load(texture_t *self, const char *filename)
 }
 texture_t *texture_from_file(const char *filename)
 {
-	char buffer[256];
 	texture_t temp = {.target = GL_TEXTURE_2D};
 	int result = 0;
-	int i;
-	for(i = 0; i < g_texture_paths_size; i++)
-	{
-		strncpy(buffer, g_texture_paths[i], sizeof(buffer));
-		path_join(buffer, sizeof(buffer), filename);
-		strncat(buffer, ".tga", sizeof(buffer));
 
-		result = LoadTGA(&temp, buffer);
-		if(result) break;
-	}
+	result = LoadTGA(&temp, filename);
+
 	if(!result)
 	{
 		printf("Could not find texture file: %s\n", filename);
@@ -432,7 +412,7 @@ texture_t *texture_from_file(const char *filename)
 	texture_t *self = calloc(1, sizeof *self);
 	*self = temp;
 	strncpy(self->name, filename, sizeof(self->name));
-	self->filename = strdup(buffer);
+	self->filename = strdup(filename);
 	self->draw_id = 0;
 	self->prev_id = 0;
 	self->bufs_size = 1;

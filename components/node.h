@@ -10,7 +10,7 @@ typedef struct
 	c_t super; /* extends c_t */
 
 	mat4_t model;
-	mat4_t rot;
+	vec4_t rot;
 #ifdef MESH4
 	float angle4;
 #endif

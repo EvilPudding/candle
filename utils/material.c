@@ -163,9 +163,9 @@ void mat_set_normal(mat_t *self, prop_t normal)
 	self->normal = normal;
 }
 
-void mat_set_diffuse(mat_t *self, prop_t diffuse)
+void mat_set_albedo(mat_t *self, prop_t albedo)
 {
-	self->albedo = diffuse;
+	self->albedo = albedo;
 }
 
 void mat_prop_menu(mat_t *self, const char *name, prop_t *prop, void *ctx)
@@ -183,7 +183,7 @@ void mat_prop_menu(mat_t *self, const char *name, prop_t *prop, void *ctx)
 
 void mat_menu(mat_t *self, void *ctx)
 {
-	mat_prop_menu(self, "diffuse", &self->albedo, ctx); 
+	mat_prop_menu(self, "albedo", &self->albedo, ctx); 
 	mat_prop_menu(self, "roughness", &self->roughness, ctx); 
 	mat_prop_menu(self, "metalness", &self->metalness, ctx); 
 	mat_prop_menu(self, "transparency", &self->transparency, ctx); 

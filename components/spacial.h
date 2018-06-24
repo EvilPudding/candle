@@ -15,7 +15,6 @@ typedef struct
 	vec3_t rot;
 	vec3_t scale;
 	vec3_t up;
-	mat4_t rot_matrix;
 	vec4_t rot_quat;
 	mat4_t model_matrix;
 	int lock_count;

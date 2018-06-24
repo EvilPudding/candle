@@ -25,7 +25,7 @@ void main()
 	vec3 nor = decode_normal(normal_roughness_metalness.rg);
 	float roughness = normal_roughness_metalness.b;
 
-	vec4 ssred = ssr(gbuffer.depth, rendered.color, roughness, nor);
+	vec4 ssred = ssr2(gbuffer.depth, rendered.color, roughness, nor);
 
     cc.rgb *= textureLod(ssao.occlusion, pixel_pos(), 0).r;
 

@@ -169,12 +169,13 @@ void c_node_update_model(c_node_t *self)
 	entity_t parent = self->parent;
 	c_spacial_t *sc = c_spacial(self);
 
+	mat4_t rot_matrix = quat_to_mat4(sc->rot_quat);
 	if(self->parent != entity_null)
 	{
 		c_node_t *parent_node = c_node(&parent);
 		c_node_update_model(parent_node);
 
-		self->rot = mat4_mul(parent_node->rot, sc->rot_matrix);
+		self->rot = mat4_mul(parent_node->rot, rot_matrix);
 #ifdef MESH4
 		self->angle4 = parent_node->angle4 + sc->angle4;
 #endif
@@ -190,13 +191,13 @@ void c_node_update_model(c_node_t *self)
 			mat4_t model = mat4_translate(pos);
 			model = mat4_mul(model, parent_node->rot);
 
-			self->model = mat4_mul(model, sc->rot_matrix);
+			self->model = mat4_mul(model, rot_matrix);
 		}
 	}
 	else
 	{
 		self->model = sc->model_matrix;
-		self->rot = sc->rot_matrix;
+		self->rot = rot_matrix;
 #ifdef MESH4
 		self->angle4 = sc->angle4;
 #endif

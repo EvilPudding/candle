@@ -399,12 +399,6 @@ float specularPowerToConeAngle(float specularPower)
     return acos(pow(xi, exponent));
 }
 
-float isoscelesTriangleOpposite(float adjacentLength, float coneTheta)
-{
-    // simple trig and algebra - soh, cah, toa - tan(theta) = opp/adj, opp = tan(theta) * adj, then multiply * 2.0f for isosceles triangle base
-    return 2.0f * tan(coneTheta) * adjacentLength;
-}
-
 float isoscelesTriangleInRadius(float a, float h)
 {
     float a2 = a * a;
@@ -417,10 +411,99 @@ vec3 fresnelSchlick(vec3 F0, float cosTheta)
 	return F0 + (vec3(1.0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
-const vec3 Fdielectric = vec3(0.04);
+#define saturate(val) (clamp(val, 0.0f, 1.0f))
+
+vec4 coneSampleWeightedColor(sampler2D screen, vec2 samplePos, float mipChannel, float gloss)
+{
+    vec3 sampleColor = textureLod(screen, samplePos, mipChannel).rgb;
+    return vec4(sampleColor * gloss, gloss);
+}
+
+#define CNST_1DIVPI 0.31830988618
+#define CNST_MAX_SPECULAR_EXP 64
+vec4 ssr2(sampler2D depth, sampler2D screen, float roughness, vec3 nor)
+{
+	vec2 tc = pixel_pos();
+	vec3 pos = get_position(depth, pixel_pos());
+
+	if(roughness > 0.95) return vec4(0.0);
+
+    float gloss = 1.0f - roughness;
+    float specularPower = roughnessToSpecularPower(roughness);
+
+	vec3 w_pos = (camera.model * vec4(pos, 1.0f)).xyz;
+	vec3 w_nor = (camera.model * vec4(nor, 0.0f)).xyz;
+	vec3 c_pos = camera.pos - w_pos;
+	vec3 eye_dir = normalize(-c_pos);
+
+	// Reflection vector
+	vec3 reflected = normalize(reflect(pos, nor));
+
+	// Ray cast
+	vec3 hitPos = pos.xyz; // + vec3(0.0, 0.0, rand(camPos.xz) * 0.2 - 0.1);
+
+	vec3 coords = RayCast(depth, reflected, hitPos);
+
+	vec2 dCoords = abs(vec2(0.5, 0.5) - coords.xy) * 2;
+	/* vec2 dCoords = abs((vec2(0.5, 0.5) - texcoord.xy) * 2 ); */
+	float screenEdgefactor = (clamp(1.0 - (pow(dCoords.x, 4) + pow(dCoords.y, 4)), 0.0, 1.0));
+
+	vec3 fallback_color = vec3(0.0f);
+	/* vec3 fallback_color = texture(ambient_map, reflect(eye_dir, nor)).rgb / (mipChannel+1); */
+
+    float coneTheta = specularPowerToConeAngle(specularPower) * 0.5f;
+
+    // P1 = pos, P2 = raySS, adjacent length = ||P2 - P1||
+    vec2 deltaP = coords.xy - pos.xy;
+    float adjacentLength = length(deltaP);
+    vec2 adjacentUnit = normalize(deltaP);
+
+	int numMips = textureQueryLevels(screen);
+    vec4 reflect_color = vec4(0.0f);
+    float remainingAlpha = 1.0f;
+    float maxMipLevel = float(numMips) - 1.0f;
+    float glossMult = gloss;
+	////////////////////////////////////
+	//
+    // cone-tracing using an isosceles triangle to approximate a cone in screen space
+    for(int i = 0; i < 14; ++i)
+    {
+        float oppositeLength = 2.0f * tan(coneTheta) * adjacentLength;
+        float incircleSize = isoscelesTriangleInRadius(oppositeLength, adjacentLength);
+        vec2 samplePos = pos.xy + adjacentUnit * (adjacentLength - incircleSize);
+		float mipChannel = clamp(log2(incircleSize * max(screen_size.x,
+						screen_size.y)), 0.0f, maxMipLevel);
+
+        vec4 newColor = coneSampleWeightedColor(screen, samplePos, mipChannel, glossMult);
+
+        remainingAlpha -= newColor.a;
+        if(remainingAlpha < 0.0f)
+        {
+            newColor.rgb *= (1.0f - abs(remainingAlpha));
+        }
+        reflect_color += newColor;
+
+        if(reflect_color.a >= 1.0f)
+        {
+            break;
+        }
+
+        adjacentLength = adjacentLength - (incircleSize * 2.0f);
+        glossMult *= gloss;
+    }
+
+    vec3 specular = fresnelSchlick(vec3(1.0f), abs(dot(w_nor, eye_dir))) * CNST_1DIVPI;
+	float coef = clamp(1.5 * pow(1.0 + dot(eye_dir, w_nor), 1), 0.0, 1.0);
+
+    float fadeOnRoughness = saturate(gloss * 4.0f);
+	float fade = screenEdgefactor * fadeOnRoughness * (1.0f - saturate(remainingAlpha));
+
+    return vec4(mix(fallback_color, reflect_color.xyz * specular, fade), 1.0f);
+}
+
 vec4 ssr(sampler2D depth, sampler2D screen, float roughness, vec3 nor)
 {
-	vec3 pos = get_position(depth, pixel_pos());
+	vec3 pos = get_position(depth);
 
 	if(roughness > 0.95) return vec4(0.0);
 
@@ -439,25 +522,13 @@ vec4 ssr(sampler2D depth, sampler2D screen, float roughness, vec3 nor)
 	// Ray cast
 	vec3 hitPos = pos.xyz; // + vec3(0.0, 0.0, rand(camPos.xz) * 0.2 - 0.1);
 
-
 	vec3 coords = RayCast(depth, reflected, hitPos);
 
 	vec2 dCoords = abs(vec2(0.5, 0.5) - coords.xy) * 2;
 	/* vec2 dCoords = abs((vec2(0.5, 0.5) - texcoord.xy) * 2 ); */
 	float screenEdgefactor = (clamp(1.0 - (pow(dCoords.x, 4) + pow(dCoords.y, 4)), 0.0, 1.0));
 
-	/* return vec5(vec3(screenEdgefactor), 1.0); */
-
-
-	/* return vec4(vec3(log2(incircleSize * 60)), 1.0f); */
-	/* return vec4(vec3(incircleSize * 50), 1.0f); */
-	/* return vec4(vec3(mipChannel / 7.0f), 1.0f); */
-	/* mipChannel = 0; */
-	/* return vec4(reflected.xy, 0.0f, 1.0f); */
-
-	int specularTextureLevels = textureQueryLevels(screen);
-	vec3 reflect_color = textureLod(screen, coords.xy, roughness *
-			7.0f).rgb;
+	vec3 reflect_color = textureLod(screen, coords.xy, 0).rgb;
 
 	vec3 fallback_color = vec3(0.0f);
 	/* vec3 fallback_color = texture(ambient_map, reflect(eye_dir, nor)).rgb / (mipChannel+1); */

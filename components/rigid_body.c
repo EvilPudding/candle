@@ -334,8 +334,11 @@ int gjk_intersects_bak(c_rigid_body_t *self, c_rigid_body_t *other)
 	other_to_self = mat4_invert(sc1->model_matrix);
 	other_to_self = mat4_mul(other_to_self, sc2->model_matrix);
 
-	rotate_to_other = mat4_transpose(sc2->rot_matrix);
-	rotate_to_other = mat4_mul(rotate_to_other, sc1->rot_matrix);
+
+	mat4_t rm2 = quat_to_mat4(sc2->rot_quat);
+	mat4_t rm1 = quat_to_mat4(sc1->rot_quat);
+	rotate_to_other = mat4_transpose(rm2);
+	rotate_to_other = mat4_mul(rotate_to_other, rm1);
 
 	vec3_t dir = vec3_sub(sc2->pos, sc1->pos);
 	if(vec3_null(dir)) dir = vec3(1.0);
@@ -750,8 +753,10 @@ int gjk_intersects(c_rigid_body_t *self, c_rigid_body_t *other,
 
 	// Matrix that transform a direction from local
 	// space of body 1 into local space of body 2
-	rotate_to_other = mat4_transpose(sc2->rot_matrix);
-	rotate_to_other = mat4_mul(rotate_to_other, sc1->rot_matrix);
+	mat4_t rm2 = quat_to_mat4(sc2->rot_quat);
+	mat4_t rm1 = quat_to_mat4(sc1->rot_quat);
+	rotate_to_other = mat4_transpose(rm2);
+	rotate_to_other = mat4_mul(rotate_to_other, rm1);
 	inv_rotate_to_other = mat4_invert(rotate_to_other);
 
 	vec3_t v = vec3_sub(sc2->pos, sc1->pos);
@@ -843,8 +848,9 @@ contact_info:
 		pB = mat4_mul_vec4(inv_rotate_to_other, vec4(_vec3(pB), 0.0)).xyz;
 
 		// Compute the contact info
-		contact->normal = mat4_mul_vec4(sc1->rot_matrix,
-				(vec4(_vec3(vec3_inv(vec3_get_unit(v))), 0.0))).xyz;
+		contact->normal = quat_mul_vec3(sc1->rot_quat, vec3_inv(vec3_get_unit(v)));
+		/* contact->normal = mat4_mul_vec4(sc1->rot_matrix, */
+				/* (vec4(_vec3(vec3_inv(vec3_get_unit(v))), 0.0))).xyz; */
 		contact->depth = margin - dist;
 	}
 	return 1;
