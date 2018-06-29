@@ -10,6 +10,7 @@ void main()
 	if(dif.a == 0.0f) discard;
 
 	dif.rgb += poly_color;
+	/* dif.rgb = TM[2] / 2.0f + 0.5f; */
 	AlbedoColor = dif;
 
 	NRM.b = resolveProperty(roughness, texcoord).r;

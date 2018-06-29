@@ -72,6 +72,7 @@ typedef struct edge_t /* Half edge */
 {
 	int v;
 	vec3_t n; /* NORMAL OF v */
+	vec3_t tg; /* TANGENT OF v */
 	vec2_t t; /* TEXTURE COORD OF v */
 
 	int face; /* face_t id								 */

@@ -35,6 +35,7 @@ mat_t *mat_from_file(const char *filename);
 mat_t *mat_from_dir(const char *name, const char *dirname);
 void mat_bind(mat_t *self, shader_t *shader);
 void mat_set_normal(mat_t *self, prop_t normal);
+void mat_set_albedo(mat_t *self, prop_t albedo);
 void mat_destroy(mat_t *self);
 void mat_menu(mat_t *self, void *ctx);
 

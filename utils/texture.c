@@ -5,7 +5,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int LoadTGA(texture_t *self, const char * filename);
+#define STB_IMAGE_IMPLEMENTATION
+#define STBI_ASSERT(x)
+#include <stb_image.h>
+
 static int texture_cubemap_frame_buffer(texture_t *self);
 static int texture_2D_frame_buffer(texture_t *self);
 
@@ -218,7 +221,12 @@ int buffer_new(const char *name, int is_float, int dims)
 		texture->bufs[i].format   = GL_RG;
 		texture->bufs[i].internal = is_float ? GL_RG16F : GL_RG;
 	}
-	else
+	else if(dims == 1)
+	{
+		texture->bufs[i].format   = GL_RED;
+		texture->bufs[i].internal = is_float ? GL_R16F : GL_RED;
+	}
+	else if(dims == -1)
 	{
 		if(i > 0) perror("Depth component must be added first\n");
 		texture->bufs[i].format = GL_DEPTH_COMPONENT;
@@ -373,18 +381,39 @@ void texture_set_xy(texture_t *self, int x, int y,
 	self->bufs[0].data[i + 3] = a;
 }
 
-texture_t *texture_load(texture_t *self, const char *filename)
+int texture_load(texture_t *self, const char *filename)
 {
 	texture_t temp = {.target = GL_TEXTURE_2D};
-	int result = 0;
-	result = LoadTGA(&temp, filename);
-	if(!result)
+
+	temp.bufs[0].dims = 0;
+	temp.bufs[0].data = stbi_load(filename, (int*)&temp.width,
+			(int*)&temp.height, &temp.bufs[0].dims, 0);
+
+	printf("DIMS: %d %s\n", temp.bufs[0].dims, filename);
+	if(!temp.bufs[0].data)
 	{
 		printf("Could not find texture file: %s\n", filename);
-		return NULL;
+		return 0;
+	}
+	*self = temp;
+
+	switch(self->bufs[0].dims)
+	{
+		case 1:	self->bufs[0].format	= GL_RED;
+				self->bufs[0].internal = GL_RED;
+				break;
+		case 2:	self->bufs[0].format	= GL_RG;
+				self->bufs[0].internal = GL_RG;
+				break;
+		case 3:	self->bufs[0].format	= GL_RGB;
+				self->bufs[0].internal = GL_RGB;
+				break;
+		case 4: self->bufs[0].format	= GL_RGBA;
+				self->bufs[0].internal = GL_RGBA;
+				break;
 	}
 
-	*self = temp;
+
 	strncpy(self->name, filename, sizeof(self->name));
 	self->filename = strdup(filename);
 	self->draw_id = 0;
@@ -393,34 +422,19 @@ texture_t *texture_load(texture_t *self, const char *filename)
 	self->bufs[0].name = strdup("color");
 
 	loader_push(g_candle->loader, (loader_cb)texture_from_file_loader, self, NULL);
-
-    return self;
+	return 1;
 }
 texture_t *texture_from_file(const char *filename)
 {
-	texture_t temp = {.target = GL_TEXTURE_2D};
-	int result = 0;
-
-	result = LoadTGA(&temp, filename);
-
-	if(!result)
+	texture_t self = {.target = GL_TEXTURE_2D};
+	if(texture_load(&self, filename))
 	{
-		printf("Could not find texture file: %s\n", filename);
-		return NULL;
+		texture_t *tmp = malloc(sizeof(texture_t));
+		*tmp = self;
+		return tmp;
 	}
 
-	texture_t *self = calloc(1, sizeof *self);
-	*self = temp;
-	strncpy(self->name, filename, sizeof(self->name));
-	self->filename = strdup(filename);
-	self->draw_id = 0;
-	self->prev_id = 0;
-	self->bufs_size = 1;
-	self->bufs[0].name = strdup("color");
-
-	loader_push(g_candle->loader, (loader_cb)texture_from_file_loader, self, NULL);
-
-    return self;
+    return NULL;
 }
 
 static int texture_2D_frame_buffer(texture_t *self)
@@ -538,7 +552,7 @@ void texture_destroy(texture_t *self)
 
 	for(i = 0; i < self->bufs_size; i++)
 	{
-		if(self->bufs[i].data) free(self->bufs[i].data);
+		if(self->bufs[i].data) stbi_image_free(self->bufs[i].data);
 		if(self->bufs[i].id) glDeleteTextures(1, &self->bufs[i].id);
 	}
 	if(self->frame_buffer[1]) /* CUBEMAP */
@@ -712,216 +726,3 @@ texture_t *texture_cubemap
 	return self;
 }
 
-typedef struct
-{
-	GLubyte Header[12];
-} TGAHeader;
-
-typedef struct
-{
-	GLubyte			header[6];
-	uint	temp;
-	uint	format;
-} TGA;
-
-int LoadTGA(texture_t *self, const char * filename)
-{
-	TGAHeader tgaheader;
-	TGA tga;
-	GLubyte *colorbuffer = NULL;
-
-	FILE * fTGA;
-	fTGA = fopen(filename, "rb");
-	int compressed;
-	GLubyte uTGAcompare[12] = {0,0,2, 0,0,0,0,0,0,0,0,0};	// Uncompressed TGA Header
-	GLubyte cTGAcompare[12] = {0,0,10,0,0,0,0,0,0,0,0,0};	// Compressed TGA Header
-
-	if(fTGA == NULL)
-	{
-		return 0;
-	}
-
-	if(fread(&tgaheader, sizeof(TGAHeader), 1, fTGA) == 0)
-	{
-		printf("Could not read file header\n");
-		goto fail;
-	}
-
-	if(memcmp(uTGAcompare, &tgaheader, sizeof(tgaheader)) == 0)
-	{
-		compressed = 0;
-	}
-	else if(memcmp(cTGAcompare, &tgaheader, sizeof(tgaheader)) == 0)
-	{
-		compressed = 1;
-	}
-	else
-	{
-		printf("TGA file be type 2 or type 10 \n");
-		goto fail;
-	}
-
-	if(fread(tga.header, sizeof(tga.header), 1, fTGA) == 0)
-	{
-		printf("Could not read info header\n");
-		goto fail;
-	}
-
-	self->width  = tga.header[1] * 256 + tga.header[0];
-	self->height = tga.header[3] * 256 + tga.header[2];
-	int bpp	 = tga.header[4];
-
-	if((self->width <= 0) || (self->height <= 0) ||
-			((bpp != 24) && (bpp != 32)))
-	{
-		printf("Invalid texture information\n");
-		goto fail;
-	}
-
-	if(bpp == 24)
-	{
-		self->bufs[0].format	= GL_RGB;
-		self->bufs[0].internal = GL_RGB16F;
-	}
-	else
-	{
-		self->bufs[0].format	= GL_RGBA;
-		self->bufs[0].internal = GL_RGBA16F;
-	}
-
-	uint bytesPerPixel = bpp / 8;
-	uint imageSize;
-	imageSize		= (bytesPerPixel * self->width * self->height);
-	self->bufs[0].data = malloc(imageSize);
-
-	if(self->bufs[0].data == NULL)
-	{
-		goto fail;
-	}
-
-	uint pixelcount	= self->height * self->width;
-	uint currentpixel	= 0;
-	uint currentbyte	= 0;
-	colorbuffer = malloc(bytesPerPixel);
-
-	if(compressed)
-	{
-		do
-		{
-			GLubyte chunkheader = 0;
-
-			if(fread(&chunkheader, sizeof(GLubyte), 1, fTGA) == 0)
-			{
-				printf("Could not read RLE header\n");
-				goto fail;
-			}
-
-			if(chunkheader < 128)
-			{
-				chunkheader++;
-				for(short counter = 0; counter < chunkheader; counter++)
-				{
-					if(fread(colorbuffer, 1, bytesPerPixel, fTGA) != bytesPerPixel)
-					{
-						printf("Could not read image data\n");
-						goto fail;
-					}
-					self->bufs[0].data[currentbyte		] = colorbuffer[2];
-					self->bufs[0].data[currentbyte + 1	] = colorbuffer[1];
-					self->bufs[0].data[currentbyte + 2	] = colorbuffer[0];
-
-					if(bytesPerPixel == 4)
-					{
-						self->bufs[0].data[currentbyte + 3] = colorbuffer[3];
-					}
-
-					currentbyte += bytesPerPixel;
-					currentpixel++;
-
-					if(currentpixel > pixelcount)
-					{
-						printf("Too many pixels read\n");
-						goto fail;
-					}
-				}
-			}
-			else
-			{
-				chunkheader -= 127;
-				if(fread(colorbuffer, 1, bytesPerPixel, fTGA) != bytesPerPixel)
-				{	
-					printf("Could not read from file\n");
-					goto fail;
-				}
-
-				for(short counter = 0; counter < chunkheader; counter++)
-				{
-					self->bufs[0].data[currentbyte		] = colorbuffer[2];
-					self->bufs[0].data[currentbyte + 1	] = colorbuffer[1];
-					self->bufs[0].data[currentbyte + 2	] = colorbuffer[0];
-
-					if(bytesPerPixel == 4)
-					{
-						self->bufs[0].data[currentbyte + 3] = colorbuffer[3];
-					}
-
-					currentbyte += bytesPerPixel;
-					currentpixel++;
-
-					if(currentpixel > pixelcount)
-					{
-						printf("Too many pixels read\n");
-						goto fail;
-					}
-				}
-			}
-		}
-		while(currentpixel < pixelcount);
-	}
-	else
-	{
-		if(fread(self->bufs[0].data, 1, imageSize, fTGA) != imageSize)	// Attempt to read image data
-		{
-			printf("Could not read image data\n");		// Display Error
-			goto fail;
-		}
-
-		uint cswap;
-		// Byte Swapping Optimized By Steve Thomas
-		for(cswap = 0; cswap < imageSize; cswap += bytesPerPixel)
-		{
-			uint tmp = self->bufs[0].data[cswap];
-			self->bufs[0].data[cswap] = self->bufs[0].data[cswap+2] ;
-			self->bufs[0].data[cswap+2] = tmp;
-		}
-
-	}
-
-	fclose(fTGA);
-
-	if(colorbuffer != NULL)
-	{
-		free(colorbuffer);
-	}
-
-
-	return 1;
-fail:
-
-	if(fTGA != NULL)
-	{
-		fclose(fTGA);
-	}	
-
-	if(colorbuffer != NULL)
-	{
-		free(colorbuffer);
-	}
-
-	if(self->bufs[0].data != NULL)
-	{
-		free(self->bufs[0].data);
-	}
-
-	return 0;
-}

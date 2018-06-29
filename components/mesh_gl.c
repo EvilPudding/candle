@@ -122,11 +122,8 @@ void glg_ind_grow(glg_t *self)
 }
 
 
-#ifdef MESH4
-static int glg_add_vert(glg_t *self, vec4_t p, vec3_t n, vec2_t t, vec3_t c, int id)
-#else
-static int glg_add_vert(glg_t *self, vec3_t p, vec3_t n, vec2_t t, vec3_t c, int id)
-#endif
+static int glg_add_vert(glg_t *self, vecN_t p, vec3_t n, vec2_t t, vec3_t tg,
+		vec3_t c, int id)
 {
 	/* int i = glg_get_vert(self, p, n, t); */
 	/* if(i >= 0) return i; */
@@ -137,6 +134,7 @@ static int glg_add_vert(glg_t *self, vec3_t p, vec3_t n, vec2_t t, vec3_t c, int
 
 	self->pos[i] = p;
 	self->nor[i] = n;
+	self->tan[i] = tg;
 	self->tex[i] = t;
 	self->col[i] = c;
 	self->id[i] = int_to_vec2(id);
@@ -200,9 +198,9 @@ void glg_edges_to_gl(glg_t *self)
 		vertex_t *V1 = e_vert(curr_edge, mesh);
 		vertex_t *V2 = e_vert(next_edge, mesh);
 		int v1 = glg_add_vert(self, V1->pos,
-				vec3(0.0f), vec2(0.0f), V1->color.xyz, 0);
+				vec3(0.0f), vec2(0.0f), vec3(0.0f), V1->color.xyz, 0);
 		int v2 = glg_add_vert(self, V2->pos,
-				vec3(0.0f), vec2(0.0f), V2->color.xyz, 0);
+				vec3(0.0f), vec2(0.0f), vec3(0.0f), V2->color.xyz, 0);
 
 		glg_add_line(self, v1, v2);
 
@@ -218,7 +216,7 @@ void glg_face_to_gl(glg_t *self, face_t *f, int id)
 		edge_t *hedge = f_edge(f, i, mesh);
 		vertex_t *V = e_vert(hedge, mesh);
 		v[i] = glg_add_vert(self, V->pos, hedge->n,
-				hedge->t, V->color.xyz, id);
+				hedge->t, hedge->tg, V->color.xyz, id);
 	}
 	if(f->e_size == 4)
 	{
@@ -237,78 +235,72 @@ void glg_face_to_gl(glg_t *self, face_t *f, int id)
 
 }
 
-void glg_get_tg_bt(glg_t *self)
-{
-	int i;
+/* void glg_get_tg_bt(glg_t *self) */
+/* { */
+/* 	int i; */
 
-	/* memset(self->tan, 0, self->ind_num * sizeof(*self->tan)); */
-	/* memset(self->bit, 0, self->ind_num * sizeof(*self->bit)); */
+/* 	/1* memset(self->tan, 0, self->ind_num * sizeof(*self->tan)); *1/ */
+/* 	/1* memset(self->bit, 0, self->ind_num * sizeof(*self->bit)); *1/ */
 
-	for(i = 0; i < self->ind_num; i += 3)
-	{
-		int i0 = self->ind[i + 0];
-		int i1 = self->ind[i + 1];
-		int i2 = self->ind[i + 2];
-		self->tan[i0] = vec3(0.0f);
-		self->tan[i1] = vec3(0.0f);
-		self->tan[i2] = vec3(0.0f);
+/* 	for(i = 0; i < self->ind_num; i += 3) */
+/* 	{ */
+/* 		int i0 = self->ind[i + 0]; */
+/* 		int i1 = self->ind[i + 1]; */
+/* 		int i2 = self->ind[i + 2]; */
+/* 		self->tan[i0] = vec3(0.0f); */
+/* 		self->tan[i1] = vec3(0.0f); */
+/* 		self->tan[i2] = vec3(0.0f); */
 
-		/* self->bit[i0] = vec3(0.0f); */
-		/* self->bit[i1] = vec3(0.0f); */
-		/* self->bit[i2] = vec3(0.0f); */
-	}
-	for(i = 0; i < self->ind_num; i += 3)
-	{
-		int i0 = self->ind[i + 0];
-		int i1 = self->ind[i + 1];
-		int i2 = self->ind[i + 2];
+/* 		/1* self->bit[i0] = vec3(0.0f); *1/ */
+/* 		/1* self->bit[i1] = vec3(0.0f); *1/ */
+/* 		/1* self->bit[i2] = vec3(0.0f); *1/ */
+/* 	} */
+/* 	for(i = 0; i < self->ind_num; i += 3) */
+/* 	{ */
+/* 		int i0 = self->ind[i + 0]; */
+/* 		int i1 = self->ind[i + 1]; */
+/* 		int i2 = self->ind[i + 2]; */
 
-		vec3_t v0 = ((vec3_t*)self->pos)[i0];
-		vec3_t v1 = ((vec3_t*)self->pos)[i1];
-		vec3_t v2 = ((vec3_t*)self->pos)[i2];
+/* 		vec3_t v0 = ((vec3_t*)self->pos)[i0]; */
+/* 		vec3_t v1 = ((vec3_t*)self->pos)[i1]; */
+/* 		vec3_t v2 = ((vec3_t*)self->pos)[i2]; */
 
-		vec2_t w0 = ((vec2_t*)self->tex)[i0];
-		vec2_t w1 = ((vec2_t*)self->tex)[i1];
-		vec2_t w2 = ((vec2_t*)self->tex)[i2];
+/* 		vec2_t w0 = ((vec2_t*)self->tex)[i0]; */
+/* 		vec2_t w1 = ((vec2_t*)self->tex)[i1]; */
+/* 		vec2_t w2 = ((vec2_t*)self->tex)[i2]; */
 
-		vec3_t dp1 = vec3_sub(v1, v0);
-		vec3_t dp2 = vec3_sub(v2, v0);
+/* 		vec3_t dp1 = vec3_sub(v1, v0); */
+/* 		vec3_t dp2 = vec3_sub(v2, v0); */
 
-		vec2_t duv1 = vec2_sub(w1, w0);
-		vec2_t duv2 = vec2_sub(w2, w0);
+/* 		vec2_t duv1 = vec2_sub(w1, w0); */
+/* 		vec2_t duv2 = vec2_sub(w2, w0); */
 
-		float r = 1.0f / (duv1.x * duv2.y - duv1.y * duv2.x);
-		vec3_t tangent   = vec3_scale(vec3_sub(vec3_scale(dp1, duv2.y), vec3_scale(dp2, duv1.y)), r);
-		/* vec3_t bitangent = vec3_scale(vec3_sub(vec3_scale(dp2, duv1.x), vec3_scale(dp1, duv2.x)), r); */
+/* 		float r = 1.0f / (duv1.x * duv2.y - duv1.y * duv2.x); */
+/* 		vec3_t tangent   = vec3_scale(vec3_sub(vec3_scale(dp1, duv2.y), vec3_scale(dp2, duv1.y)), r); */
+/* 		/1* vec3_t bitangent = vec3_scale(vec3_sub(vec3_scale(dp2, duv1.x), vec3_scale(dp1, duv2.x)), r); *1/ */
 
 
-		self->tan[i0] = vec3_add(self->tan[i0], tangent);
-		self->tan[i1] = vec3_add(self->tan[i1], tangent);
-		self->tan[i2] = vec3_add(self->tan[i2], tangent);
+/* 		self->tan[i0] = vec3_add(self->tan[i0], tangent); */
+/* 		self->tan[i1] = vec3_add(self->tan[i1], tangent); */
+/* 		self->tan[i2] = vec3_add(self->tan[i2], tangent); */
 
-		/* self->bit[i0] = vec3_add(self->bit[i0], bitangent); */
-		/* self->bit[i1] = vec3_add(self->bit[i1], bitangent); */
-		/* self->bit[i2] = vec3_add(self->bit[i2], bitangent); */
-	}
-	for(i = 0; i < self->vert_num; i++)
-	{
-		vec3_t n = self->nor[i];
-		vec3_t t = self->tan[i];
-		/* vec3_t b = self->bit[i]; */
+/* 		/1* self->bit[i0] = vec3_add(self->bit[i0], bitangent); *1/ */
+/* 		/1* self->bit[i1] = vec3_add(self->bit[i1], bitangent); *1/ */
+/* 		/1* self->bit[i2] = vec3_add(self->bit[i2], bitangent); *1/ */
+/* 	} */
+/* 	for(i = 0; i < self->ind_num; i++) */
+/* 	{ */
+/* 		int i0 = self->ind[i]; */
+/* 		vec3_t n = self->nor[i0]; */
+/* 		vec3_t t = self->tan[i0]; */
+/* 		/1* vec3_t b = self->bit[i]; *1/ */
 
-		/* Gram-Schmidt orthogonalize */
-		t = vec3_norm(vec3_sub(t, vec3_scale(n, vec3_dot(n, t))));
+/* 		/1* Gram-Schmidt orthogonalize *1/ */
+/* 		t = vec3_norm(vec3_sub(t, vec3_scale(n, vec3_dot(n, t)))); */
 
-		/* Calculate handedness */
-		/* self->tan[a].w = */
-		/* if(vec3_dot(vec3_cross(n, t), b) < 0.0f) */
-		/* { */
-			/* t = vec3_inv(t); */
-		/* } */
-
-		self->tan[i] = t;
-	}
-}
+/* 		self->tan[i0] = t; */
+/* 	} */
+/* } */
 
 static inline void create_buffer(int id, GLuint vbo, void *arr, int dim, size_t size)
 {
@@ -422,10 +414,10 @@ int glg_update_ram(glg_t *self)
 
 			glg_face_to_gl(self, face, id);
 		}
-		if(mesh->has_texcoords)
-		{
-			glg_get_tg_bt(self);
-		}
+		/* if(mesh->has_texcoords) */
+		/* { */
+		/* 	glg_get_tg_bt(self); */
+		/* } */
 	}
 	else if(vector_count(edges))
 	{

@@ -358,7 +358,7 @@ static void c_model_init(c_model_t *self)
 			"		mat4 MV    = camera.view * M;\n"
 			"		vertex_normal    = normalize(MV * vec4( N, 0.0f)).xyz;\n"
 			"		vertex_tangent   = normalize(MV * vec4(TG, 0.0f)).xyz;\n"
-			"		vertex_bitangent = cross(vertex_normal, vertex_tangent);\n"
+			"		vertex_bitangent = cross(vertex_tangent, vertex_normal);\n"
 
 			"		object_id = id;\n"
 			"		poly_id = ID;\n"
@@ -731,7 +731,7 @@ int c_model_menu(c_model_t *self, void *ctx)
 				g_update_id++;
 			}
 
-			if(layer->mat)
+			if(layer->mat && layer->mat->name[0] != '_')
 			{
 				mat_menu(layer->mat, ctx);
 			}

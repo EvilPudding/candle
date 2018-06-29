@@ -200,6 +200,7 @@ static void edge_init(edge_t *self)
 	self->tmp = -1;
 
 	self->n = vec3(0.0f);
+	self->tg = vec3(0.0f);
 
 	self->v = -1;
 
@@ -314,7 +315,9 @@ void mesh_update_smooth_normals(mesh_t *self, float smooth_max)
 		edge_t *edge = m_edge(self, start);
 		if(!edge) continue;
 		vec3_t start_n = edge->n;
+		vec3_t start_t = edge->tg;
 		vec3_t smooth_normal = start_n;
+		vec3_t smooth_tangent = start_t;
 		edge_t *pair = e_pair(edge, self);
 		if(!pair) continue;
 
@@ -330,6 +333,7 @@ void mesh_update_smooth_normals(mesh_t *self, float smooth_max)
 			{
 				edge->tmp |= 2;
 				smooth_normal = vec3_add(smooth_normal, edge->n);
+				smooth_tangent = vec3_add(smooth_tangent, edge->tg);
 			}
 			else
 			{
@@ -342,6 +346,7 @@ void mesh_update_smooth_normals(mesh_t *self, float smooth_max)
 
 		edge = m_edge(self, start);
 		edge->n = smooth_normal = vec3_norm(smooth_normal);
+		edge->tg = smooth_tangent = vec3_norm(smooth_tangent);
 
 		pair = e_pair(edge, self);
 
@@ -355,6 +360,7 @@ void mesh_update_smooth_normals(mesh_t *self, float smooth_max)
 			if(edge->tmp & 2)
 			{
 				edge->n = smooth_normal;
+				edge->tg = smooth_tangent;
 				edge->tmp = 1;
 			}
 
@@ -364,6 +370,60 @@ void mesh_update_smooth_normals(mesh_t *self, float smooth_max)
 	}
 }
 
+
+static vec3_t get_tangent(vec3_t p0, vec2_t t0, vec3_t p1, vec2_t t1,
+		vec3_t p2, vec2_t t2, vec3_t n)
+{
+	vec3_t dp1 = vec3_sub(p1, p0);
+	vec3_t dp2 = vec3_sub(p2, p0);
+
+	vec2_t duv1 = vec2_sub(t1, t0);
+	vec2_t duv2 = vec2_sub(t2, t0);
+
+	float r = 1.0f / (duv1.x * duv2.y - duv1.y * duv2.x);
+	vec3_t tangent = vec3_scale(vec3_sub(vec3_scale(dp1, duv2.y),
+				vec3_scale(dp2, duv1.y)), r);
+
+	return vec3_norm(vec3_sub(tangent, vec3_scale(n, vec3_dot(n, tangent))));
+
+}
+
+void mesh_face_calc_flat_tangents(mesh_t *self, face_t *f)
+{
+	edge_t *e0 = f_edge(f, 0, self);
+	edge_t *e1 = f_edge(f, 1, self);
+	edge_t *e2 = f_edge(f, 2, self);
+	vertex_t *v0 = e_vert(e0, self);
+	vertex_t *v1 = e_vert(e1, self);
+	vertex_t *v2 = e_vert(e2, self);
+
+	vec3_t tangent = get_tangent(XYZ(v0->pos), e0->t, XYZ(v1->pos), e1->t,
+			XYZ(v2->pos), e2->t, f->n);
+
+
+	if(f->e_size == 4)
+	{
+		/* QUAD */
+		edge_t *e3 = f_edge(f, 3, self);
+
+		e0->tg = tangent;
+		e1->tg = tangent;
+		e2->tg = tangent;
+		e3->tg = tangent;
+	}
+	else
+	{
+		/* TRIANGLE */
+		e0->tg = tangent;
+		e1->tg = tangent;
+		e2->tg = tangent;
+	}
+
+	/* Gram-Schmidt orthogonalize */
+	/* e0->tg = vec3_norm(vec3_sub(tangent, vec3_scale(e0->n, vec3_dot(e0->n, tangent)))); */
+	/* e1->tg = vec3_norm(vec3_sub(tangent, vec3_scale(e1->n, vec3_dot(e1->n, tangent)))); */
+	/* e2->tg = vec3_norm(vec3_sub(tangent, vec3_scale(e2->n, vec3_dot(e2->n, tangent)))); */
+}
 
 void mesh_face_calc_flat_normals(mesh_t *self, face_t *f)
 {
@@ -1024,6 +1084,7 @@ void mesh_update(mesh_t *self)
 		/* if(vec3_null(n)) */
 		{
 			mesh_face_calc_flat_normals(self, f);
+			mesh_face_calc_flat_tangents(self, f);
 		}
 	}
 	self->changes = 0;
@@ -2517,12 +2578,10 @@ void mesh_load_scene(mesh_t *self, const void *grp)
 	mesh_lock(self);
 	const struct aiMesh *group = grp;
 	strcpy(self->name, "load_result");
-	self->has_texcoords = 0;
+	/* self->has_texcoords = 0; */
 
 	int offset = vector_count(self->verts);
 	int j;
-
-	/* int mat = group->mMaterialIndex; */
 
 	if(!group->mTextureCoords[0])
 	{

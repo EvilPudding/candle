@@ -10,11 +10,10 @@
 #define NK_INCLUDE_DEFAULT_FONT
 #define NK_INCLUDE_COMMAND_USERDATA
 #include "nuklear/nuklear.h"
-#include "nuklear/demo/sdl_opengl3/nuklear_sdl_gl3.h"
 
-NK_API struct nk_context* nk_candle_init(SDL_Window *win);
+NK_API struct nk_context* nk_can_init(SDL_Window *win);
 
-void nk_candle_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
+void nk_can_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
 		int max_element_buffer);
 void nk_draw_image_ext(struct nk_command_buffer *b, struct nk_rect r,
     const struct nk_image *img, struct nk_color col, int no_blending);
@@ -24,5 +23,8 @@ void nk_draw_image_ext(struct nk_command_buffer *b, struct nk_rect r,
 NK_API int nk_tree_entity_push_hashed(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states initial_state, int *selected, int has_children, const char *hash, int len, int seed);
 NK_API int nk_tree_entity_image_push_hashed(struct nk_context*, enum nk_tree_type, struct nk_image, const char *title, enum nk_collapse_states initial_state, int *selected, int has_children, const char *hash, int len,int seed);
 NK_API void nk_tree_entity_pop(struct nk_context*);
+NK_API void nk_can_font_stash_begin(struct nk_font_atlas **atlas);;
+NK_API void nk_can_font_stash_end(void);
+NK_API int nk_can_handle_event(SDL_Event *evt);
 
 #endif /* !NK_H */

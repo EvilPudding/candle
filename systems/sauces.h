@@ -8,6 +8,7 @@
 
 typedef struct
 {
+	char name[64];
 	char path[256];
 	void *data;
 } resource_t;
@@ -17,7 +18,9 @@ typedef struct c_sauces_t
 {
 	c_t super;
 
-	khash_t(res) *files;
+	khash_t(res) *meshes;
+	khash_t(res) *textures;
+	khash_t(res) *materials;
 
 } c_sauces_t;
 
@@ -26,7 +29,7 @@ DEF_CASTER("sauces", c_sauces, c_sauces_t)
 c_sauces_t *c_sauces_new(void);
 void c_sauces_register(void);
 
-resource_t *c_sauces_get(c_sauces_t *self, const char *name);
+resource_t *c_sauces_get(c_sauces_t *self, khash_t(res) *hash, const char *name);
 int c_sauces_index_dir(c_sauces_t *self, const char *dir_name);
 mat_t *c_sauces_mat_get(c_sauces_t *self, const char *name);
 int c_sauces_get_mats_at(c_sauces_t *self, const char *dir_name);

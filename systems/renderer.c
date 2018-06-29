@@ -24,6 +24,8 @@ static int c_renderer_resize(c_renderer_t *self, window_resize_data *event);
 
 static int c_renderer_update_screen_texture(c_renderer_t *self);
 
+static int c_renderer_pass(c_renderer_t *self, unsigned int hash);
+
 int c_renderer_scene_changed(c_renderer_t *self)
 {
 	g_update_id++;
@@ -315,7 +317,7 @@ static int c_renderer_gl(c_renderer_t *self)
 		buffer_new("depth",		1, -1)
 	);
 	texture_t *ssao =		texture_new_2D(1, 1, 0,
-		buffer_new("occlusion",	1, 2)
+		buffer_new("occlusion",	1, 1)
 	);
 	texture_t *rendered =	texture_new_2D(1, 1, 0,
 		buffer_new("color",	1, 4)
@@ -438,6 +440,7 @@ static int c_renderer_gl(c_renderer_t *self)
 		}
 	);
 
+	/* c_renderer_tex(self, ref(rendered))->mipmaped = 1; */
 	c_renderer_add_pass(self, "final", "ssr", sig("render_quad"),
 			PASS_CLEAR_COLOR,
 		(bind_t[]){

@@ -26,6 +26,7 @@ void main()
 	float roughness = normal_roughness_metalness.b;
 
 	vec4 ssred = ssr2(gbuffer.depth, rendered.color, roughness, nor);
+	/* FragColor = ssred; return; */
 
     cc.rgb *= textureLod(ssao.occlusion, pixel_pos(), 0).r;
 
@@ -38,8 +39,6 @@ void main()
 	final = final * pow(2.0f, camera.exposure);
 	float dist = length(get_position(gbuffer.depth));
 	final.b += (clamp(dist - 5, 0, 1)) / 70;
-
-
 
 	FragColor = vec4(final, 1.0f);
 }

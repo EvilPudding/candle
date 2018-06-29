@@ -8,15 +8,43 @@
 #define NK_INCLUDE_DEFAULT_FONT
 #define NK_IMPLEMENTATION
 #define NK_INCLUDE_COMMAND_USERDATA
-#define NK_SDL_GL3_IMPLEMENTATION
 #include "nuklear/nuklear.h"
-#include "nuklear/demo/sdl_opengl3/nuklear_sdl_gl3.h"
 
-#undef NK_SHADER_VERSION 
 #define NK_SHADER_VERSION "#version 400\n"
 
+struct nk_can_device {
+    struct nk_buffer cmds;
+    struct nk_draw_null_texture null;
+    GLuint vbo, vao, ebo;
+    GLuint prog;
+    GLuint vert_shdr;
+    GLuint frag_shdr;
+    GLint attrib_pos;
+    GLint attrib_uv;
+    GLint attrib_col;
+    GLint uniform_tex;
+    GLint uniform_scale;
+    GLint uniform_proj;
+    GLuint font_tex;
+};
+
+struct nk_can_vertex {
+    float position[2];
+    float uv[2];
+    nk_byte col[4];
+};
+
+
+static struct nk_can {
+    SDL_Window *win;
+    struct nk_can_device ogl;
+    struct nk_context ctx;
+    struct nk_font_atlas atlas;
+} can;
+
+
 NK_API void
-nk_candle_device_create(void)
+nk_can_device_create(void)
 {
     GLint status;
     static const GLchar *vertex_shader =
@@ -36,14 +64,15 @@ nk_candle_device_create(void)
         NK_SHADER_VERSION
         "precision mediump float;\n"
         "uniform sampler2D Texture;\n"
+		"uniform vec2 Scale;\n"
         "in vec2 Frag_UV;\n"
         "in vec4 Frag_Color;\n"
         "out vec4 Out_Color;\n"
         "void main(){\n"
-        "   Out_Color = Frag_Color * textureLod(Texture, Frag_UV.st, 0);\n"
+        "   Out_Color = Frag_Color * textureLod(Texture, Frag_UV.st * Scale, 0);\n"
         "}\n";
 
-    struct nk_sdl_device *dev = &sdl.ogl;
+    struct nk_can_device *dev = &can.ogl;
     nk_buffer_init_default(&dev->cmds);
     dev->prog = glCreateProgram();
     dev->vert_shdr = glCreateShader(GL_VERTEX_SHADER);
@@ -63,6 +92,7 @@ nk_candle_device_create(void)
     assert(status == GL_TRUE);
 
     dev->uniform_tex = glGetUniformLocation(dev->prog, "Texture");
+    dev->uniform_scale = glGetUniformLocation(dev->prog, "Scale");
     dev->uniform_proj = glGetUniformLocation(dev->prog, "ProjMtx");
     dev->attrib_pos = glGetAttribLocation(dev->prog, "Position");
     dev->attrib_uv = glGetAttribLocation(dev->prog, "TexCoord");
@@ -70,10 +100,10 @@ nk_candle_device_create(void)
 
     {
         /* buffer setup */
-        GLsizei vs = sizeof(struct nk_sdl_vertex);
-        size_t vp = offsetof(struct nk_sdl_vertex, position);
-        size_t vt = offsetof(struct nk_sdl_vertex, uv);
-        size_t vc = offsetof(struct nk_sdl_vertex, col);
+        GLsizei vs = sizeof(struct nk_can_vertex);
+        size_t vp = offsetof(struct nk_can_vertex, position);
+        size_t vt = offsetof(struct nk_can_vertex, uv);
+        size_t vc = offsetof(struct nk_can_vertex, col);
 
         glGenBuffers(1, &dev->vbo);
         glGenBuffers(1, &dev->ebo);
@@ -98,18 +128,167 @@ nk_candle_device_create(void)
     glBindVertexArray(0);
 }
 
-NK_API struct nk_context*
-nk_candle_init(SDL_Window *win)
+NK_API void
+nk_can_font_stash_begin(struct nk_font_atlas **atlas)
 {
-    sdl.win = win;
-    nk_init_default(&sdl.ctx, 0);
-    sdl.ctx.clip.copy = nk_sdl_clipbard_copy;
-    sdl.ctx.clip.paste = nk_sdl_clipbard_paste;
-    sdl.ctx.clip.userdata = nk_handle_ptr(0);
-	sdl.ctx.style.tab.sym_minimize       = NK_SYMBOL_PLUS;
-	sdl.ctx.style.tab.sym_maximize       = NK_SYMBOL_MINUS;
-    nk_candle_device_create();
-    return &sdl.ctx;
+    nk_font_atlas_init_default(&can.atlas);
+    nk_font_atlas_begin(&can.atlas);
+    *atlas = &can.atlas;
+}
+
+NK_INTERN void
+nk_can_device_upload_atlas(const void *image, int width, int height)
+{
+    struct nk_can_device *dev = &can.ogl;
+    glGenTextures(1, &dev->font_tex);
+    glBindTexture(GL_TEXTURE_2D, dev->font_tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)width, (GLsizei)height, 0,
+                GL_RGBA, GL_UNSIGNED_BYTE, image);
+}
+
+
+NK_API void
+nk_can_font_stash_end(void)
+{
+    const void *image; int w, h;
+    image = nk_font_atlas_bake(&can.atlas, &w, &h, NK_FONT_ATLAS_RGBA32);
+    nk_can_device_upload_atlas(image, w, h);
+    nk_font_atlas_end(&can.atlas, nk_handle_id((int)can.ogl.font_tex), &can.ogl.null);
+    if (can.atlas.default_font)
+        nk_style_set_font(&can.ctx, &can.atlas.default_font->handle);
+
+}
+
+NK_API int
+nk_can_handle_event(SDL_Event *evt)
+{
+    struct nk_context *ctx = &can.ctx;
+    if (evt->type == SDL_KEYUP || evt->type == SDL_KEYDOWN) {
+        /* key events */
+        int down = evt->type == SDL_KEYDOWN;
+        const Uint8* state = SDL_GetKeyboardState(0);
+        SDL_Keycode sym = evt->key.keysym.sym;
+        if (sym == SDLK_RSHIFT || sym == SDLK_LSHIFT)
+            nk_input_key(ctx, NK_KEY_SHIFT, down);
+        else if (sym == SDLK_DELETE)
+            nk_input_key(ctx, NK_KEY_DEL, down);
+        else if (sym == SDLK_RETURN)
+            nk_input_key(ctx, NK_KEY_ENTER, down);
+        else if (sym == SDLK_TAB)
+            nk_input_key(ctx, NK_KEY_TAB, down);
+        else if (sym == SDLK_BACKSPACE)
+            nk_input_key(ctx, NK_KEY_BACKSPACE, down);
+        else if (sym == SDLK_HOME) {
+            nk_input_key(ctx, NK_KEY_TEXT_START, down);
+            nk_input_key(ctx, NK_KEY_SCROLL_START, down);
+        } else if (sym == SDLK_END) {
+            nk_input_key(ctx, NK_KEY_TEXT_END, down);
+            nk_input_key(ctx, NK_KEY_SCROLL_END, down);
+        } else if (sym == SDLK_PAGEDOWN) {
+            nk_input_key(ctx, NK_KEY_SCROLL_DOWN, down);
+        } else if (sym == SDLK_PAGEUP) {
+            nk_input_key(ctx, NK_KEY_SCROLL_UP, down);
+        } else if (sym == SDLK_z)
+            nk_input_key(ctx, NK_KEY_TEXT_UNDO, down && state[SDL_SCANCODE_LCTRL]);
+        else if (sym == SDLK_r)
+            nk_input_key(ctx, NK_KEY_TEXT_REDO, down && state[SDL_SCANCODE_LCTRL]);
+        else if (sym == SDLK_c)
+            nk_input_key(ctx, NK_KEY_COPY, down && state[SDL_SCANCODE_LCTRL]);
+        else if (sym == SDLK_v)
+            nk_input_key(ctx, NK_KEY_PASTE, down && state[SDL_SCANCODE_LCTRL]);
+        else if (sym == SDLK_x)
+            nk_input_key(ctx, NK_KEY_CUT, down && state[SDL_SCANCODE_LCTRL]);
+        else if (sym == SDLK_b)
+            nk_input_key(ctx, NK_KEY_TEXT_LINE_START, down && state[SDL_SCANCODE_LCTRL]);
+        else if (sym == SDLK_e)
+            nk_input_key(ctx, NK_KEY_TEXT_LINE_END, down && state[SDL_SCANCODE_LCTRL]);
+        else if (sym == SDLK_UP)
+            nk_input_key(ctx, NK_KEY_UP, down);
+        else if (sym == SDLK_DOWN)
+            nk_input_key(ctx, NK_KEY_DOWN, down);
+        else if (sym == SDLK_LEFT) {
+            if (state[SDL_SCANCODE_LCTRL])
+                nk_input_key(ctx, NK_KEY_TEXT_WORD_LEFT, down);
+            else nk_input_key(ctx, NK_KEY_LEFT, down);
+        } else if (sym == SDLK_RIGHT) {
+            if (state[SDL_SCANCODE_LCTRL])
+                nk_input_key(ctx, NK_KEY_TEXT_WORD_RIGHT, down);
+            else nk_input_key(ctx, NK_KEY_RIGHT, down);
+        } else return 0;
+        return 1;
+    } else if (evt->type == SDL_MOUSEBUTTONDOWN || evt->type == SDL_MOUSEBUTTONUP) {
+        /* mouse button */
+        int down = evt->type == SDL_MOUSEBUTTONDOWN;
+        const int x = evt->button.x, y = evt->button.y;
+        if (evt->button.button == SDL_BUTTON_LEFT) {
+            if (evt->button.clicks > 1)
+                nk_input_button(ctx, NK_BUTTON_DOUBLE, x, y, down);
+            nk_input_button(ctx, NK_BUTTON_LEFT, x, y, down);
+        } else if (evt->button.button == SDL_BUTTON_MIDDLE)
+            nk_input_button(ctx, NK_BUTTON_MIDDLE, x, y, down);
+        else if (evt->button.button == SDL_BUTTON_RIGHT)
+            nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
+        return 1;
+    } else if (evt->type == SDL_MOUSEMOTION) {
+        /* mouse motion */
+        if (ctx->input.mouse.grabbed) {
+            int x = (int)ctx->input.mouse.prev.x, y = (int)ctx->input.mouse.prev.y;
+            nk_input_motion(ctx, x + evt->motion.xrel, y + evt->motion.yrel);
+        } else nk_input_motion(ctx, evt->motion.x, evt->motion.y);
+        return 1;
+    } else if (evt->type == SDL_TEXTINPUT) {
+        /* text input */
+        nk_glyph glyph;
+        memcpy(glyph, evt->text.text, NK_UTF_SIZE);
+        nk_input_glyph(ctx, glyph);
+        return 1;
+    } else if (evt->type == SDL_MOUSEWHEEL) {
+        /* mouse wheel */
+        nk_input_scroll(ctx,nk_vec2((float)evt->wheel.x,(float)evt->wheel.y));
+        return 1;
+    }
+    return 0;
+}
+
+
+static void
+nk_can_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
+{
+    const char *text = SDL_GetClipboardText();
+    if (text) nk_textedit_paste(edit, text, nk_strlen(text));
+    (void)usr;
+}
+
+
+static void
+nk_can_clipboard_copy(nk_handle usr, const char *text, int len)
+{
+    char *str = 0;
+    (void)usr;
+    if (!len) return;
+    str = (char*)malloc((size_t)len+1);
+    if (!str) return;
+    memcpy(str, text, (size_t)len);
+    str[len] = '\0';
+    SDL_SetClipboardText(str);
+    free(str);
+}
+
+
+NK_API struct nk_context*
+nk_can_init(SDL_Window *win)
+{
+    can.win = win;
+    nk_init_default(&can.ctx, 0);
+    can.ctx.clip.copy = nk_can_clipboard_copy;
+    can.ctx.clip.paste = nk_can_clipboard_paste;
+    can.ctx.clip.userdata = nk_handle_ptr(0);
+	can.ctx.style.tab.sym_minimize       = NK_SYMBOL_PLUS;
+	can.ctx.style.tab.sym_maximize       = NK_SYMBOL_MINUS;
+    nk_can_device_create();
+    return &can.ctx;
 }
 
 NK_API void
@@ -270,10 +449,10 @@ nk_tree_entity_image_push_hashed(struct nk_context *ctx, enum nk_tree_type type,
     return nk_tree_entity_base(ctx, type, &img, title, initial_state, selected, has_children, hash, len, seed);
 }
 
-void nk_candle_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
+void nk_can_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
 		int max_element_buffer)
 {
-    struct nk_sdl_device *dev = &sdl.ogl;
+    struct nk_can_device *dev = &can.ogl;
     int width, height;
     int display_width, display_height;
     struct nk_vec2 scale;
@@ -283,8 +462,8 @@ void nk_candle_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
         {0.0f, 0.0f,-1.0f, 0.0f},
         {-1.0f,1.0f, 0.0f, 1.0f},
     };
-    SDL_GetWindowSize(sdl.win, &width, &height);
-    SDL_GL_GetDrawableSize(sdl.win, &display_width, &display_height);
+    SDL_GetWindowSize(can.win, &width, &height);
+    SDL_GL_GetDrawableSize(can.win, &display_width, &display_height);
     ortho[0][0] /= (GLfloat)width;
     ortho[1][1] /= (GLfloat)height;
 
@@ -304,6 +483,7 @@ void nk_candle_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
     /* setup program */
     glUseProgram(dev->prog);
     glUniform1i(dev->uniform_tex, 0);
+    glUniform2f(dev->uniform_scale, 1, 1);
     glUniformMatrix4fv(dev->uniform_proj, 1, GL_FALSE, &ortho[0][0]);
     {
         /* convert from command queue into draw list and draw to screen */
@@ -327,15 +507,15 @@ void nk_candle_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
             /* fill convert configuration */
             struct nk_convert_config config;
             static const struct nk_draw_vertex_layout_element vertex_layout[] = {
-                {NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_sdl_vertex, position)},
-                {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_sdl_vertex, uv)},
-                {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct nk_sdl_vertex, col)},
+                {NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_can_vertex, position)},
+                {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_can_vertex, uv)},
+                {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct nk_can_vertex, col)},
                 {NK_VERTEX_LAYOUT_END}
             };
             NK_MEMSET(&config, 0, sizeof(config));
             config.vertex_layout = vertex_layout;
-            config.vertex_size = sizeof(struct nk_sdl_vertex);
-            config.vertex_alignment = NK_ALIGNOF(struct nk_sdl_vertex);
+            config.vertex_size = sizeof(struct nk_can_vertex);
+            config.vertex_alignment = NK_ALIGNOF(struct nk_can_vertex);
             config.null = dev->null;
             config.circle_segment_count = 22;
             config.curve_segment_count = 22;
@@ -347,15 +527,19 @@ void nk_candle_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
             /* setup buffers to load vertices and elements */
             nk_buffer_init_fixed(&vbuf, vertices, (nk_size)max_vertex_buffer);
             nk_buffer_init_fixed(&ebuf, elements, (nk_size)max_element_buffer);
-            nk_convert(&sdl.ctx, &dev->cmds, &vbuf, &ebuf, &config);
+            nk_convert(&can.ctx, &dev->cmds, &vbuf, &ebuf, &config);
         }
         glUnmapBuffer(GL_ARRAY_BUFFER);
         glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
 
         /* iterate over and execute each draw command */
-        nk_draw_foreach(cmd, &sdl.ctx, &dev->cmds) {
+        nk_draw_foreach(cmd, &can.ctx, &dev->cmds) {
             if (!cmd->elem_count) continue;
-			if(cmd->userdata.ptr == (void*)(unsigned long)1) glDisable(GL_BLEND);
+			if(cmd->userdata.ptr == (void*)(unsigned long)1)
+			{
+				glDisable(GL_BLEND);
+				/* glUniform2f(dev->uniform_scale, 1, -1); */
+			}
             glBindTexture(GL_TEXTURE_2D, (GLuint)cmd->texture.id);
             glScissor((GLint)(cmd->clip_rect.x * scale.x),
                 (GLint)((height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h)) * scale.y),
@@ -365,7 +549,7 @@ void nk_candle_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
             offset += cmd->elem_count;
 			if(cmd->userdata.ptr == (void*)(unsigned long)1) glEnable(GL_BLEND);
         }
-        nk_clear(&sdl.ctx);
+        nk_clear(&can.ctx);
     }
 
     glUseProgram(0);

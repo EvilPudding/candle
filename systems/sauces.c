@@ -14,18 +14,29 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
+void to_lower_case(char *str);
+
 c_sauces_t *c_sauces_new()
 {
 	c_sauces_t *self = component_new("sauces");
-	self->files = kh_init(res);
+	self->materials = kh_init(res);
+	self->meshes = kh_init(res);
+	self->textures = kh_init(res);
+
+	int ret;
+	khiter_t k = kh_put(res, self->materials, ref("_default"), &ret);
+	resource_t *sauce = &kh_value(self->materials, k);
+	sauce->data = mat_new("_default");
+
 	return self;
 }
 
 mat_t *c_sauces_mat_get(c_sauces_t *self, const char *name)
 {
-	resource_t *sauce = c_sauces_get(self, name);
+	resource_t *sauce = c_sauces_get(self, self->materials, name);
+	if(!sauce) return NULL;
 	if(sauce->data) return sauce->data;
-	mat_t *mat = mat_from_file(name);
+	mat_t *mat = mat_from_file(sauce->path);
 	sauce->data = mat;
 	return mat;
 }
@@ -41,7 +52,8 @@ int load_mesh(mesh_t *mesh)
 
 mesh_t *c_sauces_mesh_get(c_sauces_t *self, const char *name)
 {
-	resource_t *sauce = c_sauces_get(self, name);
+	resource_t *sauce = c_sauces_get(self, self->meshes, name);
+	if(!sauce) return NULL;
 	if(sauce->data) return sauce->data;
 	mesh_t *mesh = mesh_new();
 	sauce->data = mesh;
@@ -73,6 +85,29 @@ static inline mat4_t mat4_from_ai(const struct aiMatrix4x4 m)
 	return r;
 }
 
+void to_lower_case(char *str)
+{
+	char c;
+	while((c = *str))
+	{
+		if(c >= 'A' && c <= 'Z')
+		{
+			*str = c + 'a' - 'A';
+		}
+		str++;
+	}
+}
+
+char *filter_sauce_name(char *path_name)
+{
+	char *slash = strrchr(path_name, '/')?:strrchr(path_name, '\\');
+	if(slash) path_name = slash + 1;
+	char *dot = strrchr(path_name, '.');
+	if(dot) *dot = '\0';
+	to_lower_case(path_name);
+	return path_name;
+}
+
 void load_node(entity_t entity, const struct aiScene *scene,
 		const struct aiNode *anode, float scale)
 {
@@ -89,12 +124,83 @@ void load_node(entity_t entity, const struct aiScene *scene,
 		if(!mc)
 		{
 			entity_add_component(entity, c_model_new(mesh_new(),
-						mat_new("t"), 1, 1));
+						sauces_mat("_default"), 1, 1));
 
 			mc = c_model(&entity);
 		}
 
 		mesh_load_scene(mc->mesh, mesh);
+
+		if(mesh->mMaterialIndex < scene->mNumMaterials)
+		{
+			char buffer[512] = "unnamed";
+			const struct aiMaterial *mat =
+				scene->mMaterials[mesh->mMaterialIndex];
+			struct aiString name;
+
+			struct aiString path;
+			if(aiGetMaterialString(mat, AI_MATKEY_NAME, &name) ==
+					aiReturn_SUCCESS)
+			{
+				strncpy(buffer, name.data, sizeof(buffer));
+				to_lower_case(buffer);
+			}
+			mat_t *material = sauces_mat(buffer);
+			if(!material)
+			{
+				material = mat_new(buffer);
+
+				enum aiTextureMapping mapping;
+				unsigned int uvi = 0;
+				enum aiTextureOp op;
+				float blend;
+				enum aiTextureMapMode mode;
+				unsigned int flags;
+
+				if(aiGetMaterialTexture( mat, aiTextureType_DIFFUSE, 0, &path,
+							&mapping, &uvi, &blend, &op, &mode, &flags) ==
+						aiReturn_SUCCESS)
+				{
+					strncpy(buffer, path.data, sizeof(buffer));
+					char *fname = filter_sauce_name(buffer);
+					texture_t *texture = sauces_tex(fname);
+					printf("%s\n", fname);
+					if(texture)
+					{
+						material->albedo.texture = texture;
+						material->albedo.texture_blend = 1.0f - blend;
+						material->albedo.texture_scale = 1.0f;
+					}
+				}
+
+				if(aiGetMaterialTexture( mat, aiTextureType_SHININESS, 0, &path,
+							&mapping, &uvi, &blend, &op, &mode, &flags) ==
+						aiReturn_SUCCESS)
+				{
+					strncpy(buffer, path.data, sizeof(buffer));
+					char *fname = filter_sauce_name(buffer);
+					texture_t *texture = sauces_tex(fname);
+					printf("%s\n", fname);
+					if(texture)
+					{
+						material->roughness.texture = texture;
+						material->roughness.texture_blend = 1.0f - blend;
+						material->roughness.texture_scale = 1.0f;
+					}
+				}
+
+				vec4_t color;
+				unsigned int max;
+				if (AI_SUCCESS == aiGetMaterialFloatArray(mat,
+							AI_MATKEY_COLOR_DIFFUSE, (ai_real*)&color, &max))
+				{
+					material->albedo.color = color;
+				}
+
+				int j; for(j = 0; j < mat->mNumProperties; j++) { printf("%s\n", mat->mProperties[j]->mKey.data); }
+			}
+			mc->layers[0].mat = material;
+		}
 	}
 
 	for(i = 0; i < anode->mNumChildren; i++)
@@ -120,7 +226,7 @@ void load_node(entity_t entity, const struct aiScene *scene,
 entity_t c_sauces_model_get(c_sauces_t *self, const char *name, float scale)
 {
 	int i;
-	resource_t *sauce = c_sauces_get(self, name);
+	resource_t *sauce = c_sauces_get(self, self->meshes, name);
 
 	entity_t result;
 	const struct aiScene *scene = aiImportFile(sauce->path,
@@ -184,20 +290,24 @@ int load_tex(texture_t *texture)
 	return 1;
 }
 
-resource_t *c_sauces_get(c_sauces_t *self, const char *name)
+resource_t *c_sauces_get(c_sauces_t *self, khash_t(res) *hash, const char *name)
 {
-	khiter_t k = kh_get(res, self->files, ref(name));
-	if(k == kh_end(self->files))
+	char buffer[64];
+	strncpy(buffer, name, sizeof(buffer));
+	to_lower_case(buffer);
+	khiter_t k = kh_get(res, hash, ref(buffer));
+	if(k == kh_end(hash))
 	{
 		printf("no indexed sauce named %s\n", name);
 		return NULL;
 	}
-	return &kh_value(self->files, k);
+	return &kh_value(hash, k);
 }
 
 texture_t *c_sauces_texture_get(c_sauces_t *self, const char *name)
 {
-	resource_t *sauce = c_sauces_get(self, name);
+	resource_t *sauce = c_sauces_get(self, self->textures, name);
+	if(!sauce) return NULL;
 	if(sauce->data) return sauce->data;
 
 	texture_t *texture;
@@ -211,6 +321,14 @@ texture_t *c_sauces_texture_get(c_sauces_t *self, const char *name)
 	return texture;
 }
 
+#define PNG 4215392736
+#define JPG 492009405
+#define TGA 519450434
+#define OBJ 1199244993
+#define DAE 1928915418
+#define FBX 804230617
+#define MAT 4225884277
+
 int c_sauces_index_dir(c_sauces_t *self, const char *dir_name)
 {
 	DIR *dir = opendir(dir_name);
@@ -219,6 +337,7 @@ int c_sauces_index_dir(c_sauces_t *self, const char *dir_name)
 	struct dirent *ent;
 	while((ent = readdir(dir)) != NULL)
 	{
+		khash_t(res) *hash;
 		char path[512];
 		char name[64];
 
@@ -229,23 +348,53 @@ int c_sauces_index_dir(c_sauces_t *self, const char *dir_name)
 		if(c_sauces_index_dir(self, path)) continue;
 
 		strcpy(name, ent->d_name);
+		to_lower_case(name);
 
-		char *ext = strrchr(name, '.');
-		*ext = '\0';
+		char *dot = strrchr(name, '.');
+		if(!dot || dot[1] == '\0')
+		{
+			continue;
+		}
+		else
+		{
+			*dot = '\0';
+		}
 
+		uint ext = ref(dot + 1);
+		switch(ext)
+		{
+			case TGA:
+			case JPG:
+			case PNG:
+				hash = self->textures;
+				break;
+			case MAT:
+				hash = self->materials;
+				break;
+			case OBJ:
+			case FBX:
+			case DAE:
+				hash = self->meshes;
+				break;
+			default:
+				printf("Unknown extension %s.%s %u\n", name, dot + 1, ref(dot+1));
+				continue;
+		}
 		printf("%s\n", name);
+
 		uint key = ref(name);
-		khiter_t k = kh_get(res, self->files, key);
-		if(k != kh_end(self->files))
+		khiter_t k = kh_get(res, hash, key);
+		if(k != kh_end(hash))
 		{
 			printf("Name collision! %s"
 					" Resources should be uniquely named.\n", ent->d_name);
 			continue;
 		}
 		int ret;
-		k = kh_put(res, self->files, key, &ret);
-		resource_t *sauce = &kh_value(self->files, k);
-		strcpy(sauce->path, path);
+		k = kh_put(res, hash, key, &ret);
+		resource_t *sauce = &kh_value(hash, k);
+		strncpy(sauce->path, path, sizeof(sauce->path));
+		strncpy(sauce->name, name, sizeof(sauce->name));
 		sauce->data = NULL;
 
 
@@ -258,18 +407,23 @@ int c_sauces_index_dir(c_sauces_t *self, const char *dir_name)
 
 int c_sauces_component_menu(c_sauces_t *self, void *ctx)
 {
-	/* if(nk_tree_push(ctx, NK_TREE_TAB, "Textures", NK_MINIMIZED)) */
-	/* { */
-	/* 	int i; */
-	/* 	for(i = 0; i < self->textures_size; i++) */
-	/* 	{ */
-	/* 		if(nk_button_label(ctx, self->textures[i]->name)) */
-	/* 		{ */
-	/* 			c_editmode_open_texture(c_editmode(self), self->textures[i]); */
-	/* 		} */
-	/* 	} */
-	/* 	nk_tree_pop(ctx); */
-	/* } */
+	if(nk_tree_push(ctx, NK_TREE_TAB, "Textures", NK_MINIMIZED))
+	{
+		khiter_t i;
+		for(i = kh_begin(self->textures); i != kh_end(self->textures); ++i)
+		{
+			if(!kh_exist(self->textures, i)) continue;
+			resource_t *sauce = &kh_value(self->textures, i);
+			if(sauce->data)
+			{
+				if(nk_button_label(ctx, sauce->name))
+				{
+					c_editmode_open_texture(c_editmode(self), sauce->data);
+				}
+			}
+		}
+		nk_tree_pop(ctx);
+	}
 	return 1;
 }
 
