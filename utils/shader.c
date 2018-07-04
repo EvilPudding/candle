@@ -133,6 +133,8 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"layout (location = 3) in vec3 TG;\n"
 			"layout (location = 4) in vec2 ID;\n"
 			"layout (location = 5) in vec3 COL;\n"
+			"layout (location = 6) in uvec4 BID;\n"
+			"layout (location = 7) in vec4 WEI;\n"
 			"\n"
 			"struct camera_t\n"
 			"{\n"
@@ -145,7 +147,7 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"};\n"
 			"\n"
 			"\n"
-			"uniform mat4 MVP;\n"
+			"uniform mat4 bones[30];\n"
 			"uniform mat4 M;\n"
 			"#ifdef MESH4\n"
 			"uniform float angle4;\n"
@@ -166,10 +168,6 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"out vec3 poly_color;\n"
 			"\n"
 			"out vec3 vertex_position;\n"
-			"out vec3 vertex_normal;\n"
-			"out vec3 vertex_tangent;\n"
-			"out vec3 vertex_bitangent;\n"
-			"\n"
 			"out vec2 texcoord;\n"
 			"/* out vec4 vertex_color; */\n"
 			"\n"
@@ -384,6 +382,7 @@ static void shader_get_prop_uniforms(shader_t *self, u_prop_t *prop,
 
 static int shader_new_loader(shader_t *self)
 {
+	int i;
 	self->program = glCreateProgram(); glerr();
 
 	glAttachShader(self->program, self->fs->program); glerr();
@@ -394,22 +393,20 @@ static int shader_new_loader(shader_t *self)
 
 	/* LAYOUTS */
 
-	/* POSITION */
-	glBindAttribLocation(self->program, 0, "P"); glerr();
-	/* NORMAL */
-	glBindAttribLocation(self->program, 1, "N"); glerr();
-	/* UV MAP */
-	glBindAttribLocation(self->program, 2, "UV"); glerr();
-	/* TANGENT */
-	glBindAttribLocation(self->program, 3, "TG"); glerr();
-	/* BITANGENT */
-	/* glBindAttribLocation(self->program, 4, "BT"); glerr(); */
-	/* ID */
-	glBindAttribLocation(self->program, 4, "ID"); glerr();
+/* 	/1* POSITION *1/ */
+/* 	glBindAttribLocation(self->program, 0, "P"); glerr(); */
+/* 	/1* NORMAL *1/ */
+/* 	glBindAttribLocation(self->program, 1, "N"); glerr(); */
+/* 	/1* UV MAP *1/ */
+/* 	glBindAttribLocation(self->program, 2, "UV"); glerr(); */
+/* 	/1* TANGENT *1/ */
+/* 	glBindAttribLocation(self->program, 3, "TG"); glerr(); */
+/* 	/1* BITANGENT *1/ */
+/* 	/1* glBindAttribLocation(self->program, 4, "BT"); glerr(); *1/ */
+/* 	/1* ID *1/ */
+/* 	glBindAttribLocation(self->program, 4, "ID"); glerr(); */
 
-	self->u_mvp = glGetUniformLocation(self->program, "MVP"); glerr();
 	self->u_m = glGetUniformLocation(self->program, "M"); glerr();
-	/* self->u_mv = glGetUniformLocation(self->program, "MV"); glerr(); */
 #ifdef MESH4
 	self->u_angle4 = glGetUniformLocation(self->program, "angle4"); glerr();
 #endif
@@ -443,6 +440,13 @@ static int shader_new_loader(shader_t *self)
 	self->u_horizontal_blur = glGetUniformLocation(self->program, "horizontal"); glerr();
 
 	self->u_output_size = glGetUniformLocation(self->program, "output_size"); glerr();
+
+	for(i = 0; i < 30; i++)
+	{
+		char buffer[12];
+		snprintf(buffer, sizeof(buffer), "bones[%d]", i);
+		self->u_bones[i] = glGetUniformLocation(self->program, buffer); glerr();
+	}
 
 	/* MATERIALS */
 	shader_get_prop_uniforms(self, &self->u_albedo, "albedo");
@@ -587,10 +591,8 @@ void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
 		mat4_t *projection, mat4_t *model, float exposure)
 {
 	/* shader_t *self = c_renderer(&g_systems)->shader; */
-	self->vp = mat4_mul(*projection, *view);
-
 	glUniformMatrix4fv(self->u_v, 1, GL_FALSE, (void*)view->_);
-	glUniformMatrix4fv(self->u_v, 1, GL_FALSE, (void*)model->_);
+	glUniformMatrix4fv(self->u_m, 1, GL_FALSE, (void*)model->_);
 	glUniform3f(self->u_camera_pos, pos.x, pos.y, pos.z);
 	glUniform1f(self->u_exposure, exposure);
 
@@ -608,22 +610,10 @@ void shader_update(shader_t *self, mat4_t *model_matrix, float angle4)
 void shader_update(shader_t *self, mat4_t *model_matrix)
 #endif
 {
-	/* shader_t *self = c_renderer(&g_systems)->shader; */
-	mat4_t mvp = mat4_mul(self->vp, *model_matrix);
-
-	glUniformMatrix4fv(self->u_mvp, 1, GL_FALSE, (void*)mvp._);
 	glUniformMatrix4fv(self->u_m, 1, GL_FALSE, (void*)model_matrix->_);
 #ifdef MESH4
 	glUniform1f(self->u_angle4, angle4);
 #endif
-	glerr();
-
-	/* if(perlin) */
-	/* { */
-	/* 	glUniform1i(self->u_perlin_map, 12); glerr(); */
-	/* 	glActiveTexture(GL_TEXTURE8 + 4); glerr(); */
-	/* 	texture_bind(perlin, COLOR_TEX); */
-	/* } */
 	glerr();
 }
 

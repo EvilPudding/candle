@@ -6,7 +6,7 @@ layout (location = 0) out vec4 FragColor;
 
 BUFFER {
 	sampler2D depth;
-	sampler2D nrm;
+	sampler2D nmr;
 } gbuffer;
 
 BUFFER {
@@ -21,9 +21,9 @@ void main()
 {
 	vec4 cc = textureLod(rendered.color, pixel_pos(), 0);
 
-	vec4 normal_roughness_metalness = textureLod(gbuffer.nrm, pixel_pos(), 0);
-	vec3 nor = decode_normal(normal_roughness_metalness.rg);
-	float roughness = normal_roughness_metalness.b;
+	vec4 normal_metalic_roughness = textureLod(gbuffer.nmr, pixel_pos(), 0);
+	vec3 nor = decode_normal(normal_metalic_roughness.rg);
+	float roughness = normal_metalic_roughness.a;
 
 	vec4 ssred = ssr2(gbuffer.depth, rendered.color, roughness, nor);
 	/* FragColor = ssred; return; */

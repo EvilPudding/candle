@@ -60,6 +60,8 @@ typedef int(*before_draw_cb)(c_t *self);
 
 #define CONTINUE			0x0000
 #define STOP				0x0001
+#define RENEW				0x0010
+
 #define WORLD				0x0000
 #define ENTITY				0x0100
 
@@ -70,7 +72,7 @@ typedef struct
 	uint signal;
 	signal_cb cb;
 	int flags;
-	uint comp_type;
+	uint target;
 	int priority;
 } listener_t;
 
@@ -118,7 +120,8 @@ typedef struct
 {
 	uint size;
 
-	vector_t *listeners;
+	vector_t *listener_types;
+	vector_t *listener_comps;
 
 } signal_t;
 

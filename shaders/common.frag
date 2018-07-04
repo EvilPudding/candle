@@ -49,8 +49,6 @@ struct camera_t
 	mat4 model;
 };
 
-uniform mat4 MVP;
-
 uniform camera_t camera;
 
 uniform vec3 light_pos;
@@ -71,9 +69,6 @@ in vec2 poly_id;
 in vec3 poly_color;
 
 in vec3 vertex_position;
-in vec3 vertex_normal;
-in vec3 vertex_tangent;
-in vec3 vertex_bitangent;
 
 in vec2 texcoord;
 in vec4 vertex_color;
@@ -196,7 +191,7 @@ vec3 get_normal()
 		return normalize(TM * texcolor);
 
 	}
-	return normalize(vertex_normal);
+	return normalize(TM[2]);
 }
 
 float rand(vec2 co)
@@ -225,24 +220,6 @@ float shadow_at_dist_no_tan(vec3 vec, float i)
 	return 0.0;
 }
 
-/* float shadow_at_dist(vec3 vec, float i) */
-/* { */
-/* 	vec3 x = vertex_tangent * i; */
-/* 	vec3 y = vertex_bitangent * i; */
-	
-/* 	if(lookup(-vec,  x + 0) > 0.5) return 1.0; */
-/* 	if(lookup(-vec,  0 + y) > 0.5) return 1.0; */
-/* 	if(lookup(-vec, -x + 0) > 0.5) return 1.0; */
-/* 	if(lookup(-vec,  0 - y) > 0.5) return 1.0; */
-
-/* 	if(lookup(-vec,  x - y) > 0.5) return 1.0; */
-/* 	if(lookup(-vec,  x + y) > 0.5) return 1.0; */
-/* 	if(lookup(-vec, -x - y) > 0.5) return 1.0; */
-/* 	if(lookup(-vec, -x + y) > 0.5) return 1.0; */
-
-/* 	return 0.0; */
-/* } */
-
 float get_shadow(vec3 vec, float point_to_light, float dist_to_eye)
 {
 	float ocluder_to_light = lookup_single(-vec);
@@ -262,7 +239,7 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye)
 
 			float count = 1;
 			float iters = floor(clamp(shadow_len / (dist_to_eye *
-							dist_to_eye / 385), 2, 16));
+							dist_to_eye / 385), 2, 16)) * 2;
 			float inc = shadow_len / iters;
 
 			for (i = inc; i <= shadow_len; i += inc)

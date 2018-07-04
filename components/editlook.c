@@ -148,12 +148,12 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 	c_spacial_rotate_Y(sc, inc_y);
 
 	c_spacial_lock(sc);
-	sc->pos = vec3_add(pivot, vec3_rotate(diff, sc->upwards, cosy, siny));
+	sc->pos = vec3_add(pivot, vec3_rotate(diff, c_spacial_upwards(sc), cosy, siny));
 
 	diff = vec3_sub(sc->pos, pivot);
 
 	c_spacial_set_pos(sc, vec3_add(pivot,
-				vec3_rotate(diff, sc->forward, cosx, sinx)));
+				vec3_rotate(diff, c_spacial_forward(sc), cosx, sinx)));
 
 	c_spacial_rotate_X(sc, oldx + inc_x);
 	c_spacial_unlock(sc);

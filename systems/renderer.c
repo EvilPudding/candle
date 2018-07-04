@@ -74,8 +74,6 @@ static void c_renderer_bind_camera(c_renderer_t *self, pass_t *pass,
 	c_camera_t *cam = c_camera(&bind->camera);
 	c_camera_update_view(cam);
 
-	self->shader->vp = cam->vp;
-
 	glUniformMatrix4fv(sb->camera.u_model, 1, GL_FALSE,
 			(void*)cam->model_matrix._);
 
@@ -312,7 +310,7 @@ static int c_renderer_gl(c_renderer_t *self)
 
 
 	texture_t *gbuffer =	texture_new_2D(1, 1, 0, 0,
-		buffer_new("nrm",		1, 4),
+		buffer_new("nmr",		1, 4),
 		buffer_new("albedo",	1, 4),
 		buffer_new("depth",		1, -1)
 	);
@@ -913,7 +911,6 @@ void c_renderer_clear_shaders(c_renderer_t *self, shader_t *shader)
 
 /* void pass_set_model(pass_t *self, mat4_t model) */
 /* { */
-/* 	mat4_t mvp = mat4_mul(self->shader->vp, model); */
 
 /* 	glUniformMatrix4fv(self->u_mvp, 1, GL_FALSE, (void*)mvp._); */
 /* 	glUniformMatrix4fv(self->u_m, 1, GL_FALSE, (void*)model._); */

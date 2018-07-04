@@ -17,7 +17,7 @@ void node_entity(c_nodegraph_t *self, entity_t entity, void *ctx)
 	char *final_name = buffer;
 	c_name_t *name = c_name(&entity);
 	c_editmode_t *emc = c_editmode(self);
-	if(name)
+	if(name && name->name[0])
 	{
 		final_name = name->name;
 	}

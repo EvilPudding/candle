@@ -95,7 +95,7 @@ void entity_destroy(entity_t self)
 int listener_signal(listener_t *self, entity_t ent, void *data)
 {
 	int p, j;
-	ct_t *ct = ecm_get(self->comp_type);
+	ct_t *ct = ecm_get(self->target);
 	for(p = 0; p < ct->pages_size; p++)
 	{
 		for(j = 0; j < ct->pages[p].components_size; j++)
@@ -113,7 +113,7 @@ int listener_signal(listener_t *self, entity_t ent, void *data)
 
 int listener_signal_same(listener_t *self, entity_t ent, void *data)
 {
-	c_t *c = ct_get(ecm_get(self->comp_type), &ent);
+	c_t *c = ct_get(ecm_get(self->target), &ent);
 	if(c)
 	{
 		return self->cb(c, data);
@@ -135,9 +135,9 @@ int entity_signal_same(entity_t self, uint signal, void *data)
 {
 	int i;
 	signal_t *sig = ecm_get_signal(signal);
-	for(i = vector_count(sig->listeners) - 1; i >= 0; i--)
+	for(i = vector_count(sig->listener_types) - 1; i >= 0; i--)
 	{
-		listener_t *lis = vector_get(sig->listeners, i);
+		listener_t *lis = vector_get(sig->listener_types, i);
 		int res = listener_signal_same(lis, self, data);
 		if(res == STOP) return STOP;
 	}
@@ -148,9 +148,9 @@ int entity_signal(entity_t self, uint signal, void *data)
 {
 	int i;
 	signal_t *sig = ecm_get_signal(signal);
-	for(i = vector_count(sig->listeners) - 1; i >= 0; i--)
+	for(i = vector_count(sig->listener_types) - 1; i >= 0; i--)
 	{
-		listener_t *lis = vector_get(sig->listeners, i);
+		listener_t *lis = vector_get(sig->listener_types, i);
 		if(listener_signal(lis, self, data) == STOP) return STOP;
 	}
 	return CONTINUE;

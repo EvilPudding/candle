@@ -1,6 +1,6 @@
 
 layout (location = 0) out vec4 AlbedoColor;
-layout (location = 1) out vec4 NRM; // normal_roughness_metalness
+layout (location = 1) out vec4 NMR; // normal_roughness_metalness
 
 #include "common.frag"
 
@@ -13,10 +13,10 @@ void main()
 	/* dif.rgb = TM[2] / 2.0f + 0.5f; */
 	AlbedoColor = dif;
 
-	NRM.b = resolveProperty(roughness, texcoord).r;
-	NRM.a = resolveProperty(metalness, texcoord).r;
+	NMR.rg = encode_normal(get_normal());
 
-	NRM.rg = encode_normal(get_normal());
+	NMR.b = resolveProperty(metalness, texcoord).r;
+	NMR.a = resolveProperty(roughness, texcoord).r;
 }
 
 // vim: set ft=c:

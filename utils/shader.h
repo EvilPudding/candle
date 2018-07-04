@@ -49,10 +49,8 @@ typedef struct shader_t
 	int frame_bind;
 
 	GLuint program;
-	GLuint u_mvp;
 	GLuint u_m;
 	GLuint u_v;
-	GLuint u_mv;
 	GLuint u_projection;
 	GLuint u_inv_projection;
 	GLuint u_perlin_map;
@@ -88,8 +86,7 @@ typedef struct shader_t
 	GLuint u_horizontal_blur; /* TODO: make this dynamic */
 	GLuint u_output_size;
 
-
-	mat4_t vp;
+	GLuint u_bones[30];
 
 	int ready;
 } shader_t;

@@ -427,6 +427,9 @@ static inline type##3_t type##3_rotate(const type##3_t v, const type##3_t a, \
 	MAFS_DEFINE_VEC_PRINT(n_t, type, format, 4) \
 	MAFS_DEFINE_SPECIFIC(n_t, type, sqrt, pow)
 
+MAFS_DEFINE_STRUCTS(unsigned int, uvec)
+MAFS_DEFINE_CONSTRUCTOR(unsigned int, uvec)
+
 MAFS_DEFINE_TYPE(float, vec, "%f", sqrtf, powf, floorf, roundf)
 MAFS_DEFINE_TYPE(double, d, "%lf", sqrt, pow, floor, round)
 

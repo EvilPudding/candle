@@ -22,6 +22,9 @@ typedef struct
 
 	entity_t parent;
 	int inherit_scale;
+
+	int has_shadows;
+	int visible;
 } c_node_t;
 
 DEF_CASTER("node", c_node, c_node_t)

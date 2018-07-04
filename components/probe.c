@@ -78,7 +78,11 @@ int c_probe_render(c_probe_t *self, uint signal)
 		renderer->bound_exposure = 1.0f;
 
 		int res = entity_signal(c_entity(self), signal, NULL);
-		if(res == STOP) return STOP;
+		if(res == STOP)
+		{
+			renderer->bound_probe = entity_null;
+			return STOP;
+		}
 	}
 
 	self->last_update = g_update_id;

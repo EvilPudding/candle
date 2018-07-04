@@ -7,7 +7,7 @@ layout (location = 0) out vec4 FragColor;
 BUFFER {
 	sampler2D depth;
 	sampler2D albedo;
-	sampler2D nrm;
+	sampler2D nmr;
 } gbuffer;
 
 const vec3 Fdielectric = vec3(0.04f);
@@ -19,10 +19,8 @@ void main()
 
 	/* vec3 c_pos2 = get_position2(gbuffer); */
 
-	vec4 normal_roughness_metalness = textureLod(gbuffer.nrm, pixel_pos(), 0);
-	vec3 c_nor = decode_normal(normal_roughness_metalness.rg);
-	float roughness = normal_roughness_metalness.b;
-	float metalness = normal_roughness_metalness.a;
+	vec4 normal_metalic_roughness = textureLod(gbuffer.nmr, pixel_pos(), 0);
+	vec3 c_nor = decode_normal(normal_metalic_roughness.rg);
 
 	float dist_to_eye = length(c_pos);
 
@@ -62,7 +60,7 @@ void main()
 			float l = point_to_light / light_radius;
 			float attenuation = clamp(1.0f - pow(l, 2), 0.0f, 1.0f);
 
-			vec4 color_lit = pbr(dif, normal_roughness_metalness.yz,
+			vec4 color_lit = pbr(dif, normal_metalic_roughness.ba,
 					light_color * attenuation, c_light_dir, c_pos, c_nor);
 			color += color_lit.xyz * (1.0 - sd);
 		}

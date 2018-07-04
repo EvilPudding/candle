@@ -35,14 +35,14 @@ static void c_sprite_init(c_sprite_t *self)
 		g_sprite_vs = vs_new("sprite", 1, vertex_modifier_new(
 			"	{\n"
 			"		vec4 center = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
-			"		pos = MVP * center;\n"
+			"		pos = (M*camera.view*camera.projection) * center;\n"
 			"		vec2 size = vec2(P.x * (screen_size.y / screen_size.x), P.y);\n"
 			"		pos = vec4(pos.xy + 0.5 * size, pos.z, pos.w);\n"
 			"		vertex_position = (camera.view * M * center).xyz + P.xyz * 0.5;\n"
 
-			"		vertex_normal    = (vec4( N, 0.0f)).xyz;\n"
-			"		vertex_tangent   = (vec4(TG, 0.0f)).xyz;\n"
-			"		vertex_bitangent = cross(vertex_normal, vertex_tangent);\n"
+			"		vec3 vertex_normal    = (vec4( N, 0.0f)).xyz;\n"
+			"		vec3 vertex_tangent   = (vec4(TG, 0.0f)).xyz;\n"
+			"		vec3 vertex_bitangent = cross(vertex_normal, vertex_tangent);\n"
 			"		texcoord = vec2(-UV.y, UV.x);\n"
 
 			"		object_id = id;\n"

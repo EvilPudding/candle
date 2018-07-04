@@ -733,10 +733,10 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 		signal_t *sig = ecm_get_signal(sig("component_menu"));
 
 		/* for(i = 0; i < sig->cts_size; i++) */
-		for(i = vector_count(sig->listeners) - 1; i >= 0; i--)
+		for(i = vector_count(sig->listener_types) - 1; i >= 0; i--)
 		{
-			listener_t *lis = vector_get(sig->listeners, i);
-			ct_t *ct = ecm_get(lis->comp_type);
+			listener_t *lis = vector_get(sig->listener_types, i);
+			ct_t *ct = ecm_get(lis->target);
 			c_t *comp = ct_get(ct, &ent);
 
 			if(comp && !comp->ghost)

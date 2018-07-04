@@ -18,10 +18,10 @@ listener_t *ct_get_listener(ct_t *self, uint signal)
 	signal_t *sig = ecm_get_signal(signal);
 	if(!self) return NULL;
 	uint i;
-	for(i = 0; i < vector_count(sig->listeners); i++)
+	for(i = 0; i < vector_count(sig->listener_types); i++)
 	{
-		listener_t *listener = vector_get(sig->listeners, i);
-		if(listener->comp_type == self->id)
+		listener_t *listener = vector_get(sig->listener_types, i);
+		if(listener->target == self->id)
 		{
 			return listener;
 		}
@@ -114,7 +114,7 @@ signal_t *ecm_get_signal(uint signal)
 		k = kh_put(sig, g_ecm->signals, signal, &ret);
 		signal_t *sig = &kh_value(g_ecm->signals, k);
 		*sig = (signal_t){
-			.listeners = vector_new(sizeof(listener_t), 0, NULL,
+			.listener_types = vector_new(sizeof(listener_t), 0, NULL,
 					(vector_compare_cb)listeners_compare)
 		};
 	}
@@ -128,9 +128,9 @@ void _ct_listener(ct_t *self, int flags, uint signal, signal_cb cb)
 
 	listener_t lis = {.signal = signal, .cb = (signal_cb)cb,
 		.flags = flags & 0xFF00, .priority = flags & 0x00FF,
-		.comp_type = self->id};
+		.target = self->id};
 
-	vector_add(sig->listeners, &lis);
+	vector_add(sig->listener_types, &lis);
 
 }
 
@@ -147,8 +147,11 @@ void _signal_init(uint id, uint size)
 	khiter_t k = kh_put(sig, g_ecm->signals, id, &ret);
 	kh_value(g_ecm->signals, k) = (signal_t){
 		.size = size,
-		.listeners = vector_new(sizeof(listener_t), 0, NULL,
-				(vector_compare_cb)listeners_compare)};
+		.listener_types = vector_new(sizeof(listener_t), 0, NULL,
+				(vector_compare_cb)listeners_compare),
+		.listener_comps = vector_new(sizeof(listener_t), FIXED_INDEX, NULL,
+				NULL)
+	};
 }
 
 void ecm_destroy_all()

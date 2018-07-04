@@ -21,7 +21,6 @@ typedef struct c_sauces_t
 	khash_t(res) *meshes;
 	khash_t(res) *textures;
 	khash_t(res) *materials;
-
 } c_sauces_t;
 
 DEF_CASTER("sauces", c_sauces, c_sauces_t)
@@ -38,8 +37,13 @@ texture_t *c_sauces_texture_get(c_sauces_t *self, const char *name);
 
 mesh_t *c_sauces_mesh_get(c_sauces_t *self, const char *name);
 
+/* material_t *c_sauces_mat_pick(c_sauces_t *self, void *ctx); */
+
 entity_t c_sauces_model_get(c_sauces_t *self, const char *name, float scale);
 
+void c_sauces_register_mat(c_sauces_t *self, mat_t *mat);
+
+#define sauces_register_mat(mat) (c_sauces_register_mat(c_sauces(&SYS), mat))
 #define sauces_mat_at(name) (c_sauces_get_mats_at(c_sauces(&SYS), name))
 #define sauces_mat(name) (c_sauces_mat_get(c_sauces(&SYS), name))
 #define sauces_mesh(name) (c_sauces_mesh_get(c_sauces(&SYS), name))

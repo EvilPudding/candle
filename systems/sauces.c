@@ -6,15 +6,28 @@
 #include <stdlib.h>
 
 #include <components/model.h>
+#include <components/timeline.h>
+#include <components/bone.h>
+#include <components/skin.h>
 #include <components/light.h>
 #include <components/node.h>
 #include <components/name.h>
 
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
+#include <assimp/metadata.h>
 #include <assimp/postprocess.h>
 
 void to_lower_case(char *str);
+static void load_node_children(entity_t entity, const struct aiScene *scene,
+		const struct aiNode *anode, int depth);
+static void load_comp_children(
+		entity_t entity,
+		const struct aiScene *scene,
+		const struct aiNode *anode,
+		c_node_t *root,
+		float scale
+);
 
 c_sauces_t *c_sauces_new()
 {
@@ -23,12 +36,18 @@ c_sauces_t *c_sauces_new()
 	self->meshes = kh_init(res);
 	self->textures = kh_init(res);
 
-	int ret;
-	khiter_t k = kh_put(res, self->materials, ref("_default"), &ret);
-	resource_t *sauce = &kh_value(self->materials, k);
-	sauce->data = mat_new("_default");
+	c_sauces_register_mat(self, mat_new("_default"));
 
 	return self;
+}
+
+void c_sauces_register_mat(c_sauces_t *self, mat_t *mat)
+{
+	int ret;
+	khiter_t k = kh_put(res, self->materials, ref(mat->name), &ret);
+	resource_t *sauce = &kh_value(self->materials, k);
+	strncpy(sauce->name, mat->name, sizeof(sauce->name));
+	sauce->data = mat;
 }
 
 mat_t *c_sauces_mat_get(c_sauces_t *self, const char *name)
@@ -68,18 +87,8 @@ mesh_t *c_sauces_mesh_get(c_sauces_t *self, const char *name)
 static inline mat4_t mat4_from_ai(const struct aiMatrix4x4 m)
 {
 	mat4_t r;
-
-	r._[0]._[0] = m.a1; r._[0]._[1] = m.a2;
-	r._[0]._[2] = m.a3; r._[0]._[3] = m.a4;
-
-	r._[1]._[0] = m.b1; r._[1]._[1] = m.b2;
-	r._[1]._[2] = m.b3; r._[1]._[3] = m.b4;
-
-	r._[2]._[0] = m.c1; r._[2]._[1] = m.c2;
-	r._[2]._[2] = m.c3; r._[2]._[3] = m.c4;
-
-	r._[3]._[0] = m.d1; r._[3]._[1] = m.d2;
-	r._[3]._[2] = m.d3; r._[3]._[3] = m.d4;
+	float *v = (float*)&m;
+	r = *(mat4_t*)v;
 
 	r = mat4_transpose(r);
 	return r;
@@ -108,118 +117,292 @@ char *filter_sauce_name(char *path_name)
 	return path_name;
 }
 
-void load_node(entity_t entity, const struct aiScene *scene,
-		const struct aiNode *anode, float scale)
+void load_material(entity_t entity, const struct aiMesh *mesh,
+		const struct aiScene *scene)
 {
-	int i;
-	c_node_t *node = c_node(&entity);
-	c_spacial_t *spacial = c_spacial(&entity);
+	if(mesh->mMaterialIndex >= scene->mNumMaterials) return;
+	c_model_t *mc = c_model(&entity);
+	char buffer[512] = "unnamed";
+	const struct aiMaterial *mat =
+		scene->mMaterials[mesh->mMaterialIndex];
+	struct aiString name;
 
-	c_spacial_set_model(spacial, mat4_from_ai(anode->mTransformation));
-
-	for(i = 0; i < anode->mNumMeshes; i++)
+	struct aiString path;
+	if(aiGetMaterialString(mat, AI_MATKEY_NAME, &name) ==
+			aiReturn_SUCCESS)
 	{
-		const struct aiMesh *mesh = scene->mMeshes[anode->mMeshes[i]];
-		c_model_t *mc = c_model(&entity);
-		if(!mc)
-		{
-			entity_add_component(entity, c_model_new(mesh_new(),
-						sauces_mat("_default"), 1, 1));
+		strncpy(buffer, name.data, sizeof(buffer));
+		to_lower_case(buffer);
+	}
+	mat_t *material = sauces_mat(buffer);
+	if(!material)
+	{
+		material = mat_new(buffer);
 
-			mc = c_model(&entity);
+		enum aiTextureMapping mapping;
+		unsigned int uvi = 0;
+		enum aiTextureOp op;
+		float blend;
+		enum aiTextureMapMode mode;
+		unsigned int flags;
+
+		if(aiGetMaterialTexture( mat, aiTextureType_DIFFUSE, 0, &path,
+					&mapping, &uvi, &blend, &op, &mode, &flags) ==
+				aiReturn_SUCCESS)
+		{
+			strncpy(buffer, path.data, sizeof(buffer));
+			char *fname = filter_sauce_name(buffer);
+			texture_t *texture = sauces_tex(fname);
+			if(texture)
+			{
+				material->albedo.texture = texture;
+				material->albedo.texture_blend = 1.0f - blend;
+				material->albedo.texture_scale = 1.0f;
+			}
 		}
+
+		if(aiGetMaterialTexture( mat, aiTextureType_SHININESS, 0, &path,
+					&mapping, &uvi, &blend, &op, &mode, &flags) ==
+				aiReturn_SUCCESS)
+		{
+			strncpy(buffer, path.data, sizeof(buffer));
+			char *fname = filter_sauce_name(buffer);
+			texture_t *texture = sauces_tex(fname);
+			if(texture)
+			{
+				material->roughness.texture = texture;
+				material->roughness.texture_blend = 1.0f - blend;
+				material->roughness.texture_scale = 1.0f;
+			}
+		}
+
+		vec4_t color = vec4(0,0,0,1);
+		if (AI_SUCCESS == aiGetMaterialColor(mat, AI_MATKEY_COLOR_DIFFUSE,
+					(void*)&color))
+		{
+			material->albedo.color = color;
+		}
+
+		int j; for(j = 0; j < mat->mNumProperties; j++) { printf("%s\n", mat->mProperties[j]->mKey.data); }
+		sauces_register_mat(material);
+	}
+	mc->layers[0].mat = material;
+}
+
+void load_comp(entity_t entity, const struct aiScene *scene,
+		const struct aiNode *anode, c_node_t *root, float scale)
+{
+	int m;
+	c_model_t *mc = c_model(&entity);
+	if(!mc && anode->mNumMeshes)
+	{
+		entity_add_component(entity, c_model_new(mesh_new(),
+					sauces_mat("_default"), 1, 1));
+		mc = c_model(&entity);
+	}
+
+	int last_vertex = 0;
+	for(m = 0; m < anode->mNumMeshes; m++)
+	{
+		const struct aiMesh *mesh = scene->mMeshes[anode->mMeshes[m]];
 
 		mesh_load_scene(mc->mesh, mesh);
 
-		if(mesh->mMaterialIndex < scene->mNumMaterials)
+		if(mesh->mNumBones)
 		{
-			char buffer[512] = "unnamed";
-			const struct aiMaterial *mat =
-				scene->mMaterials[mesh->mMaterialIndex];
-			struct aiString name;
-
-			struct aiString path;
-			if(aiGetMaterialString(mat, AI_MATKEY_NAME, &name) ==
-					aiReturn_SUCCESS)
+			int b;
+			c_skin_t *skin = c_skin(&entity);
+			if(!skin)
 			{
-				strncpy(buffer, name.data, sizeof(buffer));
-				to_lower_case(buffer);
+				entity_add_component(entity, c_skin_new());
+				skin = c_skin(&entity);
 			}
-			mat_t *material = sauces_mat(buffer);
-			if(!material)
+			c_skin_vert_prealloc(skin, vector_count(mc->mesh->verts));
+
+			for(b = 0; b < mesh->mNumBones; b++)
 			{
-				material = mat_new(buffer);
+				int w;
+				const struct aiBone* abone = mesh->mBones[b];
+				entity_t bone = c_node_get_by_name(root, ref(abone->mName.data));
+				if(!bone) continue;
+				int bone_index = skin->bones_num;
 
-				enum aiTextureMapping mapping;
-				unsigned int uvi = 0;
-				enum aiTextureOp op;
-				float blend;
-				enum aiTextureMapMode mode;
-				unsigned int flags;
+				skin->bones[bone_index] = bone;
+				mat4_t offset = mat4_from_ai(abone->mOffsetMatrix);
+				skin->off[bone_index] = offset;
+				skin->bones_num++;
 
-				if(aiGetMaterialTexture( mat, aiTextureType_DIFFUSE, 0, &path,
-							&mapping, &uvi, &blend, &op, &mode, &flags) ==
-						aiReturn_SUCCESS)
+				if(!c_bone(&bone))
 				{
-					strncpy(buffer, path.data, sizeof(buffer));
-					char *fname = filter_sauce_name(buffer);
-					texture_t *texture = sauces_tex(fname);
-					printf("%s\n", fname);
-					if(texture)
+					entity_add_component(bone, c_bone_new());
+				}
+				for(w = 0; w < abone->mNumWeights; w++)
+				{
+					int i;
+					const struct aiVertexWeight *vweight = &abone->mWeights[w];
+					int real_id = (vweight->mVertexId + last_vertex);
+					for(i = 0; i < 4; i++)
 					{
-						material->albedo.texture = texture;
-						material->albedo.texture_blend = 1.0f - blend;
-						material->albedo.texture_scale = 1.0f;
+						if(skin->wei[real_id]._[i] == 0.0f)
+						{
+							skin->wei[real_id]._[i] = vweight->mWeight;
+							skin->bid[real_id]._[i] = bone_index;
+							break;
+						}
 					}
+					if(i == 4) printf("TOO MANY WEIGHTS\n");
 				}
-
-				if(aiGetMaterialTexture( mat, aiTextureType_SHININESS, 0, &path,
-							&mapping, &uvi, &blend, &op, &mode, &flags) ==
-						aiReturn_SUCCESS)
-				{
-					strncpy(buffer, path.data, sizeof(buffer));
-					char *fname = filter_sauce_name(buffer);
-					texture_t *texture = sauces_tex(fname);
-					printf("%s\n", fname);
-					if(texture)
-					{
-						material->roughness.texture = texture;
-						material->roughness.texture_blend = 1.0f - blend;
-						material->roughness.texture_scale = 1.0f;
-					}
-				}
-
-				vec4_t color;
-				unsigned int max;
-				if (AI_SUCCESS == aiGetMaterialFloatArray(mat,
-							AI_MATKEY_COLOR_DIFFUSE, (ai_real*)&color, &max))
-				{
-					material->albedo.color = color;
-				}
-
-				int j; for(j = 0; j < mat->mNumProperties; j++) { printf("%s\n", mat->mProperties[j]->mKey.data); }
 			}
-			mc->layers[0].mat = material;
 		}
+		last_vertex += mesh->mNumVertices;
+
+		load_material(entity, mesh, scene);
 	}
 
+	load_comp_children(entity, scene, anode, root, scale);
+}
+
+static void load_comp_children(entity_t entity, const struct aiScene *scene,
+		const struct aiNode *anode, c_node_t *root, float scale)
+{
+	c_node_t *node = c_node(&entity);
+	int i;
 	for(i = 0; i < anode->mNumChildren; i++)
 	{
 		const struct aiNode *cnode = anode->mChildren[i];
 		const char *name = cnode->mName.data;
-		entity_t n = c_node_get_by_name(node, ref(name));
-		if(!n)
-		{
-			n = entity_new(c_name_new(name), c_node_new());
 
-			/* mesh_t *space = sauces_mesh("cube.ply"); */
-			/* entity_t m = entity_new(c_node_new(), */
-			/* 		c_model_new(space, mat_new("cb"), 1)); */
-			/* c_spacial_set_scale(c_spacial(&m), vec3(0.2)); */
-			/* c_node_add(c_node(&n), 1, m); */
+		if(!name[0])
+		{
+			load_comp_children(entity, scene, cnode, root, scale);
+			continue;
 		}
+		entity_t n = c_node_get_by_name(node, ref(name));
+		load_comp(n, scene, cnode, root, scale);
+	}
+}
+
+
+void load_node(entity_t entity, const struct aiScene *scene,
+		const struct aiNode *anode, int depth)
+{
+	int inherit_type = 0;
+	c_spacial_t *spacial = c_spacial(&entity);
+
+	const struct aiMetadata *meta = anode->mMetaData;
+	if(meta)
+	{
+		int j;
+		for(j = 0; j < meta->mNumProperties; j++)
+		{
+			const struct aiMetadataEntry *v = &meta->mValues[j];
+			if(!strcmp(meta->mKeys[j].data, "InheritType"))
+			{
+				inherit_type = *(char*)v->mData;
+			}
+			continue;
+			printf("%s: ", meta->mKeys[j].data);
+			switch(v->mType)
+			{
+				case AI_BOOL: printf("%d\n", *(char*)v->mData); break;
+				case AI_INT32: printf("%u\n", *(unsigned int*)v->mData); break;
+				case AI_UINT64: printf("%lu\n", *(unsigned long*)v->mData); break;
+				case AI_FLOAT: printf("%f\n", *(double*)v->mData); break;
+				case AI_DOUBLE: printf("%lf\n", *(double*)v->mData); break;
+				case AI_AISTRING: printf("'%s'\n", ((const struct aiString*)v->mData)->data); break;
+				case AI_AIVECTOR3D: break;
+				case AI_META_MAX: break;
+				default: break;
+			}
+		}
+	}
+
+	if(inherit_type)
+	{
+		c_spacial_set_model(spacial, mat4_from_ai(anode->mParent->mTransformation));
+	}
+	else
+	{
+		c_spacial_set_model(spacial, mat4_from_ai(anode->mTransformation));
+	}
+	load_node_children(entity, scene, anode, depth);
+}
+
+static void load_node_children(entity_t entity, const struct aiScene *scene,
+		const struct aiNode *anode, int depth)
+{
+	c_node_t *node = c_node(&entity);
+	int i;
+	for(i = 0; i < anode->mNumChildren; i++)
+	{
+		const struct aiNode *cnode = anode->mChildren[i];
+		const char *name = cnode->mName.data;
+
+		if(!name[0])
+		{
+			load_node_children(entity, scene, cnode, depth);
+			continue;
+		}
+		entity_t n = entity_new(c_name_new(name), c_node_new());
 		c_node_add(node, 1, n);
-		load_node(n, scene, cnode, scale);
+		load_node(n, scene, cnode, depth + 1);
+	}
+}
+
+void load_timelines(entity_t entity, const struct aiScene *scene)
+{
+	c_node_t *root = c_node(&entity);
+	int a;
+	for(a = 0; a < scene->mNumAnimations; a++)
+	{
+		int n;
+		const struct aiAnimation *anim = scene->mAnimations[a];
+
+		for(n = 0; n < anim->mNumChannels; n++)
+		{
+			int k;
+			const struct aiNodeAnim *nodeAnim = anim->mChannels[n];
+			const char *name = nodeAnim->mNodeName.data;
+			if(!name) continue;
+			entity_t ent = c_node_get_by_name(root, ref(name));
+			if(!ent) continue;
+
+			c_timeline_t *tc = c_timeline(&ent);
+			if(!tc)
+			{
+				entity_add_component(ent, c_timeline_new());
+				tc = c_timeline(&ent);
+				tc->duration = anim->mDuration;
+				tc->ticks_per_sec = anim->mTicksPerSecond;
+				if(!tc->ticks_per_sec) tc->ticks_per_sec = 30;
+			}
+			vector_alloc(tc->keys_pos, nodeAnim->mNumPositionKeys);
+			vector_alloc(tc->keys_rot, nodeAnim->mNumRotationKeys);
+			vector_alloc(tc->keys_scale, nodeAnim->mNumScalingKeys);
+
+			for(k = 0; k < nodeAnim->mNumScalingKeys; k++)
+			{
+				const struct aiVectorKey *key = &nodeAnim->mScalingKeys[k];
+				vec3_t vec = vec3(key->mValue.x, key->mValue.y, key->mValue.z);
+				c_timeline_insert_scale(tc, vec, key->mTime);
+			}
+			for(k = 0; k < nodeAnim->mNumRotationKeys; k++)
+			{
+				const struct aiQuatKey *key = &nodeAnim->mRotationKeys[k];
+				vec4_t quat = vec4(key->mValue.x, key->mValue.y, key->mValue.z,
+						key->mValue.w);
+
+				c_timeline_insert_rot(tc, quat, key->mTime);
+			}
+			for(k = 0; k < nodeAnim->mNumPositionKeys; k++)
+			{
+				const struct aiVectorKey *key = &nodeAnim->mPositionKeys[k];
+				vec3_t vec = vec3(key->mValue.x, key->mValue.y, key->mValue.z);
+				c_timeline_insert_pos(tc, vec, key->mTime);
+			}
+
+		}
+		break;
 	}
 }
 
@@ -241,13 +424,14 @@ entity_t c_sauces_model_get(c_sauces_t *self, const char *name, float scale)
 		return entity_null;
 	}
 
-	result = entity_new(c_name_new(name),
-			c_model_new(mesh_new(), mat_new("t"), 1, 1));
-	c_model(&result)->mesh->transformation =
-		mat4_scale_aniso(c_model(&result)->mesh->transformation, vec3(scale));
+	result = entity_new(c_name_new(name), c_node_new());
+	/* c_model(&result)->mesh->transformation = */
+	/* 	mat4_scale_aniso(c_model(&result)->mesh->transformation, vec3(scale)); */
 
-	load_node(result, scene, scene->mRootNode, scale);
 	c_node_t *root = c_node(&result);
+	load_node(result, scene, scene->mRootNode, 0);
+	load_comp(result, scene, scene->mRootNode, root, scale);
+	load_timelines(result, scene);
 
 	for(i = 0; i < scene->mNumLights; i++)
 	{
@@ -264,8 +448,7 @@ entity_t c_sauces_model_get(c_sauces_t *self, const char *name, float scale)
 					light->mColorDiffuse.b,
 					1.0f
 				);
-				entity_add_component(node, c_light_new(40.0f, color,
-							256));
+				entity_add_component(node, c_light_new(40.0f, color, 256));
 			}
 
 			/* load_light(lc, light); */
@@ -325,6 +508,9 @@ texture_t *c_sauces_texture_get(c_sauces_t *self, const char *name)
 #define JPG 492009405
 #define TGA 519450434
 #define OBJ 1199244993
+#define PLY 1842197252
+#define GLTF 1170648920
+#define BIN 1516167604
 #define DAE 1928915418
 #define FBX 804230617
 #define MAT 4225884277
@@ -374,6 +560,9 @@ int c_sauces_index_dir(c_sauces_t *self, const char *dir_name)
 			case OBJ:
 			case FBX:
 			case DAE:
+			case PLY:
+			case GLTF:
+			case BIN:
 				hash = self->meshes;
 				break;
 			default:

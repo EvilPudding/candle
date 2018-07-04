@@ -355,17 +355,17 @@ static void c_model_init(c_model_t *self)
 			"#endif\n"
 			"		vertex_position = (camera.view * M * pos).xyz;\n"
 
+			"		poly_color = COL;\n"
 			"		mat4 MV    = camera.view * M;\n"
-			"		vertex_normal    = normalize(MV * vec4( N, 0.0f)).xyz;\n"
-			"		vertex_tangent   = normalize(MV * vec4(TG, 0.0f)).xyz;\n"
-			"		vertex_bitangent = cross(vertex_tangent, vertex_normal);\n"
+			"		vec3 vertex_normal    = normalize(MV * vec4( N, 0.0f)).xyz;\n"
+			"		vec3 vertex_tangent   = normalize(MV * vec4(TG, 0.0f)).xyz;\n"
+			"		vec3 vertex_bitangent = cross(vertex_tangent, vertex_normal);\n"
 
 			"		object_id = id;\n"
 			"		poly_id = ID;\n"
-			"		poly_color = COL;\n"
 			"		TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
 
-			"		pos = MVP * pos;\n"
+			"		pos = (camera.projection * MV) * pos;\n"
 			"	}\n"
 		));
 	}
@@ -553,38 +553,43 @@ int c_model_render_shadows(c_model_t *self)
 	return CONTINUE;
 }
 
+int c_model_render_visible(c_model_t *self)
+{
+	if(!self->visible) return CONTINUE;
+
+	return c_model_render(self, vs_bind(g_model_vs), 0);
+}
+
 int c_model_render_selectable(c_model_t *self)
 {
-	if(!self->mesh || !self->visible) return CONTINUE;
-	c_model_render(self, 3);
+	if(!self->visible) return CONTINUE;
+	c_model_render(self, vs_bind(g_model_vs), 3);
 	return CONTINUE;
 }
 
 int c_model_render_emissive(c_model_t *self)
 {
-	if(!self->mesh || !self->visible) return CONTINUE;
-	if(self->before_draw) if(!self->before_draw((c_t*)self)) return CONTINUE;
+	if(!self->visible) return CONTINUE;
 
-	return c_model_render(self, 2);
+	return c_model_render(self, vs_bind(g_model_vs), 2);
 }
 
 int c_model_render_transparent(c_model_t *self)
 {
-	if(!self->mesh || !self->visible) return CONTINUE;
-	if(self->before_draw) if(!self->before_draw((c_t*)self)) return CONTINUE;
+	if(!self->visible) return CONTINUE;
 
-	return c_model_render(self, 1);
+	return c_model_render(self, vs_bind(g_model_vs), 1);
 }
 
-int c_model_render(c_model_t *self, int flags)
+int c_model_render(c_model_t *self, shader_t *shader, int flags)
 {
-	return c_model_render_at(self, c_node(self), flags);
+	return c_model_render_at(self, shader, c_node(self), flags);
 }
 
-int c_model_render_at(c_model_t *self, c_node_t *node, int flags)
+int c_model_render_at(c_model_t *self, shader_t *shader, c_node_t *node,
+		int flags)
 {
-	shader_t *shader = vs_bind(g_model_vs);
-	if(!shader) return STOP;
+	if(!self->mesh || !shader) return STOP;
 	if(node)
 	{
 		c_node_update_model(node);
@@ -631,14 +636,6 @@ int c_model_render_at(c_model_t *self, c_node_t *node, int flags)
 	glDepthRange(0.0, 1.00);
 
 	return CONTINUE;
-}
-
-int c_model_render_visible(c_model_t *self)
-{
-	if(!self->mesh || !self->visible) return CONTINUE;
-	if(self->before_draw) if(!self->before_draw((c_t*)self)) return CONTINUE;
-
-	return c_model_render(self, 0);
 }
 
 int c_model_menu(c_model_t *self, void *ctx)
@@ -833,6 +830,7 @@ REG()
 	add_tool("spherize", (tool_gui_cb)tool_spherize_gui,
 		(tool_edit_cb)tool_spherize_edit, sizeof(struct conf_spherize),
 		&(struct conf_spherize){1, 1});
+
 	add_tool("subdivide", (tool_gui_cb)tool_subdivide_gui,
 		(tool_edit_cb)tool_subdivide_edit, sizeof(struct conf_subdivide),
 		&(struct conf_subdivide){1});

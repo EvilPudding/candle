@@ -20,6 +20,9 @@ typedef struct
 	vec2_t *id;
 	vec3_t *col;
 
+	uvec4_t *bid;
+	vec4_t  *wei;
+
 	int vert_num; int vert_alloc;
 	/* ----------- */
 
@@ -39,6 +42,7 @@ typedef struct
 
 	int updated;
 	int update_id;
+	int skinned;
 } glg_t;
 
 typedef struct c_mesh_gl_t
@@ -47,7 +51,6 @@ typedef struct c_mesh_gl_t
 
 	glg_t *groups;
 	int groups_num;
-
 
 	int ram_update_id;
 } c_mesh_gl_t;
@@ -58,6 +61,7 @@ DEF_CASTER("mesh_gl", c_mesh_gl, c_mesh_gl_t)
 c_mesh_gl_t *c_mesh_gl_new(void);
 
 int c_mesh_gl_draw(c_mesh_gl_t *self, int transparent);
+int c_mesh_gl_draw_ent(c_mesh_gl_t *self, entity_t ent, int transparent);
 
 int c_mesh_gl_updated(c_mesh_gl_t *self);
 void c_mesh_gl_update(c_mesh_gl_t *self);

@@ -175,17 +175,42 @@ void mat_prop_menu(mat_t *self, const char *name, prop_t *prop, void *ctx)
 	{
 		if(prop->texture)
 		{
-			nk_property_float(ctx, "blend:", 0, &prop->texture_blend, 1, 0.1, 0.05);
+			nk_property_float(ctx, "#blend:", 0, &prop->texture_blend, 1, 0.1, 0.05);
 			if (nk_button_label(ctx, prop->texture->name))
 			{
 				c_editmode_open_texture(c_editmode(&SYS), prop->texture);
 			}
 		}
-		if(prop->texture_blend < 1.0f)
-		{
-			nk_layout_row_dynamic(ctx, 180, 1);
-			union { struct nk_colorf *nk; vec4_t *v; } color = { .v = &prop->color };
-			*color.nk = nk_color_picker(ctx, *color.nk, NK_RGBA);
+		/* nk_layout_row_dynamic(ctx, 180, 1); */
+		union { struct nk_colorf *nk; vec4_t *v; } color = { .v = &prop->color };
+		/* *color.nk = nk_color_picker(ctx, *color.nk, NK_RGBA); */
+
+		if (nk_combo_begin_color(ctx, nk_rgb_cf(*color.nk), nk_vec2(200,400))) {
+			enum color_mode {COL_RGB, COL_HSV};
+			static int col_mode = COL_RGB;
+			nk_layout_row_dynamic(ctx, 120, 1);
+			(*color.nk) = nk_color_picker(ctx, (*color.nk), NK_RGBA);
+
+			nk_layout_row_dynamic(ctx, 25, 2);
+			col_mode = nk_option_label(ctx, "RGB", col_mode == COL_RGB) ? COL_RGB : col_mode;
+			col_mode = nk_option_label(ctx, "HSV", col_mode == COL_HSV) ? COL_HSV : col_mode;
+
+			nk_layout_row_dynamic(ctx, 25, 1);
+			if (col_mode == COL_RGB) {
+				color.nk->r = nk_propertyf(ctx, "#R:", 0, color.nk->r, 1.0f, 0.01f,0.005f);
+				color.nk->g = nk_propertyf(ctx, "#G:", 0, color.nk->g, 1.0f, 0.01f,0.005f);
+				color.nk->b = nk_propertyf(ctx, "#B:", 0, color.nk->b, 1.0f, 0.01f,0.005f);
+				color.nk->a = nk_propertyf(ctx, "#A:", 0, color.nk->a, 1.0f, 0.01f,0.005f);
+			} else {
+				float hsva[4];
+				nk_colorf_hsva_fv(hsva, (*color.nk));
+				hsva[0] = nk_propertyf(ctx, "#H:", 0, hsva[0], 1.0f, 0.01f,0.05f);
+				hsva[1] = nk_propertyf(ctx, "#S:", 0, hsva[1], 1.0f, 0.01f,0.05f);
+				hsva[2] = nk_propertyf(ctx, "#V:", 0, hsva[2], 1.0f, 0.01f,0.05f);
+				hsva[3] = nk_propertyf(ctx, "#A:", 0, hsva[3], 1.0f, 0.01f,0.05f);
+				(*color.nk) = nk_hsva_colorfv(hsva);
+			}
+			nk_combo_end(ctx);
 		}
 		nk_tree_pop(ctx);
 	}

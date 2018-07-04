@@ -32,6 +32,7 @@ void c_light_init(c_light_t *self)
 
 		mesh_unlock(mesh);
 		g_light = entity_new(c_node_new(), c_model_new(mesh, NULL, 0, 0));
+		c_node(&g_light)->ghost = 1;
 
 	}
 }
