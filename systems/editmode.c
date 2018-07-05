@@ -482,10 +482,9 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 		title = tex->name;
 	}
 
-
 	res = nk_begin_titled(self->nk, buffer, title,
-			nk_rect(self->spawn_pos.x, self->spawn_pos.y, tex->width/2 + 30,
-				tex->height/2 + 80),
+			nk_rect(self->spawn_pos.x, self->spawn_pos.y, tex->width + 30,
+				tex->height + 130),
 			NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
 			NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE);
 	if (res)
@@ -511,9 +510,11 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 		/* im.handle.ptr = 1; */
 		struct nk_command_buffer *canvas = nk_window_get_canvas(self->nk);
 		struct nk_rect total_space = nk_window_get_content_region(self->nk);
+		total_space.w = tex->width;
+		total_space.h = tex->height;
 
 		total_space.y += 85;
-		total_space.h -= 85;
+		/* total_space.h -= 85; */
 		nk_draw_image_ext(canvas, total_space, &im, nk_rgba(255, 255, 255, 255), 1);
 	}
 	nk_end(self->nk);

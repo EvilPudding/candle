@@ -127,15 +127,6 @@ int c_skin_render_selectable(c_skin_t *self)
 	return CONTINUE;
 }
 
-int c_skin_render_emissive(c_skin_t *self)
-{
-	/* if(!self->mesh || !self->visible) return CONTINUE; */
-
-	shader_t *shader = vs_bind(g_skin_vs);
-	c_skin_bind_bones(self, shader);
-	return c_model_render(c_model(self), shader, 2);
-}
-
 
 int c_skin_render_transparent(c_skin_t *self)
 {
@@ -155,8 +146,6 @@ REG()
 	ct_listener(ct, WORLD, sig("render_visible"), c_skin_render_visible);
 
 	ct_listener(ct, WORLD, sig("render_transparent"), c_skin_render_transparent);
-
-	ct_listener(ct, WORLD, sig("render_emissive"), c_skin_render_emissive);
 
 	ct_listener(ct, WORLD, sig("render_shadows"), c_skin_render_shadows);
 

@@ -598,23 +598,40 @@ int glg_draw(glg_t *self, shader_t *shader, int flags)
 	int wireframe;
 	c_model_t *model = c_model(&self->entity);
 	mat_layer_t *layer = &model->layers[self->layer_id];
+	int is_emissive = 0;
+	int is_transparent = 0;
 
 	if(layer->mat && shader)
 	{
-		int is_emissive = layer->mat->emissive.color.a > 0.0f;
-		int is_transparent = layer->mat->transparency.color.r > 0.0f ||
-			layer->mat->transparency.color.g > 0.0f ||
-			layer->mat->transparency.color.b > 0.0f;
-
 		if(flags == 3) goto render;
+		
+		is_emissive = layer->mat->emissive.color.a > 0.0f ||
+			layer->mat->emissive.texture;
+		is_transparent = layer->mat->transparency.color.a > 0.0f ||
+			layer->mat->transparency.texture;
 
-		if(is_emissive && (flags & 2)) goto render;
-
-		if(is_transparent && (flags & 1)) goto render;
-
-		if(!is_transparent && !flags) goto render;
-
-		return CONTINUE;
+		if(flags & 1)
+		{
+			if(is_emissive || is_transparent)
+			{
+				goto render;
+			}
+			else
+			{
+				return CONTINUE;
+			}
+		}
+		else
+		{
+			if(!is_transparent)
+			{
+				goto render;
+			}
+			else
+			{
+				return CONTINUE;
+			}
+		}
 
 render:
 		mat_bind(layer->mat, shader);
@@ -648,7 +665,7 @@ render:
 	/* glPolygonOffset(0.0f, model->layers[self->layer_id].offset); */
 	glerr();
 
-	if(self->layer_id)
+	if(self->layer_id || is_emissive)
 	{
 		glDepthFunc(GL_LEQUAL);
 	}

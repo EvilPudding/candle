@@ -28,11 +28,11 @@ c_axis_t *c_axis_new(int type, vec4_t dir)
 	mat_t *m = mat_new("m");
 	if(dir.w)
 	{
-		m->emissive.color = vec4(1.0f, 0.0f, 0.9f, 0.5f);
+		m->emissive.color = vec4(1.0f, 0.0f, 0.9f, 0.8f);
 	}
 	else
 	{
-		m->emissive.color = vec4(_vec3(dir.xyz), 0.5f);
+		m->emissive.color = vec4(_vec3(dir.xyz), 0.8f);
 	}
 	self->type = type;
 

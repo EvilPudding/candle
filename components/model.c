@@ -567,13 +567,6 @@ int c_model_render_selectable(c_model_t *self)
 	return CONTINUE;
 }
 
-int c_model_render_emissive(c_model_t *self)
-{
-	if(!self->visible) return CONTINUE;
-
-	return c_model_render(self, vs_bind(g_model_vs), 2);
-}
-
 int c_model_render_transparent(c_model_t *self)
 {
 	if(!self->visible) return CONTINUE;
@@ -797,8 +790,6 @@ REG()
 	ct_listener(ct, WORLD, sig("render_visible"), c_model_render_visible);
 
 	ct_listener(ct, WORLD, sig("render_transparent"), c_model_render_transparent);
-
-	ct_listener(ct, WORLD, sig("render_emissive"), c_model_render_emissive);
 
 	ct_listener(ct, WORLD, sig("render_shadows"), c_model_render_shadows);
 
