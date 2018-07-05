@@ -563,7 +563,7 @@ int c_model_render_visible(c_model_t *self)
 int c_model_render_selectable(c_model_t *self)
 {
 	if(!self->visible) return CONTINUE;
-	c_model_render(self, vs_bind(g_model_vs), 3);
+	c_model_render(self, vs_bind(g_model_vs), 2);
 	return CONTINUE;
 }
 

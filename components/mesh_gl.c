@@ -603,75 +603,58 @@ int glg_draw(glg_t *self, shader_t *shader, int flags)
 
 	if(layer->mat && shader)
 	{
-		if(flags == 3) goto render;
-		
-		is_emissive = layer->mat->emissive.color.a > 0.0f ||
-			layer->mat->emissive.texture;
 		is_transparent = layer->mat->transparency.color.a > 0.0f ||
 			layer->mat->transparency.texture;
 
-		if(flags & 1)
+		if(flags == 1)
 		{
-			if(is_emissive || is_transparent)
-			{
-				goto render;
-			}
-			else
+			is_emissive = layer->mat->emissive.color.a > 0.0f ||
+				layer->mat->emissive.texture;
+			if(!is_emissive && !is_transparent)
 			{
 				return CONTINUE;
 			}
 		}
-		else
+		else if(flags == 0 && is_transparent)
 		{
-			if(!is_transparent)
-			{
-				goto render;
-			}
-			else
-			{
-				return CONTINUE;
-			}
+			return CONTINUE;
 		}
 
-render:
 		mat_bind(layer->mat, shader);
 	}
-	/* printf("GLG_DRAW\n"); */
 
+	if(layer->cull_front)
 	{
-		if(layer->cull_front)
+		if(layer->cull_back)
 		{
-			if(layer->cull_back)
-			{
-				cull_face = GL_FRONT_AND_BACK;
-			}
-			else
-			{
-				cull_face = GL_FRONT;
-			}
-		}
-		else if(layer->cull_back)
-		{
-			cull_face = GL_BACK;
+			cull_face = GL_FRONT_AND_BACK;
 		}
 		else
 		{
-			cull_face = GL_NONE;
+			cull_face = GL_FRONT;
 		}
-
-		wireframe = layer->wireframe;
 	}
+	else if(layer->cull_back)
+	{
+		cull_face = GL_BACK;
+	}
+	else
+	{
+		cull_face = GL_NONE;
+	}
+
+	wireframe = layer->wireframe;
 
 	/* glPolygonOffset(0.0f, model->layers[self->layer_id].offset); */
 	glerr();
 
-	if(self->layer_id || is_emissive)
+	if(is_emissive)
 	{
 		glDepthFunc(GL_LEQUAL);
 	}
 	else
 	{
-		glPolygonOffset(0.0f, 0.0f);
+		glDepthFunc(GL_LESS);
 	}
 
 	int cull_was_enabled = glIsEnabled(GL_CULL_FACE);
@@ -718,9 +701,11 @@ render:
 	}
 
 #ifndef USE_VAO
-	glDisableVertexAttribArray(0);
-	glDisableVertexAttribArray(1);
-	glDisableVertexAttribArray(2);
+	int i;
+	for(i = 0; i < self->vbo_num; i++)
+	{
+		glDisableVertexAttribArray(i);
+	}
 #endif
 
 	glerr();

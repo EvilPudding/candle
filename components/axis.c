@@ -34,6 +34,7 @@ c_axis_t *c_axis_new(int type, vec4_t dir)
 	{
 		m->emissive.color = vec4(_vec3(dir.xyz), 0.8f);
 	}
+	m->albedo.color = vec4(1, 1, 1, 1.0f);
 	self->type = type;
 
 	self->dir_mesh = mesh_new();

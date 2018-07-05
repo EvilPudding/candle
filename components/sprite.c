@@ -98,7 +98,7 @@ static int c_sprite_render_selectable(c_sprite_t *self)
 #endif
 	}
 
-	c_mesh_gl_draw(c_mesh_gl(self), 3);
+	c_mesh_gl_draw(c_mesh_gl(self), 2);
 	return CONTINUE;
 }
 

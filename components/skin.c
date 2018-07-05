@@ -123,7 +123,7 @@ int c_skin_render_selectable(c_skin_t *self)
 	/* if(!self->mesh || !self->visible) return CONTINUE; */
 	shader_t *shader = vs_bind(g_skin_vs);
 	c_skin_bind_bones(self, shader);
-	c_model_render(c_model(self), shader, 3);
+	c_model_render(c_model(self), shader, 2);
 	return CONTINUE;
 }
 
