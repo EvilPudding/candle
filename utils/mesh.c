@@ -2587,6 +2587,11 @@ void mesh_load_scene(mesh_t *self, const void *grp)
 	{
 		self->has_texcoords = 0;
 	}
+	/* for(j = 0; j < AI_MAX_NUMBER_OF_TEXTURECOORDS; j++) */
+	/* { */
+		/* printf("j %d = %u\n", j, group->mNumUVComponents[j]); */
+	/* } */
+
 
 	for(j = 0; j < group->mNumVertices; j++)
 	{

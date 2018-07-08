@@ -24,6 +24,8 @@ DEF_CASTER("timeline", c_timeline, c_timeline_t)
 
 c_timeline_t *c_timeline_new(void);
 
+void c_timeline_clear(c_timeline_t *self);
+
 void c_timeline_insert_scale(c_timeline_t *self,
 		vec3_t scale, float time);
 void c_timeline_insert_pos(c_timeline_t *self,
