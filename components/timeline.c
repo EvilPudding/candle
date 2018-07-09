@@ -41,6 +41,14 @@ c_timeline_t *c_timeline_new()
 	return self;
 }
 
+void c_timeline_clear(c_timeline_t *self)
+{
+	vector_clear(self->keys_scale);
+	vector_clear(self->keys_pos);
+	vector_clear(self->keys_rot);
+	vector_clear(self->keys_scripts);
+}
+
 void c_timeline_insert_scale(c_timeline_t *self,
 		vec3_t scale, float time)
 {

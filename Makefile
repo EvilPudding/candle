@@ -12,8 +12,7 @@ SRCS = $(wildcard *.c) $(wildcard components/*.c) $(wildcard systems/*.c) \
 OBJS_REL = $(patsubst %.c, $(DIR)/%.o, $(SRCS))
 OBJS_DEB = $(patsubst %.c, $(DIR)/%.debug.o, $(SRCS))
 
-CFLAGS = $(shell sdl2-config --cflags) -DUSE_VAO -Wall -I. \
-		 -Wuninitialized -Wstrict-prototypes $(PARENTCFLAGS)
+CFLAGS = $(shell sdl2-config --cflags) -DUSE_VAO -Wall -I. -Wuninitialized -Wstrict-prototypes $(PARENTCFLAGS)
 
 CFLAGS_REL = $(CFLAGS) -O3
 
@@ -21,9 +20,10 @@ CFLAGS_DEB = $(CFLAGS) -g3
 
 ##############################################################################
 
-all: $(DIR)/candle.a
+all: $(DIR)/export.a
+	echo $(myarr)
 
-$(DIR)/candle.a: init $(OBJS_REL) $(SHAD)
+$(DIR)/export.a: init $(OBJS_REL) $(SHAD)
 	$(AR) rs $@ $(OBJS_REL) $(SHAD)
 
 $(DIR)/%.o: %.c
@@ -48,9 +48,9 @@ $(DIR)/%.vert.o: %.vert
 
 ##############################################################################
 
-debug: $(DIR)/candle_debug.a
+debug: $(DIR)/export_debug.a
 
-$(DIR)/candle_debug.a: init $(OBJS_DEB) $(SHAD)
+$(DIR)/export_debug.a: init $(OBJS_DEB) $(SHAD)
 	$(AR) rs $@ $(OBJS_DEB) $(SHAD)
 
 $(DIR)/%.debug.o: %.c
@@ -67,8 +67,8 @@ init:
 	mkdir -p $(DIR)/shaders
 
 install: all debug
-	cp $(DIR)/candle.a /usr/lib/
-	cp $(DIR)/candle_debug.a /usr/lib/
+	cp $(DIR)/export.a /usr/lib/
+	cp $(DIR)/export_debug.a /usr/lib/
 
 ##############################################################################
 

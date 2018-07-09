@@ -16,6 +16,7 @@ static void c_bone_init(c_bone_t *self)
 	{
 		mat_t *m = mat_new("m");
 		m->emissive.color = vec4(0.3f, 0.1f, 0.9f, 0.5f);
+		m->albedo.color = vec4(1, 1, 1, 1.0f);
 
 #ifdef MESH4
 		vec4_t dir = vec4(0.0f, 0.0f, -1.0f, 0.0f);
@@ -86,7 +87,7 @@ int c_bone_render(c_bone_t *self, int flags)
 	glDepthRange(0, 0.01);
 	c_mesh_gl_draw_ent(c_mesh_gl(&g_bone), n->parent, flags);
 
-	if(!n->children_size)
+	/* if(!n->children_size) */
 	{
 		c_node_update_model(n);
 #ifdef MESH4
@@ -97,25 +98,26 @@ int c_bone_render(c_bone_t *self, int flags)
 
 		c_mesh_gl_draw_ent(c_mesh_gl(&g_end), c_entity(self), flags);
 	}
+	glDepthRange(0, 1.0f);
 
 	return CONTINUE;
 }
 
 int c_bone_render_selectable(c_bone_t *self)
 {
-	return c_bone_render(self, 3);
+	return c_bone_render(self, 2);
 }
 
-int c_bone_render_emissive(c_bone_t *self)
+int c_bone_render_transparent(c_bone_t *self)
 {
-	return c_bone_render(self, 2);
+	return c_bone_render(self, 1);
 }
 
 REG()
 {
 	ct_t *ct = ct_new("bone", sizeof(c_bone_t),
 			c_bone_init, NULL, 1, ref("node"));
-	ct_listener(ct, WORLD, sig("render_transparent"), c_bone_render_emissive);
+	ct_listener(ct, WORLD, sig("render_transparent"), c_bone_render_transparent);
 	ct_listener(ct, WORLD, sig("render_selectable"), c_bone_render_selectable);
 }
 

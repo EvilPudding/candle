@@ -72,6 +72,7 @@ void c_spacial_look_at(c_spacial_t *self, vec3_t eye, vec3_t center, vec3_t up)
 	mat4_t rot_matrix = mat4_look_at(vec3(0,0,0), vec3_sub(center, eye), up);
 	self->rot_quat = mat4_to_quat(rot_matrix);
 
+	self->update_id++;
 	self->modified = 1;
 	c_spacial_unlock(self);
 }
@@ -80,6 +81,7 @@ void c_spacial_set_scale(c_spacial_t *self, vec3_t scale)
 {
 	c_spacial_lock(self);
 	self->scale = scale;
+	self->update_id++;
 	self->modified = 1;
 	c_spacial_unlock(self);
 }
@@ -88,6 +90,7 @@ void c_spacial_scale(c_spacial_t *self, vec3_t scale)
 {
 	c_spacial_lock(self);
 	self->scale = vec3_mul(self->scale, scale);
+	self->update_id++;
 	self->modified = 1;
 	c_spacial_unlock(self);
 }
@@ -102,6 +105,7 @@ void c_spacial_rotate_axis(c_spacial_t *self, vec3_t axis, float angle)
 
 	self->rot_quat = quat_mul(rot, self->rot_quat);
 
+	self->update_id++;
 	self->modified = 1;
 	c_spacial_unlock(self);
 }
@@ -116,6 +120,7 @@ void c_spacial_rotate_X(c_spacial_t *self, float angle)
 
 	self->rot.x += angle;
 
+	self->update_id++;
 	self->modified = 1;
 	c_spacial_unlock(self);
 }
@@ -130,6 +135,7 @@ void c_spacial_rotate_Z(c_spacial_t *self, float angle)
 
 	self->rot.z += angle;
 
+	self->update_id++;
 	self->modified = 1;
 	c_spacial_unlock(self);
 }
@@ -144,6 +150,7 @@ void c_spacial_rotate_Y(c_spacial_t *self, float angle)
 	self->rot_quat = quat_mul(rot, self->rot_quat);
 	self->rot.y += angle;
 
+	self->update_id++;
 	self->modified = 1;
 	c_spacial_unlock(self);
 }
@@ -167,6 +174,7 @@ void c_spacial_set_rot(c_spacial_t *self, float x, float y, float z, float angle
 	if(y) self->rot.y = new_y;
 	if(z) self->rot.z = new_z;
 
+	self->update_id++;
 	self->modified = 1;
 	c_spacial_unlock(self);
 }
@@ -201,6 +209,7 @@ void c_spacial_set_model(c_spacial_t *self, mat4_t m)
 	self->rot = quat_to_euler(self->rot_quat);
 
 	/* self->model_matrix = m; */
+	self->update_id++;
 	self->modified = 1;
 	c_spacial_unlock(self);
 
@@ -212,6 +221,7 @@ void c_spacial_set_pos(c_spacial_t *self, vec3_t pos)
 	self->pos = pos;
 
 	self->modified = 1;
+	self->update_id++;
 	c_spacial_unlock(self);
 
 }

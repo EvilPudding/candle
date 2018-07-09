@@ -49,6 +49,7 @@ int c_camera_changed(c_camera_t *self)
 vec3_t c_camera_real_pos(c_camera_t *self, float depth, vec2_t coord)
 {
 	/* float z = depth; */
+	if(depth < 0.01f) depth *= 100.0f;
     float z = depth * 2.0 - 1.0;
 	coord = vec2_sub_number(vec2_scale(coord, 2.0f), 1.0);
 

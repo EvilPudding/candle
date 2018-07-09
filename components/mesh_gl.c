@@ -598,63 +598,63 @@ int glg_draw(glg_t *self, shader_t *shader, int flags)
 	int wireframe;
 	c_model_t *model = c_model(&self->entity);
 	mat_layer_t *layer = &model->layers[self->layer_id];
+	int is_emissive = 0;
+	int is_transparent = 0;
 
 	if(layer->mat && shader)
 	{
-		int is_emissive = layer->mat->emissive.color.a > 0.0f;
-		int is_transparent = layer->mat->transparency.color.r > 0.0f ||
-			layer->mat->transparency.color.g > 0.0f ||
-			layer->mat->transparency.color.b > 0.0f;
+		is_transparent = layer->mat->transparency.color.a > 0.0f ||
+			layer->mat->transparency.texture;
 
-		if(flags == 3) goto render;
-
-		if(is_emissive && (flags & 2)) goto render;
-
-		if(is_transparent && (flags & 1)) goto render;
-
-		if(!is_transparent && !flags) goto render;
-
-		return CONTINUE;
-
-render:
-		mat_bind(layer->mat, shader);
-	}
-	/* printf("GLG_DRAW\n"); */
-
-	{
-		if(layer->cull_front)
+		if(flags == 1)
 		{
-			if(layer->cull_back)
+			is_emissive = layer->mat->emissive.color.a > 0.0f ||
+				layer->mat->emissive.texture;
+			if(!is_emissive && !is_transparent)
 			{
-				cull_face = GL_FRONT_AND_BACK;
-			}
-			else
-			{
-				cull_face = GL_FRONT;
+				return CONTINUE;
 			}
 		}
-		else if(layer->cull_back)
+		else if(flags == 0 && is_transparent)
 		{
-			cull_face = GL_BACK;
+			return CONTINUE;
+		}
+
+		mat_bind(layer->mat, shader);
+	}
+
+	if(layer->cull_front)
+	{
+		if(layer->cull_back)
+		{
+			cull_face = GL_FRONT_AND_BACK;
 		}
 		else
 		{
-			cull_face = GL_NONE;
+			cull_face = GL_FRONT;
 		}
-
-		wireframe = layer->wireframe;
 	}
+	else if(layer->cull_back)
+	{
+		cull_face = GL_BACK;
+	}
+	else
+	{
+		cull_face = GL_NONE;
+	}
+
+	wireframe = layer->wireframe;
 
 	/* glPolygonOffset(0.0f, model->layers[self->layer_id].offset); */
 	glerr();
 
-	if(self->layer_id)
+	if(is_emissive)
 	{
 		glDepthFunc(GL_LEQUAL);
 	}
 	else
 	{
-		glPolygonOffset(0.0f, 0.0f);
+		glDepthFunc(GL_LESS);
 	}
 
 	int cull_was_enabled = glIsEnabled(GL_CULL_FACE);
@@ -701,9 +701,11 @@ render:
 	}
 
 #ifndef USE_VAO
-	glDisableVertexAttribArray(0);
-	glDisableVertexAttribArray(1);
-	glDisableVertexAttribArray(2);
+	int i;
+	for(i = 0; i < self->vbo_num; i++)
+	{
+		glDisableVertexAttribArray(i);
+	}
 #endif
 
 	glerr();

@@ -16,6 +16,7 @@ typedef struct
 	int lock_count;
 	int modified;
 
+	int update_id;
 #ifdef MESH4
 	float angle4;
 #endif

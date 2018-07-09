@@ -1194,6 +1194,9 @@ static inline vec2_t int_to_vec2(int id)
 #define _vec2(v) (float)v.x, (float)v.y
 #define _vec3(v) (float)v.x, (float)v.y, (float)v.z
 #define _vec4(v) (float)v.x, (float)v.y, (float)v.z, (float)v.w
+#define _d2(v) (double)v.x, (double)v.y
+#define _d3(v) (double)v.x, (double)v.y, (double)v.z
+#define _d4(v) (double)v.x, (double)v.y, (double)v.z, (double)v.w
 
 #define __vec2_1(a)  \
 			_if(_type(a, vec2_t), \

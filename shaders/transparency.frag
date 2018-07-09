@@ -15,21 +15,24 @@ void main()
 	float rough = get_roughness();
 	vec3 nor = get_normal();
 
-	vec4 final = vec4(0.0f);
-	if(trans.r > 0.0f || trans.g > 0.0f || trans.b > 0.0f)
+	vec3 final;
+	if(trans.a > 0.0f)
 	{
-		vec2 coord = pixel_pos() + nor.xy * (trans.a * 0.03);
+		vec2 coord = pixel_pos() + nor.xy * (rough * 0.03);
 
-		vec3 color = textureLod(refr.color, coord.xy, trans.a * 3).rgb;
+		vec3 color = textureLod(refr.color, coord.xy, rough * 3).rgb;
 
-		final += vec4(color * (1.0f - trans.rgb), 1.0f);
+		final = color * (1.0f - trans.rgb);
 	}
-	else if(emit.a > 0.0f)
+	else
 	{
-		final += emit;
+		final = textureLod(refr.color, pixel_pos(), 0).rgb;
 	}
-	final.a = clamp(final.a, 0.0f, 1.0f);
-	FragColor = final;
+	if(emit.a > 0.0f)
+	{
+		final += emit.rgb * emit.a;
+	}
+	FragColor = vec4(final, 1.0f);
 }
 
 // vim: set ft=c:

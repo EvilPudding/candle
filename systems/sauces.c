@@ -25,8 +25,7 @@ static void load_comp_children(
 		entity_t entity,
 		const struct aiScene *scene,
 		const struct aiNode *anode,
-		c_node_t *root,
-		float scale
+		c_node_t *root
 );
 
 c_sauces_t *c_sauces_new()
@@ -190,7 +189,7 @@ void load_material(entity_t entity, const struct aiMesh *mesh,
 }
 
 void load_comp(entity_t entity, const struct aiScene *scene,
-		const struct aiNode *anode, c_node_t *root, float scale)
+		const struct aiNode *anode, c_node_t *root)
 {
 	int m;
 	c_model_t *mc = c_model(&entity);
@@ -259,11 +258,11 @@ void load_comp(entity_t entity, const struct aiScene *scene,
 		load_material(entity, mesh, scene);
 	}
 
-	load_comp_children(entity, scene, anode, root, scale);
+	load_comp_children(entity, scene, anode, root);
 }
 
 static void load_comp_children(entity_t entity, const struct aiScene *scene,
-		const struct aiNode *anode, c_node_t *root, float scale)
+		const struct aiNode *anode, c_node_t *root)
 {
 	c_node_t *node = c_node(&entity);
 	int i;
@@ -274,11 +273,11 @@ static void load_comp_children(entity_t entity, const struct aiScene *scene,
 
 		if(!name[0])
 		{
-			load_comp_children(entity, scene, cnode, root, scale);
+			load_comp_children(entity, scene, cnode, root);
 			continue;
 		}
 		entity_t n = c_node_get_by_name(node, ref(name));
-		load_comp(n, scene, cnode, root, scale);
+		load_comp(n, scene, cnode, root);
 	}
 }
 
@@ -372,10 +371,12 @@ void load_timelines(entity_t entity, const struct aiScene *scene)
 			{
 				entity_add_component(ent, c_timeline_new());
 				tc = c_timeline(&ent);
-				tc->duration = anim->mDuration;
-				tc->ticks_per_sec = anim->mTicksPerSecond;
-				if(!tc->ticks_per_sec) tc->ticks_per_sec = 30;
 			}
+			tc->duration = anim->mDuration;
+			tc->ticks_per_sec = anim->mTicksPerSecond;
+			if(!tc->ticks_per_sec) tc->ticks_per_sec = 30;
+
+			c_timeline_clear(tc);
 			vector_alloc(tc->keys_pos, nodeAnim->mNumPositionKeys);
 			vector_alloc(tc->keys_rot, nodeAnim->mNumRotationKeys);
 			vector_alloc(tc->keys_scale, nodeAnim->mNumScalingKeys);
@@ -406,12 +407,13 @@ void load_timelines(entity_t entity, const struct aiScene *scene)
 	}
 }
 
-entity_t c_sauces_model_get(c_sauces_t *self, const char *name, float scale)
+void c_sauces_model_get(c_sauces_t *self, entity_t *target,
+		const char *name, float scale)
 {
 	int i;
 	resource_t *sauce = c_sauces_get(self, self->meshes, name);
+	if(!sauce) return;
 
-	entity_t result;
 	const struct aiScene *scene = aiImportFile(sauce->path,
 			/* aiProcess_CalcTangentSpace  		| */
 			aiProcess_Triangulate			|
@@ -421,17 +423,25 @@ entity_t c_sauces_model_get(c_sauces_t *self, const char *name, float scale)
 	if(!scene)
 	{
 		printf("failed to load %s\n", name);
-		return entity_null;
+		return;
 	}
 
-	result = entity_new(c_name_new(name), c_node_new());
+	int anim_only = 1;
+	if(*target == entity_null)
+	{
+		anim_only = 0;
+		*target = entity_new(c_name_new(name), c_node_new());
+	}
 	/* c_model(&result)->mesh->transformation = */
 	/* 	mat4_scale_aniso(c_model(&result)->mesh->transformation, vec3(scale)); */
 
-	c_node_t *root = c_node(&result);
-	load_node(result, scene, scene->mRootNode, 0);
-	load_comp(result, scene, scene->mRootNode, root, scale);
-	load_timelines(result, scene);
+	c_node_t *root = c_node(target);
+	if(!anim_only)
+	{
+		load_node(*target, scene, scene->mRootNode, 0);
+		load_comp(*target, scene, scene->mRootNode, root);
+	}
+	load_timelines(*target, scene);
 
 	for(i = 0; i < scene->mNumLights; i++)
 	{
@@ -458,11 +468,12 @@ entity_t c_sauces_model_get(c_sauces_t *self, const char *name, float scale)
 			printf("%s not found for light\n", light->mName.data);
 		}
 	}
+	if(!anim_only)
+	{
+		c_spacial_set_scale(c_spacial(target), vec3(scale));
+	}
 
 	aiReleaseImport(scene);
-
-
-	return result;
 }
 
 int load_tex(texture_t *texture)
