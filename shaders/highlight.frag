@@ -7,6 +7,7 @@ layout (location = 0) out vec4 FragColor;
 uniform vec2 over_id;
 uniform vec2 sel_id;
 uniform vec2 over_poly_id;
+uniform vec2 context_id;
 uniform int mode;
 
 #define EDIT_VERT	0
@@ -14,6 +15,7 @@ uniform int mode;
 #define EDIT_FACE	2
 #define EDIT_OBJECT	3
 
+const vec2 zero = vec2(0.003922, 0.000000);
 
 float filtered(vec2 c, vec2 fil)
 {
@@ -49,19 +51,23 @@ void main()
 	c2 = textureLod(sbuffer.geomid, pixel_pos(), 0).rg;
 
 	float over = filtered(c, over_id);
-	float selected = filtered(c, sel_id);
 
 	float overp = filtered(c2, over_poly_id);
 
-	const vec3 sel_color = vec3(0.3f, 0.3f, 0.3f);
 	const vec3 over_poly_color = vec3(0.1f, 0.01f, 0.4f);
 	const vec3 over_color = vec3(0.08);
 
-	vec3 final = vec3(1.0f);
-	if(sel_id.x > 0.0f || sel_id.y > 0.0f)
+	if(is_equal(c, zero))
 	{
-		final -= sel_color * (1.0f - selected);
+		FragColor = vec4(vec3(0.5), 1.0f);
+		return;
 	}
+
+	vec3 final = vec3(1.0f);
+	/* if(sel_id.x > 0.0f || sel_id.y > 0.0f) */
+	/* { */
+	/* 	final -= sel_color * (1.0f - selected); */
+	/* } */
 	if(is_equal(sel_id, c))
 	{
 		if(mode != EDIT_OBJECT)

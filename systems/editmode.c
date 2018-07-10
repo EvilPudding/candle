@@ -28,6 +28,8 @@ void c_editmode_init(c_editmode_t *self)
 {
 	self->spawn_pos = vec2(10, 10);
 	self->mode = EDIT_OBJECT;
+	self->context = c_entity(self);
+	c_node(self)->unpacked = 1;
 	if(!g_sel_mat)
 	{
 		g_sel_mat = mat_new("sel_mat");
@@ -52,11 +54,14 @@ vec2_t c_editmode_bind_over_poly(c_editmode_t *self)
 	return int_to_vec2(self->over_poly);
 }
 
+vec2_t c_editmode_bind_context(c_editmode_t *self)
+{
+	return int_to_vec2(self->context);
+}
 vec2_t c_editmode_bind_selected(c_editmode_t *self)
 {
 	return int_to_vec2(self->selected);
 }
-
 
 /* vec2_t c_editmode_bind_over(c_editmode_t *self) */
 /* { */
@@ -116,7 +121,6 @@ void c_editmode_coords(c_editmode_t *self)
 c_editmode_t *c_editmode_new()
 {
 	c_editmode_t *self = component_new("editmode");
-
 	return self;
 }
 
@@ -179,7 +183,37 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 			{BIND_INT, "mode", (getter_cb)c_editmode_bind_mode, self},
 			{BIND_VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
 			{BIND_VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
+			{BIND_VEC2, "context_id", (getter_cb)c_editmode_bind_context, self},
 			{BIND_VEC2, "sel_id", (getter_cb)c_editmode_bind_sel, self},
+			{BIND_NONE}
+		}
+	);
+
+	c_renderer_add_pass(renderer, "highlights_0", "border", sig("render_quad"),
+			PASS_CLEAR_COLOR,
+		(bind_t[]){
+			{BIND_OUT, .buffer = c_renderer_tex(renderer, ref("tmp"))},
+			{BIND_TEX, "sbuffer", .buffer = c_renderer_tex(renderer, ref("selectable"))},
+			{BIND_INT, "mode", (getter_cb)c_editmode_bind_mode, self},
+			{BIND_VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
+			{BIND_VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
+			{BIND_VEC2, "sel_id", (getter_cb)c_editmode_bind_sel, self},
+			{BIND_INT, "horizontal", .integer = 1},
+			{BIND_NONE}
+		}
+	);
+
+	c_renderer_add_pass(renderer, "highlights_1", "border", sig("render_quad"),
+			PASS_ADDITIVE,
+		(bind_t[]){
+			{BIND_OUT, .buffer = c_renderer_tex(renderer, ref("final"))},
+			{BIND_TEX, "sbuffer", .buffer = c_renderer_tex(renderer, ref("selectable"))},
+			{BIND_TEX, "tmp", .buffer = c_renderer_tex(renderer, ref("tmp"))},
+			{BIND_INT, "mode", (getter_cb)c_editmode_bind_mode, self},
+			{BIND_VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
+			{BIND_VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
+			{BIND_VEC2, "sel_id", (getter_cb)c_editmode_bind_sel, self},
+			{BIND_INT, "horizontal", .integer = 0},
 			{BIND_NONE}
 		}
 	);
@@ -311,10 +345,49 @@ void c_editmode_open_entity(c_editmode_t *self, entity_t ent)
 	self->open_entities[self->open_entities_count++] = ent;
 }
 
+void c_editmode_leave_context(c_editmode_t *self)
+{
+	entity_t context = self->context;
+	if(context)
+	{
+		c_node_t *nc = c_node(&context);
+		if(nc->parent)
+		{
+			c_node_pack(nc, 0);
+
+			self->context = nc->parent;
+			c_node_pack(c_node(&self->context), 1);
+
+			/* c_editmode_select(self, context); */
+		}
+	}
+}
+void c_editmode_enter_context(c_editmode_t *self)
+{
+	if(self->context)
+	{
+		c_node_t *nc = c_node(&self->context);
+		c_node_pack(nc, 0);
+	}
+
+	if(self->selected)
+	{
+		c_node_t *nc = c_node(&self->selected);
+		if(nc)
+		{
+			printf("unpacking %ld\n", self->selected);
+			c_node_pack(nc, 1);
+			self->context = self->selected;
+			c_editmode_select(self, entity_null);
+		}
+	}
+}
+
 void c_editmode_select(c_editmode_t *self, entity_t select)
 {
 	self->selected = select;
 	c_editmode_coords(self);
+
 	if(self->selected)
 	{
 		c_editmode_open_entity(self, self->selected);
@@ -443,8 +516,18 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 			c_editmode_selected_delete(self);
 			break;
 		case 27:
-			self->menu_x = -1;
-			c_editmode_select(self, entity_null);
+			if(self->selected != entity_null)
+			{
+				self->menu_x = -1;
+				c_editmode_select(self, entity_null);
+			}
+			else
+			{
+				c_editmode_leave_context(self);
+			}
+			break;
+		case '\r':
+			c_editmode_enter_context(self);
 			break;
 	}
 	return CONTINUE;
@@ -882,8 +965,8 @@ int c_editmode_event(c_editmode_t *self, SDL_Event *event)
 
 REG()
 {
-	ct_t *ct = ct_new("editmode", sizeof(c_editmode_t),
-			c_editmode_init, NULL, 0);
+	ct_t *ct = ct_new("editmode", sizeof(c_editmode_t), c_editmode_init,
+			NULL, 1, ref("node"));
 
 	signal_init(sig("component_menu"), sizeof(struct nk_context*));
 

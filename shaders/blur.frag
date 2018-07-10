@@ -14,26 +14,25 @@ BUFFER {
 
 void main()
 {
-	vec2 pp = texcoord;
-	vec2 tex_offset = 1.0f / textureSize(buf.color, 0);
-	vec3 c = textureLod(buf.color, pp, 0).rgb * weight[0];
+	ivec2 tc = ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y));
+	vec3 c = texelFetch(buf.color, pp, 0).rgb * weight[0];
 
 	if(horizontal)
 	{
 		for(int i = 1; i < 6; ++i)
 		{
-			vec2 off = vec2(tex_offset.x * i, 0.0f);
-			c += textureLod(buf.color, pp + off, 0).rgb * weight[i];
-			c += textureLod(buf.color, pp - off, 0).rgb * weight[i];
+			ivec2 off = ivec2(i, 0.0f);
+			c += texelFetch(buf.color, pp + off, 0).rgb * weight[i];
+			c += texelFetch(buf.color, pp - off, 0).rgb * weight[i];
 		}
 	}
 	else
 	{
 		for(int i = 1; i < 6; ++i)
 		{
-			vec2 off = vec2(0.0f, tex_offset.y * i);
-			c += textureLod(buf.color, pp + off, 0).rgb * weight[i];
-			c += textureLod(buf.color, pp - off, 0).rgb * weight[i];
+			ivec2 off = ivec2(0.0f, * i);
+			c += texelFetch(buf.color, pp + off, 0).rgb * weight[i];
+			c += texelFetch(buf.color, pp - off, 0).rgb * weight[i];
 		}
 	}
 	FragColor = vec4(c, 0.4f);

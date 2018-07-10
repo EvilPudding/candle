@@ -65,13 +65,13 @@ int c_nodegraph_component_menu(c_nodegraph_t *self, void *ctx)
 {
 	unsigned long i;
 
-	for(i = 1; i < g_ecm->entities_busy_size; i++)
+	c_node_t *nc = c_node(self);
+	for(i = 0; i < nc->children_size; i++)
 	{
-		if(!g_ecm->entities_busy[i]) continue;
-		c_node_t *node = c_node(&i);
+		c_node_t *node = c_node(&nc->children[i]);
 
-		if(node && node->parent != entity_null) continue;
-		node_entity(self, i, ctx);
+		if(node->ghost) continue;
+		node_entity(self, nc->children[i], ctx);
 	}
 	return CONTINUE;
 }

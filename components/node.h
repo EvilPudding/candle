@@ -15,7 +15,8 @@ typedef struct
 	float angle4;
 #endif
 	int cached;
-	int ghost;
+	int ghost_inheritance;
+	entity_t unpack_inheritance;
 
 	entity_t *children;
 	ulong children_size;
@@ -23,8 +24,10 @@ typedef struct
 	entity_t parent;
 	int inherit_scale;
 
+	int ghost;
 	int has_shadows;
 	int visible;
+	int unpacked;
 } c_node_t;
 
 DEF_CASTER("node", c_node, c_node_t)
@@ -39,5 +42,6 @@ vec3_t c_node_global_to_local(c_node_t *self, vec3_t vec);
 vec3_t c_node_local_to_global(c_node_t *self, vec3_t vec);
 vec3_t c_node_dir_to_local(c_node_t *self, vec3_t vec);
 vec3_t c_node_dir_to_global(c_node_t *self, vec3_t vec);
+void c_node_pack(c_node_t *self, int packed);
 
 #endif /* !NODE_H */
