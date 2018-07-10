@@ -6,6 +6,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define SYS ((entity_t){1})
+
 
 static void c_node_init(c_node_t *self)
 {
@@ -13,8 +15,12 @@ static void c_node_init(c_node_t *self)
 	self->children_size = 0;
 	self->model = mat4();
 	self->cached = 0;
-	self->parent = entity_null;
 	self->inherit_scale = 1;
+	self->parent = entity_null;
+	if(c_entity(self) != SYS)
+	{
+		c_node_add(c_node(&SYS), 1, c_entity(self));
+	}
 }
 
 c_node_t *c_node_new()
@@ -33,6 +39,13 @@ static int c_node_changed(c_node_t *self)
 	}
 	return CONTINUE;
 }
+
+void c_node_pack(c_node_t *self, int packed)
+{
+	self->unpacked = packed;
+	c_node_changed(self);
+}
+
 
 entity_t c_node_get_by_name(c_node_t *self, uint hash)
 {
@@ -173,7 +186,16 @@ void c_node_update_model(c_node_t *self)
 	if(self->parent != entity_null)
 	{
 		c_node_t *parent_node = c_node(&parent);
+
 		c_node_update_model(parent_node);
+		self->ghost_inheritance = self->ghost || parent_node->ghost_inheritance;
+
+		self->unpack_inheritance = parent_node->unpacked ? c_entity(self) :
+			parent_node->unpack_inheritance;
+		if(self->ghost_inheritance)
+		{
+			self->unpack_inheritance = c_entity(self);
+		}
 
 		self->rot = mat4_mul(parent_node->rot, rot_matrix);
 #ifdef MESH4
@@ -196,6 +218,8 @@ void c_node_update_model(c_node_t *self)
 	}
 	else
 	{
+		self->unpack_inheritance = self->unpacked ? c_entity(self) : entity_null;
+		self->ghost_inheritance = self->ghost;
 		self->model = sc->model_matrix;
 		self->rot = rot_matrix;
 #ifdef MESH4

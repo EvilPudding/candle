@@ -31,6 +31,7 @@ typedef struct
 	vec2_t spawn_pos;
 	entity_t selected;
 	entity_t over;
+	entity_t context;
 	int selected_poly;
 	int over_poly;
 

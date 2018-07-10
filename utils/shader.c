@@ -41,6 +41,7 @@ void shaders_quad_frag_reg(void);
 void shaders_sprite_frag_reg(void);
 void shaders_ssr_frag_reg(void);
 void shaders_blur_frag_reg(void);
+void shaders_border_frag_reg(void);
 
 void shaders_phong_frag_reg(void);
 void shaders_ssao_frag_reg(void);
@@ -49,23 +50,23 @@ void shaders_highlight_frag_reg(void);
 
 void shaders_reg()
 {
-	shaders_common_frag_reg();
 	shaders_ambient_frag_reg();
+	shaders_blur_frag_reg();
+	shaders_border_frag_reg();
 	shaders_bright_frag_reg();
+	shaders_common_frag_reg();
 	shaders_copy_frag_reg();
+	shaders_decals_frag_reg();
 	shaders_depth_frag_reg();
 	shaders_gbuffer_frag_reg();
-	shaders_select_frag_reg();
-	shaders_decals_frag_reg();
+	shaders_highlight_frag_reg();
 	shaders_phong_frag_reg();
 	shaders_quad_frag_reg();
+	shaders_select_frag_reg();
 	shaders_sprite_frag_reg();
+	shaders_ssao_frag_reg();
 	shaders_ssr_frag_reg();
 	shaders_transparency_frag_reg();
-	shaders_highlight_frag_reg();
-	shaders_blur_frag_reg();
-
-	shaders_ssao_frag_reg();
 }
 
 vertex_modifier_t vertex_modifier_new(const char *code)
@@ -211,6 +212,9 @@ void shader_add_source(const char *name, unsigned char data[],
 	g_sources[i].src = malloc(len + 1);
 	memcpy(g_sources[i].src, data, len);
 	g_sources[i].src[len] = '\0';
+
+	/* g_sources[i].src = data; */
+	/* g_sources[i].src[len] = '\0'; */
 	printf("adding source %s\n", name);
 }
 

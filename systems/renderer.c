@@ -326,10 +326,13 @@ static int c_renderer_gl(c_renderer_t *self)
 	texture_t *final =		texture_new_2D(1, 1, TEX_INTERPOLATE,
 		buffer_new("color",	1, 4)
 	);
-	texture_t *bloom =		texture_new_2D(1, 1, TEX_INTERPOLATE,
-		buffer_new("color",	1, 4)
-	);
-	texture_t *bloom2 =		texture_new_2D(1, 1, TEX_INTERPOLATE,
+	/* texture_t *bloom =		texture_new_2D(1, 1, TEX_INTERPOLATE, */
+		/* buffer_new("color",	1, 4) */
+	/* ); */
+	/* texture_t *bloom2 =		texture_new_2D(1, 1, TEX_INTERPOLATE, */
+		/* buffer_new("color",	1, 4) */
+	/* ); */
+	texture_t *tmp =		texture_new_2D(1, 1, TEX_INTERPOLATE,
 		buffer_new("color",	1, 4)
 	);
 	texture_t *selectable =	texture_new_2D(1, 1, 0,
@@ -344,8 +347,9 @@ static int c_renderer_gl(c_renderer_t *self)
 	c_renderer_add_tex(self, "refr",		1.0f, refr);
 	c_renderer_add_tex(self, "final",		1.0f, final);
 	c_renderer_add_tex(self, "selectable",	1.0f, selectable);
-	c_renderer_add_tex(self, "bloom",		0.3f, bloom);
-	c_renderer_add_tex(self, "bloom2",		0.3f, bloom2);
+	c_renderer_add_tex(self, "tmp",			1.0f, tmp);
+	/* c_renderer_add_tex(self, "bloom",		0.3f, bloom); */
+	/* c_renderer_add_tex(self, "bloom2",		0.3f, bloom2); */
 
 	c_renderer_add_pass(self, "gbuffer", "gbuffer", sig("render_visible"),
 			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR,

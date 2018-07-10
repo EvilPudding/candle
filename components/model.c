@@ -583,9 +583,11 @@ int c_model_render_at(c_model_t *self, shader_t *shader, c_node_t *node,
 		int flags)
 {
 	if(!self->mesh || !shader) return STOP;
+	entity_t ent = c_entity(self);
 	if(node)
 	{
 		c_node_update_model(node);
+		ent = node->unpack_inheritance;
 
 		if(self->scale_dist > 0.0f)
 		{
@@ -614,7 +616,7 @@ int c_model_render_at(c_model_t *self, shader_t *shader, c_node_t *node,
 	{
 		glDepthRange(0, 0.01);
 	}
-	c_mesh_gl_draw(c_mesh_gl(self), flags);
+	c_mesh_gl_draw_ent(c_mesh_gl(self), ent, flags);
 	if(self->xray)
 	{
 		if(!additive_was_enabled)
