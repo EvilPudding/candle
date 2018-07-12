@@ -33,7 +33,7 @@ void candle_reset_dir()
 int handle_event(SDL_Event event)
 {
 	char key;
-	if(g_candle->mouse_owners[0] != entity_null)
+	if(entity_exists(g_candle->mouse_owners[0]))
 	{
 		if(entity_signal_same(g_candle->mouse_owners[0], sig("event_handle"),
 					&event) == STOP)
@@ -60,7 +60,7 @@ int handle_event(SDL_Event event)
 		case SDL_MOUSEBUTTONUP:
 			bdata = (mouse_button_data){event.button.x, event.button.y, 0,
 				event.button.button};
-			if(g_candle->mouse_owners[0])
+			if(entity_exists(g_candle->mouse_owners[0]))
 			{
 				entity_signal_same(g_candle->mouse_owners[0], sig("mouse_release"),
 						&bdata);
@@ -73,7 +73,7 @@ int handle_event(SDL_Event event)
 		case SDL_MOUSEBUTTONDOWN:
 			bdata = (mouse_button_data){event.button.x, event.button.y, 0,
 				event.button.button};
-			if(g_candle->mouse_owners[0])
+			if(entity_exists(g_candle->mouse_owners[0]))
 			{
 				entity_signal(g_candle->mouse_owners[0], sig("mouse_press"),
 						&bdata);
@@ -88,7 +88,7 @@ int handle_event(SDL_Event event)
 			mdata = (mouse_move_data){event.motion.xrel, event.motion.yrel,
 				event.motion.x, event.motion.y};
 
-			if(g_candle->mouse_owners[0])
+			if(entity_exists(g_candle->mouse_owners[0]))
 			{
 				entity_signal_same(g_candle->mouse_owners[0], sig("mouse_move"),
 						&mdata);
@@ -311,7 +311,7 @@ entity_t candle_run_command(entity_t root, const char *command)
 	for(i = 0; i < argc; i++) free(argv[i]);
 	free(copy);
 
-	if(instance == entity_null) instance = root;
+	if(!entity_exists(instance)) instance = root;
 	return instance;
 }
 
@@ -330,7 +330,7 @@ int candle_run(entity_t root, const char *map_name)
 		if(read == 0) continue;
 		entity_t entity = candle_run_command(root, line);
 
-		if(root && c_node(&root) && entity != root)
+		if(entity_exists(root) && c_node(&root) && entity != root)
 		{
 			c_node_add(c_node(&root), 1, entity);
 		}

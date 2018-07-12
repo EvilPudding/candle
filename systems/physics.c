@@ -12,14 +12,15 @@
 
 static vec3_t c_physics_handle_forces(c_physics_t *self, vec3_t vel, float *dt)
 {
-	unsigned int i, p;
+	khiter_t k;
 
 	ct_t *forces = ecm_get(ref("force"));
 
-	for(p = 0; p < forces->pages_size; p++)
-	for(i = 0; i < forces->pages[p].components_size; i++)
+	for(k = kh_begin(forces->cs); k != kh_end(forces->cs); ++k)
 	{
-		c_force_t *fc = (c_force_t*)ct_get_at(forces, p, i);
+		if(!kh_exist(forces->cs, k)) continue;
+		c_force_t *fc = (c_force_t*)kh_value(forces->cs, k);
+
 		if(fc->active) vel = vec3_add(vel, vec3_scale(fc->force, *dt));
 	}
 
@@ -175,16 +176,17 @@ static void c_physics_handle_collisions(c_rigid_body_t *c1,
 
 static int c_physics_update(c_physics_t *self, float *dt)
 {
-	unsigned long i, j, p, p2;
+	khiter_t k, k2;
 
 	ct_t *vels = ecm_get(ref("velocity"));
 	ct_t *bodies = ecm_get(ref("rigid_body"));
 
-	for(p = 0; p < vels->pages_size; p++)
-	for(i = 0; i < vels->pages[p].components_size; i++)
+	for(k = kh_begin(vels->cs); k != kh_end(vels->cs); ++k)
 	{
-		c_velocity_t *vc = (c_velocity_t*)ct_get_at(vels, p, i);
-		if(!c_entity(vc)) continue;
+		if(!kh_exist(vels->cs, k)) continue;
+		c_velocity_t *vc = (c_velocity_t*)kh_value(vels->cs, k);
+
+		if(!entity_exists(c_entity(vc))) continue;
 
 		c_spacial_t *sc = c_spacial(vc);
 
@@ -195,34 +197,31 @@ static int c_physics_update(c_physics_t *self, float *dt)
 			vec3_add(sc->pos, vec3_scale(vc->velocity, *dt));
 	}
 
-	for(p = 0; p < bodies->pages_size; p++)
-	for(i = 0; i < bodies->pages[p].components_size; i++)
+	for(k = kh_begin(bodies->cs); k != kh_end(bodies->cs); ++k)
 	{
-		c_rigid_body_t *c1 = (c_rigid_body_t*)ct_get_at(bodies, p, i);
-		if(!c_entity(c1)) continue;
+		if(!kh_exist(bodies->cs, k)) continue;
+		c_rigid_body_t *c1 = (c_rigid_body_t*)kh_value(bodies->cs, k);
+		if(!entity_exists(c_entity(c1))) continue;
 		c_velocity_t *v1 = c_velocity(c1);
-		int si = i + 1;
 
-		for(p2 = p; p2 < bodies->pages_size; p2++)
+		for(k2 = k + 1; k2 != kh_end(bodies->cs); ++k2)
 		{
-			for(j = si; j < bodies->pages[p2].components_size; j++)
-			{
-				c_rigid_body_t *c2 = (c_rigid_body_t*)ct_get_at(bodies, p2, j);
-				if(!c_entity(c2)) continue;
-				c_velocity_t *v2 = c_velocity(c2);
+			if(!kh_exist(bodies->cs, k2)) continue;
+			c_rigid_body_t *c2 = (c_rigid_body_t*)kh_value(bodies->cs, k2);
 
-				if(!v1 && !v2) continue;
+			if(!entity_exists(c_entity(c2))) continue;
+			c_velocity_t *v2 = c_velocity(c2);
 
-				c_physics_handle_collisions(c1, c2);
-			}
-			si = 0;
+			if(!v1 && !v2) continue;
+
+			c_physics_handle_collisions(c1, c2);
 		}
 	}
 
-	for(p = 0; p < vels->pages_size; p++)
-	for(i = 0; i < vels->pages[p].components_size; i++)
+	for(k = kh_begin(vels->cs); k != kh_end(vels->cs); ++k)
 	{
-		c_velocity_t *vc = (c_velocity_t*)ct_get_at(vels, p, i);
+		if(!kh_exist(vels->cs, k)) continue;
+		c_velocity_t *vc = (c_velocity_t*)kh_value(vels->cs, k);
 
 		c_spacial_t *sc = c_spacial(vc);
 

@@ -47,34 +47,29 @@ int c_editmode_bind_mode(c_editmode_t *self)
 
 vec2_t c_editmode_bind_over(c_editmode_t *self)
 {
-	return int_to_vec2(self->over);
+	return entity_to_vec2(self->over);
 }
 vec2_t c_editmode_bind_over_poly(c_editmode_t *self)
 {
-	return int_to_vec2(self->over_poly);
+	return entity_to_vec2(self->over_poly);
 }
 
 vec2_t c_editmode_bind_context(c_editmode_t *self)
 {
-	return int_to_vec2(self->context);
+	return entity_to_vec2(self->context);
 }
 vec2_t c_editmode_bind_selected(c_editmode_t *self)
 {
-	return int_to_vec2(self->selected);
+	return entity_to_vec2(self->selected);
 }
-
-/* vec2_t c_editmode_bind_over(c_editmode_t *self) */
-/* { */
-/* 	return int_to_vec2(self->over); */
-/* } */
 
 vec2_t c_editmode_bind_sel(c_editmode_t *self)
 {
-	return self->selected ? int_to_vec2(self->selected) : vec2(0.0f);
+	return entity_to_vec2(self->selected);
 }
 void c_editmode_coords(c_editmode_t *self)
 {
-	if(!arrows)
+	if(!entity_exists(arrows))
 	{
 		arrows = entity_new(c_name_new("Coord System"), c_node_new());
 		c_node(&arrows)->inherit_scale = 0;
@@ -98,7 +93,7 @@ void c_editmode_coords(c_editmode_t *self)
 		c_node_add(c_node(&arrows), 1, W);
 #endif
 	}
-	if(self->selected)
+	if(entity_exists(self->selected))
 	{
 		c_node_t *nc = c_node(&self->selected);
 		/* c_attach_target(c_attach(&arrows), self->selected); */
@@ -136,7 +131,7 @@ void c_editmode_activate(c_editmode_t *self)
 
 	self->backup_camera = c_renderer(self)->camera;
 
-	if(self->camera == entity_null)
+	if(!entity_exists(self->camera))
 	{
 		self->camera = entity_new(
 			c_name_new("Edit Camera"), c_editlook_new(), c_node_new(),
@@ -239,7 +234,7 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 	}
 	else
 	{
-		if(result == self->selected)
+		if(entity_exists(self->selected) && result == self->selected)
 		{
 			entity_t result = c_renderer_geom_at_pixel(renderer, x, y,
 					&self->mouse_depth);
@@ -259,7 +254,7 @@ int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 	{
 		if(self->mode == EDIT_OBJECT)
 		{
-			if(self->pressing && self->selected)
+			if(self->pressing && entity_exists(self->selected))
 			{
 				c_renderer_t *renderer = c_renderer(self);
 				c_camera_t *cam = c_camera(&renderer->camera);
@@ -270,7 +265,7 @@ int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 				{
 					self->dragging = 1;
 
-					if(parent)
+					if(entity_exists(parent))
 					{
 						c_node_t *nc = c_node(&parent);
 						vec3_t local_pos = c_node_global_to_local(nc, self->mouse_position);
@@ -285,7 +280,7 @@ int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 				float py = 1.0f - event->y / renderer->height;
 
 				vec3_t pos = c_camera_real_pos(cam, self->mouse_depth, vec2(px, py));
-				if(parent)
+				if(entity_exists(parent))
 				{
 					c_node_t *nc = c_node(&parent);
 					pos = c_node_global_to_local(nc, pos);
@@ -348,10 +343,10 @@ void c_editmode_open_entity(c_editmode_t *self, entity_t ent)
 void c_editmode_leave_context(c_editmode_t *self)
 {
 	entity_t context = self->context;
-	if(context)
+	if(entity_exists(context))
 	{
 		c_node_t *nc = c_node(&context);
-		if(nc->parent)
+		if(entity_exists(nc->parent))
 		{
 			c_node_pack(nc, 0);
 
@@ -364,13 +359,13 @@ void c_editmode_leave_context(c_editmode_t *self)
 }
 void c_editmode_enter_context(c_editmode_t *self)
 {
-	if(self->context)
+	if(entity_exists(self->context))
 	{
 		c_node_t *nc = c_node(&self->context);
 		c_node_pack(nc, 0);
 	}
 
-	if(self->selected)
+	if(entity_exists(self->selected))
 	{
 		c_node_t *nc = c_node(&self->selected);
 		if(nc)
@@ -388,7 +383,7 @@ void c_editmode_select(c_editmode_t *self, entity_t select)
 	self->selected = select;
 	c_editmode_coords(self);
 
-	if(self->selected)
+	if(entity_exists(self->selected))
 	{
 		c_editmode_open_entity(self, self->selected);
 	}
@@ -445,7 +440,7 @@ int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 
 static void c_editmode_update_axis(c_editmode_t *self)
 {
-	if(arrows)
+	if(entity_exists(arrows))
 	{
 		c_model(&RX)->visible = self->selected && self->tool;
 		c_model(&RY)->visible = self->selected && self->tool;
@@ -466,7 +461,7 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 		case 'c':
 			if(self->control)
 			{
-				if(self->selected && self->mode == EDIT_OBJECT)
+				if(entity_exists(self->selected) && self->mode == EDIT_OBJECT)
 				{
 					self->mode = EDIT_FACE; 
 					c_model_t *cm = c_model(&self->selected);
@@ -516,7 +511,7 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 			c_editmode_selected_delete(self);
 			break;
 		case 27:
-			if(self->selected != entity_null)
+			if(entity_exists(self->selected))
 			{
 				self->menu_x = -1;
 				c_editmode_select(self, entity_null);
@@ -722,7 +717,7 @@ int c_editmode_commands(c_editmode_t *self)
 		if(nk_contextual_begin(self->nk, 0, nk_vec2(150, 300), bounds))
 		{
 			c_editmode_shell(self);
-			if(self->selected)
+			if(entity_exists(self->selected))
 			{
 				if(nk_button_label(self->nk, "delete"))
 				{
@@ -920,7 +915,7 @@ int c_editmode_draw(c_editmode_t *self)
 				/* self->open_entities_count--; */
 				/* self->open_entities[e] = */
 					/* self->open_entities[self->open_entities_count]; */
-				self->open_entities[e] = self->open_entities[SYS];
+				self->open_entities[e] = SYS;
 				/* e--; */
 				c_editmode_open_entity(self, c_entity(self));
 			}

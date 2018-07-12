@@ -6,9 +6,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define SYS ((entity_t){1})
-
-
 static void c_node_init(c_node_t *self)
 {
 	self->children = NULL;
@@ -26,6 +23,7 @@ static void c_node_init(c_node_t *self)
 c_node_t *c_node_new()
 {
 	c_node_t *self = component_new("node");
+
 	return self;
 }
 
@@ -65,7 +63,7 @@ entity_t c_node_get_by_name(c_node_t *self, uint hash)
 		if(child_node)
 		{
 			entity_t response = c_node_get_by_name(child_node, hash);
-			if(response != entity_null)
+			if(entity_exists(response))
 			{
 				return response;
 			}
@@ -76,7 +74,7 @@ entity_t c_node_get_by_name(c_node_t *self, uint hash)
 
 void c_node_unparent(c_node_t *self, int inherit_transform)
 {
-	if(self->parent)
+	if(entity_exists(self->parent))
 	{
 		c_node_t *parent = c_node(&self->parent);
 		if(inherit_transform)
@@ -100,6 +98,7 @@ void c_node_remove(c_node_t *self, entity_t child)
 	{
 		if(self->children[i] == child)
 		{
+			if(!entity_exists(self->children[i])) continue;
 			c_node_t *cn = c_node(&child);
 			cn->cached = 0;
 			cn->parent = entity_null;
@@ -125,7 +124,7 @@ void c_node_add(c_node_t *self, int num, ...)
 			entity_add_component(child, c_node_new());
 			child_node = c_node(&child);
 		}
-		else if(child_node->parent)
+		else if(entity_exists(child_node->parent))
 		{
 			if(child_node->parent == c_entity(self))
 			{
@@ -183,7 +182,7 @@ void c_node_update_model(c_node_t *self)
 	c_spacial_t *sc = c_spacial(self);
 
 	mat4_t rot_matrix = quat_to_mat4(sc->rot_quat);
-	if(self->parent != entity_null)
+	if(entity_exists(self->parent))
 	{
 		c_node_t *parent_node = c_node(&parent);
 

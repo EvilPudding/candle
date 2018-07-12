@@ -37,5 +37,16 @@ void _entity_add_post(entity_t self, c_t *comp);
 
 void entity_destroy(entity_t self);
 
+static inline unsigned int entity_uid(entity_t self)
+{
+	struct { unsigned int pos, uid; } *separate = (void*)&self;
+	return separate->uid;
+}
+
+static inline unsigned int entity_pos(entity_t self)
+{
+	struct { unsigned int pos, unique_id; } *separate = (void*)&self;
+	return separate->pos;
+}
 
 #endif /* !ENTITY_H */

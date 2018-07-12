@@ -6,6 +6,7 @@ layout (location = 0) out vec4 FragColor;
 
 BUFFER {
 	sampler2D depth;
+	sampler2D albedo;
 	sampler2D nmr;
 } gbuffer;
 
@@ -22,10 +23,11 @@ void main()
 	vec4 cc = textureLod(rendered.color, pixel_pos(), 0);
 
 	vec4 normal_metalic_roughness = textureLod(gbuffer.nmr, pixel_pos(), 0);
+	vec4 albedo = textureLod(gbuffer.albedo, pixel_pos(), 0);
 	vec3 nor = decode_normal(normal_metalic_roughness.rg);
-	float roughness = normal_metalic_roughness.a;
 
-	vec4 ssred = ssr2(gbuffer.depth, rendered.color, roughness, nor);
+	vec4 ssred = ssr2(gbuffer.depth, rendered.color, albedo,
+			normal_metalic_roughness.ba, nor);
 	/* FragColor = ssred; return; */
 
     cc.rgb *= textureLod(ssao.occlusion, pixel_pos(), 0).r;

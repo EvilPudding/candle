@@ -679,9 +679,12 @@ entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
 	texture_t *tex = c_renderer_tex(self, ref("selectable"));
 	if(!tex) return entity_null;
 
-	unsigned int res = texture_get_pixel(tex, 0,
-			x * self->resolution, y * self->resolution, depth) & 0xFFFF;
-	result = res - 1;
+	unsigned int pos = texture_get_pixel(tex, 0,
+			x * self->resolution, y * self->resolution, depth);
+	struct { unsigned int pos, uid; } *cast = (void*)&result;
+
+	cast->pos = pos;
+	cast->uid = g_ecm->entities_info[pos].uid;
 	return result;
 }
 
@@ -907,7 +910,7 @@ int c_renderer_draw(c_renderer_t *self)
 {
 	uint i;
 
-	if(self->camera == entity_null) return CONTINUE;
+	if(!entity_exists(self->camera)) return CONTINUE;
 	if(!self->width || !self->height) return CONTINUE;
 
 	self->frame++;

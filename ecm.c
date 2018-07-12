@@ -73,7 +73,14 @@ void ecm_init()
 
 	signal_init(sig("entity_created"), 0);
 
-	ecm_new_entity(); // entity_null
+	/* create entity_null */
+	{
+		self->entities_info = malloc(sizeof(*g_ecm->entities_info));
+		self->entities_info->uid = 0;
+		self->entities_info->next_free = 1;
+		self->entities_info_size = 1;
+		self->entity_uid_counter = 1;
+	}
 
 	sem = SDL_CreateSemaphore(1);
 
@@ -87,7 +94,7 @@ void ecm_init()
 
 void ecm_add_reg(c_reg_cb reg)
 {
-	printf("ADD REG\n");
+	/* printf("ADD REG\n"); */
 	g_ecm->regs[g_ecm->regs_size++] = reg;
 }
 
@@ -157,11 +164,11 @@ void _signal_init(uint id, uint size)
 void ecm_destroy_all()
 {
 	uint i;
-	int *iter;
-	for(i = 0, iter = g_ecm->entities_busy;
-			i < g_ecm->entities_busy_size; i++, iter++)
+	entity_info_t *iter;
+	for(i = 0, iter = g_ecm->entities_info;
+			i < g_ecm->entities_info_size; i++, iter++)
 	{
-		if(*iter)
+		if(iter->uid)
 		{
 			entity_destroy(i);
 		}
@@ -170,26 +177,39 @@ void ecm_destroy_all()
 
 entity_t ecm_new_entity()
 {
-	uint i;
-	int *iter;
 
 	SDL_SemWait(sem);
-	for(i = 0, iter = g_ecm->entities_busy;
-			i < g_ecm->entities_busy_size && *iter; i++, iter++);
+	entity_info_t *info;
 
-	if(iter == NULL || i == g_ecm->entities_busy_size)
+	unsigned int i = g_ecm->entities_info[0].next_free;
+
+	if(i == g_ecm->entities_info_size)
 	{
-		i = g_ecm->entities_busy_size++;
-		g_ecm->entities_busy = realloc(g_ecm->entities_busy,
-				sizeof(*g_ecm->entities_busy) * g_ecm->entities_busy_size);
-		iter = &g_ecm->entities_busy[i];
+		g_ecm->entities_info_size++;
+		g_ecm->entities_info = realloc(g_ecm->entities_info,
+				sizeof(*g_ecm->entities_info) * g_ecm->entities_info_size);
+
+		info = &g_ecm->entities_info[i];
+		info->uid = 0;
+
+		g_ecm->entities_info[0].next_free = g_ecm->entities_info_size;
+	}
+	else
+	{
+		info = &g_ecm->entities_info[i];
+		g_ecm->entities_info[0].next_free = info->next_free;
 	}
 
-	*iter = 1;
-	SDL_SemPost(sem);
-	/* printf(">>>>>>>> %u\n", i); */
+	info->uid = g_ecm->entity_uid_counter++;
 
-	return i;
+	entity_t ent = info->uid;
+
+	struct { unsigned int pos, uid; } *separate = (void*)&ent;
+	separate->pos = i;
+	separate->uid = info->uid;
+
+	SDL_SemPost(sem);
+	return ent;
 }
 
 void ct_add_interaction(ct_t *dep, uint target)
@@ -218,17 +238,17 @@ void ct_add_dependency(ct_t *dep, uint target)
 	ct->depends[i].is_interaction = 0;
 }
 
-struct comp_page *ct_add_page(ct_t *self)
-{
-	int page_id = self->pages_size++;
-	self->pages = realloc(self->pages, sizeof(*self->pages) * self->pages_size);
-	struct comp_page *page = &self->pages[page_id];
+/* struct comp_page *ct_add_page(ct_t *self) */
+/* { */
+/* 	int page_id = self->pages_size++; */
+/* 	self->pages = realloc(self->pages, sizeof(*self->pages) * self->pages_size); */
+/* 	struct comp_page *page = &self->pages[page_id]; */
 	
-	page->components = malloc(self->size * PAGE_SIZE);
-	page->components_size = 0;
-	return page;
+/* 	page->components = malloc(self->size * PAGE_SIZE); */
+/* 	page->components_size = 0; */
+/* 	return page; */
 
-}
+/* } */
 
 ct_t *_ct_new(const char *name, uint hash, uint size, init_cb init,
 		destroy_cb destroy, int depend_size, ...)
@@ -247,7 +267,7 @@ ct_t *_ct_new(const char *name, uint hash, uint size, init_cb init,
 	khiter_t k = kh_put(ct, g_ecm->cts, hash, &ret);
 
 	ct_t *ct = &kh_value(g_ecm->cts, k);
-	printf("%s %u\n", name, hash);
+	/* printf("%s %u\n", name, hash); */
 
 	*ct = (ct_t) {
 		.id = hash,
@@ -256,7 +276,8 @@ ct_t *_ct_new(const char *name, uint hash, uint size, init_cb init,
 		.size = size,
 		.depends_size = depend_size,
 		.is_interaction = 0,
-		.pages_size = 0
+		.cs = kh_init(c)
+		/* .pages_size = 0 */
 	};
 	strncpy(ct->name, name, sizeof(ct->name));
 
@@ -273,7 +294,7 @@ ct_t *_ct_new(const char *name, uint hash, uint size, init_cb init,
 		}
 		va_end(depends);
 	}
-	ct_add_page(ct);
+	/* ct_add_page(ct); */
 
 	if(!ecm_get(hash)) exit(1);
 
@@ -282,23 +303,19 @@ ct_t *_ct_new(const char *name, uint hash, uint size, init_cb init,
 
 void ecm_clean2(int force)
 {
+	khiter_t k;
 	if(force)
 	{
-		int p, i;
 		ct_t *ct;
 		ecm_foreach_ct(ct,
 		{
 			if(ct->destroy)
 			{
-				for(p = 0; p < ct->pages_size; p++)
+				for(k = kh_begin(ct->cs); k != kh_end(ct->cs); ++k)
 				{
-					struct comp_page *page = &ct->pages[p];
-					for(i = 0; i < page->components_size; i++)
-					{
-						c_t *c = ct_get_at(ct, p, i);
-						ct->destroy(c);
-					}
-
+					if(!kh_exist(ct->cs, k)) continue;
+					c_t *c = kh_value(ct->cs, k);
+					ct->destroy(c);
 				}
 			}
 		});
@@ -307,39 +324,34 @@ void ecm_clean2(int force)
 
 	ct_t *dest = ecm_get(ref("destroyed"));
 
-	while(dest->pages[0].components_size)
+	for(k = kh_begin(dest->cs); k != kh_end(dest->cs); ++k)
 	{
-		c_destroyed_t *dc = (c_destroyed_t*)ct_get_at(dest, 0, 0);
-		entity_destroy(c_entity(dc));
+		if(!kh_exist(dest->cs, k)) continue;
+		c_destroyed_t *dc = (c_destroyed_t*)kh_value(dest->cs, k);
+		entity_t ent = c_entity(dc);
+		entity_destroy(ent);
 	}
 end:
 
 	g_ecm->dirty = 0;
-	/* SDL_AtomicAdd((SDL_atomic_t*)&g_ecm->steps, -2); */
-	g_ecm->steps = 0;
+	g_ecm->safe = 0;
 }
 
 void ecm_clean(int force)
 {
 	if(!g_ecm->dirty && !force) return;
 
-	g_ecm->steps++;
+	int rt = SDL_ThreadID() == g_candle->loader->threadId;
 
-	if(SDL_ThreadID() == g_candle->loader->threadId)
+	if(g_ecm->safe && rt)
 	{
-		if(g_ecm->steps == 1)
-		{
-			SDL_SemWait(sem1);
-		}
 		ecm_clean2(force);
 		SDL_SemPost(sem1);
 	}
-	else
+
+	if(!rt)
 	{
-		if(g_ecm->steps == 2)
-		{
-			SDL_SemPost(sem1);
-		}
+		SDL_AtomicIncRef((SDL_atomic_t*)&g_ecm->safe);
 		SDL_SemWait(sem1);
 	}
 }
@@ -351,45 +363,38 @@ c_t *ct_add(ct_t *self, entity_t entity)
 	SDL_LockMutex(mut);
 	if(!self) return NULL;
 
-	int page_id = self->pages_size - 1;
-	struct comp_page *page = &self->pages[page_id];
-	if(page->components_size == PAGE_SIZE)
-	{
-		page = ct_add_page(self);
-		page_id++;
-	}
+	/* int page_id = self->pages_size - 1; */
+	/* struct comp_page *page = &self->pages[page_id]; */
+	/* if(page->components_size == PAGE_SIZE) */
+	/* { */
+	/* 	page = ct_add_page(self); */
+	/* 	page_id++; */
+	/* } */
 
-	uint offset;
+	/* uint offset; */
 
-	if(entity >= self->offsets_size)
-	{
-		/* printf("increasing offsets %d -> %d\n", self->offsets_size, (int)entity + 1); */
-		int j, new_size = entity + 1;
-		self->offsets = realloc(self->offsets, sizeof(*self->offsets) *
-				new_size);
-		for(j = self->offsets_size; j < new_size - 1; j++)
-		{
-			self->offsets[j].offset = -1;
-		}
+	int ret;
+	unsigned int uid = entity_uid(entity);
+	unsigned int key = ent_comp_ref(self->id, uid);
+	khiter_t k = kh_put(c, g_ecm->cs, key, &ret);
+	c_t **comp = &kh_value(g_ecm->cs, k);
+	*comp = calloc(1, self->size);
 
-	}
-	/* printf("c_size %d %s\n", (int)self->size, self->name); */
+	k = kh_put(c, self->cs, uid, &ret);
+	kh_value(self->cs, k) = *comp;
 
-	self->offsets[entity].offset = offset = page->components_size * self->size;
-	self->offsets[entity].page = page_id;
+	/* page->components_size++; */
 
-
-	page->components_size++;
-
-	if(entity >= self->offsets_size)
-	{
-		self->offsets_size = entity + 1;
-	}
+	/* if(pos >= self->offsets_size) */
+	/* { */
+		/* self->offsets_size = pos + 1; */
+	/* } */
 	SDL_UnlockMutex(mut);
-	c_t *comp = (c_t*)&page->components[offset];
-	memset(comp, 0, self->size);
-	comp->entity = entity;
-	comp->comp_type = self->id;
-	return comp;
+
+	/* c_t *comp = (c_t*)&page->components[offset]; */
+	/* memset(comp, 0, self->size); */
+	(*comp)->entity = entity;
+	(*comp)->comp_type = self->id;
+	return *comp;
 }
 

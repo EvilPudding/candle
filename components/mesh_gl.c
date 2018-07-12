@@ -736,7 +736,7 @@ int c_mesh_gl_draw_ent(c_mesh_gl_t *self, entity_t ent, int transparent)
 	if(shader)
 	{
 		glUniform1f(shader->u_has_tex, (float)mesh->has_texcoords);
-		vec2_t id_color = int_to_vec2(ent);
+		vec2_t id_color = entity_to_vec2(ent);
 
 		glUniform2f(shader->u_id, id_color.x, id_color.y);
 		glerr();

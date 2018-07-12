@@ -27,7 +27,7 @@
 #define ECMHASH(str) murmur_hash(str, strlen(str), 0)
 #define sig(str) murmur_hash(str, strlen(str), 0)
 #define ref(str) murmur_hash(str, strlen(str), 0)
-#define ent_comp_ref(str, ent) murmur_hash(str, strlen(str), ent)
+#define ent_comp_ref(cid, eid) murmur_hash(&cid, 4, eid)
 #define TP2(a, b) a##b
 #define TP(a, b) TP2(a, b)
 

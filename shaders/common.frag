@@ -401,15 +401,22 @@ vec4 coneSampleWeightedColor(sampler2D screen, vec2 samplePos, float mipChannel,
 
 #define CNST_1DIVPI 0.31830988618
 #define CNST_MAX_SPECULAR_EXP 64
-vec4 ssr2(sampler2D depth, sampler2D screen, float roughness, vec3 nor)
+vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
+		vec2 metallic_roughness, vec3 nor)
 {
 	vec2 tc = pixel_pos();
 	vec3 pos = get_position(depth, pixel_pos());
 
-	if(roughness > 0.95) return vec4(0.0);
+	float perceptualRoughness = metallic_roughness.y;
+	float metallic = metallic_roughness.x;
 
-    float gloss = 1.0f - roughness;
-    float specularPower = roughnessToSpecularPower(roughness);
+	perceptualRoughness = clamp(perceptualRoughness, c_MinRoughness, 1.0);
+	metallic = clamp(metallic, 0.0, 1.0);
+
+	if(perceptualRoughness > 0.95) return vec4(0.0);
+
+    float gloss = 1.0f - perceptualRoughness;
+    float specularPower = roughnessToSpecularPower(perceptualRoughness);
 
 	vec3 w_pos = (camera.model * vec4(pos, 1.0f)).xyz;
 	vec3 w_nor = (camera.model * vec4(nor, 0.0f)).xyz;
@@ -470,13 +477,17 @@ vec4 ssr2(sampler2D depth, sampler2D screen, float roughness, vec3 nor)
         adjacentLength = adjacentLength - (incircleSize * 2.0f);
         glossMult *= gloss;
     }
+	vec3 f0 = vec3(0.04);
+	vec3 specularColor = mix(f0, base_color.rgb, metallic);
 
-    vec3 specular = fresnelSchlick(vec3(0.04f), abs(dot(w_nor, eye_dir))) * CNST_1DIVPI;
-
-    float fadeOnRoughness = saturate(gloss * 4.0f);
+	/* return vec4(specularColor, 1); */
+    specularColor *= fresnelSchlick(vec3(0.04f), abs(dot(w_nor, eye_dir))) * CNST_1DIVPI;
+    /* float fadeOnRoughness = saturate(gloss * 4.0f); */
+    float fadeOnRoughness = 1;
 	float fade = screenEdgefactor * fadeOnRoughness * (1.0f - saturate(remainingAlpha));
 
-    return vec4(mix(fallback_color, reflect_color.xyz * specular, fade), 1.0f);
+	return vec4(mix(fallback_color,
+				reflect_color.xyz * specularColor, fade), 1.0f);
 }
 
 #endif
@@ -578,7 +589,7 @@ vec4 pbr(vec4 base_color, vec2 metallic_roughness,
     vec3 v = normalize(-c_pos);        // Vector from surface point to camera
     vec3 l = normalize(light_dir);             // Vector from surface point to light
     vec3 h = normalize(l+v);                          // Half vector between both l and v
-    vec3 reflection = -normalize(reflect(v, c_nor));
+    /* vec3 reflection = -normalize(reflect(v, c_nor)); */
 
     float NdotL = clamp(dot(c_nor, l), 0.001, 1.0);
     float NdotV = clamp(abs(dot(c_nor, v)), 0.001, 1.0);

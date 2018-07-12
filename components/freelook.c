@@ -46,7 +46,7 @@ static void c_freelook_update(c_freelook_t *self)
 	const float max_up = M_PI / 2.0 - 0.01;
 	const float max_down = -M_PI / 2.0 + 0.01;
 
-	if(self->x_control == entity_null || self->y_control == entity_null)
+	if(!entity_exists(self->x_control) || !entity_exists(self->y_control))
 	{
 		return;
 	}

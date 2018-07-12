@@ -55,7 +55,6 @@ typedef struct candle_t
 
 } candle_t;
 
-#define SYS ((entity_t){1})
 void candle_wait(void);
 void candle_reset_dir(void);
 

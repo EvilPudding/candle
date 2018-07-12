@@ -32,6 +32,7 @@ bool is_equal(vec2 a, vec2 b)
 
 
 BUFFER {
+	sampler2D depth;
 	sampler2D id;
 	sampler2D geomid;
 } sbuffer;
@@ -59,35 +60,61 @@ void main()
 
 	const vec3 sel_color = vec3(0.8f, 0.7f, 0.2f);
 
+	float w;
 	if(sel_id.x > 0.0f || sel_id.y > 0.0f)
 	{
 		if(horizontal)
 		{
 			float sel_percent = selected * weight[0] * 2;
+			float min_d = 2;
+			float w;
 			for(int i = 1; i < 6; ++i)
 			{
 				ivec2 off = ivec2(i, 0);
 
-				float w = is_selected(tc + off);
-				/* sel_percent += w; */
-				sel_percent += w * weight[i] * 2;
+				w = is_selected(tc + off);
+				sel_percent += w * weight[i];
+				if(w > 0)
+				{
+					min_d = min(texelFetch(sbuffer.depth, tc + off, 0).r, min_d);
+				}
 
 				w = is_selected(tc - off);
-				/* sel_percent += w; */
-				sel_percent += w * weight[i] * 2;
+				sel_percent += w * weight[i];
+				if(w > 0)
+				{
+					min_d = min(texelFetch(sbuffer.depth, tc - off, 0).r, min_d);
+				}
 			}
-			FragColor = vec4(sel_percent, vec3(0.0f));
+			FragColor = vec4(sel_percent, min_d, 0.0f, 0.0f);
 		}
 		else if(selected < 0.5)
 		{
-			float sel_percent = texelFetch(tmp.color, tc, 0).r * weight[0] * 2;
+
+			float sel_percent = texelFetch(tmp.color, tc, 0).r * weight[0];
+			float min_d = texelFetch(tmp.color, tc, 0).g;
 			for(int i = 1; i < 6; ++i)
 			{
 				ivec2 off = ivec2(0, i);
-				sel_percent += texelFetch(tmp.color, tc + off, 0).r * weight[i] * 2;
-				sel_percent += texelFetch(tmp.color, tc - off, 0).r * weight[i] * 2;
+
+				w = texelFetch(tmp.color, tc + off, 0).r;
+				sel_percent += w * weight[i];
+				if(w > 0)
+				{
+					min_d = min(texelFetch(tmp.color, tc + off, 0).g, min_d);
+				}
+
+				w = texelFetch(tmp.color, tc - off, 0).r;
+				sel_percent += w * weight[i];
+				if(w > 0)
+				{
+					min_d = min(texelFetch(tmp.color, tc - off, 0).g, min_d);
+				}
+
+
 			}
-			FragColor = vec4(sel_color, sel_percent * 0.5);
+			float depth = texelFetch(sbuffer.depth, tc, 0).r;
+			FragColor = vec4((depth > min_d ? sel_color: 1 - sel_color) * 2, sel_percent);
 		}
 	}
 }

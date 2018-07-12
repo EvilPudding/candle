@@ -642,14 +642,6 @@ void shader_bind(shader_t *self)
 	glUseProgram(self->program);
 }
 
-void shader_bind_mesh(shader_t *self, mesh_t *mesh, unsigned int id)
-{
-	glUniform1f(self->u_has_tex, (float)mesh->has_texcoords);
-	vec2_t id_color = int_to_vec2(id);
-
-	glUniform2f(self->u_id, id_color.x, id_color.y);
-}
-
 GLuint _shader_uniform(shader_t *self, const char *uniform, const char *member)
 {
 	if(member)

@@ -1159,7 +1159,6 @@ static inline float float_mix(float x, float y, float a)
 	return x * (1.0f - a) + y * a; \
 }
 
-/* TODO maybe this shouldn't be here */
 static inline vec2_t int_to_vec2(int id)
 {
 	id++;

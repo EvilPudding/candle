@@ -90,6 +90,8 @@ struct comp_page
 	uint components_size;
 };
 
+KHASH_MAP_INIT_INT(c, c_t*)
+
 typedef struct ct_t
 {
 	char name[32];
@@ -100,14 +102,9 @@ typedef struct ct_t
 	uint id;
 	uint size;
 
-	struct {
-		uint page;
-		uint offset;
-	} *offsets;
-	uint offsets_size;
-
-	struct comp_page *pages;
-	uint pages_size;
+	khash_t(c) *cs;
+	/* struct comp_page *pages; */
+	/* uint pages_size; */
 
 	dep_t *depends;
 	uint depends_size;
@@ -127,12 +124,18 @@ typedef struct
 
 KHASH_MAP_INIT_INT(sig, signal_t)
 KHASH_MAP_INIT_INT(ct, ct_t)
-KHASH_MAP_INIT_INT(c, c_t*)
+
+typedef struct
+{
+	unsigned int next_free;
+	unsigned int uid;
+} entity_info_t;
 
 typedef struct ecm_t
 {
-	int *entities_busy;
-	uint entities_busy_size;
+	entity_info_t *entities_info;
+	uint entities_info_size;
+	uint entity_uid_counter;
 
 	khash_t(ct) *cts;
 	khash_t(c) *cs;
@@ -145,7 +148,7 @@ typedef struct ecm_t
 	c_reg_cb *regs;
 
 	int dirty;
-	int steps;
+	int safe;
 } ecm_t; /* Entity Component System */
 
 typedef struct c_t
@@ -160,19 +163,10 @@ typedef struct c_t
 #define _type(a, b) __builtin_types_compatible_p(typeof(a), b)
 #define _if(c, a, b) __builtin_choose_expr(c, a, b)
 
-static inline c_t *ct_get_at(ct_t *self, uint page, uint i)
-{
-	return (c_t*)&(self->pages[page].components[i * self->size]);
-}
-
-static inline c_t *ct_get(ct_t *self, entity_t *entity)
-{
-	if((*entity) >= self->offsets_size) return NULL;
-	uint offset = self->offsets[*entity].offset;
-	uint page = self->offsets[*entity].page;
-	if(offset == -1) return NULL;
-	return (c_t*)&(self->pages[page].components[offset]);
-}
+/* static inline c_t *ct_get_at(ct_t *self, uint page, uint i) */
+/* { */
+	/* return (c_t*)&(self->pages[page].components[i * self->size]); */
+/* } */
 
 signal_t *ecm_get_signal(uint signal);
 void _signal_init(uint id, uint size);
@@ -221,6 +215,57 @@ static inline ct_t *ecm_get(uint comp_type)
 #define component_new_from_ref(comp_type) _component_new(comp_type)
 #define component_new(comp_type) _component_new(ref(comp_type))
 void *_component_new(uint comp_type);
+
+static inline unsigned int entity_exists(entity_t self)
+{
+	if(self == entity_null) return 0;
+	entity_info_t info = g_ecm->entities_info[entity_pos(self)];
+	return info.uid == entity_uid(self);
+}
+
+static inline c_t *ct_get_nth(ct_t *self, int n)
+{
+	khiter_t k;
+	for(k = kh_begin(self->cs); k != kh_end(self->cs); ++k)
+	{
+		if(!kh_exist(self->cs, k)) continue;
+		if(n == 0)
+		{
+			return kh_value(self->cs, k);
+		}
+		else
+		{
+			n--;
+		}
+	}
+	return NULL;
+}
+
+static inline c_t *ct_get(ct_t *self, entity_t *entity)
+{
+	if(!entity_exists(*entity)) return NULL;
+	khiter_t k = kh_get(c, self->cs, entity_uid(*entity));
+	if(k == kh_end(self->cs)) return NULL;
+	return kh_value(self->cs, k);
+}
+
+
+/* TODO maybe this shouldn't be here */
+static inline vec2_t entity_to_vec2(entity_t self)
+{
+	int pos = entity_pos(self);
+
+	union {
+		unsigned int i;
+		struct{
+			unsigned char r, g, b, a;
+		};
+	} convert = {.i = pos};
+
+	return vec2((float)convert.r / 255, (float)convert.g / 255);
+}
+
+#define SYS ((entity_t){0x0000000100000001})
 
 /* builtin signals */
 

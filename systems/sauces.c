@@ -427,7 +427,7 @@ void c_sauces_model_get(c_sauces_t *self, entity_t *target,
 	}
 
 	int anim_only = 1;
-	if(*target == entity_null)
+	if(!entity_exists(*target))
 	{
 		anim_only = 0;
 		*target = entity_new(c_name_new(name), c_node_new());

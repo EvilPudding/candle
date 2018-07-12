@@ -39,7 +39,9 @@ entity_t _entity_new(int ignore, ...)
 
 void entity_destroy(entity_t self)
 {
-	if(g_ecm->steps < 2)
+	if(!entity_exists(self)) return;
+
+	if(!g_ecm->safe)
 	{
 		if(!c_destroyed(&self))
 		{
@@ -49,64 +51,49 @@ void entity_destroy(entity_t self)
 	}
 	else
 	{
+		unsigned int pos = entity_pos(self);
+		unsigned int uid = entity_uid(self);
+
 		ct_t *ct;
 		ecm_foreach_ct(ct, {
-			c_t *c = ct_get(ct, &self); if(!c) continue;
-			if(!c) exit(1);
-			if(ct->destroy)
-			{
-				ct->destroy(c);
-			}
+
+			khiter_t k = kh_get(c, ct->cs, entity_uid(self));
+			if(k == kh_end(ct->cs)) continue;
+			c_t *c = kh_value(ct->cs, k);
+
+
+			if(ct->destroy) ct->destroy(c);
 			c->entity = entity_null;
 
-			uint offset = ct->offsets[self].offset;
-			uint page = ct->offsets[self].page;
-
-			struct comp_page *last = &ct->pages[ct->pages_size - 1];
-			struct comp_page *curr = &ct->pages[page];
-			if(ct->pages_size <= page) continue;
-
-			uint last_offset = last->components_size - 1;
-			if(last != curr && offset != last_offset)
-			{
-				memcpy(&curr->components[offset],
-						&last->components[last_offset], ct->size);
-
-				entity_t ent2 = ct_get_at(ct, page, offset)->entity;
-
-				if(ent2)
-				{
-					ct->offsets[ent2].offset = offset;
-					ct->offsets[ent2].page = page;
-				}
-			}
-
-			ct->offsets[self].offset = -1;
-			last->components_size--;
-			if(last->components_size == 0)
-			{
-				free(last->components);
-				ct->pages_size--;
-			}
+			kh_del(c, ct->cs, k);
+			
+			unsigned int key = ent_comp_ref(ct->id, uid);
+			k = kh_get(c, g_ecm->cs, key);
+			kh_del(c, g_ecm->cs, k);
+			free(c);
 		});
+		entity_info_t *info = &g_ecm->entities_info[pos];
+		info->next_free = g_ecm->entities_info[0].next_free;
+		info->uid = 0;
+		g_ecm->entities_info[0].next_free = pos;
 	}
 }
 
 int listener_signal(listener_t *self, entity_t ent, void *data)
 {
-	int p, j;
+	khiter_t k;
 	ct_t *ct = ecm_get(self->target);
-	for(p = 0; p < ct->pages_size; p++)
-	{
-		for(j = 0; j < ct->pages[p].components_size; j++)
-		{
-			c_t *c = ct_get_at(ct, p, j);
-			if(!c_entity(c)) continue;
-			if((self->flags & ENTITY) && c_entity(c) != ent)
-				continue;
 
-			if(self->cb(c, data) == STOP) return STOP;
-		}
+	for(k = kh_begin(ct->cs); k != kh_end(ct->cs); ++k)
+	{
+		if(!kh_exist(ct->cs, k)) continue;
+
+		c_t *c = kh_value(ct->cs, k);
+		if(!c_entity(c)) continue;
+		if((self->flags & ENTITY) && c_entity(c) != ent)
+			continue;
+
+		if(self->cb(c, data) == STOP) return STOP;
 	}
 	return CONTINUE;
 }
@@ -162,7 +149,7 @@ void _entity_add_post(entity_t self, c_t *comp)
 	--_g_creating_num;
 
 	ct_t *ct = ecm_get(comp->comp_type);
-	component_signal(comp, ct, sig("entity_created"), NULL);
+	component_signal(comp, ct, ref("entity_created"), NULL);
 
 }
 
