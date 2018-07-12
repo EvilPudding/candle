@@ -36,7 +36,7 @@ void c_editmode_init(c_editmode_t *self)
 		/* g_sel_mat->albedo.color = vec4(0, 0.1, 0.4, 1); */
 		g_sel_mat->albedo.color = vec4(0.0, 0.0, 0.0, 0.0);
 		g_sel_mat->transparency.color = vec4(0.6, 0.3, 0.1, 0.0f);
-				/* sauces_mat("pack1/white"); */
+				/* sauces_mat("white"); */
 	}
 }
 

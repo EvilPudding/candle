@@ -1,13 +1,10 @@
 # candle
 C Game Engine
 
-Barebones C engine with rendering and basic collision detection.
-
 ## Dependencies
 * Assimp
 * GLEW
 * SDL2
-* libpng
 * lua
 
 ## Screenshots

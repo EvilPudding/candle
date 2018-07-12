@@ -18,12 +18,16 @@ static void c_bone_init(c_bone_t *self)
 		m->emissive.color = vec4(0.3f, 0.1f, 0.9f, 0.5f);
 		m->albedo.color = vec4(1, 1, 1, 1.0f);
 
+#ifdef MESH4
 		vec4_t dir = vec4(0.0f, 0.0f, -1.0f, 0.0f);
+#else
+		vec3_t dir = vec3(0.0f, 0.0f, -1.0f);
+#endif
 		mesh_t *mesh = mesh_new();
 		mesh_lock(mesh);
 		mesh_circle(mesh, 0.01f, 4, dir);
-		mesh_extrude_edges(mesh, 1, vec4_scale(dir, 0.05f), 0.05f / 0.01f, NULL, NULL, NULL);
-		mesh_extrude_edges(mesh, 1, vec4_scale(dir, 0.95f), 0.01f, NULL, NULL, NULL);
+		mesh_extrude_edges(mesh, 1, vecN_(scale)(dir, 0.05f), 0.05f / 0.01f, NULL, NULL, NULL);
+		mesh_extrude_edges(mesh, 1, vecN_(scale)(dir, 0.95f), 0.01f, NULL, NULL, NULL);
 		mesh_unlock(mesh);
 
 		g_bone = entity_new(c_node_new(), c_model_new(mesh, m, 0, 0));
