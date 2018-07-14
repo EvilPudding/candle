@@ -1015,6 +1015,7 @@ void mesh_subdivide(mesh_t *self, int subdivisions)
 void mesh_clear(mesh_t *self)
 {
 	mesh_lock(self);
+	mesh_unselect(self, SEL_EDITING, MESH_ANY, -1);
 
 	vector_clear(self->verts);
 	vector_clear(self->edges);
@@ -1817,6 +1818,14 @@ void mesh_triangulate(mesh_t *self)
 
 
 	self->triangulated = 1;
+	mesh_unlock(self);
+}
+
+void mesh_disk(mesh_t *self, float radius, float inner_radius, int segments, vecN_t dir)
+{
+	mesh_lock(self);
+	mesh_circle(self, radius, segments, dir);
+	mesh_extrude_edges(self, 1, ZN, inner_radius / radius, NULL, NULL, NULL);
 	mesh_unlock(self);
 }
 

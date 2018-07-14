@@ -521,6 +521,7 @@ static int c_renderer_resize(c_renderer_t *self, window_resize_data *event)
 static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 {
 	self->frame++;
+	if(!pass->active) return NULL;
 
 	if(!pass->output) exit(1);
 
@@ -819,6 +820,15 @@ static int c_renderer_pass(c_renderer_t *self, unsigned int hash)
 	return -1;
 }
 
+void c_renderer_toggle_pass(c_renderer_t *self, uint hash, int active)
+{
+	int i = c_renderer_pass(c_renderer(self), hash);
+	if(i >= 0)
+	{
+		self->passes[i].active = active;
+	}
+}
+
 void c_renderer_add_pass(c_renderer_t *self, const char *name,
 		const char *shader_name, ulong draw_signal, int flags, bind_t binds[])
 {
@@ -838,6 +848,7 @@ void c_renderer_add_pass(c_renderer_t *self, const char *name,
 	pass_t *pass = &self->passes[i];
 	pass->shader = fs_new(shader_name);
 	pass->hash = hash;
+	pass->active = 1;
 
 	pass->clear = 0;
 	if(flags & PASS_CLEAR_COLOR) pass->clear |= GL_COLOR_BUFFER_BIT;

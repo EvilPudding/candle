@@ -145,12 +145,28 @@ void load_material(entity_t entity, const struct aiMesh *mesh,
 		enum aiTextureMapMode mode;
 		unsigned int flags;
 
+		if(aiGetMaterialTexture( mat, aiTextureType_NORMALS, 0, &path,
+					&mapping, &uvi, &blend, &op, &mode, &flags) ==
+				aiReturn_SUCCESS)
+		{
+			strncpy(buffer, path.data, sizeof(buffer));
+			char *fname = filter_sauce_name(buffer);
+			printf("loading normal texture %s\n", fname);
+			texture_t *texture = sauces_tex(fname);
+			if(texture)
+			{
+				material->normal.texture = texture;
+				material->normal.texture_blend = 1.0f - blend;
+				material->normal.texture_scale = 1.0f;
+			}
+		}
 		if(aiGetMaterialTexture( mat, aiTextureType_DIFFUSE, 0, &path,
 					&mapping, &uvi, &blend, &op, &mode, &flags) ==
 				aiReturn_SUCCESS)
 		{
 			strncpy(buffer, path.data, sizeof(buffer));
 			char *fname = filter_sauce_name(buffer);
+			printf("loading diffuse texture %s\n", fname);
 			texture_t *texture = sauces_tex(fname);
 			if(texture)
 			{
@@ -166,6 +182,7 @@ void load_material(entity_t entity, const struct aiMesh *mesh,
 		{
 			strncpy(buffer, path.data, sizeof(buffer));
 			char *fname = filter_sauce_name(buffer);
+			printf("loading shiny texture %s\n", fname);
 			texture_t *texture = sauces_tex(fname);
 			if(texture)
 			{
@@ -176,13 +193,19 @@ void load_material(entity_t entity, const struct aiMesh *mesh,
 		}
 
 		vec4_t color = vec4(0,0,0,1);
+		if (AI_SUCCESS == aiGetMaterialColor(mat, AI_MATKEY_COLOR_TRANSPARENT,
+					(void*)&color))
+		{
+			vec4_print(color);
+			material->transparency.color = vec4(1-color.x, 1-color.y, 1-color.z, 1-color.a);
+		}
 		if (AI_SUCCESS == aiGetMaterialColor(mat, AI_MATKEY_COLOR_DIFFUSE,
 					(void*)&color))
 		{
 			material->albedo.color = color;
 		}
 
-		int j; for(j = 0; j < mat->mNumProperties; j++) { printf("%s\n", mat->mProperties[j]->mKey.data); }
+		/* int j; for(j = 0; j < mat->mNumProperties; j++) { printf("%s\n", mat->mProperties[j]->mKey.data); } */
 		sauces_register_mat(material);
 	}
 	mc->layers[0].mat = material;

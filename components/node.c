@@ -27,10 +27,12 @@ c_node_t *c_node_new()
 	return self;
 }
 
+extern int g_update_id;
 static int c_node_changed(c_node_t *self)
 {
 	ulong i;
 	self->cached = 0;
+	g_update_id++;
 	for(i = 0; i < self->children_size; i++)
 	{
 		c_node_changed(c_node(&self->children[i]));

@@ -25,8 +25,11 @@ DEF_CASTER("camera", c_camera, c_camera_t)
 c_camera_t *c_camera_new(float fov, float near, float far);
 c_camera_t *c_camera_clone(c_camera_t *self);
 vec3_t c_camera_real_pos(c_camera_t *cam, float depth, vec2_t coord);
+vec3_t c_camera_screen_pos(c_camera_t *self, vec3_t pos);
+vec3_t c_camera_screen_pos_flat(c_camera_t *self, vec3_t pos);
 void c_camera_update_view(c_camera_t *self);
 int c_camera_update(c_camera_t *self, void *event);
 void c_camera_activate(c_camera_t *self);
+float c_camera_unlinearize(c_camera_t *self, float depth);
 
 #endif /* !CAMERA_H */

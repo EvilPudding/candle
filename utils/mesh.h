@@ -225,6 +225,8 @@ void mesh_quad(mesh_t *self);
 void mesh_circle(mesh_t *self, float radius, int segments, vecN_t dir);
 mesh_t *mesh_torus(float radius, float inner_radius, int segments,
 		int inner_segments);
+void mesh_disk(mesh_t *self, float radius, float inner_radius, int segments,
+		vecN_t dir);
 void mesh_cube(mesh_t *self, float size, float tex_scale);
 void mesh_ico(mesh_t *self, float size);
 

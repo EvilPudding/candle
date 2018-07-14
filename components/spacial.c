@@ -64,12 +64,12 @@ void c_spacial_lock(c_spacial_t *self)
 	self->lock_count++;
 }
 
-void c_spacial_look_at(c_spacial_t *self, vec3_t eye, vec3_t center, vec3_t up)
+void c_spacial_look_at(c_spacial_t *self, vec3_t eye, vec3_t up)
 {
 	c_spacial_lock(self);
-	self->pos = eye;
 
-	mat4_t rot_matrix = mat4_look_at(vec3(0,0,0), vec3_sub(center, eye), up);
+	mat4_t rot_matrix = mat4_look_at(vec3(0,0,0), eye, up);
+	rot_matrix = mat4_invert(rot_matrix);
 	self->rot_quat = mat4_to_quat(rot_matrix);
 
 	self->update_id++;

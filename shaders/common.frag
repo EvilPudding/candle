@@ -220,27 +220,32 @@ float shadow_at_dist_no_tan(vec3 vec, float i)
 	return 0.0;
 }
 
+float unlinearize(float depth)
+{
+	return 100 * (1.0f - (0.1 / depth)) / (100 - 0.1);
+}
+
 float get_shadow(vec3 vec, float point_to_light, float dist_to_eye)
 {
 	float ocluder_to_light = lookup_single(-vec);
 
 	float sd = ((ocluder_to_light - point_to_light) > -0.05) ? 0.0 : 1.0;
-
-	float breaked = 0.0;
+	vec4 p = vec4(0.002f, 0.002f, unlinearize(dist_to_eye), 1.0f);
+	p = camera.inv_projection * p;
+	p /= p.w;
 	if(sd > 0.5)
 	{
 		/* sd = 0.5; */
-		float shadow_len = min(0.8 * max(0.05, point_to_light / ocluder_to_light - 1), 10);
-		if(shadow_len > 0.0001)
+		float shadow_len = min(0.8 * (point_to_light / ocluder_to_light - 1), 10);
+		if(shadow_len > 0.001)
 		{
 			float i;
 
-			if(shadow_at_dist_no_tan(vec, shadow_len) < 0.5) return 1.0f;
+			/* if(shadow_at_dist_no_tan(vec, shadow_len) < 0.5) return 1.0f; */
 
 			float count = 1;
-			float iters = floor(clamp(shadow_len / (dist_to_eye *
-							dist_to_eye / 385), 2, 16)) * 2;
-			float inc = shadow_len / iters;
+			float inc = p.x;
+			float iters = shadow_len / inc;
 
 			for (i = inc; i <= shadow_len; i += inc)
 			{
@@ -393,7 +398,8 @@ vec3 fresnelSchlick(vec3 F0, float cosTheta)
 
 #define saturate(val) (clamp(val, 0.0f, 1.0f))
 
-vec4 coneSampleWeightedColor(sampler2D screen, vec2 samplePos, float mipChannel, float gloss)
+vec4 coneSampleWeightedColor(sampler2D screen, vec2 samplePos,
+		float mipChannel, float gloss)
 {
     vec3 sampleColor = textureLod(screen, samplePos, mipChannel).rgb;
     return vec4(sampleColor * gloss, gloss);

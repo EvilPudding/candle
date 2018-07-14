@@ -33,6 +33,12 @@ struct conf_torus
 	int segments1;
 	int segments2;
 };
+struct conf_disk
+{
+	float radius1;
+	float radius2;
+	int segments;
+};
 struct conf_subdivide
 {
 	int steps;
@@ -43,7 +49,7 @@ struct conf_cube
 };
 struct conf_extrude
 {
-	vec4_t offset;
+	vecN_t offset;
 	float scale;
 	int steps;
 	char scale_e[255];
@@ -61,6 +67,8 @@ struct edit_tool
 	size_t size;
 	void *defaults;
 	char name[32];
+	uint ref;
+	int require_sys;
 };
 extern struct edit_tool g_edit_tools[];
 
@@ -81,6 +89,7 @@ typedef enum
 	MESH_SPHERE,
 	MESH_CUBE,
 	MESH_TORUS,
+	MESH_DISK,
 	MESH_ICOSPHERE,
 	MESH_EXTRUDE,
 	MESH_SPHERIZE,

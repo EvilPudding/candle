@@ -420,6 +420,7 @@ void candle_init2(void)
 	entity_add_component(SYS, c_keyboard_new());
 	entity_add_component(SYS, c_physics_new());
 	entity_add_component(SYS, c_sauces_new());
+	/* entity_add_component(SYS, c_model_new(NULL, NULL, 0, 0)); */
 
 	//int res = pipe(candle->events);
 	//if(res == -1) exit(1);

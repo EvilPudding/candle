@@ -136,6 +136,7 @@ typedef struct pass_t
 	texture_t *output;
 	texture_t *depth;
 
+	int active;
 } pass_t;
 
 typedef struct c_renderer_t
@@ -199,6 +200,7 @@ void c_renderer_add_pass(c_renderer_t *self, const char *name,
 void c_renderer_replace_pass(c_renderer_t *self, const char *name,
 		const char *shader_name, ulong draw_signal,
 		int flags, bind_t binds[]);
+void c_renderer_toggle_pass(c_renderer_t *self, uint hash, int active);
 
 entity_t c_renderer_get_camera(c_renderer_t *self);
 

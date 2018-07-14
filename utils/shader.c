@@ -47,6 +47,7 @@ void shaders_phong_frag_reg(void);
 void shaders_ssao_frag_reg(void);
 void shaders_transparency_frag_reg(void);
 void shaders_highlight_frag_reg(void);
+void shaders_editmode_frag_reg(void);
 
 void shaders_reg()
 {
@@ -59,6 +60,7 @@ void shaders_reg()
 	shaders_decals_frag_reg();
 	shaders_depth_frag_reg();
 	shaders_gbuffer_frag_reg();
+	shaders_editmode_frag_reg();
 	shaders_highlight_frag_reg();
 	shaders_phong_frag_reg();
 	shaders_quad_frag_reg();

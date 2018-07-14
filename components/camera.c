@@ -46,6 +46,27 @@ int c_camera_changed(c_camera_t *self)
 	return CONTINUE;
 }
 
+vec3_t c_camera_screen_pos(c_camera_t *self, vec3_t pos)
+{
+	mat4_t VP = mat4_mul(self->projection_matrix, self->view_matrix); 
+
+	vec4_t viewSpacePosition = mat4_mul_vec4(VP, vec4(_vec3(pos), 1.0f));
+	viewSpacePosition = vec4_div_number(viewSpacePosition, viewSpacePosition.w);
+
+	viewSpacePosition.xyz = vec3_scale(vec3_add_number(viewSpacePosition.xyz, 1.0f), 0.5);
+    return viewSpacePosition.xyz;
+}
+
+/* float c_camera_linearize(c_camera_t *self, float depth) */
+/* { */
+    /* return = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * z_b - 1.0) * (zFar - zNear)); */
+/* } */
+
+float c_camera_unlinearize(c_camera_t *self, float depth)
+{
+	return self->far * (1.0f - (self->near / depth)) / (self->far - self->near);
+}
+
 vec3_t c_camera_real_pos(c_camera_t *self, float depth, vec2_t coord)
 {
 	/* float z = depth; */

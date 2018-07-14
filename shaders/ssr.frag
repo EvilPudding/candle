@@ -28,6 +28,7 @@ void main()
 
 	vec4 ssred = ssr2(gbuffer.depth, rendered.color, albedo,
 			normal_metalic_roughness.ba, nor);
+
 	/* FragColor = ssred; return; */
 
     cc.rgb *= textureLod(ssao.occlusion, pixel_pos(), 0).r;

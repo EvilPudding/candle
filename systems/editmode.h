@@ -5,6 +5,12 @@
 #include <utils/mesh.h>
 #include <utils/nk.h>
 
+/* struct tool_event */
+/* { */
+/* 	void *ctx; */
+/* 	entity_t selected; */
+/* }; */
+
 typedef struct
 {
 	c_t super; /* extends c_t */
@@ -24,8 +30,11 @@ typedef struct
 	int menu_y;
 
 	vec3_t drag_diff;
+	vec4_t start_rot;
+	vec2_t start_screen;
+	float start_radius;
 
-	float mouse_depth;
+	vec3_t mouse_screen_pos;
 
 	void *nk;
 	vec2_t spawn_pos;

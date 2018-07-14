@@ -47,11 +47,19 @@ static int tool_icosphere_gui(void *ctx, struct conf_ico *conf)
 	return 0;
 }
 
+static int tool_disk_gui(void *ctx, struct conf_disk *conf)
+{
+	nk_property_float(ctx, "#radius:", -10000, &conf->radius1, 10000, 0.1, 0.05);
+	nk_property_float(ctx, "#inner radius:", -10000, &conf->radius2, 10000, 0.1, 0.05);
+	nk_property_int(ctx, "#segments:", 1, &conf->segments, 1000, 1, 1);
+	return 0;
+}
+
 static int tool_torus_gui(void *ctx, struct conf_torus *conf)
 {
 	nk_property_float(ctx, "#radius:", -10000, &conf->radius1, 10000, 0.1, 0.05);
-	nk_property_int(ctx, "#segments:", 1, &conf->segments1, 1000, 1, 1);
 	nk_property_float(ctx, "#inner radius:", -10000, &conf->radius2, 10000, 0.1, 0.05);
+	nk_property_int(ctx, "#segments:", 1, &conf->segments1, 1000, 1, 1);
 	nk_property_int(ctx, "#inner segments:", 1, &conf->segments2, 1000, 1, 1);
 	return 0;
 }
@@ -75,7 +83,9 @@ static int tool_extrude_gui(void *ctx, struct conf_extrude *conf)
 	nk_property_float(ctx, "#x:", -10000, &conf->offset.x, 10000, 0.1, 0.05);
 	nk_property_float(ctx, "#y:", -10000, &conf->offset.y, 10000, 0.1, 0.05);
 	nk_property_float(ctx, "#z:", -10000, &conf->offset.z, 10000, 0.1, 0.05);
+#ifdef MESH4
 	nk_property_float(ctx, "#w:", -10000, &conf->offset.w, 10000, 0.1, 0.05);
+#endif
 	nk_property_float(ctx, "#scale:", -10000, &conf->scale, 10000, 0.1, 0.05);
 	nk_property_int(ctx, "#steps:", 1, &conf->steps, 1000, 1, 1);
 	/* 0.1+0.9*math.pow(x*2-1,2) */
@@ -167,6 +177,19 @@ static mesh_t *tool_icosphere_edit(
 		mesh_unlock(state);
 	}
 	return state;
+}
+
+static mesh_t *tool_disk_edit(mesh_t *mesh, struct conf_disk *conf)
+{
+	mesh = mesh_clone(mesh);
+	mesh_lock(mesh);
+	mesh_disk(mesh, conf->radius1, conf->radius2, conf->segments,
+			VEC3(0.0, 1.0, 0.0));
+	mesh_select(mesh, SEL_EDITING, MESH_FACE, -1);
+	mesh->has_texcoords = 0;
+
+	mesh_unlock(mesh);
+	return mesh;
 }
 
 static mesh_t *tool_torus_edit(mesh_t *mesh, struct conf_torus *conf)
@@ -321,7 +344,7 @@ static mesh_t *tool_extrude_edit(
 	}
 	else
 	{
-		mesh_extrude_edges(state, new->steps, new->offset.xyz, new->scale,
+		mesh_extrude_edges(state, new->steps, new->offset, new->scale,
 				new->scale_f ? (modifier_cb)interpret_scale : NULL,
 				new->offset_f ? (modifier_cb)interpret_offset : NULL, &args);
 		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_2d);
@@ -633,6 +656,36 @@ int c_model_render_at(c_model_t *self, shader_t *shader, c_node_t *node,
 	return CONTINUE;
 }
 
+
+int c_model_tool(c_model_t *self, void *ctx)
+{
+	int i;
+	int sys = c_entity(self) == SYS;
+	for(i = 0; i < g_edit_tools_count; i++)
+	{
+		struct edit_tool *tool = &g_edit_tools[i];
+		if(!sys && !tool->require_sys)
+		{
+			if(nk_button_label(ctx, tool->name))
+			{
+				c_model_edit(self, i, MESH_FACE);
+				return STOP;
+			}
+		}
+		else if(sys && tool->require_sys)
+		{
+			if(nk_button_label(ctx, tool->name))
+			{
+				entity_t ent = entity_new(c_model_new(NULL, mat_new("k"), 1, 1));
+				c_editmode_select(c_editmode(&SYS), ent);
+				c_model_edit(c_model(&ent), i, MESH_FACE);
+				return STOP;
+			}
+		}
+	}
+	return CONTINUE;
+}
+
 int c_model_menu(c_model_t *self, void *ctx)
 {
 	int i;
@@ -746,10 +799,12 @@ int c_model_scene_changed(c_model_t *self, entity_t *entity)
 }
 
 void add_tool(char *name, tool_gui_cb gui, tool_edit_cb edit, size_t size,
-		void *defaults)
+		void *defaults, int require_sys)
 {
 	struct edit_tool tool = {gui, edit, size};
 	strcpy(tool.name, name);
+	tool.ref = ref(name);
+	tool.require_sys = require_sys;
 	if(defaults)
 	{
 		tool.defaults = calloc(1, size);
@@ -775,6 +830,7 @@ static void c_model_destroy(c_model_t *self)
 }
 
 
+
 REG()
 {
 	signal_init(sig("mesh_changed"), sizeof(mesh_t));
@@ -786,6 +842,7 @@ REG()
 	ct_listener(ct, ENTITY, sig("entity_created"), c_model_created);
 
 	ct_listener(ct, WORLD, sig("component_menu"), c_model_menu);
+	ct_listener(ct, WORLD, sig("component_tool"), c_model_tool);
 
 	ct_listener(ct, ENTITY, sig("spacial_changed"), c_model_scene_changed);
 
@@ -799,32 +856,36 @@ REG()
 
 	add_tool("circle", (tool_gui_cb)tool_circle_gui,
 			(tool_edit_cb)tool_circle_edit,
-		sizeof(struct conf_circle), &(struct conf_circle){2, 10});
+		sizeof(struct conf_circle), &(struct conf_circle){2, 10}, 1);
 
 	add_tool("sphere", (tool_gui_cb)tool_sphere_gui,
-			(tool_edit_cb)tool_sphere_edit, sizeof(struct conf_sphere), NULL);
+			(tool_edit_cb)tool_sphere_edit, sizeof(struct conf_sphere), NULL, 1);
 
 	add_tool("cube", (tool_gui_cb)tool_cube_gui, (tool_edit_cb)tool_cube_edit,
 		sizeof(struct conf_cube),
-		&(struct conf_cube){1.0f});
+		&(struct conf_cube){1.0f}, 1);
 
 	add_tool("torus", (tool_gui_cb)tool_torus_gui, (tool_edit_cb)tool_torus_edit,
 		sizeof(struct conf_torus),
-		&(struct conf_torus){2.0f, 0.2f, 10, 4});
+		&(struct conf_torus){1.0f, 0.2f, 30, 20}, 1);
+
+	add_tool("disk", (tool_gui_cb)tool_disk_gui, (tool_edit_cb)tool_disk_edit,
+		sizeof(struct conf_disk),
+		&(struct conf_disk){2.0f, 0.2f, 10}, 1);
 
 	add_tool("icosphere", (tool_gui_cb)tool_icosphere_gui,
 			(tool_edit_cb)tool_icosphere_edit, sizeof(struct conf_ico),
-			&(struct conf_ico){1.0f, 0});
+			&(struct conf_ico){1.0f, 0}, 1);
 
 	add_tool("extrude", (tool_gui_cb)tool_extrude_gui,
 		(tool_edit_cb)tool_extrude_edit, sizeof(struct conf_extrude),
-		&(struct conf_extrude){vec4(0.0f, 2.0f, 0.0f, 0.0f), 1.0f, 1});
+		&(struct conf_extrude){VEC3(0.0f, 2.0f, 0.0f), 1.0f, 1}, 0);
 
 	add_tool("spherize", (tool_gui_cb)tool_spherize_gui,
 		(tool_edit_cb)tool_spherize_edit, sizeof(struct conf_spherize),
-		&(struct conf_spherize){1, 1});
+		&(struct conf_spherize){1, 1}, 0);
 
 	add_tool("subdivide", (tool_gui_cb)tool_subdivide_gui,
 		(tool_edit_cb)tool_subdivide_edit, sizeof(struct conf_subdivide),
-		&(struct conf_subdivide){1});
+		&(struct conf_subdivide){1}, 0);
 }

@@ -40,7 +40,6 @@ void main()
 		vec3 c_light_dir = c_light - c_pos;
 		vec3 w_light_dir = light_pos - w_pos;
 
-
 		float point_to_light = length(w_light_dir);
 		/* FragColor = vec4(texture(shadow_map, -vec).rgb, 1.0f); return; */
 
