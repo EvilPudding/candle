@@ -21,7 +21,7 @@ static void c_axis_init(c_axis_t *self)
 	}
 }
 
-c_axis_t *c_axis_new(int type, vec4_t dir)
+c_axis_t *c_axis_new(int type, vecN_t dir)
 {
 	c_axis_t *self = component_new("axis");
 
@@ -32,35 +32,39 @@ c_axis_t *c_axis_new(int type, vec4_t dir)
 	}
 	else
 	{
-		m->emissive.color = vec4(_vec3(dir.xyz), 0.8f);
+		m->emissive.color = vec4(_vec3(dir), 0.8f);
 	}
 	m->albedo.color = vec4(1, 1, 1, 1.0f);
 	self->type = type;
 
-	self->dir_mesh = mesh_new();
-
-	mesh_lock(self->dir_mesh);
-#ifdef MESH4
-	mesh_circle(self->dir_mesh, 0.03f, 8, dir);
-	mesh_extrude_edges(self->dir_mesh, 1,
-			vec4_scale(dir, 0.5), 1.0f, NULL, NULL, NULL);
-	mesh_extrude_edges(self->dir_mesh, 1,
-			vec4(0.0, 0.0, 0.0, 0.0), 1.70f, NULL, NULL, NULL);
-	mesh_extrude_edges(self->dir_mesh, 1,
-			vec4_scale(dir, 0.1), 0.01f, NULL, NULL, NULL);
-#else
-	mesh_circle(self->dir_mesh, 0.03f, 8, dir.xyz);
-	mesh_extrude_edges(self->dir_mesh, 1,
-			vec4_scale(dir, 0.5).xyz, 1.0f, NULL, NULL, NULL);
-	mesh_extrude_edges(self->dir_mesh, 1,
-			vec4(0.0, 0.0, 0.0, 0.0).xyz, 1.70f, NULL, NULL, NULL);
-	mesh_extrude_edges(self->dir_mesh, 1,
-			vec4_scale(dir, 0.1).xyz, 0.01f, NULL, NULL, NULL);
-#endif
-	mesh_unlock(self->dir_mesh);
+	if(type == 0)
+	{
+		self->dir_mesh = mesh_new();
+		mesh_lock(self->dir_mesh);
+		mesh_circle(self->dir_mesh, 0.03f, 8, dir);
+		mesh_extrude_edges(self->dir_mesh, 1, vecN_(scale)(dir, 0.5), 1.0f, NULL, NULL, NULL);
+		mesh_extrude_edges(self->dir_mesh, 1, ZN, 1.70f, NULL, NULL, NULL);
+		mesh_extrude_edges(self->dir_mesh, 1, vecN_(scale)(dir, 0.1), 0.01f, NULL, NULL, NULL);
+		mesh_unlock(self->dir_mesh);
+	}
+	else if(type == 1)
+	{
+		self->dir_mesh = g_rot_axis_mesh;
+	}
+	else if(type == 2)
+	{
+		self->dir_mesh = mesh_new();
+		mesh_lock(self->dir_mesh);
+		vecN_t point = vecN_(scale)(dir, 0.5);
+		mesh_circle(self->dir_mesh, 0.03f, 8, dir);
+		mesh_extrude_edges(self->dir_mesh, 1, point, 1.0f, NULL, NULL, NULL);
+		mesh_translate(self->dir_mesh, XYZ(point));
+		mesh_cube(self->dir_mesh, 0.1, 1.0f);
+		mesh_unlock(self->dir_mesh);
+	}
 
 	entity_add_component(c_entity(self),
-			c_model_new(type?g_rot_axis_mesh:self->dir_mesh, m, 0, !self->type));
+			c_model_new(self->dir_mesh, m, 0, !self->type));
 	c_model(self)->xray = 1;
 	c_model(self)->scale_dist = 0.2f;
 
@@ -96,44 +100,46 @@ int c_axis_mouse_move(c_axis_t *self, mouse_move_data *event)
 		if(target)
 		{
 			entity_t parent = c_node(&target)->parent;
+			float amount = -event->sy * 0.04;
 
 			c_spacial_t *sc = c_spacial(&target);
 
-			if(self->type == 0)
+			vec3_t dir = self->dir;
+			if(parent)
 			{
-				vec3_t dir = self->dir;
-				if(parent)
-				{
-					c_node_t *nc = c_node(&parent);
-
-					vec3_t world_dir = c_node_dir_to_global(c_node(&target), dir);
-
-					world_dir = vec3_norm(world_dir);
-
-					dir = c_node_dir_to_local(nc, world_dir);
-				}
-				else
-				{
-					/* dir = mat4_mul_vec4(sc->rot_matrix, vec4(_vec3(dir), 0.0f)).xyz; */
-					dir = quat_mul_vec3(sc->rot_quat, dir);
-				}
-				dir = vec3_scale(dir, -event->sy * 0.04);
-				c_spacial_set_pos(sc, vec3_add(dir, sc->pos));
+				c_node_t *nc = c_node(&parent);
+				vec3_t world_dir = c_node_dir_to_global(c_node(&target), dir);
+				world_dir = vec3_norm(world_dir);
+				dir = c_node_dir_to_local(nc, world_dir);
 			}
 			else
 			{
+				dir = quat_mul_vec3(sc->rot_quat, dir);
+			}
+			dir = vec3_scale(dir, amount);
+
+			if(self->type == 0)
+			{
+				c_spacial_set_pos(sc, vec3_add(dir, sc->pos));
+			}
+			else if(self->type == 1)
+			{
 				if(self->dir.x > 0.0f)
 				{
-					c_spacial_rotate_X(sc, -event->sy * 0.04);
+					c_spacial_rotate_X(sc, amount);
 				}
 				else if(self->dir.y > 0.0f)
 				{
-					c_spacial_rotate_Y(sc, -event->sy * 0.04);
+					c_spacial_rotate_Y(sc, amount);
 				}
 				else if(self->dir.z > 0.0f)
 				{
-					c_spacial_rotate_Z(sc, -event->sy * 0.04);
+					c_spacial_rotate_Z(sc, amount);
 				}
+			}
+			else if(self->type == 2)
+			{
+				c_spacial_set_scale(sc, vec3_add(vec3_scale(self->dir, amount), sc->scale));
 			}
 		}
 	}

@@ -30,9 +30,10 @@ typedef struct
 	int menu_y;
 
 	vec3_t drag_diff;
-	vec4_t start_rot;
+	vec4_t start_prop;
 	vec2_t start_screen;
 	float start_radius;
+	float tool_fade;
 
 	vec3_t mouse_screen_pos;
 

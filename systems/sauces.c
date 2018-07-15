@@ -151,7 +151,6 @@ void load_material(entity_t entity, const struct aiMesh *mesh,
 		{
 			strncpy(buffer, path.data, sizeof(buffer));
 			char *fname = filter_sauce_name(buffer);
-			printf("loading normal texture %s\n", fname);
 			texture_t *texture = sauces_tex(fname);
 			if(texture)
 			{
@@ -166,7 +165,6 @@ void load_material(entity_t entity, const struct aiMesh *mesh,
 		{
 			strncpy(buffer, path.data, sizeof(buffer));
 			char *fname = filter_sauce_name(buffer);
-			printf("loading diffuse texture %s\n", fname);
 			texture_t *texture = sauces_tex(fname);
 			if(texture)
 			{
@@ -182,7 +180,6 @@ void load_material(entity_t entity, const struct aiMesh *mesh,
 		{
 			strncpy(buffer, path.data, sizeof(buffer));
 			char *fname = filter_sauce_name(buffer);
-			printf("loading shiny texture %s\n", fname);
 			texture_t *texture = sauces_tex(fname);
 			if(texture)
 			{
@@ -196,7 +193,6 @@ void load_material(entity_t entity, const struct aiMesh *mesh,
 		if (AI_SUCCESS == aiGetMaterialColor(mat, AI_MATKEY_COLOR_TRANSPARENT,
 					(void*)&color))
 		{
-			vec4_print(color);
 			material->transparency.color = vec4(1-color.x, 1-color.y, 1-color.z, 1-color.a);
 		}
 		if (AI_SUCCESS == aiGetMaterialColor(mat, AI_MATKEY_COLOR_DIFFUSE,

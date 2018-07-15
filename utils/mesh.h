@@ -312,7 +312,7 @@ int mesh_update_unpaired_edges(mesh_t *self);
 int mesh_update_unpaired_faces(mesh_t *self);
 int mesh_vert_has_face(mesh_t *self, vertex_t *vert, int face_id);
 
-void mesh_translate(mesh_t *self, float x, float y, float z);
+void mesh_translate(mesh_t *self, vec3_t t);
 void mesh_rotate(mesh_t *self, float angle, int x, int y, int z);
 void mesh_save(mesh_t *self);
 void mesh_restore(mesh_t *self);

@@ -14,6 +14,7 @@ uniform int mode;
 uniform vec2 mouse_pos;
 uniform vec3 selected_pos;
 uniform float start_radius;
+uniform float tool_fade;
 
 vec3 real_pos(float depth, vec2 coord)
 {
@@ -55,8 +56,9 @@ void main()
 	/* FragColor = vec4(proj_mouse - proj_pixel, 1);return; */
 
 	float dist_to_mouse = length(proj_mouse - proj_pixel);
-	dist_to_mouse = clamp((0.4 - dist_to_mouse)/0.4 - 0.1, 0.0f, 1.0f);
-	intensity += pow(dist_to_mouse, 2);
+	float md = clamp((0.4 - dist_to_mouse)/0.4 - 0.1, 0.0f, 1.0f);
+	intensity += pow(md, 2);
+	intensity -= max(dist_to_mouse - (1 - tool_fade) * start_radius * 2.1, 0) * tool_fade;
 
 	if(intensity < 0.9) intensity = 0;
 	if(intensity > 1.0) intensity = 1;

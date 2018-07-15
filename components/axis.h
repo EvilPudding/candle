@@ -15,6 +15,6 @@ typedef struct
 
 DEF_CASTER("axis", c_axis, c_axis_t)
 
-c_axis_t *c_axis_new(int type, vec4_t dir);
+c_axis_t *c_axis_new(int type, vecN_t dir);
 
 #endif /* !AXIS_H */

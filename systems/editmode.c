@@ -23,7 +23,7 @@ static void c_editmode_selected_delete(c_editmode_t *self);
 
 mat_t *g_sel_mat = NULL;
 
-entity_t arrows, X, Y, Z, W, RX, RY, RZ;
+entity_t arrows, X, Y, Z, W, RX, RY, RZ, SX, SY, SZ;
 void c_editmode_init(c_editmode_t *self)
 {
 	self->spawn_pos = vec2(10, 10);
@@ -43,6 +43,11 @@ void c_editmode_init(c_editmode_t *self)
 int c_editmode_bind_mode(c_editmode_t *self)
 {
 	return self->mode;
+}
+
+float c_editmode_bind_tool_fade(c_editmode_t *self)
+{
+	return self->tool_fade;
 }
 
 vec2_t c_editmode_bind_over(c_editmode_t *self)
@@ -67,9 +72,9 @@ float c_editmode_bind_start_radius(c_editmode_t *self)
 vec3_t c_editmode_bind_selected_pos(c_editmode_t *self)
 {
 	if(!entity_exists(self->selected)) return Z3;
-	c_spacial_t *sc = c_spacial(&self->selected);
-	if(!sc) return Z3;
-	return sc->pos;
+	c_node_t *nc = c_node(&self->selected);
+	if(!nc) return Z3;
+	return c_node_local_to_global(nc, Z3);
 }
 
 vec2_t c_editmode_bind_context(c_editmode_t *self)
@@ -93,15 +98,19 @@ void c_editmode_coords(c_editmode_t *self)
 		c_node(&arrows)->inherit_scale = 0;
 		c_node(&arrows)->ghost = 1;
 
-		X = entity_new(c_name_new("X"), c_axis_new(0, vec4(1.0f, 0.0f, 0.0f, 0.0f)));
-		Z = entity_new(c_name_new("Z"), c_axis_new(0, vec4(0.0f, 0.0f, 1.0f, 0.0f)));
-		Y = entity_new(c_name_new("Y"), c_axis_new(0, vec4(0.0f, 1.0f, 0.0f, 0.0f)));
+		X = entity_new(c_name_new("X"), c_axis_new(0, VEC3(1.0f, 0.0f, 0.0f)));
+		Z = entity_new(c_name_new("Z"), c_axis_new(0, VEC3(0.0f, 0.0f, 1.0f)));
+		Y = entity_new(c_name_new("Y"), c_axis_new(0, VEC3(0.0f, 1.0f, 0.0f)));
 
-		RX = entity_new(c_name_new("RX"), c_axis_new(1, vec4(1.0f, 0.0f, 0.0f, 0.0f)));
-		RZ = entity_new(c_name_new("RZ"), c_axis_new(1, vec4(0.0f, 0.0f, 1.0f, 0.0f)));
-		RY = entity_new(c_name_new("RY"), c_axis_new(1, vec4(0.0f, 1.0f, 0.0f, 0.0f)));
+		RX = entity_new(c_name_new("RX"), c_axis_new(1, VEC3(1.0f, 0.0f, 0.0f)));
+		RZ = entity_new(c_name_new("RZ"), c_axis_new(1, VEC3(0.0f, 0.0f, 1.0f)));
+		RY = entity_new(c_name_new("RY"), c_axis_new(1, VEC3(0.0f, 1.0f, 0.0f)));
 
-		c_node_add(c_node(&arrows), 6, X, Y, Z, RX, RY, RZ);
+		SX = entity_new(c_name_new("SX"), c_axis_new(2, VEC3(1.0f, 0.0f, 0.0f)));
+		SZ = entity_new(c_name_new("SZ"), c_axis_new(2, VEC3(0.0f, 0.0f, 1.0f)));
+		SY = entity_new(c_name_new("SY"), c_axis_new(2, VEC3(0.0f, 1.0f, 0.0f)));
+
+		c_node_add(c_node(&arrows), 9, X, Y, Z, RX, RY, RZ, SX, SY, SZ);
 
 		c_spacial_rotate_Z(c_spacial(&RX), -M_PI / 2.0f);
 		c_spacial_rotate_X(c_spacial(&RZ), M_PI / 2.0f);
@@ -237,6 +246,7 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 			{BIND_CAM, "camera", (getter_cb)c_renderer_get_camera, c_renderer(self)},
 			{BIND_VEC2, "mouse_pos", (getter_cb)c_editmode_bind_mouse_pos, self},
 			{BIND_NUM, "start_radius", (getter_cb)c_editmode_bind_start_radius, self},
+			{BIND_NUM, "tool_fade", (getter_cb)c_editmode_bind_tool_fade, self},
 			{BIND_VEC3, "selected_pos", (getter_cb)c_editmode_bind_selected_pos, self},
 			{BIND_NONE}
 		}
@@ -288,7 +298,17 @@ void c_editmode_pressing(c_editmode_t *self, mouse_move_data *event)
 	c_camera_t *cam = c_camera(&renderer->camera);
 
 	c_spacial_t *sc = c_spacial(&self->selected);
-	entity_t parent = c_node(&self->selected)->parent;
+	c_node_t *ns = c_node(sc);
+	c_node_t *nc = c_node(cam);
+	c_node_update_model(ns);
+	c_node_t *parent = NULL;
+	if(entity_exists(ns->parent))
+	{
+		parent = c_node(&ns->parent);
+		c_node_update_model(parent);
+	}
+	vec3_t obj_pos = c_node_local_to_global(ns, Z3);
+	vec3_t cam_pos = c_node_local_to_global(nc, Z3);
 
 	vec2_t p = vec2(event->x / renderer->width,
 			1.0f - event->y / renderer->height);
@@ -297,77 +317,63 @@ void c_editmode_pressing(c_editmode_t *self, mouse_move_data *event)
 	{
 		self->dragging = 1;
 
-		if(entity_exists(parent))
+		if(parent)
 		{
-			c_node_t *nc = c_node(&parent);
-			vec3_t local_pos = c_node_global_to_local(nc, self->mouse_position);
+			vec3_t local_pos = c_node_global_to_local(parent, self->mouse_position);
 			self->drag_diff = vec3_sub(sc->pos, local_pos);
 		}
 		else
 		{
 			self->drag_diff = vec3_sub(sc->pos, self->mouse_position);
 		}
-		self->start_rot = sc->rot_quat;
 		self->start_screen = p;
-		if(self->tool)
-		{
-			float dist = -mat4_mul_vec4(cam->view_matrix, vec4(_vec3(sc->pos), 1.0f)).z;
 
+		{
+			float dist = -mat4_mul_vec4(cam->view_matrix, vec4(_vec3(obj_pos), 1.0f)).z;
 			dist = c_camera_unlinearize(cam, dist);
 			vec3_t proj = c_camera_real_pos(cam, dist, p);
-
-			/* vec3_t p1 = c_camera_real_pos(cam, dist, vec2(0.5,0.5)); */
-			/* vec3_t p2 = c_camera_real_pos(cam, dist*0.1, vec2(0.5,0.5)); */
-
-			/* if(!entity_exists(g_disk)) */
-			/* { */
-				/* mesh_t *disk = mesh_new(); */
-				/* mat_t *mat = mat_new("disk"); */
-				/* mat->emissive.color = vec4(0.1, 0.1, 0.5, 1.0f); */
-				/* mat->transparency.color = vec4(0.1, 0.1, 0.1, 0.1f); */
-				/* g_disk = entity_new(c_name_new("disk"), c_node_new(), c_model_new(disk, mat, 1, 1)); */
-				/* c_model(&g_disk)->xray = 1; */
-			/* } */
-			/* c_model_t *dc = c_model(&g_disk); */
-			/* dc->visible = 1; */
+			self->tool_fade = 1;
+			self->start_radius = vec3_dist(proj, obj_pos);
+		}
+		if(self->tool == 0)
+		{
+			self->start_prop.xyz = sc->pos;
+		}
+		else if(self->tool == 1)
+		{
+			self->start_prop = sc->rot_quat;
 			c_renderer_toggle_pass(c_renderer(self), ref("tool"), 1);
-			float d = vec3_dist(proj, sc->pos);
-			self->start_radius = d;
-			/* mesh_lock(dc->mesh); */
-			/* mesh_clear(dc->mesh); */
-			/* mesh_disk(dc->mesh, d-0.2, d+0.2, 64, VEC3(0.0, 0.0, 1.0)); */
-			/* c_spacial_look_at(c_spacial(&g_disk), vec3_sub(p2, p1), vec3(0,1,0)); */
-			/* c_spacial_set_pos(c_spacial(&g_disk), sc->pos); */
-			/* mesh_unlock(dc->mesh); */
+		}
+		else if(self->tool == 2)
+		{
+			self->start_prop.xyz = sc->scale;
 		}
 	}
-	if(!self->tool)
+	if(self->tool == 0)
 	{
 		vec3_t pos = c_camera_real_pos(cam, self->mouse_screen_pos.z, p);
 
-		if(entity_exists(parent))
+		if(parent)
 		{
-			c_node_t *nc = c_node(&parent);
-			pos = c_node_global_to_local(nc, pos);
+			pos = c_node_global_to_local(parent, pos);
 		}
 
 		c_spacial_set_pos(sc, vec3_add(self->drag_diff, pos));
 	}
-	else
+	else if(self->tool == 1)
 	{
 		c_spacial_lock(sc);
-		c_spacial_t *cs = c_spacial(cam);
-		vec3_t to_cam = vec3_norm(vec3_sub(sc->pos, cs->pos));
-		vec2_t sp = c_camera_screen_pos(cam, sc->pos).xy;
+
+		vec2_t sp = c_camera_screen_pos(cam, obj_pos).xy;
 		vec2_t dif = vec2_sub(p, sp);
 		float angle1 = atan2f(self->start_screen.y - sp.y, self->start_screen.x - sp.x);
 		float angle2 = atan2f(dif.y, dif.x);
 		float angle = angle1 - angle2;
 
-		float dist = -mat4_mul_vec4(cam->view_matrix, vec4(_vec3(sc->pos), 1.0f)).z;
+		float dist = -mat4_mul_vec4(cam->view_matrix, vec4(_vec3(obj_pos), 1.0f)).z;
 		vec3_t proj = c_camera_real_pos(cam, c_camera_unlinearize(cam, dist), p);
 
-		float d = vec3_dist(proj, sc->pos);
+		float d = vec3_dist(proj, obj_pos);
 		d -= self->start_radius;
 		if(d > 0.0f)
 		{
@@ -379,21 +385,40 @@ void c_editmode_pressing(c_editmode_t *self, mouse_move_data *event)
 			d += 0.3f;
 			d = fmin(d, 0.0f);
 		}
-		vec3_t to_mouse = vec3_sub(sc->pos, proj);
+		vec3_t to_mouse = vec3_sub(obj_pos, proj);
 
-		vec4_t rot = quat_rotate(to_cam, angle);
-		/* rot = quat_mul(self->start_rot, rot); */
-		rot = quat_mul(rot, self->start_rot);
+		vec3_t to_cam = vec3_sub(obj_pos, cam_pos);
+
+		vec3_t axis1 = to_cam;
+		if(parent)
+		{
+			axis1 = c_node_dir_to_local(parent, to_cam);
+		}
+
+		vec4_t rot = quat_rotate(vec3_norm(axis1), angle);
+		rot = quat_mul(rot, self->start_prop);
 
 		/* printf("%f\n", d); */
-		vec3_t axis = vec3_norm(vec3_cross(to_cam, to_mouse));
-		vec4_t rot2 = quat_rotate(axis, (d / (self->start_radius - 0.3))*M_PI);
+		vec3_t axis2 = vec3_cross(to_cam, to_mouse);
+		if(parent)
+		{
+			axis2 = c_node_dir_to_local(parent, axis2);
+		}
+		vec4_t rot2 = quat_rotate(vec3_norm(axis2), (d / (self->start_radius - 0.3))*M_PI);
 		rot = quat_mul(rot2, rot);
 
 		sc->rot_quat = rot;
 		sc->update_id++;
 		sc->modified = 1;
 		c_spacial_unlock(sc);
+	}
+	else if(self->tool == 2)
+	{
+		float dist = -mat4_mul_vec4(cam->view_matrix, vec4(_vec3(sc->pos), 1.0f)).z;
+		vec3_t proj = c_camera_real_pos(cam, c_camera_unlinearize(cam, dist), p);
+
+		float r = vec3_dist(proj, sc->pos);
+		c_spacial_set_scale(sc, vec3_scale(self->start_prop.xyz, r / self->start_radius));
 	}
 
 }
@@ -564,14 +589,17 @@ static void c_editmode_update_axis(c_editmode_t *self)
 {
 	if(entity_exists(arrows))
 	{
-		c_model(&RX)->visible = self->selected && self->tool;
-		c_model(&RY)->visible = self->selected && self->tool;
-		c_model(&RZ)->visible = self->selected && self->tool;
-		c_model(&X)->visible = self->selected && !self->tool;
-		c_model(&Y)->visible = self->selected && !self->tool;
-		c_model(&Z)->visible = self->selected && !self->tool;
+		c_model(&SX)->visible = self->selected && self->tool == 2;
+		c_model(&SY)->visible = self->selected && self->tool == 2;
+		c_model(&SZ)->visible = self->selected && self->tool == 2;
+		c_model(&RX)->visible = self->selected && self->tool == 1;
+		c_model(&RY)->visible = self->selected && self->tool == 1;
+		c_model(&RZ)->visible = self->selected && self->tool == 1;
+		c_model(&X)->visible = self->selected && self->tool == 0;
+		c_model(&Y)->visible = self->selected && self->tool == 0;
+		c_model(&Z)->visible = self->selected && self->tool == 0;
 #ifdef MESH4
-		c_model(&W)->visible = self->selected && !self->tool;
+		c_model(&W)->visible = self->selected && self->tool == 0;
 #endif
 	}
 }
@@ -602,14 +630,9 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 				}
 			}
 			break;
-		case 't':
-			self->tool = 0;
-			c_editmode_update_axis(self);
-			break;
-		case 'r':
-			self->tool = 1;
-			c_editmode_update_axis(self);
-			break;
+		case 't': self->tool = 0; c_editmode_update_axis(self); break;
+		case 'r': self->tool = 1; c_editmode_update_axis(self); break;
+		case 's': self->tool = 2; c_editmode_update_axis(self); break;
 		case '`':
 			{
 				if(!self->control)
@@ -975,6 +998,16 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 }
 
 
+int c_editmode_update(c_editmode_t *self, float *dt)
+{
+	if(self->tool_fade > 0.0f)
+	{
+		self->tool_fade -= *dt * 5;
+		if(self->tool_fade < 0) self->tool_fade = 0.0f;
+	}
+	return CONTINUE;
+}
+
 int c_editmode_draw(c_editmode_t *self)
 {
 
@@ -1060,6 +1093,8 @@ REG()
 	ct_listener(ct, WORLD, sig("mouse_move"), c_editmode_mouse_move);
 
 	ct_listener(ct, WORLD, sig("world_draw"), c_editmode_draw);
+
+	ct_listener(ct, WORLD, sig("world_update"), c_editmode_update);
 
 	ct_listener(ct, WORLD | 50, sig("component_menu"), c_editmode_component_menu);
 

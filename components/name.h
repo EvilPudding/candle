@@ -6,7 +6,7 @@
 typedef struct
 {
 	c_t super; /* extends c_t */
-	char name[32];
+	char name[64];
 	unsigned int hash;
 } c_name_t;
 

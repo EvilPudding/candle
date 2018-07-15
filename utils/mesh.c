@@ -1660,10 +1660,9 @@ static inline float to_radians(float angle)
 	return angle * (M_PI / 180.0);
 }
 
-void mesh_translate(mesh_t *self, float x, float y, float z)
+void mesh_translate(mesh_t *self, vec3_t t)
 {
-	self->transformation = mat4_translate_in_place(self->transformation,
-			vec3(x, y, z));
+	self->transformation = mat4_translate_in_place(self->transformation, t);
 }
 
 void mesh_rotate(mesh_t *self, float angle, int x, int y, int z)
