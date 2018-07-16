@@ -14,7 +14,8 @@ void c_decal_init(c_decal_t *self)
 
 	if(!g_decal_mesh)
 	{
-		g_decal_mesh = sauces_mesh("cube.ply");
+		g_decal_mesh = mesh_new();
+		mesh_cube(g_decal_mesh, 1, 1);
 	}
 	self->visible = 1;
 

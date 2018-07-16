@@ -68,7 +68,7 @@ c_axis_t *c_axis_new(int type, vecN_t dir)
 	c_model(self)->xray = 1;
 	c_model(self)->scale_dist = 0.2f;
 
-	self->dir = dir.xyz;
+	self->dir = XYZ(dir);
 
 	return self;
 }
