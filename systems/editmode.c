@@ -414,10 +414,10 @@ void c_editmode_pressing(c_editmode_t *self, mouse_move_data *event)
 	}
 	else if(self->tool == 2)
 	{
-		float dist = -mat4_mul_vec4(cam->view_matrix, vec4(_vec3(sc->pos), 1.0f)).z;
+		float dist = -mat4_mul_vec4(cam->view_matrix, vec4(_vec3(obj_pos), 1.0f)).z;
 		vec3_t proj = c_camera_real_pos(cam, c_camera_unlinearize(cam, dist), p);
 
-		float r = vec3_dist(proj, sc->pos);
+		float r = vec3_dist(proj, obj_pos);
 		c_spacial_set_scale(sc, vec3_scale(self->start_prop.xyz, r / self->start_radius));
 	}
 
