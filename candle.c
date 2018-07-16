@@ -5,7 +5,6 @@
 #include <stdlib.h>
 
 #include <systems/renderer.h>
-#include <systems/physics.h>
 #include <systems/window.h>
 #include <systems/sauces.h>
 #include <systems/nodegraph.h>
@@ -418,7 +417,6 @@ void candle_init2(void)
 	entity_add_component(SYS, c_nodegraph_new());
 	entity_add_component(SYS, c_mouse_new());
 	entity_add_component(SYS, c_keyboard_new());
-	entity_add_component(SYS, c_physics_new());
 	entity_add_component(SYS, c_sauces_new());
 	/* entity_add_component(SYS, c_model_new(NULL, NULL, 0, 0)); */
 

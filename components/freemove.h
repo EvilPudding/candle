@@ -15,6 +15,8 @@ typedef struct
 
 	int plane_movement;
 
+	vec3_t vel;
+
 	entity_t force_down;
 } c_freemove_t;
 

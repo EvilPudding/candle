@@ -1,7 +1,6 @@
 #include "freelook.h"
 #include <systems/window.h>
 #include <components/spacial.h>
-#include <components/force.h>
 #include <components/node.h>
 #include <systems/mouse.h>
 #include <math.h>
