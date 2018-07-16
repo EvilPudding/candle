@@ -487,11 +487,11 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
 
 	/* return vec4(specularColor, 1); */
 	vec3 specularColor = mix(f0, base_color.rgb, metallic);
-    /* float reflectance = max(max(specularColor.r, specularColor.g), specularColor.b); */
+    float reflectance = max(max(specularColor.r, specularColor.g), specularColor.b);
 
     float NdotL = clamp(dot(w_nor, -eye_dir), 0.001, 1.0);
 
-    specularColor = fresnelSchlick(specularColor, NdotL) * CNST_1DIVPI;
+    specularColor = fresnelSchlick(vec3(reflectance), NdotL) * CNST_1DIVPI;
     /* float fadeOnRoughness = saturate(gloss * 4.0f); */
     float fadeOnRoughness = 1;
 	float fade = screenEdgefactor * fadeOnRoughness * (1.0f - saturate(remainingAlpha));
