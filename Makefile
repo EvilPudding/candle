@@ -21,7 +21,6 @@ CFLAGS_DEB = $(CFLAGS) -g3
 ##############################################################################
 
 all: $(DIR)/export.a
-	echo $(myarr)
 
 $(DIR)/export.a: init $(OBJS_REL) $(SHAD)
 	$(AR) rs $@ $(OBJS_REL) $(SHAD)
@@ -59,6 +58,7 @@ $(DIR)/%.debug.o: %.c
 ##############################################################################
 
 init:
+	git submodule update
 	mkdir -p $(DIR)
 	mkdir -p $(DIR)/components
 	mkdir -p $(DIR)/systems

@@ -1085,6 +1085,7 @@ REG()
 
 	signal_init(sig("component_menu"), sizeof(struct nk_context*));
 	signal_init(sig("component_tool"), sizeof(void*));
+	signal_init(sig("pick_file"), sizeof(void*));
 
 	ct_listener(ct, WORLD, sig("key_up"), c_editmode_key_up);
 
