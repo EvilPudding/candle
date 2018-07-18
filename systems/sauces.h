@@ -6,6 +6,12 @@
 #include <utils/texture.h>
 #include <utils/material.h>
 
+struct load_signal
+{
+	const char *filename;
+	float scale;
+};
+
 typedef struct
 {
 	char name[64];

@@ -3,6 +3,8 @@ LD = cc
 
 DIR = build
 
+DEPS =  $(shell sdl2-config --libs) -lglut -lGLU -lm -lGL -lGLEW
+
 SHAD = $(patsubst %.frag, $(DIR)/%.frag.o, $(wildcard shaders/*.frag)) \
 	   $(patsubst %.vert, $(DIR)/%.vert.o, $(wildcard shaders/*.vert)) \
 
@@ -12,7 +14,8 @@ SRCS = $(wildcard *.c) $(wildcard components/*.c) $(wildcard systems/*.c) \
 OBJS_REL = $(patsubst %.c, $(DIR)/%.o, $(SRCS))
 OBJS_DEB = $(patsubst %.c, $(DIR)/%.debug.o, $(SRCS))
 
-CFLAGS = $(shell sdl2-config --cflags) -DUSE_VAO -Wall -I. -Wuninitialized -Wstrict-prototypes $(PARENTCFLAGS)
+CFLAGS = $(shell sdl2-config --cflags) -DUSE_VAO -Wall -I. -Wuninitialized \
+	-Wstrict-prototypes $(PARENTCFLAGS)
 
 CFLAGS_REL = $(CFLAGS) -O3
 
@@ -21,6 +24,7 @@ CFLAGS_DEB = $(CFLAGS) -g3
 ##############################################################################
 
 all: $(DIR)/export.a
+	echo -n $(DEPS) > $(DIR)/deps
 
 $(DIR)/export.a: init $(OBJS_REL) $(SHAD)
 	$(AR) rs $@ $(OBJS_REL) $(SHAD)
@@ -48,6 +52,7 @@ $(DIR)/%.vert.o: %.vert
 ##############################################################################
 
 debug: $(DIR)/export_debug.a
+	echo -n $(DEPS) > $(DIR)/deps
 
 $(DIR)/export_debug.a: init $(OBJS_DEB) $(SHAD)
 	$(AR) rs $@ $(OBJS_DEB) $(SHAD)
