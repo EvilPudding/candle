@@ -55,7 +55,7 @@ void c_spacial_unlock(c_spacial_t *self)
 		self->modified = 0;
 		c_spacial_update_model_matrix(self);
 		entity_signal(self->super.entity, sig("spacial_changed"),
-				&self->super.entity);
+				&self->super.entity, NULL);
 	}
 }
 
@@ -257,7 +257,7 @@ int c_spacial_menu(c_spacial_t *self, void *ctx)
 		{
 			self->angle4 = tmpw;
 			entity_signal(c_entity(self), sig("spacial_changed"),
-					&c_entity(self));
+					&c_entity(self), NULL);
 		}
 #endif
 
@@ -305,5 +305,5 @@ void c_spacial_update_model_matrix(c_spacial_t *self)
 
 	self->model_matrix = mat4_scale_aniso(self->model_matrix, self->scale);
 
-	entity_signal(c_entity(self), sig("spacial_changed"), &c_entity(self));
+	entity_signal(c_entity(self), sig("spacial_changed"), &c_entity(self), NULL);
 }

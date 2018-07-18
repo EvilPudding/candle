@@ -879,11 +879,11 @@ int c_editmode_commands(c_editmode_t *self)
 									c_model(&self->selected)->layers[0].mat, 1, 1)));
 					nk_contextual_close(self->nk);
 				}
-				close |= entity_signal_same(self->selected, sig("component_tool"), self->nk) == STOP;
+				close |= entity_signal_same(self->selected, sig("component_tool"), self->nk, NULL) == STOP;
 			}
 			else
 			{
-				close |= entity_signal_same(c_entity(self), sig("component_tool"), self->nk) == STOP;
+				close |= entity_signal_same(c_entity(self), sig("component_tool"), self->nk, NULL) == STOP;
 			}
 
 			if(close) nk_contextual_close(self->nk);
@@ -933,7 +933,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 				if(nk_tree_push_id(self->nk, NK_TREE_TAB, ct->name,
 							NK_MAXIMIZED, i))
 				{
-					component_signal(comp, ct, sig("component_menu"), self->nk);
+					component_signal(comp, ct, sig("component_menu"), self->nk, NULL);
 					nk_tree_pop(self->nk);
 				}
 			}

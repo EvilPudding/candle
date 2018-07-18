@@ -21,7 +21,7 @@ typedef struct c_t c_t;
 
 typedef void(*init_cb)(c_t *self);
 typedef void(*destroy_cb)(c_t *self);
-typedef int(*signal_cb)(c_t *self, void *data);
+typedef int(*signal_cb)(c_t *self, void *data, void *output);
 typedef void(*c_reg_cb)(void);
 
 /* TODO: find appropriate place */

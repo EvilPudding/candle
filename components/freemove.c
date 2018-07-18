@@ -66,7 +66,7 @@ static int c_freemove_update(c_freemove_t *self, float *dt)
 
 	c_spacial_set_pos(sc, vec3_add(sc->pos, *vel));
 
-	entity_signal(self->super.entity, sig("spacial_changed"), &self->super.entity);
+	entity_signal(self->super.entity, sig("spacial_changed"), &self->super.entity, NULL);
 
 	return CONTINUE;
 }

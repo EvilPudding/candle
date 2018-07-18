@@ -77,7 +77,7 @@ int c_probe_render(c_probe_t *self, uint signal)
 		renderer->bound_camera_model = &self->models[f];
 		renderer->bound_exposure = 1.0f;
 
-		int res = entity_signal(c_entity(self), signal, NULL);
+		int res = entity_signal(c_entity(self), signal, NULL, NULL);
 		if(res == STOP)
 		{
 			renderer->bound_probe = entity_null;

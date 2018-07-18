@@ -528,7 +528,7 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 	if(!pass->shader) /* Maybe drawing without OpenGL */
 	{
 		/* CALL DRAW */
-		entity_signal(c_entity(self), pass->draw_signal, NULL);
+		entity_signal(c_entity(self), pass->draw_signal, NULL, NULL);
 		return pass->output;
 	}
 	else if(!pass->shader->ready)
@@ -578,7 +578,7 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 	self->bound_light = entity_null;
 
 	/* CALL DRAW */
-	entity_signal(c_entity(self), pass->draw_signal, NULL);
+	entity_signal(c_entity(self), pass->draw_signal, NULL, NULL);
 
 	glDisable(GL_DEPTH_TEST);
 
@@ -734,7 +734,7 @@ int c_renderer_mouse_press(c_renderer_t *self, mouse_button_data *event)
 			.x = event->x, .y = event->y, .direction = event->direction,
 			.depth = depth, .geom = geom, .button = event->button
 		};
-		return entity_signal_same(ent, sig("model_press"), &ev);
+		return entity_signal_same(ent, sig("model_press"), &ev, NULL);
 	}
 	return CONTINUE;
 }
@@ -752,7 +752,7 @@ int c_renderer_mouse_release(c_renderer_t *self, mouse_button_data *event)
 			.x = event->x, .y = event->y, .direction = event->direction,
 			.depth = depth, .geom = geom, .button = event->button
 		};
-		return entity_signal_same(ent, sig("model_release"), &ev);
+		return entity_signal_same(ent, sig("model_release"), &ev, NULL);
 	}
 	return CONTINUE;
 }
@@ -799,7 +799,7 @@ static void c_renderer_update_probes(c_renderer_t *self)
 	glEnable(GL_CULL_FACE); glerr();
 	glEnable(GL_DEPTH_TEST); glerr();
 
-	entity_signal(c_entity(self), sig("offscreen_render"), NULL);
+	entity_signal(c_entity(self), sig("offscreen_render"), NULL, NULL);
 
 	glerr();
 

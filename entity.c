@@ -32,7 +32,7 @@ int filter_listener(listener_t *self)
 entity_t _entity_new(int ignore, ...)
 {
 	entity_t self = _g_creating[--_g_creating_num];
-	entity_signal_same(self, sig("entity_created"), NULL);
+	entity_signal_same(self, sig("entity_created"), NULL, NULL);
 
 	return self;
 }
@@ -79,7 +79,7 @@ void entity_destroy(entity_t self)
 	}
 }
 
-int listener_signal(listener_t *self, entity_t ent, void *data)
+int listener_signal(listener_t *self, entity_t ent, void *data, void *output)
 {
 	khiter_t k;
 	ct_t *ct = ecm_get(self->target);
@@ -93,52 +93,52 @@ int listener_signal(listener_t *self, entity_t ent, void *data)
 		if((self->flags & ENTITY) && c_entity(c) != ent)
 			continue;
 
-		if(self->cb(c, data) == STOP) return STOP;
+		if(self->cb(c, data, output) == STOP) return STOP;
 	}
 	return CONTINUE;
 }
 
-int listener_signal_same(listener_t *self, entity_t ent, void *data)
+int listener_signal_same(listener_t *self, entity_t ent, void *data, void *output)
 {
 	c_t *c = ct_get(ecm_get(self->target), &ent);
 	if(c)
 	{
-		return self->cb(c, data);
+		return self->cb(c, data, output);
 	}
 	return CONTINUE;
 }
 
-int component_signal(c_t *comp, ct_t *ct, uint signal, void *data)
+int component_signal(c_t *comp, ct_t *ct, uint signal, void *data, void *output)
 {
 	listener_t *listener = ct_get_listener(ct, signal);
 	if(listener)
 	{
-		listener->cb(comp, data);
+		listener->cb(comp, data, output);
 	}
 	return CONTINUE;
 }
 
-int entity_signal_same(entity_t self, uint signal, void *data)
+int entity_signal_same(entity_t self, uint signal, void *data, void *output)
 {
 	int i;
 	signal_t *sig = ecm_get_signal(signal);
 	for(i = vector_count(sig->listener_types) - 1; i >= 0; i--)
 	{
 		listener_t *lis = vector_get(sig->listener_types, i);
-		int res = listener_signal_same(lis, self, data);
+		int res = listener_signal_same(lis, self, data, output);
 		if(res == STOP) return STOP;
 	}
 	return CONTINUE;
 }
 
-int entity_signal(entity_t self, uint signal, void *data)
+int entity_signal(entity_t self, uint signal, void *data, void *output)
 {
 	int i;
 	signal_t *sig = ecm_get_signal(signal);
 	for(i = vector_count(sig->listener_types) - 1; i >= 0; i--)
 	{
 		listener_t *lis = vector_get(sig->listener_types, i);
-		if(listener_signal(lis, self, data) == STOP) return STOP;
+		if(listener_signal(lis, self, data, output) == STOP) return STOP;
 	}
 	return CONTINUE;
 }
@@ -149,7 +149,7 @@ void _entity_add_post(entity_t self, c_t *comp)
 	--_g_creating_num;
 
 	ct_t *ct = ecm_get(comp->comp_type);
-	component_signal(comp, ct, ref("entity_created"), NULL);
+	component_signal(comp, ct, ref("entity_created"), NULL, NULL);
 
 }
 

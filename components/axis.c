@@ -149,7 +149,7 @@ int c_axis_mouse_move(c_axis_t *self, mouse_move_data *event)
 
 int c_axis_created(c_axis_t *self)
 {
-	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
+	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL, NULL);
 	return CONTINUE;
 }
 

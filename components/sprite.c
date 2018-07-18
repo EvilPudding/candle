@@ -70,7 +70,7 @@ c_sprite_t *c_sprite_new(mat_t *mat, int cast_shadow)
 int c_sprite_created(c_sprite_t *self)
 {
 	g_update_id++;
-	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
+	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL, NULL);
 	return CONTINUE;
 }
 

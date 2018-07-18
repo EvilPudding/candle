@@ -547,7 +547,7 @@ static int glg_update_buffers(glg_t *self)
 	self->updated = 1;
 	/* if(!self->ready) */
 	{
-		entity_signal(self->entity, sig("spacial_changed"), NULL);
+		entity_signal(self->entity, sig("spacial_changed"), NULL, NULL);
 	}
 	self->ready = 1;
 

@@ -404,7 +404,7 @@ void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset)
 	self->layers[i].wireframe = 0;
 	self->layers[i].offset = 0;
 	self->layers[i].smooth_angle = 0.2f;
-	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
+	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL, NULL);
 }
 
 c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow, int visible)
@@ -473,7 +473,7 @@ void c_model_propagate_edit(c_model_t *self, int cmd_id)
 	self->mesh->update_id = last_update_id + 1;
 	mesh_unlock(self->mesh);
 
-	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
+	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL, NULL);
 }
 
 void c_model_remove_edit(c_model_t *self, int cmd_id)
@@ -554,7 +554,7 @@ void c_model_set_mesh(c_model_t *self, mesh_t *mesh)
 {
 	mesh_t *old_mesh = self->mesh;
 	self->mesh = mesh;
-	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
+	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL, NULL);
 	if(old_mesh) mesh_destroy(old_mesh);
 }
 
@@ -564,7 +564,7 @@ int c_model_created(c_model_t *self)
 	if(self->mesh)
 	{
 		g_update_id++;
-		entity_signal_same(c_entity(self), sig("mesh_changed"), NULL);
+		entity_signal_same(c_entity(self), sig("mesh_changed"), NULL, NULL);
 	}
 	return CONTINUE;
 }

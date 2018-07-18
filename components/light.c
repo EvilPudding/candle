@@ -120,7 +120,7 @@ int c_light_probe_render(c_light_t *self)
 	if(!probe)
 	{
 		entity_add_component(c_entity(self), (c_t*)c_probe_new(self->shadow_size));
-		entity_signal(c_entity(self), sig("spacial_changed"), &c_entity(self));
+		entity_signal(c_entity(self), sig("spacial_changed"), &c_entity(self), NULL);
 		return STOP;
 	}
 	if(!g_depth_fs) return STOP;

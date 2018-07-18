@@ -93,7 +93,7 @@ int c_window_toggle_fullscreen_gl(c_window_t *self)
 
 	printf("window resize: %dx%d\n", self->width, self->height);
 	entity_signal(entity_null, sig("window_resize"),
-		&(window_resize_data){.width = self->width, .height = self->height});
+		&(window_resize_data){.width = self->width, .height = self->height}, NULL);
 
 	SDL_SetWindowSize(self->window, self->width, self->height);
 
@@ -115,7 +115,7 @@ void c_window_handle_resize(c_window_t *self, const SDL_Event event)
 	printf("window resize: %dx%d\n", self->width, self->height);
 
 	entity_signal(entity_null, sig("window_resize"),
-		&(window_resize_data){.width = self->width, .height = self->height});
+		&(window_resize_data){.width = self->width, .height = self->height}, NULL);
 }
 
 int c_window_created(c_window_t *self)
@@ -145,7 +145,7 @@ int c_window_created(c_window_t *self)
 	entity_signal(entity_null, sig("window_resize"),
 			&(window_resize_data){
 			.width = self->width,
-			.height = self->height});
+			.height = self->height}, NULL);
 
 	return CONTINUE;
 }
