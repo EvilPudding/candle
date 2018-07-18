@@ -51,6 +51,7 @@ void c_sauces_model_get(c_sauces_t *self, entity_t *target,
 void c_sauces_register_mat(c_sauces_t *self, mat_t *mat);
 
 #define sauces_register_mat(mat) (c_sauces_register_mat(c_sauces(&SYS), mat))
+#define sauces(hash, name) (c_sauces_get(c_sauces(&SYS), c_sauces(&SYS)->hash, name))
 #define sauces_mat_at(name) (c_sauces_get_mats_at(c_sauces(&SYS), name))
 #define sauces_mat(name) (c_sauces_mat_get(c_sauces(&SYS), name))
 #define sauces_mesh(name) (c_sauces_mesh_get(c_sauces(&SYS), name))
