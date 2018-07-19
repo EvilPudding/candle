@@ -57,8 +57,8 @@ char *filter_sauce_name(char *path_name)
 {
 	char *slash = strrchr(path_name, '/')?:strrchr(path_name, '\\');
 	if(slash) path_name = slash + 1;
-	char *dot = strrchr(path_name, '.');
-	if(dot) *dot = '\0';
+	/* char *dot = strrchr(path_name, '.'); */
+	/* if(dot) *dot = '\0'; */
 	to_lower_case(path_name);
 	return path_name;
 }

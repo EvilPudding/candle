@@ -2703,3 +2703,28 @@ float mesh_get_margin(const mesh_t *self)
 	return 0.001f; /* FIXME */
 }
 
+int load_mesh(mesh_t *mesh)
+{
+	char buffer[256];
+	strcpy(buffer, mesh->name);
+	printf("loading %s\n", mesh->name);
+	mesh_load(mesh, buffer);
+	return 1;
+}
+
+void *mesh_loader(const char *path, const char *name, uint ext)
+{
+	mesh_t *mesh = mesh_new();
+	strcpy(mesh->name, path);
+
+	SDL_CreateThread((int(*)(void*))load_mesh, "load_mesh", mesh);
+	/* load_mesh(mesh); */
+
+	return mesh;
+}
+
+void meshes_reg()
+{
+	sauces_loader(ref("obj"), mesh_loader);
+	sauces_loader(ref("ply"), mesh_loader);
+}

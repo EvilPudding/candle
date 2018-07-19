@@ -418,6 +418,10 @@ void candle_init2(void)
 	entity_add_component(SYS, c_mouse_new());
 	entity_add_component(SYS, c_keyboard_new());
 	entity_add_component(SYS, c_sauces_new());
+
+	textures_reg();
+	meshes_reg();
+	materials_reg();
 	/* entity_add_component(SYS, c_model_new(NULL, NULL, 0, 0)); */
 
 	//int res = pipe(candle->events);

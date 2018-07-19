@@ -2,9 +2,8 @@
 #define RESAUCES_H
 
 #include <ecm.h>
-#include <utils/mesh.h>
-#include <utils/texture.h>
-#include <utils/material.h>
+
+typedef void*(*sauces_loader_cb)(const char *path, const char *name, uint ext);
 
 struct load_signal
 {
@@ -18,44 +17,33 @@ typedef struct
 	char path[256];
 	void *data;
 } resource_t;
-KHASH_MAP_INIT_INT(res, resource_t)
+
+KHASH_MAP_INIT_INT(res, resource_t*)
+KHASH_MAP_INIT_INT(loa, sauces_loader_cb)
 
 typedef struct c_sauces_t
 {
 	c_t super;
 
-	khash_t(res) *meshes;
-	khash_t(res) *textures;
-	khash_t(res) *materials;
+	khash_t(loa) *loaders;
+	khash_t(res) *sauces;
+	khash_t(res) *generic;
 } c_sauces_t;
 
 DEF_CASTER("sauces", c_sauces, c_sauces_t)
 
 c_sauces_t *c_sauces_new(void);
-void c_sauces_register(void);
+void c_sauces_register(c_sauces_t *self, const char *name, const char *path,
+		void *data);
 
-resource_t *c_sauces_get(c_sauces_t *self, khash_t(res) *hash, const char *name);
+void c_sauces_loader(c_sauces_t *self, uint ref, sauces_loader_cb loader);
+void *c_sauces_get(c_sauces_t *self, const char *name);
 int c_sauces_index_dir(c_sauces_t *self, const char *dir_name);
-mat_t *c_sauces_mat_get(c_sauces_t *self, const char *name);
-int c_sauces_get_mats_at(c_sauces_t *self, const char *dir_name);
+resource_t *c_sauces_get_sauce(c_sauces_t *self, const char *name);
 
-texture_t *c_sauces_texture_get(c_sauces_t *self, const char *name);
-
-mesh_t *c_sauces_mesh_get(c_sauces_t *self, const char *name);
-
-/* material_t *c_sauces_mat_pick(c_sauces_t *self, void *ctx); */
-
-void c_sauces_model_get(c_sauces_t *self, entity_t *target,
-		const char *name, float scale);
-
-void c_sauces_register_mat(c_sauces_t *self, mat_t *mat);
-
-#define sauces_register_mat(mat) (c_sauces_register_mat(c_sauces(&SYS), mat))
-#define sauces(hash, name) (c_sauces_get(c_sauces(&SYS), c_sauces(&SYS)->hash, name))
-#define sauces_mat_at(name) (c_sauces_get_mats_at(c_sauces(&SYS), name))
-#define sauces_mat(name) (c_sauces_mat_get(c_sauces(&SYS), name))
-#define sauces_mesh(name) (c_sauces_mesh_get(c_sauces(&SYS), name))
-#define sauces_model(ent, name, scale) (c_sauces_model_get(c_sauces(&SYS), ent, name, scale))
-#define sauces_tex(name) (c_sauces_texture_get(c_sauces(&SYS), name))
+#define sauces_loader(ref, loader) (c_sauces_loader(c_sauces(&SYS), ref, loader))
+#define sauces_register(name, path, data) (c_sauces_register(c_sauces(&SYS), \
+			name, path, data))
+#define sauces(name) (c_sauces_get(c_sauces(&SYS), name))
 
 #endif /* !RESAUCES_H */

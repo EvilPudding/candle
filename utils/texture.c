@@ -726,3 +726,27 @@ texture_t *texture_cubemap
 	return self;
 }
 
+int load_tex(texture_t *texture)
+{
+	char buffer[256];
+	strcpy(buffer, texture->name);
+	texture_load(texture, buffer);
+	return 1;
+}
+
+void *tex_loader(const char *path, const char *name, uint ext)
+{
+	texture_t *texture = texture_new_2D(0, 0, TEX_INTERPOLATE);
+	strcpy(texture->name, path);
+
+	SDL_CreateThread((int(*)(void*))load_tex, "load_tex", texture);
+
+	return texture;
+}
+
+void textures_reg()
+{
+	sauces_loader(ref("png"), tex_loader);
+	sauces_loader(ref("tga"), tex_loader);
+	sauces_loader(ref("jpg"), tex_loader);
+}

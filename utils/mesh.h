@@ -327,4 +327,6 @@ float mesh_get_margin(const mesh_t *self);
 /* COLLISIONS */
 int mesh_gjk_intersection(mesh_t *self, mesh_t *other);
 
+void meshes_reg(void);
+
 #endif /* !MESH_H */

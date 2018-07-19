@@ -39,4 +39,6 @@ void mat_set_albedo(mat_t *self, prop_t albedo);
 void mat_destroy(mat_t *self);
 void mat_menu(mat_t *self, void *ctx);
 
+void materials_reg(void);
+
 #endif /* !MATERIAL_H */

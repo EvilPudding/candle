@@ -86,7 +86,7 @@ void mat_parse(mat_t *self, FILE *fd)
 				char *file = strtok(arg, "*");
 				if(file)
 				{
-					prp->texture = sauces_tex(arg);
+					prp->texture = sauces(arg);
 				}
 				prp->texture_scale = 1.0;
 
@@ -234,9 +234,18 @@ void mat_bind(mat_t *self, shader_t *shader)
 	mat_bind_prop(&shader->u_transparency, &self->transparency, &shader->bound_textures);
 	mat_bind_prop(&shader->u_normal, &self->normal, &shader->bound_textures);
 	mat_bind_prop(&shader->u_emissive, &self->emissive, &shader->bound_textures);
-	/* mat_bind_prop(&shader->u_position, &self->position, 5); */
-	/* mat_bind_prop(&shader->u_position, &self->position, 6); */
 
 	glerr();
 
+}
+
+void *mat_loader(const char *path, const char *name, uint ext)
+{
+	return mat_from_file(path);
+}
+
+void materials_reg()
+{
+	sauces_loader(ref("mat"), mat_loader);
+	sauces_register("_default.mat", NULL, mat_new("_default.mat"));
 }

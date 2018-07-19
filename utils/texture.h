@@ -97,4 +97,6 @@ void texture_draw_id(texture_t *self, int tex);
 
 int buffer_new(const char *name, int is_float, int dims);
 
+void textures_reg(void);
+
 #endif /* !TEXTURE_H */
