@@ -58,9 +58,9 @@ resource_t *c_sauces_get_sauce(c_sauces_t *self, const char *name)
 
 	{
 		khiter_t k = kh_get(res, self->generic, ref(buffer));
-		if(k != kh_end(self->sauces))
+		if(k != kh_end(self->generic))
 		{
-			return kh_value(self->sauces, k);
+			return kh_value(self->generic, k);
 		}
 
 	}
@@ -108,6 +108,8 @@ void c_sauces_register(c_sauces_t *self, const char *name, const char *path, voi
 	}
 	sauce->data = data;
 
+	sauces_loader_cb cb = NULL;
+
 	if(dot)
 	{
 		key = ref(buffer);
@@ -122,8 +124,12 @@ void c_sauces_register(c_sauces_t *self, const char *name, const char *path, voi
 		kh_value(self->sauces, k) = sauce;
 
 		*dot = '\0';
+
+		cb = c_sauces_get_loader(self, ref(dot + 1));
 	}
 
+
+	if(cb)
 	{
 		key = ref(buffer);
 
@@ -182,43 +188,7 @@ int c_sauces_index_dir(c_sauces_t *self, const char *dir_name)
 		if(!dot || dot[1] == '\0') continue;
 		/* *dot = '\0'; */
 
-		if(!c_sauces_get_loader(self, ref(dot + 1))) continue;
-
-
-		resource_t *sauce = calloc(1, sizeof(*sauce));
-		strncpy(sauce->path, path, sizeof(sauce->path));
-		strncpy(sauce->name, buffer, sizeof(sauce->name));
-
 		c_sauces_register(self, buffer, path, NULL);
-
-		/* if(dot) */
-		/* { */
-		/* 	key = ref(buffer); */
-		/* 	printf("%s %s\n", buffer, path); */
-
-		/* 	k = kh_get(res, self->sauces, key); */
-		/* 	if(k != kh_end(self->sauces)) */
-		/* 	{ */
-		/* 		printf("Name collision! %s" */
-		/* 				" Resources should be uniquely named.\n", ent->d_name); */
-		/* 		continue; */
-		/* 	} */
-		/* 	k = kh_put(res, self->sauces, key, &ret); */
-		/* 	kh_value(self->sauces, k) = sauce; */
-
-		/* 	*dot = '\0'; */
-		/* } */
-		/* { */
-		/* 	key = ref(buffer); */
-		/* 	printf("%s %s\n", buffer, path); */
-
-		/* 	k = kh_get(res, self->generic, key); */
-		/* 	if(k == kh_end(self->generic)) */
-		/* 	{ */
-		/* 		k = kh_put(res, self->generic, key, &ret); */
-		/* 		kh_value(self->generic, k) = sauce; */
-		/* 	} */
-		/* } */
 	}
 	closedir(dir);
 
