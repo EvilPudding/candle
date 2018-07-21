@@ -10,24 +10,16 @@
 #include <systems/editmode.h>
 #include <candle.h>
 
-
 vs_t *g_sprite_vs = NULL;
 
 static int c_sprite_render_visible(c_sprite_t *self);
 
-static mat_t *g_missing_mat = NULL;
 static mesh_t *g_sprite_mesh = NULL;
 
 /* int c_sprite_menu(c_sprite_t *self, void *ctx); */
 
-static void c_sprite_init(c_sprite_t *self)
+vs_t *sprite_vs()
 {
-	if(!g_missing_mat)
-	{
-		g_missing_mat = mat_new("missing");
-		mat_set_albedo(g_missing_mat, (prop_t){.color=vec4(0.0, 0.9, 1.0, 1.0)});
-
-	}
 	if(!g_sprite_mesh)
 	{
 		g_sprite_mesh = mesh_new();
@@ -35,10 +27,11 @@ static void c_sprite_init(c_sprite_t *self)
 		g_sprite_vs = vs_new("sprite", 1, vertex_modifier_new(
 			"	{\n"
 			"		vec4 center = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
-			"		pos = (M*camera.view*camera.projection) * center;\n"
+			"		mat4 MV = camera.view * M;\n"
+			"		pos = (MV * camera.projection) * center;\n"
 			"		vec2 size = vec2(P.x * (screen_size.y / screen_size.x), P.y);\n"
 			"		pos = vec4(pos.xy + 0.5 * size, pos.z, pos.w);\n"
-			"		vertex_position = (camera.view * M * center).xyz + P.xyz * 0.5;\n"
+			"		vertex_position = (MV * center).xyz + P.xyz * 0.5;\n"
 
 			"		vec3 vertex_normal    = (vec4( N, 0.0f)).xyz;\n"
 			"		vec3 vertex_tangent   = (vec4(TG, 0.0f)).xyz;\n"
@@ -51,7 +44,12 @@ static void c_sprite_init(c_sprite_t *self)
 			"	}\n"
 		));
 	}
+	return g_sprite_vs;
+}
 
+static void c_sprite_init(c_sprite_t *self)
+{
+	sprite_vs();
 	self->visible = 1;
 }
 

@@ -26,14 +26,14 @@ c_axis_t *c_axis_new(int type, vecN_t dir)
 	c_axis_t *self = component_new("axis");
 
 	mat_t *m = mat_new("m");
+
+	m->emissive.color = vec4(_vec3(dir), 0.8f);
+#ifdef MESH4
 	if(dir.w)
 	{
 		m->emissive.color = vec4(1.0f, 0.0f, 0.9f, 0.8f);
 	}
-	else
-	{
-		m->emissive.color = vec4(_vec3(dir), 0.8f);
-	}
+#endif
 	m->albedo.color = vec4(1, 1, 1, 1.0f);
 	self->type = type;
 

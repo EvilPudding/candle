@@ -14,6 +14,7 @@ typedef struct
 
 DEF_CASTER("sprite", c_sprite, c_sprite_t)
 extern int g_update_id;
+vs_t *sprite_vs(void);
 
 c_sprite_t *c_sprite_new(mat_t *mat, int cast_shadow);
 
