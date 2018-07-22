@@ -14,6 +14,13 @@ mat_t *mat_new(const char *name)
 	mat_set_normal(self, (prop_t){.color=vec4(0.5, 0.5, 1.0, 0.0)});
 	self->albedo.color = vec4(0.5, 0.5, 0.5, 1.0);
 
+	self->albedo.texture_scale = 1;
+	self->roughness.texture_scale = 1;
+	self->normal.texture_scale = 1;
+	self->metalness.texture_scale = 1;
+	self->transparency.texture_scale = 1;
+	self->emissive.texture_scale = 1;
+
 	strncpy(self->name, name, sizeof(self->name));
 
 	return self;

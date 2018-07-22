@@ -63,7 +63,7 @@ $(DIR)/%.debug.o: %.c
 ##############################################################################
 
 init:
-	git submodule update
+	# git submodule update
 	mkdir -p $(DIR)
 	mkdir -p $(DIR)/components
 	mkdir -p $(DIR)/systems

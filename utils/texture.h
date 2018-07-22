@@ -42,7 +42,9 @@ typedef struct
 } texture_t;
 
 texture_t *texture_from_file(const char *filename);
+texture_t *texture_from_memory(void *buffer, int len);
 int texture_load(texture_t *self, const char *filename);
+int texture_load_from_memory(texture_t *self, void *buffer, int len);
 #define TEX_MIPMAP			0x01
 #define TEX_REPEAT			0x02
 #define TEX_INTERPOLATE		0x03

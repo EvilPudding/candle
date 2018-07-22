@@ -381,6 +381,49 @@ void texture_set_xy(texture_t *self, int x, int y,
 	self->bufs[0].data[i + 3] = a;
 }
 
+int texture_load_from_memory(texture_t *self, void *buffer, int len)
+{
+	texture_t temp = {.target = GL_TEXTURE_2D};
+
+	temp.bufs[0].dims = 0;
+	temp.bufs[0].data = stbi_load_from_memory(buffer, len, (int*)&temp.width,
+			(int*)&temp.height, &temp.bufs[0].dims, 0);
+
+	if(!temp.bufs[0].data)
+	{
+		printf("Could not load from memory!\n");
+		return 0;
+	}
+	*self = temp;
+
+	switch(self->bufs[0].dims)
+	{
+		case 1:	self->bufs[0].format	= GL_RED;
+				self->bufs[0].internal = GL_RED;
+				break;
+		case 2:	self->bufs[0].format	= GL_RG;
+				self->bufs[0].internal = GL_RG;
+				break;
+		case 3:	self->bufs[0].format	= GL_RGB;
+				self->bufs[0].internal = GL_RGB;
+				break;
+		case 4: self->bufs[0].format	= GL_RGBA;
+				self->bufs[0].internal = GL_RGBA;
+				break;
+	}
+
+
+	strncpy(self->name, "unnamed", sizeof(self->name));
+	self->filename = "unnamed";
+	self->draw_id = 0;
+	self->prev_id = 0;
+	self->bufs_size = 1;
+	self->bufs[0].name = strdup("color");
+
+	loader_push(g_candle->loader, (loader_cb)texture_from_file_loader, self, NULL);
+	return 1;
+}
+
 int texture_load(texture_t *self, const char *filename)
 {
 	texture_t temp = {.target = GL_TEXTURE_2D};
@@ -389,7 +432,6 @@ int texture_load(texture_t *self, const char *filename)
 	temp.bufs[0].data = stbi_load(filename, (int*)&temp.width,
 			(int*)&temp.height, &temp.bufs[0].dims, 0);
 
-	printf("DIMS: %d %s\n", temp.bufs[0].dims, filename);
 	if(!temp.bufs[0].data)
 	{
 		printf("Could not find texture file: %s\n", filename);
@@ -424,17 +466,19 @@ int texture_load(texture_t *self, const char *filename)
 	loader_push(g_candle->loader, (loader_cb)texture_from_file_loader, self, NULL);
 	return 1;
 }
+
+texture_t *texture_from_memory(void *buffer, int len)
+{
+	texture_t *self = texture_new_2D(0, 0, TEX_INTERPOLATE);
+	texture_load_from_memory(self, buffer, len);
+
+	return self;
+}
 texture_t *texture_from_file(const char *filename)
 {
-	texture_t self = {.target = GL_TEXTURE_2D};
-	if(texture_load(&self, filename))
-	{
-		texture_t *tmp = malloc(sizeof(texture_t));
-		*tmp = self;
-		return tmp;
-	}
-
-    return NULL;
+	texture_t *self = texture_new_2D(0, 0, TEX_INTERPOLATE);
+	texture_load(self, filename);
+    return self;
 }
 
 static int texture_2D_frame_buffer(texture_t *self)

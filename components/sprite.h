@@ -10,6 +10,7 @@ typedef struct
 	mat_t *mat;
 	int visible;
 	int cast_shadow;
+	int xray;
 } c_sprite_t;
 
 DEF_CASTER("sprite", c_sprite, c_sprite_t)

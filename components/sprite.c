@@ -25,10 +25,30 @@ vs_t *sprite_vs()
 		g_sprite_mesh = mesh_new();
 		mesh_quad(g_sprite_mesh);
 		g_sprite_vs = vs_new("sprite", 1, vertex_modifier_new(
+			/* "	{\n" */
+			/* "#ifdef MESH4\n" */
+			/* "		float Y = cos(angle4);\n" */
+			/* "		float W = sin(angle4);\n" */
+			/* "		pos = vec4(vec3(P.x, P.y * Y + P.w * W, P.z), 1.0);\n" */
+			/* "#endif\n" */
+			/* "		vertex_position = (camera.view * M * pos).xyz;\n" */
+
+			/* "		poly_color = COL;\n" */
+			/* "		mat4 MV    = camera.view * M;\n" */
+			/* "		vec3 vertex_normal    = normalize(MV * vec4( N, 0.0f)).xyz;\n" */
+			/* "		vec3 vertex_tangent   = normalize(MV * vec4(TG, 0.0f)).xyz;\n" */
+			/* "		vec3 vertex_bitangent = cross(vertex_tangent, vertex_normal);\n" */
+
+			/* "		object_id = id;\n" */
+			/* "		poly_id = ID;\n" */
+			/* "		TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n" */
+
+			/* "		pos = (camera.projection * MV) * pos;\n" */
+			/* "	}\n" */
 			"	{\n"
 			"		vec4 center = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
 			"		mat4 MV = camera.view * M;\n"
-			"		pos = (MV * camera.projection) * center;\n"
+			"		pos = (camera.projection * MV) * center;\n"
 			"		vec2 size = vec2(P.x * (screen_size.y / screen_size.x), P.y);\n"
 			"		pos = vec4(pos.xy + 0.5 * size, pos.z, pos.w);\n"
 			"		vertex_position = (MV * center).xyz + P.xyz * 0.5;\n"
@@ -36,7 +56,7 @@ vs_t *sprite_vs()
 			"		vec3 vertex_normal    = (vec4( N, 0.0f)).xyz;\n"
 			"		vec3 vertex_tangent   = (vec4(TG, 0.0f)).xyz;\n"
 			"		vec3 vertex_bitangent = cross(vertex_normal, vertex_tangent);\n"
-			"		texcoord = vec2(-UV.y, UV.x);\n"
+			"		texcoord = vec2(UV.x, 1.0f - UV.y);\n"
 
 			"		object_id = id;\n"
 			"		poly_id = ID;\n"
@@ -61,6 +81,7 @@ c_sprite_t *c_sprite_new(mat_t *mat, int cast_shadow)
 
 	entity_add_component(c_entity(self),
 			c_model_new(g_sprite_mesh, mat, 0, 0));
+	c_model_cull_face(c_model(self), 0, 2);
 
 	return self;
 }
