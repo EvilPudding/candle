@@ -1,7 +1,7 @@
 #ifndef ATTACH_H
 #define ATTACH_H
 
-#include <ecm.h>
+#include <ecs/ecm.h>
 
 typedef struct
 {

@@ -1,7 +1,7 @@
 #ifndef BONE_H
 #define BONE_H
 
-#include <ecm.h>
+#include <ecs/ecm.h>
 #include <utils/mafs.h>
 
 typedef struct

@@ -1,6 +1,9 @@
 #ifndef NK_H
 #define NK_H
 
+#include <SDL2/SDL.h>
+#include <stdarg.h>
+
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_STANDARD_VARARGS
@@ -9,7 +12,7 @@
 #define NK_INCLUDE_FONT_BAKING
 #define NK_INCLUDE_DEFAULT_FONT
 #define NK_INCLUDE_COMMAND_USERDATA
-#include "nuklear/nuklear.h"
+#include "utils/nuklear/nuklear.h"
 
 NK_API struct nk_context* nk_can_init(SDL_Window *win);
 

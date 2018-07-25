@@ -1,7 +1,7 @@
 #ifndef EDITMODE_H
 #define EDITMODE_H
 
-#include <ecm.h>
+#include <ecs/ecm.h>
 #include <utils/mesh.h>
 #include <utils/nk.h>
 

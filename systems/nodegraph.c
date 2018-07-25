@@ -1,4 +1,4 @@
-#include <ecm.h>
+#include <ecs/ecm.h>
 #include "nodegraph.h"
 #include <components/node.h>
 #include <components/name.h>

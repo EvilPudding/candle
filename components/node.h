@@ -2,7 +2,7 @@
 #define NODE_H
 
 #include <utils/glutil.h>
-#include <ecm.h>
+#include <ecs/ecm.h>
 #include <components/spacial.h>
 
 typedef struct

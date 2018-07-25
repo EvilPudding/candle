@@ -171,7 +171,6 @@ int c_sauces_index_dir(c_sauces_t *self, const char *dir_name)
 	struct dirent *ent;
 	while((ent = readdir(dir)) != NULL)
 	{
-		int ret;
 		char path[512];
 		char buffer[64];
 

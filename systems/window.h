@@ -1,7 +1,7 @@
 #ifndef WINDOW_H
 #define WINDOW_H
 
-#include <ecm.h>
+#include <ecs/ecm.h>
 #include <utils/shader.h>
 
 extern int window_width;

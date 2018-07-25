@@ -1,7 +1,7 @@
 #ifndef FREELOOK_H
 #define FREELOOK_H
 
-#include <ecm.h>
+#include <ecs/ecm.h>
 #include <utils/glutil.h>
 
 typedef struct

@@ -1,7 +1,7 @@
 #ifndef DESTROYED_H
 #define DESTROYED_H
 
-#include <ecm.h>
+#include <ecs/ecm.h>
 
 typedef struct
 {

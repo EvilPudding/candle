@@ -1,7 +1,7 @@
 #ifndef AXIS_H
 #define AXIS_H
 
-#include <ecm.h>
+#include <ecs/ecm.h>
 #include <systems/renderer.h>
 
 typedef struct

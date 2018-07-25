@@ -2,7 +2,7 @@
 #define LOADER_H
 
 #include "glutil.h"
-#include "ecm.h"
+#include <ecs/ecm.h>
 
 typedef int(*loader_cb)(void*);
 

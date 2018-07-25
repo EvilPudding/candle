@@ -1,7 +1,7 @@
 #ifndef RESAUCES_H
 #define RESAUCES_H
 
-#include <ecm.h>
+#include <ecs/ecm.h>
 
 typedef void*(*sauces_loader_cb)(const char *path, const char *name, uint ext);
 

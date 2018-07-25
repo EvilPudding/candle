@@ -3,7 +3,6 @@
 
 #include <utils/glutil.h>
 #include <utils/mesh.h>
-#include <ecm.h>
 
 void mesh_load_ply(mesh_t *self, const char *filename);
 

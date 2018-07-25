@@ -1,7 +1,7 @@
 #ifndef MOUSE_H
 #define MOUSE_H
 
-#include <ecm.h>
+#include <ecs/ecm.h>
 
 typedef struct
 {

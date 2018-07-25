@@ -6,7 +6,7 @@
 #include <utils/texture.h>
 #include <utils/mesh.h>
 #include <utils/shader.h>
-#include <ecm.h>
+#include <ecs/ecm.h>
 
 typedef struct pass_t pass_t;
 

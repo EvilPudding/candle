@@ -1,7 +1,7 @@
 #ifndef TIMELINE_H
 #define TIMELINE_H
 
-#include <ecm.h>
+#include <ecs/ecm.h>
 
 typedef struct
 {

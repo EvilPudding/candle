@@ -1,7 +1,7 @@
 #ifndef SPRITE_H
 #define SPRITE_H
 
-#include <ecm.h>
+#include <ecs/ecm.h>
 #include <systems/renderer.h>
 
 typedef struct

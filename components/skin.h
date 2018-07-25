@@ -1,7 +1,7 @@
 #ifndef SKIN_H
 #define SKIN_H
 
-#include <ecm.h>
+#include <ecs/ecm.h>
 #include <utils/mafs.h>
 
 typedef struct

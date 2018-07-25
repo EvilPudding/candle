@@ -1,7 +1,7 @@
 #ifndef LUA_H
 #define LUA_H
 
-#include <ecm.h>
+#include <ecs/ecm.h>
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>

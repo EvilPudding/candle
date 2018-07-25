@@ -10,6 +10,7 @@
 #include <systems/keyboard.h>
 #include <candle.h>
 #include <utils/mesh.h>
+#include <vil/vil.h>
 #include <stdlib.h>
 #include "renderer.h"
 
@@ -18,8 +19,8 @@ void c_editmode_open_entity(c_editmode_t *self, entity_t ent);
 static void c_editmode_update_axis(c_editmode_t *self);
 static void c_editmode_selected_delete(c_editmode_t *self);
 
-#define MAX_VERTEX_MEMORY (512 * 1024) / 4
-#define MAX_ELEMENT_MEMORY (128 * 1024) / 4
+#define MAX_VERTEX_MEMORY (512 * 1024)
+#define MAX_ELEMENT_MEMORY (128 * 1024)
 
 mat_t *g_sel_mat = NULL;
 
@@ -901,6 +902,8 @@ int c_editmode_commands(c_editmode_t *self)
 
 int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 {
+	/* node_editorf(ref("parent"), self->nk); */
+
 	c_name_t *name = c_name(&ent);
 	int res;
 	char buffer[64];

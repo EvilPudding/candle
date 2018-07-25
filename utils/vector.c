@@ -1,7 +1,7 @@
 #include "vector.h"
 #include <stdlib.h>
 #include <string.h>
-#include <ecm.h>
+#include <ecs/ecm.h>
 
 struct element
 {

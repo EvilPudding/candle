@@ -2,7 +2,7 @@
 #define LIGHT_H
 
 #include <utils/glutil.h>
-#include <ecm.h>
+#include <ecs/ecm.h>
 #include <utils/texture.h>
 #include <utils/material.h>
 

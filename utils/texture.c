@@ -7,7 +7,7 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_ASSERT(x)
-#include <stb_image.h>
+#include <utils/stb_image.h>
 
 static int texture_cubemap_frame_buffer(texture_t *self);
 static int texture_2D_frame_buffer(texture_t *self);

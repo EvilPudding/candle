@@ -3,7 +3,7 @@
 
 #include "glutil.h"
 #include "texture.h"
-#include <ecm.h>
+#include <ecs/ecm.h>
 
 typedef struct
 {

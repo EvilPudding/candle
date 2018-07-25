@@ -1,7 +1,7 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include <ecm.h>
+#include <ecs/ecm.h>
 #include <utils/glutil.h>
 
 typedef struct
