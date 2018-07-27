@@ -2,156 +2,172 @@
 #include <utils/nk.h>
 #include <utils/khash.h>
 
-struct vil_node; /* vil_type with display data */
-struct vil_type; /* vil_type with display data */
+struct vil_call;
+struct vil_type;
 
-typedef void(*vil_type_gui_cb)(struct vil_node *node, void *ctx);
-static struct vil_type *add_type(const char *name,
-		vil_type_gui_cb builtin_gui, int builtin_size);
-static void func_add_node(struct vil_type *func, unsigned int type,
+typedef union
+{
+	struct { unsigned char size; unsigned char _[7]; };
+	uint64_t val;
+} slot_t;
+
+typedef void(*vil_func_gui_cb)(struct vil_call *call, void *ctx);
+static struct vil_func *add_func(const char *name,
+		vil_func_gui_cb builtin_gui, int builtin_size);
+static void func_add_call(struct vil_func *root, unsigned int func,
 		const char *name, struct nk_vec2 pos, int is_input, int is_output);
-static void func_link(struct vil_type *type, int in_id, int in_slot,
-		int out_id, int out_slot);
+static void func_link(struct vil_call *root, slot_t in_slot, slot_t out_slot,
+		int field);
 
 struct vil_link
 {
-	int input_id;
-	int input_slot;
-	int output_id;
-	int output_slot;
+	slot_t input;
+	slot_t output;
 	struct nk_vec2 in;
 	struct nk_vec2 out;
 };
 
-struct node_linking
+struct vil_call
 {
-	int active;
-	struct vil_node *node;
-	int input_id;
-	int input_slot;
-};
-
-struct vil_node
-{
-	struct vil_type *type;
+	struct vil_func *func;
+	struct vil_func *parent;
 
 	int id;
 	char name[32];
-	struct vil_node *next;
-	struct vil_node *prev;
+	struct vil_call *next;
+	struct vil_call *prev;
 
 	int is_input;
 	int is_output;
 
+
 	struct nk_rect bounds;
+
+	float input_sizes[32];
+	slot_t input_args[32];
 
 	void *builtin_data;
 };
 
-struct vil_type
+struct vil_func
 {
 	char name[32];
+	unsigned int id;
 
-	struct vil_node node_buf[32];
+	struct vil_call call_buf[32];
 	struct vil_link links[64];
-	struct vil_node *begin;
-	struct vil_node *end;
-	int node_count;
+	struct vil_call *begin;
+	struct vil_call *end;
+	int call_count;
 	int link_count;
 
 	unsigned int		builtin_size;
-	vil_type_gui_cb		builtin_gui;
-	/* vil_type_load_cb	builtin_load; */
-	/* vil_type_save_cb	builtin_save; */
+	vil_func_gui_cb		builtin_gui;
+	/* vil_func_load_cb	builtin_load; */
+	/* vil_func_save_cb	builtin_save; */
 };
 
-KHASH_MAP_INIT_INT(vil_type, struct vil_type)
+KHASH_MAP_INIT_INT(vil_func, struct vil_func)
 
-static struct node_linking linking;
+static slot_t linking;
+static unsigned int linking_type;
 static struct nk_vec2 scrolling;
 static int show_grid;
-static struct vil_node *selected;
+static struct vil_call *selected;
 
-static khash_t(vil_type) *g_types;
+static khash_t(vil_func) *g_funcs;
 
-void number_gui(struct vil_node *node, void *ctx) 
+void label_gui(struct vil_call *call, void *ctx) 
 {
-	int *num = node->builtin_data;
+	nk_layout_row_dynamic(ctx, 29, 1);
+	nk_label(ctx, call->name, NK_TEXT_LEFT);
+}
+void number_gui(struct vil_call *call, void *ctx) 
+{
+	int *num = call->builtin_data;
 	if(*num < 29) *num = 29;
-	nk_layout_row_dynamic(ctx, *num, 1);
-	*num = (nk_byte)nk_propertyi(ctx, "#N:", 0, *num, 255, 1, 1);
+	nk_layout_row_begin(ctx, NK_DYNAMIC, *num, 2);
+	nk_layout_row_push(ctx, 0.20);
+	nk_label(ctx, call->name, NK_TEXT_LEFT);
+	nk_layout_row_push(ctx, 0.80);
+	*num = (nk_byte)nk_propertyi(ctx, "#", 0, *num, 255, 1, 1);
+	nk_layout_row_end(ctx);
+	/* nk_slider_int(ctx, 29, num, 200, 1); */
 }
 
 REG() {
-	g_types = kh_init(vil_type);
+	g_funcs = kh_init(vil_func);
 
 	show_grid = nk_true;
 
-	add_type("number", (vil_type_gui_cb)number_gui, sizeof(float));
+	add_func("number", (vil_func_gui_cb)number_gui, sizeof(float));
 
-	struct vil_type *func = add_type("test", NULL, 0);
+	struct vil_func *func = add_func("test", NULL, 0);
 
-	func_add_node(func, ref("number"), "A", nk_vec2(40, 10), 1, 0);
-	func_add_node(func, ref("number"), "B", nk_vec2(40, 260), 1, 0);
-	func_add_node(func, ref("number"), "C", nk_vec2(200, 260), 0, 1);
+	func_add_call(func, ref("number"), "A", nk_vec2(40, 10), 1, 0);
+	func_add_call(func, ref("number"), "B", nk_vec2(40, 260), 1, 0);
+	func_add_call(func, ref("number"), "C", nk_vec2(200, 260), 0, 1);
 
-	func = add_type("parent", NULL, 0);
+	func = add_func("parent", NULL, 0);
 
-	func_add_node(func, ref("number"), "num", nk_vec2(40, 10), 0, 0);
-	func_add_node(func, ref("test"), "sum", nk_vec2(40, 260), 0, 0);
+	func_add_call(func, ref("number"), "num", nk_vec2(40, 10), 0, 0);
+	func_add_call(func, ref("number"), "num2", nk_vec2(149, 13), 0, 0);
+	func_add_call(func, ref("test"), "sum", nk_vec2(40, 260), 0, 0);
 }
 
-static struct vil_type *add_type(const char *name,
-		vil_type_gui_cb builtin_gui, int builtin_size)
+static struct vil_func *add_func(const char *name,
+		vil_func_gui_cb builtin_gui, int builtin_size)
 {
 	int ret;
-	khiter_t k = kh_put(vil_type, g_types, ref(name), &ret);
-	struct vil_type *type = &kh_value(g_types, k);
-	strncpy(type->name, name, sizeof(type->name));
-	type->builtin_gui = builtin_gui;
-	type->builtin_size = builtin_size;
-	type->begin = NULL;
-	type->end = NULL;
+	int id = ref(name);
+	khiter_t k = kh_put(vil_func, g_funcs, id, &ret);
+	struct vil_func *func = &kh_value(g_funcs, k);
+	strncpy(func->name, name, sizeof(func->name));
+	func->builtin_gui = builtin_gui;
+	func->builtin_size = builtin_size;
+	func->begin = NULL;
+	func->end = NULL;
+	func->id = id;
 
-	/* func_link(type, 0, 0, 2, 0); */
-	/* func_link(type, 1, 0, 2, 1); */
+	/* func_link(func, 0, 0, 2, 0); */
+	/* func_link(func, 1, 0, 2, 1); */
 
-	return type;
+	return func;
 }
 
-static void func_push(struct vil_type *type, struct vil_node *node)
+static void func_push(struct vil_func *func, struct vil_call *call)
 {
-	if (!type->begin) {
-		node->next = NULL;
-		node->prev = NULL;
-		type->begin = node;
-		type->end = node;
+	if (!func->begin) {
+		call->next = NULL;
+		call->prev = NULL;
+		func->begin = call;
+		func->end = call;
 	} else {
-		node->prev = type->end;
-		if (type->end)
-			type->end->next = node;
-		node->next = NULL;
-		type->end = node;
+		call->prev = func->end;
+		if (func->end)
+			func->end->next = call;
+		call->next = NULL;
+		func->end = call;
 	}
 }
 
-static void func_pop(struct vil_type *type, struct vil_node *node)
+static void func_pop(struct vil_func *func, struct vil_call *call)
 {
-	if (node->next)
-		node->next->prev = node->prev;
-	if (node->prev)
-		node->prev->next = node->next;
-	if (type->end == node)
-		type->end = node->prev;
-	if (type->begin == node)
-		type->begin = node->next;
-	node->next = NULL;
-	node->prev = NULL;
+	if (call->next)
+		call->next->prev = call->prev;
+	if (call->prev)
+		call->prev->next = call->next;
+	if (func->end == call)
+		func->end = call->prev;
+	if (func->begin == call)
+		func->begin = call->next;
+	call->next = NULL;
+	call->prev = NULL;
 }
 
-static struct vil_node *func_find(struct vil_type *type, int id)
+static struct vil_call *get_call(struct vil_func *func, int id)
 {
-	struct vil_node *iter = type->begin;
+	struct vil_call *iter = func->begin;
 	while (iter) {
 		if (iter->id == id)
 			return iter;
@@ -160,187 +176,359 @@ static struct vil_node *func_find(struct vil_type *type, int id)
 	return NULL;
 }
 
-/* static int type_count_outputs(struct vil_type *type) */
-/* { */
-/* 	int count = 0; */
-/* 	struct vil_node *it = type->begin; */
-/* 	if(type->builtin_gui) count++; */
-/* 	while (it) */
-/* 	{ */
-/* 		if(it->is_output) count++; */
-/* 		it = it->next; */
-/* 	} */
-/* 	return count; */
-/* } */
-
-/* static int type_count_inputs(struct vil_type *type) */
-/* { */
-/* 	int count = 0; */
-/* 	struct vil_node *it = type->begin; */
-/* 	if(type->builtin_gui) count++; */
-/* 	while (it) */
-/* 	{ */
-/* 		if(it->is_input) count++; */
-/* 		it = it->next; */
-/* 	} */
-/* 	return count; */
-/* } */
-
-static struct vil_type *get_type(uint ref)
+static struct vil_func *get_func(uint ref)
 {
-	khiter_t k = kh_get(vil_type, g_types, ref);
-	if(k == kh_end(g_types))
+	khiter_t k = kh_get(vil_func, g_funcs, ref);
+	if(k == kh_end(g_funcs))
 	{
 		printf("Type does not exist\n");
 		return NULL;
 	}
 
-	return &kh_value(g_types, k);
+	return &kh_value(g_funcs, k);
 }
 
 
-static void func_add_node(struct vil_type *func, unsigned int type,
+static void func_add_call(struct vil_func *root, unsigned int func,
 		const char *name, struct nk_vec2 pos, int is_input, int is_output)
 {
-	struct vil_node *node;
-	/* NK_ASSERT((nk_size)func->node_count < NK_LEN(func->node_buf)); */
-	int i = func->node_count++;
-	node = &func->node_buf[i];
-	node->id = i;
-	node->bounds.x = pos.x;
-	node->bounds.y = pos.y;
-	node->bounds.w = 180;
-	node->bounds.h = 29;
-	node->type = get_type(type);
-	node->builtin_data = calloc(1, node->type->builtin_size);
-	node->is_input = is_input;
-	node->is_output = is_output;
-	/* node->input_count = type_count_inputs(node->type); */
-	/* node->output_count = 0; */
-	/* node->output_count = type_count_outputs(node->type); */
+	struct vil_call *call;
+	/* NK_ASSERT((nk_size)func->call_count < NK_LEN(func->call_buf)); */
+	int i = root->call_count++;
+	call = &root->call_buf[i];
+	call->id = i;
+	call->bounds.x = pos.x;
+	call->bounds.y = pos.y;
+	call->bounds.w = 180;
+	call->bounds.h = 29;
+	call->func = get_func(func);
+	call->parent = root;
+	call->builtin_data = calloc(1, call->func->builtin_size);
+	call->is_input = is_input;
+	call->is_output = is_output;
+	/* call->input_count = func_count_inputs(call->func); */
+	/* call->output_count = 0; */
+	/* call->output_count = func_count_outputs(call->func); */
 
-	strcpy(node->name, name);
-	func_push(func, node);
+	strcpy(call->name, name);
+	func_push(root, call);
 }
 
-static void func_link(struct vil_type *func, int in_id, int in_slot,
-		int out_id, int out_slot)
+static void func_unlink(struct vil_call *root, slot_t out_slot,
+		int field)
 {
-	struct vil_link *link;
-	/* NK_ASSERT((nk_size)func->link_count < NK_LEN(func->links)); */
-	link = &func->links[func->link_count++];
-	link->input_id = in_id;
-	link->input_slot = in_slot;
-	link->output_id = out_id;
-	link->output_slot = out_slot;
+	int i;
+	struct vil_func *func = root->parent;
+
+	if(func->link_count > 1)
+	{
+		for(i = 0; i < func->link_count; i++)
+		{
+			struct vil_link *link = &func->links[i];
+			if(link->output.val == out_slot.val || link->output.val == out_slot.val)
+			{
+				*link = func->links[func->link_count - 1];
+				break;
+			}
+		}
+	}
+	func->link_count--;
+	root->input_args[field].size = 0;
 }
 
-static float node_inputs(struct vil_type *root, struct vil_node *node,
+static void func_link(struct vil_call *root, slot_t in_slot, slot_t out_slot,
+		int field)
+{
+	struct vil_link *link = &root->parent->links[root->parent->link_count++];
+	link->input = in_slot;
+	link->output = out_slot;
+	root->input_args[field] = in_slot;
+}
+
+static float call_outputs(struct vil_call *root,
+		struct vil_call *call, slot_t parent_slot,
 		float x, float y, struct nk_context *ctx)
 {
+	slot_t slot = parent_slot;
+	slot._[slot.size++] = call->id;
+
 	const struct nk_input *in = &ctx->input;
 	struct nk_command_buffer *canvas = nk_window_get_canvas(ctx);
 
-	int n;
-	if(node->type->builtin_gui)
+	if(call->func->builtin_gui)
 	{
 		struct nk_rect circle;
-		circle.x = x - 4;
-		circle.y = 29 + y + node->bounds.h / 2.0f;
+		circle.x = x + call->bounds.w-4;
+		/* circle.y = call->bounds.y + space * (float)(n+1); */
+		circle.y = y + 29.0f + 29.0f / 2.0f;
 		circle.w = 8; circle.h = 8;
 		nk_fill_circle(canvas, circle, nk_rgb(100, 100, 100));
-		if (nk_input_is_mouse_released(in, NK_BUTTON_LEFT) &&
-				nk_input_is_mouse_hovering_rect(in, circle) &&
-				linking.active && linking.node != node)
+
+		struct nk_rect bound = nk_rect(circle.x-5, circle.y-5,
+				circle.w+10, circle.h+10);
+
+		/* start linking process */
+		if (nk_input_has_mouse_click_down_in_rect(in,
+					NK_BUTTON_LEFT, bound, nk_true))
 		{
-			linking.active = nk_false;
-			func_link(root, linking.input_id,
-					linking.input_slot, node->id, n);
+			linking = slot;
+			linking_type = call->func->id;
 		}
-		y += node->bounds.h;
+
+		/* draw curve from linked call slot to mouse position */
+		if (linking.size && linking.val == slot.val)
+		{
+			struct nk_vec2 l0 = nk_vec2(circle.x + 3, circle.y + 3);
+			struct nk_vec2 l1 = in->mouse.pos;
+			nk_stroke_curve(canvas, l0.x, l0.y, l0.x + 50.0f, l0.y,
+					l1.x - 50.0f, l1.y, l1.x, l1.y, 1.0f, nk_rgb(100, 100, 100));
+		}
+		y += 29;
 	}
-	struct vil_node *it = node->type->begin;
+	struct vil_call *it = call->func->begin;
+
 	while (it)
 	{
-		if(it->is_input)
+		if(it->is_output)
 		{
-			y = node_inputs(root, it, x, y, ctx);
+			y = call_outputs(root, it, slot, x, y, ctx);
 		}
 		it = it->next;
 	}
 	return y;
 }
 
-static float node_gui(struct vil_node *node, void *ctx)
+static int get_call_output_y(struct vil_call *root, struct vil_call *call, float *y,
+		slot_t parent_slot, slot_t search)
 {
-	node->bounds.h = 0.0f;
-	if(node->type->builtin_gui)
+	slot_t slot = parent_slot;
+	slot._[slot.size++] = call->id;
+
+	if(call->func->builtin_gui)
 	{
-		node->type->builtin_gui(node, ctx);
-		struct nk_rect rect = nk_layout_widget_bounds(ctx);
-		node->bounds.h += rect.h;
+		float h = 29.0f;
+		if(slot.val == search.val)
+		{
+			*y += h / 2.0f;
+			return 1;
+		}
+		*y += h;
+		return 0;
 	}
-	struct vil_node *it = node->type->begin;
+
+	struct vil_call *it = call->func->begin;
+
 	while (it)
 	{
-		if(it->is_input)
+		if(it->is_output)
 		{
-			node->bounds.h += node_gui(it, ctx);
+			if(get_call_output_y(root, it, y, slot, search))
+			{
+				return 1;
+			}
 		}
 		it = it->next;
 	}
-	return node->bounds.h;
+	return 0;
+}
+static int get_call_input_y(struct vil_call *root, int *field,
+		struct vil_call *call, float *y, slot_t parent_slot, slot_t search)
+{
+	slot_t slot = parent_slot;
+	slot._[slot.size++] = call->id;
+
+	int call_field = (*field)++;
+
+	float h = root->input_sizes[call_field];
+	if(slot.val == search.val)
+	{
+		*y += h / 2.0f;
+		return 1;
+	}
+
+	if(call->func->builtin_gui)
+	{
+		*y += h;
+		return 0;
+	}
+
+	struct vil_call *it;
+
+	for(it = call->func->begin; it; it = it->next)
+	{
+		if(it->is_input)
+		{
+			if(get_call_input_y(root, field, it, y, slot, search))
+			{
+				return 1;
+			}
+		}
+	}
+	return 0;
 }
 
-int node_editorf(uint type_ref, void *nk)
+struct nk_vec2 get_output_position(struct vil_func *func, slot_t search)
+{
+	struct vil_call *call = get_call(func, search._[0]);
+	float y = call->bounds.y + 33;
+	get_call_output_y(call, call, &y, (slot_t){0}, search);
+	return nk_vec2(call->bounds.x + call->bounds.w, y);
+}
+
+struct nk_vec2 get_input_position(struct vil_func *func, slot_t search)
+{
+	int field = 0;
+	struct vil_call *call = get_call(func, search._[0]);
+	float y = call->bounds.y + 33;
+	get_call_input_y(call, &field, call, &y, (slot_t){0}, search);
+
+	return nk_vec2(call->bounds.x, y);
+}
+
+static float call_inputs(struct vil_call *root, int *field,
+		struct vil_call *call, float *y, slot_t parent_slot,
+		struct nk_context *ctx)
+{
+	int call_field = (*field)++;
+
+	slot_t slot = parent_slot;
+	slot._[slot.size++] = call->id;
+
+	int is_linking = linking.size && linking._[0] != root->id;
+	int linking_allowed = is_linking && linking_type == call->func->id;
+	int is_linked = root->input_args[call_field].size;
+
+	float call_h = root->input_sizes[call_field];
+
+	if(linking_allowed || is_linked)
+	{
+		const struct nk_input *in = &ctx->input;
+		struct nk_command_buffer *canvas = nk_window_get_canvas(ctx);
+
+		struct nk_rect circle = nk_rect(root->bounds.x + 2,
+				*y + call_h / 2.0f, 8, 8);
+		nk_fill_circle(canvas, circle, nk_rgb(100, 100, 100));
+
+		struct nk_rect bound = nk_rect(circle.x-5, circle.y-5,
+				circle.w+10, circle.h+10);
+
+		if(is_linked)
+		{
+			if (nk_input_has_mouse_click_down_in_rect(in,
+						NK_BUTTON_LEFT, bound, nk_true))
+			{
+				linking = root->input_args[call_field];
+				linking_type = call->func->id;
+				func_unlink(root, slot, call_field);
+			}
+		}
+
+		if (linking_allowed &&
+				nk_input_is_mouse_released(in, NK_BUTTON_LEFT) &&
+				nk_input_is_mouse_hovering_rect(in, bound))
+		{
+			if(is_linked) func_unlink(root, slot, call_field);
+			func_link(root, linking, slot, call_field);
+			linking.size = 0;
+		}
+	}
+	else
+	{
+		struct vil_call *it;
+		for (it = call->func->begin; it; it = it->next)
+		{
+			if(it->is_input)
+			{
+				*y += call_inputs(root, field, it, y, slot, ctx);
+			}
+		}
+	}
+	return call_h;
+}
+
+static float call_gui(struct vil_call *root, int *field,
+		struct vil_call *call, void *ctx)
+{
+	struct vil_call *it;
+	float call_h = 0.0f;
+	int call_field = (*field)++;
+
+	if(root->input_args[call_field].size) /* input is linked */
+	{
+		label_gui(call, ctx);
+		struct nk_rect rect = nk_layout_widget_bounds(ctx);
+		call_h = rect.h;
+	}
+	else if(call->func->builtin_gui)
+	{
+		call->func->builtin_gui(call, ctx);
+		struct nk_rect rect = nk_layout_widget_bounds(ctx);
+		call_h = rect.h;
+	}
+	else
+	{
+		for (it = call->func->begin; it; it = it->next)
+		{
+			if(it->is_input)
+			{
+				call_h += call_gui(root, field, it, ctx);
+			}
+		}
+	}
+	return root->input_sizes[call_field] = call_h;
+}
+
+int func_gui(uint func_ref, void *nk)
 {
 	struct nk_context *ctx = nk;
-	int n = 0;
 	struct nk_rect total_space;
 	const struct nk_input *in = &ctx->input;
-	struct nk_command_buffer *canvas;
-	struct vil_node *updated = 0;
-	struct vil_type *type = get_type(type_ref);
+	struct vil_call *updated = 0;
+	struct vil_func *func = get_func(func_ref);
 
 
-	if (nk_begin(ctx, type->name, nk_rect(0, 0, 800, 600),
-				NK_WINDOW_BORDER|NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_MOVABLE|NK_WINDOW_CLOSABLE))
+	if (nk_begin(ctx, func->name, nk_rect(0, 0, 800, 600),
+				NK_WINDOW_BORDER |
+				NK_WINDOW_NO_SCROLLBAR |
+				NK_WINDOW_MOVABLE |
+				NK_WINDOW_CLOSABLE))
 	{
 		/* allocate complete window space */
-		canvas = nk_window_get_canvas(ctx);
 		total_space = nk_window_get_content_region(ctx);
-		nk_layout_space_begin(ctx, NK_STATIC, total_space.h, type->node_count);
+		nk_layout_space_begin(ctx, NK_STATIC, total_space.h, func->call_count);
 		{
-			struct vil_node *it = type->begin;
+			struct vil_call *it = func->begin;
 			/* struct nk_rect size = nk_layout_space_bounds(ctx); */
-			struct nk_panel *node = 0;
+			struct nk_panel *call = 0;
 
-			/* execute each node as a movable group */
+			/* execute each call as a movable group */
 			while (it)
 			{
-				/* calculate scrolled node window position and size */
+				/* calculate scrolled call window position and size */
 				nk_layout_space_push(ctx, nk_rect(it->bounds.x - scrolling.x,
 							it->bounds.y - scrolling.y, it->bounds.w, 35 + it->bounds.h));
 
-				/* execute node window */
+				/* execute call window */
 				if (nk_group_begin(ctx, it->name,
 							NK_WINDOW_MOVABLE|
 							NK_WINDOW_NO_SCROLLBAR|
 							NK_WINDOW_BORDER|
 							NK_WINDOW_TITLE))
 				{
-					/* always have last selected node on top */
+					/* always have last selected call on top */
 
-					node = nk_window_get_panel(ctx);
-					if (nk_input_mouse_clicked(in, NK_BUTTON_LEFT, node->bounds) &&
+					call = nk_window_get_panel(ctx);
+					if (nk_input_mouse_clicked(in, NK_BUTTON_LEFT, call->bounds) &&
 							(!(it->prev && nk_input_mouse_clicked(in, NK_BUTTON_LEFT,
-							  nk_layout_space_rect_to_screen(ctx, node->bounds)))) &&
-							type->end != it)
+							  nk_layout_space_rect_to_screen(ctx, call->bounds)))) &&
+							func->end != it)
 					{
 						updated = it;
 					}
 
-					node_gui(it, nk);
+					int field = 0;
+					float h = call_gui(it, &field, it, nk);
+					it->bounds.h = h;
 					/* nk_layout_row_begin(ctx, NK_DYNAMIC, 25, 2); */
 					/* nk_layout_row_push(ctx, 0.50); */
 					/* nk_label(ctx, "input", NK_TEXT_LEFT); */
@@ -358,71 +546,45 @@ int node_editorf(uint type_ref, void *nk)
 					nk_group_end(ctx);
 				}
 				{
-					/* node connector and linking */
+					/* call connector and linking */
 					struct nk_rect bounds;
-					bounds = nk_layout_space_rect_to_local(ctx, node->bounds);
+					bounds = nk_layout_space_rect_to_local(ctx, call->bounds);
 					bounds.x += scrolling.x;
 					bounds.y += scrolling.y;
 					bounds.h = it->bounds.h;
 					it->bounds = bounds;
 
+
+					slot_t sl = {0};
 					/* output connector */
-					/* for (n = 0; n < it->output_count; ++n) */
-					/* { */
-					/* 	struct nk_rect circle; */
-					/* 	circle.x = node->bounds.x + node->bounds.w-4; */
-					/* 	/1* circle.y = node->bounds.y + space * (float)(n+1); *1/ */
-					/* 	circle.y = 24.0f/2 + node->bounds.y + 29.0f * (float)(n+1); */
-					/* 	circle.w = 8; circle.h = 8; */
-					/* 	nk_fill_circle(canvas, circle, nk_rgb(100, 100, 100)); */
-
-					/* 	/1* start linking process *1/ */
-					/* 	if (nk_input_has_mouse_click_down_in_rect(in, */
-					/* 				NK_BUTTON_LEFT, circle, nk_true)) */
-					/* 	{ */
-					/* 		linking.active = nk_true; */
-					/* 		linking.node = it; */
-					/* 		linking.input_id = it->id; */
-					/* 		linking.input_slot = n; */
-					/* 	} */
-
-					/* 	/1* draw curve from linked node slot to mouse position *1/ */
-					/* 	if (linking.active && linking.node == it && */
-					/* 			linking.input_slot == n) */
-					/* 	{ */
-					/* 		struct nk_vec2 l0 = nk_vec2(circle.x + 3, circle.y + 3); */
-					/* 		struct nk_vec2 l1 = in->mouse.pos; */
-					/* 		nk_stroke_curve(canvas, l0.x, l0.y, l0.x + 50.0f, l0.y, */
-					/* 				l1.x - 50.0f, l1.y, l1.x, l1.y, 1.0f, nk_rgb(100, 100, 100)); */
-					/* 	} */
-					/* } */
-
+					call_outputs(it, it, sl, call->bounds.x, call->bounds.y, ctx);
 					/* input connector */
-					node_inputs(type, it, node->bounds.x, node->bounds.y, ctx);
+					int field = 0;
+					float y = call->bounds.y + 29;
+					call_inputs(it, &field, it, &y, sl, ctx);
 				}
 				it = it->next;
 			}
 
 			/* reset linking connection */
-			if (linking.active && nk_input_is_mouse_released(in, NK_BUTTON_LEFT))
+			if (linking.size && nk_input_is_mouse_released(in, NK_BUTTON_LEFT))
 			{
-				linking.active = nk_false;
-				linking.node = NULL;
+				linking.size = 0;
 				fprintf(stdout, "linking failed\n");
 			}
 
 			/* draw each link */
-			for (n = 0; n < type->link_count; ++n)
+			int n;
+			struct nk_command_buffer *canvas = nk_window_get_canvas(ctx);
+			for (n = 0; n < func->link_count; ++n)
 			{
-				struct vil_link *link = &type->links[n];
-				struct vil_node *ni = func_find(type, link->input_id);
-				struct vil_node *no = func_find(type, link->output_id);
-				struct nk_vec2 l0 = nk_layout_space_to_screen(ctx,
-						nk_vec2(ni->bounds.x + ni->bounds.w, 24.0f/2 + 3.0f + ni->bounds.y +
-							29.0f * (float)(link->input_slot+1)));
-				struct nk_vec2 l1 = nk_layout_space_to_screen(ctx,
-						nk_vec2(no->bounds.x, 24.0f/2 + 3.0f + no->bounds.y + 29.0f *
-							(float)(link->output_slot+1)));
+				struct vil_link *link = &func->links[n];
+
+				struct nk_vec2 pi = get_input_position(func, link->output);
+				struct nk_vec2 po = get_output_position(func, link->input);
+
+				struct nk_vec2 l0 = nk_layout_space_to_screen(ctx, po);
+				struct nk_vec2 l1 = nk_layout_space_to_screen(ctx, pi);
 
 				l0.x -= scrolling.x;
 				l0.y -= scrolling.y;
@@ -434,17 +596,17 @@ int node_editorf(uint type_ref, void *nk)
 
 			if (updated)
 			{
-				/* reshuffle nodes to have least recently selected node on top */
-				func_pop(type, updated);
-				func_push(type, updated);
+				/* reshuffle calls to have least recently selected call on top */
+				func_pop(func, updated);
+				func_push(func, updated);
 			}
 
-			/* node selection */
+			/* call selection */
 			if (nk_input_mouse_clicked(in, NK_BUTTON_LEFT, nk_layout_space_bounds(ctx)))
 			{
-				it = type->begin;
+				it = func->begin;
 				selected = NULL;
-				/* type->bounds = nk_rect(in->mouse.pos.x, in->mouse.pos.y, 100, 200); */
+				/* func->bounds = nk_rect(in->mouse.pos.x, in->mouse.pos.y, 100, 200); */
 				while (it)
 				{
 					struct nk_rect b = nk_layout_space_rect_to_screen(ctx, it->bounds);
@@ -462,7 +624,7 @@ int node_editorf(uint type_ref, void *nk)
 			/* 	const char *grid_option[] = {"Show Grid", "Hide Grid"}; */
 			/* 	nk_layout_row_dynamic(ctx, 25, 1); */
 			/* 	if (nk_contextual_item_label(ctx, "New", NK_TEXT_CENTERED)) */
-			/* 		func_add_node(type, "New", nk_vec2(400, 260), */
+			/* 		func_add_call(func, "New", nk_vec2(400, 260), */
 			/* 				nk_rgb(255, 255, 255)); */
 			/* 	if (nk_contextual_item_label(ctx, grid_option[show_grid],NK_TEXT_CENTERED)) */
 			/* 		show_grid = !show_grid; */
@@ -480,6 +642,6 @@ int node_editorf(uint type_ref, void *nk)
 		}
 	}
 	nk_end(ctx);
-	return !nk_window_is_closed(ctx, type->name);
+	return !nk_window_is_closed(ctx, func->name);
 }
 

@@ -725,8 +725,6 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 				tex->prev_id, 25, nk_vec2(200, 200));
 
 
-		/* slider color combobox */
-
 
 		nk_value_int(self->nk, "glid: ", tex->bufs[tex->prev_id].id);
 		nk_value_int(self->nk, "dims: ", tex->bufs[tex->prev_id].dims);
@@ -863,6 +861,10 @@ int c_editmode_commands(c_editmode_t *self)
 		if(nk_contextual_begin(self->nk, 0, nk_vec2(150, 300), bounds))
 		{
 			c_editmode_shell(self);
+			if(nk_button_label(self->nk, "visual logic"))
+			{
+				self->open_vil = ref("parent");
+			}
 
 			int close = 0;
 			if(entity_exists(self->selected))
@@ -902,8 +904,6 @@ int c_editmode_commands(c_editmode_t *self)
 
 int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 {
-	/* node_editorf(ref("parent"), self->nk); */
-
 	c_name_t *name = c_name(&ent);
 	int res;
 	char buffer[64];
@@ -1021,6 +1021,11 @@ int c_editmode_draw(c_editmode_t *self)
 			c_editmode_commands(self);
 		}
 		int e;
+		if(self->open_vil)
+		{
+			func_gui(self->open_vil, self->nk);
+		}
+
 		for(e = 0; e < self->open_textures_count; e++)
 		{
 			if(!c_editmode_texture_window(self, self->open_textures[e]))

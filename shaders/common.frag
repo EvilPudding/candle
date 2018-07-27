@@ -245,7 +245,8 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye)
 
 			float count = 1;
 			float inc = p.x;
-			float iters = shadow_len / inc;
+			float iters = min(shadow_len / inc, 20);
+			inc = shadow_len / iters;
 
 			for (i = inc; i <= shadow_len; i += inc)
 			{
