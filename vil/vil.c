@@ -1,21 +1,23 @@
 #include "vil.h"
 #include <utils/nk.h>
 #include <utils/khash.h>
+#include <utils/mafs.h>
 
 struct vil_call;
-struct vil_type;
+struct vil_func;
 
 typedef union
 {
-	struct { unsigned char size; unsigned char _[7]; };
+	struct { unsigned char depth; unsigned char _[7]; };
 	uint64_t val;
 } slot_t;
 
-typedef void(*vil_func_gui_cb)(struct vil_call *call, void *ctx);
+typedef void(*vil_func_gui_cb)(struct vil_call *call, void *data, void *ctx);
 static struct vil_func *add_func(const char *name,
 		vil_func_gui_cb builtin_gui, int builtin_size);
-static void func_add_call(struct vil_func *root, unsigned int func,
-		const char *name, struct nk_vec2 pos, int is_input, int is_output);
+static struct vil_call *add_call(struct vil_func *root, unsigned int func,
+		const char *name, struct nk_color color, struct nk_vec2 pos,
+		int is_input, int is_output, int collapsable);
 static void func_link(struct vil_call *root, slot_t in_slot, slot_t out_slot,
 		int field);
 
@@ -23,8 +25,22 @@ struct vil_link
 {
 	slot_t input;
 	slot_t output;
-	struct nk_vec2 in;
-	struct nk_vec2 out;
+};
+
+struct vil_arg
+{
+	float height;
+	slot_t link;
+	void *data;
+	struct vil_func *type;
+	int expanded;
+};
+
+struct vil_ret
+{
+	/* float height = 29; */
+	slot_t link;
+	struct vil_func *type;
 };
 
 struct vil_call
@@ -32,19 +48,21 @@ struct vil_call
 	struct vil_func *func;
 	struct vil_func *parent;
 
-	int id;
+	unsigned int id;
 	char name[32];
 	struct vil_call *next;
 	struct vil_call *prev;
 
+	int collapsable;
 	int is_input;
 	int is_output;
 
+	struct nk_color color;
 
 	struct nk_rect bounds;
 
-	float input_sizes[32];
-	slot_t input_args[32];
+	struct vil_arg input_args[32];
+	struct vil_ret output_args[32];
 
 	void *builtin_data;
 };
@@ -58,8 +76,8 @@ struct vil_func
 	struct vil_link links[64];
 	struct vil_call *begin;
 	struct vil_call *end;
-	int call_count;
-	int link_count;
+	unsigned int call_count;
+	unsigned int link_count;
 
 	unsigned int		builtin_size;
 	vil_func_gui_cb		builtin_gui;
@@ -67,13 +85,16 @@ struct vil_func
 	/* vil_func_save_cb	builtin_save; */
 };
 
-KHASH_MAP_INIT_INT(vil_func, struct vil_func)
+KHASH_MAP_INIT_INT(vil_func, struct vil_func *)
 
 static slot_t linking;
+struct vil_call *g_dragging;
+struct vil_call *g_hovered;
 static unsigned int linking_type;
+static slot_t g_call_unlink;
+static slot_t g_call_link;
 static struct nk_vec2 scrolling;
 static int show_grid;
-static struct vil_call *selected;
 
 static khash_t(vil_func) *g_funcs;
 
@@ -82,57 +103,81 @@ void label_gui(struct vil_call *call, void *ctx)
 	nk_layout_row_dynamic(ctx, 29, 1);
 	nk_label(ctx, call->name, NK_TEXT_LEFT);
 }
-void number_gui(struct vil_call *call, void *ctx) 
+
+void color_gui(struct vil_call *call, struct nk_colorf *color, void *ctx) 
 {
-	int *num = call->builtin_data;
-	if(*num < 29) *num = 29;
-	nk_layout_row_begin(ctx, NK_DYNAMIC, *num, 2);
+	nk_layout_row_dynamic(ctx, 29, 1);
+	if (nk_combo_begin_color(ctx, nk_rgb_cf(*color), nk_vec2(200,400))) {
+		nk_layout_row_dynamic(ctx, 120, 1);
+		*color = nk_color_picker(ctx, *color, NK_RGBA);
+
+		nk_combo_end(ctx);
+	}
+}
+
+void number_gui(struct vil_call *call, float *num, void *ctx) 
+{
+	/* if(*num < 29) *num = 29; */
+	/* nk_layout_row_begin(ctx, NK_DYNAMIC, *num, 2); */
+	nk_layout_row_begin(ctx, NK_DYNAMIC, 29, 2);
 	nk_layout_row_push(ctx, 0.20);
 	nk_label(ctx, call->name, NK_TEXT_LEFT);
 	nk_layout_row_push(ctx, 0.80);
-	*num = (nk_byte)nk_propertyi(ctx, "#", 0, *num, 255, 1, 1);
+	*num = nk_propertyf(ctx, "#", 0, *num, 1, 0.01, 0.01);
 	nk_layout_row_end(ctx);
 	/* nk_slider_int(ctx, 29, num, 200, 1); */
 }
 
 REG() {
 	g_funcs = kh_init(vil_func);
+	struct vil_func *func;
 
 	show_grid = nk_true;
 
-	add_func("number", (vil_func_gui_cb)number_gui, sizeof(float));
+	func = add_func("number", (vil_func_gui_cb)number_gui, sizeof(float));
+	func = add_func("_color_picker", (vil_func_gui_cb)color_gui, sizeof(vec4_t));
 
-	struct vil_func *func = add_func("test", NULL, 0);
+	func = add_func("test", NULL, 0);
+		add_call(func, ref("number"), "A", nk_rgb(100, 100, 100), nk_vec2(40, 10), 1, 0, 0);
+		add_call(func, ref("number"), "B", nk_rgb(100, 100, 100), nk_vec2(40, 260), 1, 0, 0);
+		add_call(func, ref("number"), "C", nk_rgb(100, 100, 100), nk_vec2(200, 260), 0, 1, 0);
 
-	func_add_call(func, ref("number"), "A", nk_vec2(40, 10), 1, 0);
-	func_add_call(func, ref("number"), "B", nk_vec2(40, 260), 1, 0);
-	func_add_call(func, ref("number"), "C", nk_vec2(200, 260), 0, 1);
+	func = add_func("rgba", NULL, sizeof(vec4_t));
+		add_call(func, ref("_color_picker"), "color", nk_rgb(100, 100, 100), nk_vec2(100, 10), 1, 0, 0);
+		add_call(func, ref("number"), "r", nk_rgb(255, 0, 0), nk_vec2(100, 10), 1, 1, 1);
+		add_call(func, ref("number"), "g", nk_rgb(0, 255, 0), nk_vec2(200, 10), 1, 1, 1);
+		add_call(func, ref("number"), "b", nk_rgb(0, 0, 255), nk_vec2(300, 10), 1, 1, 1);
+		add_call(func, ref("number"), "a", nk_rgb(255, 255, 255), nk_vec2(300, 10), 1, 1, 1);
+
 
 	func = add_func("parent", NULL, 0);
-
-	func_add_call(func, ref("number"), "num", nk_vec2(40, 10), 0, 0);
-	func_add_call(func, ref("number"), "num2", nk_vec2(149, 13), 0, 0);
-	func_add_call(func, ref("test"), "sum", nk_vec2(40, 260), 0, 0);
+		add_call(func, ref("number"),	"num",	nk_rgb(100, 100, 100), nk_vec2(40, 10), 0, 0, 0);
+		add_call(func, ref("number"),	"num2",	nk_rgb(100, 100, 100), nk_vec2(149, 13), 0, 0, 0);
+		add_call(func, ref("test"),		"sum",	nk_rgb(100, 100, 100), nk_vec2(40, 260), 0, 0, 0);
+		add_call(func, ref("rgba"),	"color1", nk_rgb(100, 100, 100), nk_vec2(0, 0), 0, 0, 0);
+		add_call(func, ref("rgba"),	"color2", nk_rgb(100, 100, 100), nk_vec2(0, 0), 0, 0, 0);
 }
 
 static struct vil_func *add_func(const char *name,
 		vil_func_gui_cb builtin_gui, int builtin_size)
 {
-	int ret;
+	int ret = 0;
 	int id = ref(name);
 	khiter_t k = kh_put(vil_func, g_funcs, id, &ret);
-	struct vil_func *func = &kh_value(g_funcs, k);
-	strncpy(func->name, name, sizeof(func->name));
-	func->builtin_gui = builtin_gui;
-	func->builtin_size = builtin_size;
-	func->begin = NULL;
-	func->end = NULL;
-	func->id = id;
+	if(ret != 1) exit(1);
+	struct vil_func **func = &kh_value(g_funcs, k);
+	*func = malloc(sizeof(struct vil_func));
+	**func = (struct vil_func){
+		.builtin_gui = builtin_gui,
+		.builtin_size = builtin_size,
+		.id = id
+	};
 
+	strncpy((*func)->name, name, sizeof((*func)->name));
 	/* func_link(func, 0, 0, 2, 0); */
 	/* func_link(func, 1, 0, 2, 1); */
 
-	return func;
+	return *func;
 }
 
 static void func_push(struct vil_func *func, struct vil_call *call)
@@ -144,8 +189,7 @@ static void func_push(struct vil_func *func, struct vil_call *call)
 		func->end = call;
 	} else {
 		call->prev = func->end;
-		if (func->end)
-			func->end->next = call;
+		func->end->next = call;
 		call->next = NULL;
 		func->end = call;
 	}
@@ -153,14 +197,10 @@ static void func_push(struct vil_func *func, struct vil_call *call)
 
 static void func_pop(struct vil_func *func, struct vil_call *call)
 {
-	if (call->next)
-		call->next->prev = call->prev;
-	if (call->prev)
-		call->prev->next = call->next;
-	if (func->end == call)
-		func->end = call->prev;
-	if (func->begin == call)
-		func->begin = call->next;
+	if (call->next) call->next->prev = call->prev;
+	if (call->prev) call->prev->next = call->next;
+	if (func->end == call) func->end = call->prev;
+	if (func->begin == call) func->begin = call->next;
 	call->next = NULL;
 	call->prev = NULL;
 }
@@ -185,16 +225,17 @@ static struct vil_func *get_func(uint ref)
 		return NULL;
 	}
 
-	return &kh_value(g_funcs, k);
+	return kh_value(g_funcs, k);
 }
 
 
-static void func_add_call(struct vil_func *root, unsigned int func,
-		const char *name, struct nk_vec2 pos, int is_input, int is_output)
+static struct vil_call *add_call(struct vil_func *root, unsigned int func,
+		const char *name, struct nk_color color, struct nk_vec2 pos,
+		int is_input, int is_output, int collapsable)
 {
 	struct vil_call *call;
 	/* NK_ASSERT((nk_size)func->call_count < NK_LEN(func->call_buf)); */
-	int i = root->call_count++;
+	unsigned int i = root->call_count++;
 	call = &root->call_buf[i];
 	call->id = i;
 	call->bounds.x = pos.x;
@@ -203,15 +244,21 @@ static void func_add_call(struct vil_func *root, unsigned int func,
 	call->bounds.h = 29;
 	call->func = get_func(func);
 	call->parent = root;
-	call->builtin_data = calloc(1, call->func->builtin_size);
+	call->color = color;
+	if(call->func->builtin_size)
+	{
+		call->builtin_data = calloc(1, call->func->builtin_size);
+	}
 	call->is_input = is_input;
+	call->collapsable = collapsable;
 	call->is_output = is_output;
 	/* call->input_count = func_count_inputs(call->func); */
 	/* call->output_count = 0; */
 	/* call->output_count = func_count_outputs(call->func); */
 
-	strcpy(call->name, name);
+	strncpy(call->name, name, sizeof(call->name));
 	func_push(root, call);
+	return call;
 }
 
 static void func_unlink(struct vil_call *root, slot_t out_slot,
@@ -225,7 +272,7 @@ static void func_unlink(struct vil_call *root, slot_t out_slot,
 		for(i = 0; i < func->link_count; i++)
 		{
 			struct vil_link *link = &func->links[i];
-			if(link->output.val == out_slot.val || link->output.val == out_slot.val)
+			if(link->output.val == out_slot.val)
 			{
 				*link = func->links[func->link_count - 1];
 				break;
@@ -233,36 +280,86 @@ static void func_unlink(struct vil_call *root, slot_t out_slot,
 		}
 	}
 	func->link_count--;
-	root->input_args[field].size = 0;
+	root->input_args[field].link.val = 0;
+	root->output_args[field].link.val = 0;
 }
 
 static void func_link(struct vil_call *root, slot_t in_slot, slot_t out_slot,
 		int field)
 {
 	struct vil_link *link = &root->parent->links[root->parent->link_count++];
+
+	g_call_link = in_slot;
+
 	link->input = in_slot;
 	link->output = out_slot;
-	root->input_args[field] = in_slot;
+	root->input_args[field].link = in_slot;
 }
 
-static float call_outputs(struct vil_call *root,
-		struct vil_call *call, slot_t parent_slot,
-		float x, float y, struct nk_context *ctx)
+static void output_options(struct vil_call *root, int *field,
+		struct vil_call *call, slot_t parent_slot, struct nk_context *ctx)
 {
 	slot_t slot = parent_slot;
-	slot._[slot.size++] = call->id;
+	slot._[slot.depth++] = call->id;
+	struct vil_call *it;
+	int call_field = (*field)++;
+	if(call->func->builtin_size)
+	{
+		if(!root->output_args[call_field].link.depth) /* is not linked */
+		{
+			if (nk_contextual_item_label(ctx, call->name, NK_TEXT_CENTERED))
+			{
+				root->output_args[call_field].link.depth = (unsigned char)-1;
+				linking = slot;
+				linking_type = call->func->id;
+			}
+		}
+	}
+	for (it = call->func->begin; it; it = it->next)
+	{
+		if(it->is_output)
+		{
+			output_options(root, field, it, slot, ctx);
+		}
+	}
+}
 
+static float call_outputs(struct vil_call *root, int *field,
+		struct vil_call *call, slot_t parent_slot, float y,
+		struct nk_context *ctx)
+{
+	int call_field = (*field)++;
+	struct vil_call *it;
+	slot_t slot = parent_slot;
+	slot._[slot.depth++] = call->id;
+
+	struct vil_ret *arg = &root->output_args[call_field];
+
+	if(!linking.depth && arg->link.depth == (unsigned char)-1)
+	{
+		arg->link.val = 0;
+	}
+	if(g_call_unlink.depth && g_call_unlink.val == slot.val)
+	{
+		arg->link.val = 0;
+		g_call_unlink.val = 0;
+	}
+	if(g_call_link.depth && g_call_link.val == slot.val)
+	{
+		arg->link = g_call_link;
+		g_call_link.val = 0;
+	}
 	const struct nk_input *in = &ctx->input;
 	struct nk_command_buffer *canvas = nk_window_get_canvas(ctx);
 
-	if(call->func->builtin_gui)
+	if(arg->link.depth) /* is linked */
 	{
 		struct nk_rect circle;
-		circle.x = x + call->bounds.w-4;
+		circle.x = root->bounds.x + call->bounds.w + 2;
 		/* circle.y = call->bounds.y + space * (float)(n+1); */
-		circle.y = y + 29.0f + 29.0f / 2.0f;
+		circle.y = y + 29.0f / 2.0f;
 		circle.w = 8; circle.h = 8;
-		nk_fill_circle(canvas, circle, nk_rgb(100, 100, 100));
+		nk_fill_circle(canvas, circle, call->color);
 
 		struct nk_rect bound = nk_rect(circle.x-5, circle.y-5,
 				circle.w+10, circle.h+10);
@@ -276,7 +373,7 @@ static float call_outputs(struct vil_call *root,
 		}
 
 		/* draw curve from linked call slot to mouse position */
-		if (linking.size && linking.val == slot.val)
+		if (linking.depth && linking.val == slot.val)
 		{
 			struct nk_vec2 l0 = nk_vec2(circle.x + 3, circle.y + 3);
 			struct nk_vec2 l1 = in->mouse.pos;
@@ -285,15 +382,13 @@ static float call_outputs(struct vil_call *root,
 		}
 		y += 29;
 	}
-	struct vil_call *it = call->func->begin;
 
-	while (it)
+	for (it = call->func->begin; it; it = it->next)
 	{
 		if(it->is_output)
 		{
-			y = call_outputs(root, it, slot, x, y, ctx);
+			y = call_outputs(root, field, it, slot, y, ctx);
 		}
-		it = it->next;
 	}
 	return y;
 }
@@ -301,24 +396,18 @@ static float call_outputs(struct vil_call *root,
 static int get_call_output_y(struct vil_call *root, struct vil_call *call, float *y,
 		slot_t parent_slot, slot_t search)
 {
+	struct vil_call *it;
 	slot_t slot = parent_slot;
-	slot._[slot.size++] = call->id;
+	slot._[slot.depth++] = call->id;
 
-	if(call->func->builtin_gui)
+	float h = 29.0f;
+	if(slot.val == search.val)
 	{
-		float h = 29.0f;
-		if(slot.val == search.val)
-		{
-			*y += h / 2.0f;
-			return 1;
-		}
-		*y += h;
-		return 0;
+		*y += h / 2.0f;
+		return 1;
 	}
 
-	struct vil_call *it = call->func->begin;
-
-	while (it)
+	for (it =  call->func->begin; it; it = it->next)
 	{
 		if(it->is_output)
 		{
@@ -327,7 +416,6 @@ static int get_call_output_y(struct vil_call *root, struct vil_call *call, float
 				return 1;
 			}
 		}
-		it = it->next;
 	}
 	return 0;
 }
@@ -335,11 +423,11 @@ static int get_call_input_y(struct vil_call *root, int *field,
 		struct vil_call *call, float *y, slot_t parent_slot, slot_t search)
 {
 	slot_t slot = parent_slot;
-	slot._[slot.size++] = call->id;
+	slot._[slot.depth++] = call->id;
 
 	int call_field = (*field)++;
 
-	float h = root->input_sizes[call_field];
+	float h = root->input_args[call_field].height;
 	if(slot.val == search.val)
 	{
 		*y += h / 2.0f;
@@ -385,20 +473,22 @@ struct nk_vec2 get_input_position(struct vil_func *func, slot_t search)
 	return nk_vec2(call->bounds.x, y);
 }
 
-static float call_inputs(struct vil_call *root, int *field,
+static void call_inputs(struct vil_call *root, int *field,
 		struct vil_call *call, float *y, slot_t parent_slot,
 		struct nk_context *ctx)
 {
 	int call_field = (*field)++;
 
 	slot_t slot = parent_slot;
-	slot._[slot.size++] = call->id;
+	slot._[slot.depth++] = call->id;
 
-	int is_linking = linking.size && linking._[0] != root->id;
+	struct vil_arg *arg = &root->input_args[call_field];
+
+	int is_linking = linking.depth && linking._[0] != root->id;
 	int linking_allowed = is_linking && linking_type == call->func->id;
-	int is_linked = root->input_args[call_field].size;
+	int is_linked = arg->link.depth;
 
-	float call_h = root->input_sizes[call_field];
+	float call_h = arg->height;
 
 	if(linking_allowed || is_linked)
 	{
@@ -407,7 +497,7 @@ static float call_inputs(struct vil_call *root, int *field,
 
 		struct nk_rect circle = nk_rect(root->bounds.x + 2,
 				*y + call_h / 2.0f, 8, 8);
-		nk_fill_circle(canvas, circle, nk_rgb(100, 100, 100));
+		nk_fill_circle(canvas, circle, call->color);
 
 		struct nk_rect bound = nk_rect(circle.x-5, circle.y-5,
 				circle.w+10, circle.h+10);
@@ -417,9 +507,10 @@ static float call_inputs(struct vil_call *root, int *field,
 			if (nk_input_has_mouse_click_down_in_rect(in,
 						NK_BUTTON_LEFT, bound, nk_true))
 			{
-				linking = root->input_args[call_field];
+				linking = arg->link;
 				linking_type = call->func->id;
 				func_unlink(root, slot, call_field);
+				g_call_unlink = arg->link;
 			}
 		}
 
@@ -427,41 +518,59 @@ static float call_inputs(struct vil_call *root, int *field,
 				nk_input_is_mouse_released(in, NK_BUTTON_LEFT) &&
 				nk_input_is_mouse_hovering_rect(in, bound))
 		{
-			if(is_linked) func_unlink(root, slot, call_field);
-			func_link(root, linking, slot, call_field);
-			linking.size = 0;
-		}
-	}
-	else
-	{
-		struct vil_call *it;
-		for (it = call->func->begin; it; it = it->next)
-		{
-			if(it->is_input)
+			if(is_linked)
 			{
-				*y += call_inputs(root, field, it, y, slot, ctx);
+				func_unlink(root, slot, call_field);
+				g_call_unlink = arg->link;
 			}
+			func_link(root, linking, slot, call_field);
+			linking.val = 0;
 		}
 	}
-	return call_h;
+	struct vil_call *it;
+	for (it = call->func->begin; it; it = it->next)
+	{
+		if(it->is_input)
+		{
+			call_inputs(root, field, it, y, slot, ctx);
+		}
+	}
+	if(call->func->builtin_gui) *y += call_h;
 }
 
 static float call_gui(struct vil_call *root, int *field,
-		struct vil_call *call, void *ctx)
+		char **inherited_data, struct vil_call *call, void *ctx)
 {
 	struct vil_call *it;
 	float call_h = 0.0f;
 	int call_field = (*field)++;
+	char **data = (char**)&root->input_args[call_field].data;
 
-	if(root->input_args[call_field].size) /* input is linked */
+	if(root->input_args[call_field].link.depth) /* input is linked */
 	{
 		label_gui(call, ctx);
 		struct nk_rect rect = nk_layout_widget_bounds(ctx);
 		call_h = rect.h;
+		return root->input_args[call_field].height = call_h;
 	}
-	else if(call->func->builtin_gui)
+	if(*data == NULL)
 	{
-		call->func->builtin_gui(call, ctx);
+		if(*inherited_data)
+		{
+			*data = *inherited_data;
+			*inherited_data += call->func->builtin_size;
+		}
+		else if(call->func->builtin_size)
+		{
+			*data = calloc(1, call->func->builtin_size);
+		}
+	}
+
+	char *current_data = *data;
+
+	if(call->func->builtin_gui)
+	{
+		call->func->builtin_gui(call, *data, ctx);
 		struct nk_rect rect = nk_layout_widget_bounds(ctx);
 		call_h = rect.h;
 	}
@@ -471,11 +580,19 @@ static float call_gui(struct vil_call *root, int *field,
 		{
 			if(it->is_input)
 			{
-				call_h += call_gui(root, field, it, ctx);
+				if(*data)
+				{
+					if(current_data >= (*data) + call->func->builtin_size)
+					{
+						current_data = *data;
+					}
+				}
+
+				call_h += call_gui(root, field, &current_data, it, ctx);
 			}
 		}
 	}
-	return root->input_sizes[call_field] = call_h;
+	return root->input_args[call_field].height = call_h;
 }
 
 int func_gui(uint func_ref, void *nk)
@@ -483,9 +600,7 @@ int func_gui(uint func_ref, void *nk)
 	struct nk_context *ctx = nk;
 	struct nk_rect total_space;
 	const struct nk_input *in = &ctx->input;
-	struct vil_call *updated = 0;
 	struct vil_func *func = get_func(func_ref);
-
 
 	if (nk_begin(ctx, func->name, nk_rect(0, 0, 800, 600),
 				NK_WINDOW_BORDER |
@@ -497,12 +612,14 @@ int func_gui(uint func_ref, void *nk)
 		total_space = nk_window_get_content_region(ctx);
 		nk_layout_space_begin(ctx, NK_STATIC, total_space.h, func->call_count);
 		{
-			struct vil_call *it = func->begin;
+			struct vil_call *hovered = NULL;
+			struct vil_call *dragging = NULL;
+			struct vil_call *it;
 			/* struct nk_rect size = nk_layout_space_bounds(ctx); */
 			struct nk_panel *call = 0;
 
 			/* execute each call as a movable group */
-			while (it)
+			for (it = func->begin; it; it = it->next)
 			{
 				/* calculate scrolled call window position and size */
 				nk_layout_space_push(ctx, nk_rect(it->bounds.x - scrolling.x,
@@ -510,7 +627,6 @@ int func_gui(uint func_ref, void *nk)
 
 				/* execute call window */
 				if (nk_group_begin(ctx, it->name,
-							NK_WINDOW_MOVABLE|
 							NK_WINDOW_NO_SCROLLBAR|
 							NK_WINDOW_BORDER|
 							NK_WINDOW_TITLE))
@@ -518,16 +634,35 @@ int func_gui(uint func_ref, void *nk)
 					/* always have last selected call on top */
 
 					call = nk_window_get_panel(ctx);
-					if (nk_input_mouse_clicked(in, NK_BUTTON_LEFT, call->bounds) &&
-							(!(it->prev && nk_input_mouse_clicked(in, NK_BUTTON_LEFT,
-							  nk_layout_space_rect_to_screen(ctx, call->bounds)))) &&
-							func->end != it)
+					struct nk_rect bd = call->bounds;
+					struct nk_rect header = nk_rect(bd.x, bd.y - 29, bd.w, 29);
+					bd.y -= 29;
+					bd.h += 29;
+
+					if(g_dragging)
 					{
-						updated = it;
+						if(g_dragging == it)
+						{
+							if(nk_input_is_mouse_released(in, NK_BUTTON_LEFT))
+							{
+								g_dragging = NULL;
+							}
+							call->bounds.x += in->mouse.delta.x;
+							call->bounds.y += in->mouse.delta.y;
+						}
+					}
+					else if (nk_input_is_mouse_hovering_rect(in, header))
+					{
+						if(!linking.depth && nk_input_is_mouse_pressed(in, NK_BUTTON_LEFT))
+						{
+							dragging = it;
+						}
+						hovered = it;
 					}
 
 					int field = 0;
-					float h = call_gui(it, &field, it, nk);
+					char *inherited_data = NULL;
+					float h = call_gui(it, &field, &inherited_data, it, nk);
 					it->bounds.h = h;
 					/* nk_layout_row_begin(ctx, NK_DYNAMIC, 25, 2); */
 					/* nk_layout_row_push(ctx, 0.50); */
@@ -542,7 +677,18 @@ int func_gui(uint func_ref, void *nk)
 					/* nk_layout_row_push(ctx, 0.50); */
 					/* nk_label(ctx, "output", NK_TEXT_RIGHT); */
 					/* nk_layout_row_end(ctx); */
-
+					/* contextual menu */
+					if(g_hovered == it)
+					{
+						if (nk_contextual_begin(ctx, 0, nk_vec2(100, 220), bd))
+						{
+							nk_layout_row_dynamic(ctx, 25, 1);
+							int field = 0;
+							slot_t sl = {0};
+							output_options(it, &field, it, sl, ctx);
+							nk_contextual_end(ctx);
+						}
+					}
 					nk_group_end(ctx);
 				}
 				{
@@ -556,21 +702,27 @@ int func_gui(uint func_ref, void *nk)
 
 
 					slot_t sl = {0};
-					/* output connector */
-					call_outputs(it, it, sl, call->bounds.x, call->bounds.y, ctx);
-					/* input connector */
 					int field = 0;
+					/* output connector */
+					call_outputs(it, &field, it, sl, call->bounds.y + 29, ctx);
+					/* input connector */
+					field = 0;
 					float y = call->bounds.y + 29;
 					call_inputs(it, &field, it, &y, sl, ctx);
 				}
-				it = it->next;
 			}
 
 			/* reset linking connection */
-			if (linking.size && nk_input_is_mouse_released(in, NK_BUTTON_LEFT))
+			if(linking.depth)
 			{
-				linking.size = 0;
-				fprintf(stdout, "linking failed\n");
+				dragging = NULL;
+				g_dragging = NULL;
+				if (nk_input_is_mouse_released(in, NK_BUTTON_LEFT))
+				{
+					g_call_unlink = linking;
+					linking.val = 0;
+					fprintf(stdout, "linking failed\n");
+				}
 			}
 
 			/* draw each link */
@@ -594,42 +746,30 @@ int func_gui(uint func_ref, void *nk)
 						l1.x - 50.0f, l1.y, l1.x, l1.y, 1.0f, nk_rgb(100, 100, 100));
 			}
 
-			if (updated)
+			if(hovered)
 			{
-				/* reshuffle calls to have least recently selected call on top */
-				func_pop(func, updated);
-				func_push(func, updated);
-			}
-
-			/* call selection */
-			if (nk_input_mouse_clicked(in, NK_BUTTON_LEFT, nk_layout_space_bounds(ctx)))
-			{
-				it = func->begin;
-				selected = NULL;
-				/* func->bounds = nk_rect(in->mouse.pos.x, in->mouse.pos.y, 100, 200); */
-				while (it)
+				if(g_hovered && g_hovered != hovered)
+				/* Don't transition directly so contextual has chance to close */
 				{
-					struct nk_rect b = nk_layout_space_rect_to_screen(ctx, it->bounds);
-					b.x -= scrolling.x;
-					b.y -= scrolling.y;
-					if (nk_input_is_mouse_hovering_rect(in, b))
-						selected = it;
-					it = it->next;
+					g_hovered = NULL;
+				}
+				else
+				{
+					g_hovered = hovered;
 				}
 			}
 
-			/* contextual menu */
-			/* if (nk_contextual_begin(ctx, 0, nk_vec2(100, 220), nk_window_get_bounds(ctx))) */
-			/* { */
-			/* 	const char *grid_option[] = {"Show Grid", "Hide Grid"}; */
-			/* 	nk_layout_row_dynamic(ctx, 25, 1); */
-			/* 	if (nk_contextual_item_label(ctx, "New", NK_TEXT_CENTERED)) */
-			/* 		func_add_call(func, "New", nk_vec2(400, 260), */
-			/* 				nk_rgb(255, 255, 255)); */
-			/* 	if (nk_contextual_item_label(ctx, grid_option[show_grid],NK_TEXT_CENTERED)) */
-			/* 		show_grid = !show_grid; */
-			/* 	nk_contextual_end(ctx); */
-			/* } */
+			if(dragging)
+			{
+				g_dragging = dragging;
+				if (dragging->next)
+				{
+					/* reshuffle calls to have least recently selected call on top */
+					func_pop(func, g_dragging);
+					func_push(func, g_dragging);
+				}
+			}
+
 		}
 		nk_layout_space_end(ctx);
 
