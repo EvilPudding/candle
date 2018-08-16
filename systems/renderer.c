@@ -32,6 +32,11 @@ int c_renderer_scene_changed(c_renderer_t *self)
 	return CONTINUE;
 }
 
+void c_renderer_invert_depth(c_renderer_t *self, int inverted)
+{
+	self->depth_inverted = inverted;
+}
+
 static int c_renderer_bind_buffer(c_renderer_t *self, pass_t *pass,
 		bind_t *bind)
 {
@@ -377,6 +382,7 @@ static int c_renderer_gl(c_renderer_t *self)
 		(bind_t[]){
 			{BIND_OUT, .buffer = c_renderer_tex(self, ref("gbuffer"))},
 			{BIND_TEX, "gbuffer", .buffer = c_renderer_tex(self, ref("gbuffer"))},
+			/* I can safely read from the gbuffer depth because depth write is locked*/
 			{BIND_CAM, "camera", (getter_cb)c_renderer_get_camera, self},
 			{BIND_NONE}
 		}

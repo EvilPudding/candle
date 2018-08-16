@@ -179,7 +179,18 @@ vec3 get_position(sampler2D depth, vec2 pos)
 
 vec3 get_normal(sampler2D buffer)
 {
-	return decode_normal(textureLod(buffer, pixel_pos(), 0).rg);
+	return decode_normal(texelFetch(buffer, ivec2(int(gl_FragCoord.x),
+					int(gl_FragCoord.y)), 0).rg);
+}
+vec3 get_normal(vec2 tc)
+{
+	if(has_tex > 0.5)
+	{
+		vec3 texcolor = resolveProperty(normal, tc).rgb * 2.0f - 1.0f;
+		return normalize(TM * texcolor);
+
+	}
+	return normalize(TM[2]);
 }
 vec3 get_normal()
 {

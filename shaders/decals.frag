@@ -7,7 +7,7 @@ layout (location = 1) out vec4 NRM; // normal_roughness_metalness
 
 BUFFER {
 	sampler2D depth;
-	sampler2D normal;
+	/* sampler2D nmr; */
 } gbuffer;
 
 void main()
@@ -20,22 +20,23 @@ void main()
 
 
 	vec3 diff = abs(m_pos);
-	if(diff.x > 1) discard;
-	if(diff.y > 1) discard;
-	if(diff.z > 1) discard;
+	if(diff.x > 0.5) discard;
+	if(diff.y > 0.5) discard;
+	if(diff.z > 0.5) discard;
 	vec2 tc = m_pos.xy - 0.5;
 
 	vec3 vnorm = resolveProperty(normal, tc).rgb * 2.0f - 1.0f;
 	/* vnorm = vec3(0.0f, 0.0f, 1.0f); */
 
 	vec3 norm = ((camera.view * model) * vec4(vnorm, 0.0f)).xyz;
-	if(dot(norm, get_normal(gbuffer.normal)) < 0.5) discard;
+	/* if(dot(norm, get_normal(gbuffer.nmr)) < 0.5) discard; */
 
+	/* AlbedoColor = vec4(get_normal(gbuffer.nmr), 1); */
 	AlbedoColor = resolveProperty(albedo, tc);
 
-	NRM.b = resolveProperty(roughness, texcoord).r;
-	NRM.a = resolveProperty(metalness, texcoord).r;
-	NRM.rg = encode_normal(get_normal());
+	NRM.b = resolveProperty(roughness, tc).r;
+	NRM.a = resolveProperty(metalness, tc).r;
+	NRM.rg = encode_normal(norm);
 
 }
 

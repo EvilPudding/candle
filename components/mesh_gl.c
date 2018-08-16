@@ -648,13 +648,28 @@ int glg_draw(glg_t *self, shader_t *shader, int flags)
 	/* glPolygonOffset(0.0f, model->layers[self->layer_id].offset); */
 	glerr();
 
+	c_renderer_t *renderer = c_renderer(&SYS);
 	if(is_emissive)
 	{
-		glDepthFunc(GL_LEQUAL);
+		if(renderer->depth_inverted)
+		{
+			glDepthFunc(GL_GEQUAL);
+		}
+		else
+		{
+			glDepthFunc(GL_LEQUAL);
+		}
 	}
 	else
 	{
-		glDepthFunc(GL_LESS);
+		if(renderer->depth_inverted)
+		{
+			glDepthFunc(GL_GREATER);
+		}
+		else
+		{
+			glDepthFunc(GL_LESS);
+		}
 	}
 
 	int cull_was_enabled = glIsEnabled(GL_CULL_FACE);

@@ -50,9 +50,9 @@ int c_decal_render_bound(c_decal_t *self)
 int c_decal_render(c_decal_t *self)
 {
 	c_model_cull_face(c_model(self), 0, 1);
-	glDepthFunc(GL_GREATER);
+	c_renderer_invert_depth(c_renderer(&SYS), 1);
 	int res = c_model_render(c_model(self), vs_bind(g_model_vs), 0);
-	glDepthFunc(GL_LESS);
+	c_renderer_invert_depth(c_renderer(&SYS), 0);
 
 	return res;
 }

@@ -243,6 +243,7 @@ static inline c_t *ct_get_nth(ct_t *self, int n)
 
 static inline c_t *ct_get(ct_t *self, entity_t *entity)
 {
+	if(!self) return NULL;
 	if(!entity_exists(*entity)) return NULL;
 	khiter_t k = kh_get(c, self->cs, entity_uid(*entity));
 	if(k == kh_end(self->cs)) return NULL;

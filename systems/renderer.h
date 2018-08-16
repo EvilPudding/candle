@@ -178,6 +178,9 @@ typedef struct c_renderer_t
 	entity_t camera;
 
 	int ready;
+
+	// GL PROPS
+	int depth_inverted;
 } c_renderer_t;
 
 DEF_CASTER("renderer", c_renderer, c_renderer_t)
@@ -210,6 +213,8 @@ entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
 		float *depth);
 unsigned int c_renderer_geom_at_pixel(c_renderer_t *self, int x, int y,
 		float *depth);
+
+void c_renderer_invert_depth(c_renderer_t *self, int inverted);
 
 void pass_set_model(pass_t *self, mat4_t model);
 
