@@ -11,6 +11,7 @@
 
 #include <components/node.h>
 #include <components/name.h>
+#include <components/vimat.h> // TODO REMOVE THIS
 
 #ifndef WIN32
 #include <unistd.h>
@@ -437,3 +438,7 @@ void candle_init2(void)
 	/* candle_import_dir(candle, entity_null, "./"); */
 }
 
+static __attribute__((__used__)) void prevent_linker_removal(void)
+{
+	c_vimat_new();
+}

@@ -150,7 +150,7 @@ void mat_bind_prop(u_prop_t *uniforms, prop_t *prop, int *num)
 	glUniform4f(uniforms->color, prop->color.r, prop->color.g, prop->color.b,
 			prop->color.a); glerr();
 
-	if(prop->texture_blend && ((int)uniforms->texture) != -1)
+	if(prop->texture_blend && ((int)uniforms->texture) != -1 && prop->texture)
 	{
 		glUniform1i(uniforms->texture, (*num)); glerr();
 		glActiveTexture(GL_TEXTURE0 + (*num)); glerr();

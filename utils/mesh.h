@@ -179,7 +179,6 @@ typedef struct mesh_t
 	int triangulated;
 	int current_cell;
 	int current_surface;
-	int first_edge;
 
 	mat4_t transformation;
 	mat4_t backup;

@@ -152,7 +152,6 @@ mesh_t *mesh_new()
 	self->triangulated = 1;
 	self->current_cell = -1;
 	self->current_surface = -1;
-	self->first_edge = 0;
 
 	self->faces_hash = kh_init(id);
 	self->edges_hash = kh_init(id);
@@ -1531,8 +1530,6 @@ void mesh_remove_edge(mesh_t *self, int edge_i)
 		prev->next = -1;
 	}
 	face_t *face = e_face(edge, self);
-
-	if(edge_i == self->first_edge) self->first_edge++;
 
 	vector_remove(self->edges, edge_i);
 

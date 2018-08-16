@@ -109,10 +109,8 @@ float lookup_single(vec3 shadowCoord)
 }
 
 /* float prec = 0.05; */
-float lookup(vec3 shadowCoord, vec3 offset)
+float lookup(vec3 coord)
 {
-	vec3 coord = shadowCoord + offset;
-	/* float dist = length(shadowCoord); */
 	float dist = length(coord);
 	float dist2 = lookup_single(coord) - dist;
 	return (dist2 > -0.05) ? 1.0 : 0.0;
@@ -199,6 +197,21 @@ float rand(vec2 co)
     return fract(sin(dot(co.xy, vec2(12.9898,78.233))) * 43758.5453);
 }
 
+vec2 fTaps_Poisson[] = vec2[](
+	vec2(-.326,-.406),
+	vec2(-.840,-.074),
+	vec2(-.696, .457),
+	vec2(-.203, .621),
+	vec2( .962,-.195),
+	vec2( .473,-.480),
+	vec2( .519, .767),
+	vec2( .185,-.893),
+	vec2( .507, .064),
+	vec2( .896, .412),
+	vec2(-.322,-.933),
+	vec2(-.792,-.598)
+);
+
 float shadow_at_dist_no_tan(vec3 vec, float i)
 {
 	/* vec3 rnd = (vec3(rand(vec.xy), rand(vec.yz), rand(vec.xz)) - 0.5) * i; */
@@ -208,21 +221,21 @@ float shadow_at_dist_no_tan(vec3 vec, float i)
 	vec3 x = vec3(1.0, 0.0, 0.0) * i;
 	vec3 y = vec3(0.0, 1.0, 0.0) * i;
 	vec3 z = vec3(0.0, 0.0, 1.0) * i;
-	
-	if(lookup(-vec,  x) > 0.5) return 1.0;
-	if(lookup(-vec,  y) > 0.5) return 1.0;
-	if(lookup(-vec,  z) > 0.5) return 1.0;
-	if(lookup(-vec, -x) > 0.5) return 1.0;
-	if(lookup(-vec, -y) > 0.5) return 1.0;
-	if(lookup(-vec, -z) > 0.5) return 1.0;
+
+	if(lookup(-vec + x) > 0.5) return 1.0;
+	if(lookup(-vec + y) > 0.5) return 1.0;
+	if(lookup(-vec + z) > 0.5) return 1.0;
+	if(lookup(-vec - x) > 0.5) return 1.0;
+	if(lookup(-vec - y) > 0.5) return 1.0;
+	if(lookup(-vec - z) > 0.5) return 1.0;
 
 
-	return 0.0;
+	return 0;
 }
 
 float unlinearize(float depth)
 {
-	return 100 * (1.0f - (0.1 / depth)) / (100 - 0.1);
+	return 100.0f * (1.0f - (0.1f / depth)) / (100.0f - 0.1f);
 }
 
 float get_shadow(vec3 vec, float point_to_light, float dist_to_eye)
@@ -243,10 +256,11 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye)
 
 			/* if(shadow_at_dist_no_tan(vec, shadow_len) < 0.5) return 1.0f; */
 
-			float count = 1;
+			float count = 0;
 			float inc = p.x;
 			float iters = min(shadow_len / inc, 20);
 			inc = shadow_len / iters;
+
 
 			for (i = inc; i <= shadow_len; i += inc)
 			{
@@ -254,11 +268,10 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye)
 
 				count++;
 			}
-			return count / (iters + 1);
+			return (count / iters);
 		}
 	}
-	sd = 0.0;
-	return sd;
+	return 0.0f;
 }
 
 float doAmbientOcclusion(sampler2D depth, vec2 tcoord, vec2 uv, vec3 p, vec3 cnorm)
@@ -273,6 +286,19 @@ float doAmbientOcclusion(sampler2D depth, vec2 tcoord, vec2 uv, vec3 p, vec3 cno
     return max(0.0, dot(cnorm, v) - bias) * (1.0 / (1.0 + d)) * intensity;
 }
 
+vec3 ppp[] = vec3[](
+		vec3(-0.6025853861145103, 0.4154745183350379, 0.6813749166615211),
+		vec3(0.17785620075237496, 0.721257801464502, 0.6694433177502961),
+		vec3(0.40907339758770134, 0.8591826554711636, 0.30735015848958713),
+		vec3(0.8016505389371444, -0.387637413020948, -0.45507543270123113),
+		vec3(0.9967060392294212, -0.08048051062902849, 0.009997938411999658),
+		vec3(0.11242268603816562, 0.9348998373902656, -0.33663546116180154),
+		vec3(-0.6735495643495322, 0.313093085567789, -0.669554855209188),
+		vec3(0.516552787451761, 0.321101595974388, 0.7937675874199681),
+		vec3(-0.6653981859746977, -0.03128467474575039, 0.7458327716235285),
+		vec3(0.043770034870918025, -0.979515190833735, -0.19655578081895841),
+		vec3(0.14642092069816068, 0.5859713297143408, -0.7969934220147054),
+		vec3(0.968975404819239, -0.07683527155447646, 0.234910633860074));
 
 float ambientOcclusion(sampler2D depth, vec3 p, vec3 n, float dist_to_eye)
 {
@@ -282,31 +308,31 @@ float ambientOcclusion(sampler2D depth, vec3 p, vec3 n, float dist_to_eye)
 	float rad = 0.4f / dist_to_eye;
 
 	/* vec2 vec[8]; */ 
-	vec2 vec[4]; 
-	vec[0] = vec2(1.0, 0.0); 
-	vec[1] = vec2(-1.0, 0.0); 
-	vec[2] = vec2(0.0, 1.0); 
-	vec[3] = vec2(0.0, -1.0);
+	/* vec2 vec[4]; */ 
+	/* vec[0] = vec2(1.0, 0.0); */ 
+	/* vec[1] = vec2(-1.0, 0.0); */ 
+	/* vec[2] = vec2(0.0, 1.0); */ 
+	/* vec[3] = vec2(0.0, -1.0); */
 
 	/* vec[4] = vec2(1.0, 1.0); */ 
 	/* vec[5] = vec2(-1.0, 1.0); */ 
 	/* vec[6] = vec2(-1.0, 1.0); */ 
 	/* vec[7] = vec2(-1.0, -1.0); */
 
-	int iterations = 4;
+	int iterations = 12;
 	for (int j = 0; j < iterations; ++j)
 	{
-		vec2 coord1 = reflect(vec[j], rnd) * rad;
+		vec2 coord1 = reflect(fTaps_Poisson[j], rnd) * rad;
 		vec2 coord2 = vec2(coord1.x * 0.707 - coord1.y * 0.707,
 				coord1.x * 0.707 + coord1.y * 0.707);
 
-		ao += doAmbientOcclusion(depth, texcoord,coord1 * 0.25, p, n);
-		ao += doAmbientOcclusion(depth, texcoord,coord2 * 0.5, p, n);
-		ao += doAmbientOcclusion(depth, texcoord,coord1 * 0.75, p, n);
-		ao += doAmbientOcclusion(depth, texcoord,coord2, p, n);
+		ao += doAmbientOcclusion(depth, texcoord, coord1 * 0.25, p, n);
+		ao += doAmbientOcclusion(depth, texcoord, coord2 * 0.5, p, n);
+		ao += doAmbientOcclusion(depth, texcoord, coord1 * 0.75, p, n);
+		ao += doAmbientOcclusion(depth, texcoord, coord2, p, n);
 	}
 	ao /= float(iterations) * 4.0f;
-	return clamp(1.0f - ao * 0.7f, 0.0f, 1.0f); 
+	return clamp(1.0f - ao * 0.4f, 0.0f, 1.0f); 
 }
 
 

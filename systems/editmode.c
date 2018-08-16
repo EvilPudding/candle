@@ -861,10 +861,6 @@ int c_editmode_commands(c_editmode_t *self)
 		if(nk_contextual_begin(self->nk, 0, nk_vec2(150, 300), bounds))
 		{
 			c_editmode_shell(self);
-			if(nk_button_label(self->nk, "visual logic"))
-			{
-				self->open_vil = ref("parent");
-			}
 
 			int close = 0;
 			if(entity_exists(self->selected))
@@ -1023,7 +1019,7 @@ int c_editmode_draw(c_editmode_t *self)
 		int e;
 		if(self->open_vil)
 		{
-			func_gui(self->open_vil, self->nk);
+			vitype_gui(self->open_vil, self->nk);
 		}
 
 		for(e = 0; e < self->open_textures_count; e++)

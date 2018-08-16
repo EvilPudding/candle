@@ -51,7 +51,7 @@ typedef struct
 	texture_t *open_textures[16];
 	int open_textures_count;
 
-	unsigned int open_vil;
+	void *open_vil;
 
 	enum {
 		EDIT_VERT,
