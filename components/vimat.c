@@ -52,7 +52,7 @@ REG()
 {
 	vicall_t *r, *g, *b, *a;
 	vil_t *ctx = &g_mat_ctx;
-	vil_context_init(ctx, NULL, NULL);
+	vil_context_init(ctx);
 
 
 	vitype_t *tnum = vil_add_type(ctx, "number",
