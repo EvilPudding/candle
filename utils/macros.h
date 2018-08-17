@@ -112,5 +112,10 @@ static inline uint murmur_hash_step(uint h1, uint block)
     return h1;
 }
 
+static inline uint hash_ptr(void *ptr)
+{
+	return murmur_hash(&ptr, sizeof(ptr), 0);
+}
+
 
 #endif /* !MACROS_H */

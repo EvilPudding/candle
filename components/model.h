@@ -72,16 +72,16 @@ struct edit_tool
 };
 extern struct edit_tool g_edit_tools[];
 
-typedef struct
-{
-	int selection;
-	mat_t *mat;
-	int wireframe;
-	int cull_front;
-	int cull_back;
-	float offset;
-	float smooth_angle;
-} mat_layer_t;
+/* typedef struct */
+/* { */
+/* 	int selection; */
+/* 	mat_t *mat; */
+/* 	int wireframe; */
+/* 	int cull_front; */
+/* 	int cull_back; */
+/* 	float offset; */
+/* 	float smooth_angle; */
+/* } mat_layer_t; */
 
 typedef enum
 {
@@ -113,13 +113,15 @@ typedef struct
 	int history_count;
 	mesh_t *mesh;
 
-	mat_layer_t *layers;
-	int layers_num;
+	/* mat_layer_t *layers; */
+	mat_t *mat;
+
+	/* int layers_num; */
 	float scale_dist;
 
 	int visible;
 	int cast_shadow;
-	before_draw_cb before_draw;
+	/* before_draw_cb before_draw; */
 	int xray;
 
 } c_model_t;
@@ -129,12 +131,12 @@ extern int g_update_id;
 extern vs_t *g_model_vs;
 
 void c_model_edit(c_model_t *self, mesh_edit_t type, geom_t target);
-void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset);
+/* void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset); */
 c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow, int visible);
-c_model_t *c_model_cull_face(c_model_t *self, int layer, int inverted);
-c_model_t *c_model_wireframe(c_model_t *self, int layer, int wireframe);
-c_model_t *c_model_smooth(c_model_t *self, int layer, int smooth);
-c_model_t *c_model_paint(c_model_t *self, int layer, mat_t *mat);
+c_model_t *c_model_cull_face(c_model_t *self, int inverted);
+c_model_t *c_model_wireframe(c_model_t *self, int wireframe);
+c_model_t *c_model_smooth(c_model_t *self, int smooth);
+c_model_t *c_model_paint(c_model_t *self, mat_t *mat);
 int c_model_render_transparent(c_model_t *self);
 int c_model_render_visible(c_model_t *self);
 int c_model_render(c_model_t *self, shader_t *shader, int transp);

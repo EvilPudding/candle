@@ -136,7 +136,7 @@ int c_window_created(c_window_t *self)
 	mesh_quad(mesh);
 	if(!c_model(self)) exit(1);
 
-	c_model_cull_face(c_model(self), 0, 2);
+	c_model_cull_face(c_model(self), 2);
 	c_model(self)->super.ghost = 1;
 	c_spacial(self)->super.ghost = 1;
 	c_node(self)->super.ghost = 1;
@@ -176,18 +176,13 @@ int c_window_render_quad(c_window_t *self, texture_t *texture)
 		shader_bind_screen(shader, texture, 1, 1);
 	}
 	c_node_t *node = c_node(self);
-	if(node)
-	{
-		c_node_update_model(node);
+	c_node_update_model(node);
 
 #ifdef MESH4
-			shader_update(shader, &node->model, node->angle4);
-#else
-			shader_update(shader, &node->model);
+	shader_update(shader, node->angle4);
 #endif
-	}
 
-	c_mesh_gl_draw(c_mesh_gl(self), 0);
+	c_mesh_gl_draw(c_mesh_gl(self), &node->model, 0);
 	return CONTINUE;
 }
 
@@ -213,7 +208,7 @@ void c_window_rect(c_window_t *self, int x, int y, int width, int height,
 			self->width,
 			self->height); glerr();
 
-	c_mesh_gl_draw(c_mesh_gl(self), 0);
+	c_mesh_gl_draw(c_mesh_gl(self), NULL, 0);
 
 }
 

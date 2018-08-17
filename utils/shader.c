@@ -136,8 +136,9 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"layout (location = 3) in vec3 TG;\n"
 			"layout (location = 4) in vec2 ID;\n"
 			"layout (location = 5) in vec3 COL;\n"
-			"layout (location = 6) in uvec4 BID;\n"
-			"layout (location = 7) in vec4 WEI;\n"
+			"layout (location = 7) in uvec4 BID;\n"
+			"layout (location = 8) in vec4 WEI;\n"
+			"layout (location = 9) in mat4 M;\n"
 			"\n"
 			"struct camera_t\n"
 			"{\n"
@@ -151,7 +152,6 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"\n"
 			"\n"
 			"uniform mat4 bones[30];\n"
-			"uniform mat4 M;\n"
 			"#ifdef MESH4\n"
 			"uniform float angle4;\n"
 			"#endif\n"
@@ -184,7 +184,7 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"void main()\n"
 			"{\n"
 			"	vec4 pos = vec4(P.xyz, 1.0f);\n"
-			"	model = M;\n"
+			"	model = mat4(1.0f);\n"
 			"	texcoord = UV;\n");
 
 
@@ -412,7 +412,6 @@ static int shader_new_loader(shader_t *self)
 /* 	/1* ID *1/ */
 /* 	glBindAttribLocation(self->program, 4, "ID"); glerr(); */
 
-	self->u_m = glGetUniformLocation(self->program, "M"); glerr();
 #ifdef MESH4
 	self->u_angle4 = glGetUniformLocation(self->program, "angle4"); glerr();
 #endif
@@ -598,7 +597,7 @@ void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
 {
 	/* shader_t *self = c_renderer(&g_systems)->shader; */
 	glUniformMatrix4fv(self->u_v, 1, GL_FALSE, (void*)view->_);
-	glUniformMatrix4fv(self->u_m, 1, GL_FALSE, (void*)model->_);
+	glUniformMatrix4fv(self->u_camera_model, 1, GL_FALSE, (void*)model->_);
 	glUniform3f(self->u_camera_pos, pos.x, pos.y, pos.z);
 	glUniform1f(self->u_exposure, exposure);
 
@@ -611,17 +610,12 @@ void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
 }
 
 #ifdef MESH4
-void shader_update(shader_t *self, mat4_t *model_matrix, float angle4)
-#else
-void shader_update(shader_t *self, mat4_t *model_matrix)
-#endif
+void shader_update(shader_t *self, float angle4)
 {
-	glUniformMatrix4fv(self->u_m, 1, GL_FALSE, (void*)model_matrix->_);
-#ifdef MESH4
 	glUniform1f(self->u_angle4, angle4);
-#endif
 	glerr();
 }
+#endif
 
 void shader_bind_screen(shader_t *self, texture_t *buffer, float sx, float sy)
 {

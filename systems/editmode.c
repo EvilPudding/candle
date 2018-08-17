@@ -290,6 +290,7 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 			self->over_poly = 0;
 		}
 	}
+	return CONTINUE;
 }
 
 /* entity_t g_disk = entity_null; */
@@ -620,7 +621,7 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 					{
 						mesh_t *mesh = cm->mesh;
 						mesh_lock(mesh);
-						c_model_add_layer(cm, g_sel_mat, SEL_EDITING, 0.8);
+						/* c_model_add_layer(cm, g_sel_mat, SEL_EDITING, 0.8); */
 						mesh_modified(mesh);
 						mesh_unlock(mesh);
 					}
@@ -875,7 +876,7 @@ int c_editmode_commands(c_editmode_t *self)
 					mesh_t *mesh = c_model(&self->selected)->mesh;
 					c_editmode_select(self,
 							entity_new(c_model_new(mesh_clone(mesh),
-									c_model(&self->selected)->layers[0].mat, 1, 1)));
+									c_model(&self->selected)->mat, 1, 1)));
 					nk_contextual_close(self->nk);
 				}
 				close |= entity_signal_same(self->selected, sig("component_tool"), self->nk, NULL) == STOP;

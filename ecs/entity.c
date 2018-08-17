@@ -103,6 +103,7 @@ int listener_signal_same(listener_t *self, entity_t ent, void *data, void *outpu
 	c_t *c = ct_get(ecm_get(self->target), &ent);
 	if(c)
 	{
+		if(c_entity(c) != ent)  return CONTINUE;
 		return self->cb(c, data, output);
 	}
 	return CONTINUE;

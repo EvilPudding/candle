@@ -75,7 +75,7 @@ c_skin_t *c_skin_new()
 	return self;
 }
 
-void c_skin_vert_prealloc(c_skin_t *self, int size)
+void skin_vert_prealloc(skin_t *self, int size)
 {
 	self->wei = realloc(self->wei, (self->vert_alloc + size) *
 			sizeof(*self->wei));
@@ -94,11 +94,11 @@ static void c_skin_bind_bones(c_skin_t *self, shader_t *shader)
 	/* c_node_update_model(nc); */
 	/* mat4_t inverse = mat4_invert(nc->model); */
 	int i;
-	for(i = 0; i < self->bones_num; i++)
+	for(i = 0; i < self->info.bones_num; i++)
 	{
-		c_node_t *node = c_node(&self->bones[i]);
+		c_node_t *node = c_node(&self->info.bones[i]);
 		c_node_update_model(node);
-		mat4_t transform = mat4_mul(node->model, self->off[i]);
+		mat4_t transform = mat4_mul(node->model, self->info.off[i]);
 		glUniformMatrix4fv(shader->u_bones[i], 1, GL_FALSE, (void*)transform._);
 	}
 }

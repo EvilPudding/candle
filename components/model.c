@@ -365,7 +365,8 @@ static void c_model_init(c_model_t *self)
 	}
 
 	self->visible = 1;
-	self->layers = malloc(sizeof(*self->layers) * 16);
+	/* self->layers = malloc(sizeof(*self->layers) * 16); */
+	self->history = vector_new(sizeof(mesh_history_t), FIXED_ORDER, NULL, NULL);
 
 	if(!g_model_vs)
 	{
@@ -394,29 +395,29 @@ static void c_model_init(c_model_t *self)
 	}
 }
 
-void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset)
-{
-	int i = self->layers_num++;
-	self->layers[i].mat = mat;
-	self->layers[i].selection = selection;
-	self->layers[i].cull_front = 0;
-	self->layers[i].cull_back = 1;
-	self->layers[i].wireframe = 0;
-	self->layers[i].offset = 0;
-	self->layers[i].smooth_angle = 0.2f;
-	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL, NULL);
-}
+/* void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset) */
+/* { */
+/* 	int i = self->layers_num++; */
+/* 	self->layers[i].mat = mat; */
+/* 	self->layers[i].selection = selection; */
+/* 	self->layers[i].cull_front = 0; */
+/* 	self->layers[i].cull_back = 1; */
+/* 	self->layers[i].wireframe = 0; */
+/* 	self->layers[i].offset = 0; */
+/* 	self->layers[i].smooth_angle = 0.2f; */
+/* 	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL, NULL); */
+/* } */
 
 c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow, int visible)
 {
 	c_model_t *self = component_new("model");
 
-	c_model_add_layer(self, mat, -1, 0);
+	/* c_model_add_layer(self, mat, -1, 0); */
+	self->mat = mat;
 
 	self->mesh = mesh;
 	self->cast_shadow = cast_shadow;
 	self->visible = visible;
-	self->history = vector_new(sizeof(mesh_history_t), FIXED_ORDER, NULL, NULL);
 
 	return self;
 }
@@ -502,50 +503,52 @@ void c_model_edit(c_model_t *self, mesh_edit_t type, geom_t target)
 	c_model_propagate_edit(self, vector_count(self->history) - 1);
 }
 
-c_model_t *c_model_paint(c_model_t *self, int layer, mat_t *mat)
-{
-	self->layers[layer].mat = mat;
-	/* c_mesh_gl_t *gl = c_mesh_gl(self); */
-	/* gl->groups[layer].mat = mat; */
-	return self;
-}
+/* c_model_t *c_model_paint(c_model_t *self, int layer, mat_t *mat) */
+/* { */
+/* 	self->layers[layer].mat = mat; */
+/* 	/1* c_mesh_gl_t *gl = c_mesh_gl(self); *1/ */
+/* 	/1* gl->groups[layer].mat = mat; *1/ */
+/* 	return self; */
+/* } */
 
-c_model_t *c_model_cull_face(c_model_t *self, int layer, int inverted)
+c_model_t *c_model_cull_face(c_model_t *self, int inverted)
 {
 	if(inverted == 0)
 	{
-		self->layers[layer].cull_front = 1;
-		self->layers[layer].cull_back = 0;
+		self->mesh->cull_front = 1;
+		self->mesh->cull_back = 0;
 	}
 	else if(inverted == 1)
 	{
-		self->layers[layer].cull_front = 1;
-		self->layers[layer].cull_back = 0;
+		self->mesh->cull_front = 1;
+		self->mesh->cull_back = 0;
 	}
 	else if(inverted == 2)
 	{
-		self->layers[layer].cull_front = 0;
-		self->layers[layer].cull_back = 0;
+		self->mesh->cull_front = 0;
+		self->mesh->cull_back = 0;
 	}
 	else
 	{
-		self->layers[layer].cull_front = 1;
-		self->layers[layer].cull_back = 1;
+		self->mesh->cull_front = 1;
+		self->mesh->cull_back = 1;
 	}
-	g_update_id++;
+	/* g_update_id++; */
 	return self;
 }
 
-c_model_t *c_model_smooth(c_model_t *self, int layer, int smooth)
+c_model_t *c_model_smooth(c_model_t *self, int smooth)
 {
-	self->layers[layer].smooth_angle = smooth;
+	/* self->layers[layer].smooth_angle = smooth; */
+	self->mesh->smooth_angle = smooth;
 	mesh_modified(self->mesh);
 	return self;
 }
 
-c_model_t *c_model_wireframe(c_model_t *self, int layer, int wireframe)
+c_model_t *c_model_wireframe(c_model_t *self, int wireframe)
 {
-	self->layers[layer].wireframe = wireframe;
+	/* self->layers[layer].wireframe = wireframe; */
+	self->mesh->wireframe = wireframe;
 	g_update_id++;
 	return self;
 }
@@ -560,7 +563,6 @@ void c_model_set_mesh(c_model_t *self, mesh_t *mesh)
 
 int c_model_created(c_model_t *self)
 {
-
 	if(self->mesh)
 	{
 		g_update_id++;
@@ -607,31 +609,22 @@ int c_model_render_at(c_model_t *self, shader_t *shader, c_node_t *node,
 {
 	if(!self->mesh || !shader) return STOP;
 	entity_t ent = c_entity(self);
-	if(node)
-	{
-		c_node_update_model(node);
-		ent = node->unpack_inheritance;
 
-		if(self->scale_dist > 0.0f)
-		{
-			vec3_t pos = mat4_mul_vec4(node->model, vec4(0,0,0,1)).xyz;
-			float dist = vec3_dist(pos, c_renderer(&SYS)->bound_camera_pos);
-			mat4_t model = mat4_scale_aniso(node->model, vec3(dist * self->scale_dist));
-#ifdef MESH4
-			shader_update(shader, &model, node->angle4);
-#else
-			shader_update(shader, &model);
-#endif
-		}
-		else
-		{
-#ifdef MESH4
-			shader_update(shader, &node->model, node->angle4);
-#else
-			shader_update(shader, &node->model);
-#endif
-		}
+	c_node_update_model(node);
+	ent = node->unpack_inheritance;
+
+	mat4_t model = node->model;
+
+	if(self->scale_dist > 0.0f)
+	{
+		vec3_t pos = mat4_mul_vec4(model, vec4(0,0,0,1)).xyz;
+		float dist = vec3_dist(pos, c_renderer(&SYS)->bound_camera_pos);
+		model = mat4_scale_aniso(model, vec3(dist * self->scale_dist));
 	}
+#ifdef MESH4
+	shader_update(shader, node->angle4);
+#endif
+
 	int depth_was_enabled = glIsEnabled(GL_DEPTH_TEST);
 	int additive_was_enabled = glIsEnabled(GL_BLEND);
 
@@ -639,7 +632,7 @@ int c_model_render_at(c_model_t *self, shader_t *shader, c_node_t *node,
 	{
 		glDepthRange(0, 0.01);
 	}
-	c_mesh_gl_draw_ent(c_mesh_gl(self), ent, flags);
+	c_mesh_gl_draw_ent(c_mesh_gl(self), ent, &model, flags);
 	if(self->xray)
 	{
 		if(!additive_was_enabled)
@@ -706,6 +699,8 @@ int c_model_menu(c_model_t *self, void *ctx)
 
 	/* if(nk_tree_push(ctx, NK_TREE_TAB, "Edit", NK_MAXIMIZED)) */
 	/* { */
+	if(self->mesh)
+	{
 		for(i = 0; i < vector_count(self->history); i++)
 		{
 			mesh_history_t *cmd = vector_get(self->history, i);
@@ -731,59 +726,53 @@ int c_model_menu(c_model_t *self, void *ctx)
 		/* nk_tree_pop(ctx); */
 	/* } */
 
-	for(i = 0; i < self->layers_num; i++)
-	{
-		char buffer[32];
-		snprintf(buffer, sizeof(buffer), "Layer %d", i);
-		mat_layer_t *layer = &self->layers[i];
-		if(nk_tree_push_id(ctx, NK_TREE_NODE, buffer, NK_MINIMIZED, i))
+		mesh_t *mesh = self->mesh;
+
+		new_value = nk_check_label(ctx, "Wireframe",
+				mesh->wireframe);
+
+		if(new_value != mesh->wireframe)
 		{
-			new_value = nk_check_label(ctx, "Wireframe",
-					layer->wireframe);
+			mesh->wireframe = new_value;
+			g_update_id++;
+		}
 
-			if(new_value != layer->wireframe)
-			{
-				layer->wireframe = new_value;
-				g_update_id++;
-			}
+		float smooth = mesh->smooth_angle;
+		nk_property_float(ctx, "#smooth:", 0.0f, &smooth,
+				1.0f, 0.05f, 0.05f);
+		if(smooth != mesh->smooth_angle)
+		{
+			mesh->smooth_angle = smooth;
+			/* self->mesh->update_id++; */
+			mesh_modified(mesh);
+			mesh_update(mesh);
+		}
 
-			float smooth = layer->smooth_angle;
-			nk_property_float(ctx, "#smooth:", 0.0f, &smooth,
-					1.0f, 0.05f, 0.05f);
-			if(smooth != layer->smooth_angle)
-			{
-				layer->smooth_angle = smooth;
-				/* self->mesh->update_id++; */
-				mesh_modified(self->mesh);
-				mesh_update(self->mesh);
-			}
+		new_value = nk_check_label(ctx, "Cull front",
+				mesh->cull_front);
 
-			new_value = nk_check_label(ctx, "Cull front",
-					layer->cull_front);
+		if(new_value != mesh->cull_front)
+		{
+			mesh->cull_front = new_value;
+			g_update_id++;
+		}
 
-			if(new_value != layer->cull_front)
-			{
-				layer->cull_front = new_value;
-				g_update_id++;
-			}
+		new_value = nk_check_label(ctx, "Cull back",
+				mesh->cull_back);
 
-			new_value = nk_check_label(ctx, "Cull back",
-					layer->cull_back);
-
-			if(new_value != layer->cull_back)
-			{
-				layer->cull_back = new_value;
-				g_update_id++;
-			}
-
-			if(layer->mat && layer->mat->name[0] != '_')
-			{
-				mat_menu(layer->mat, ctx);
-			}
-
-			nk_tree_pop(ctx);
+		if(new_value != mesh->cull_back)
+		{
+			mesh->cull_back = new_value;
+			g_update_id++;
 		}
 	}
+
+	if(self->mat && self->mat->name[0] != '_')
+	{
+		mat_menu(self->mat, ctx);
+	}
+
+	/* nk_tree_pop(ctx); */
 
 
 	return CONTINUE;

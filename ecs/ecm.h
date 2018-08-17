@@ -25,7 +25,7 @@ typedef int(*signal_cb)(c_t *self, void *data, void *output);
 typedef void(*c_reg_cb)(void);
 
 /* TODO: find appropriate place */
-typedef int(*before_draw_cb)(c_t *self);
+/* typedef int(*before_draw_cb)(c_t *self); */
 
 
 #define IDENT_NULL UINT_MAX

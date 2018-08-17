@@ -193,6 +193,14 @@ typedef struct mesh_t
 
 	void *semaphore;
 	ulong owner_thread;
+
+
+	/* DISPAY PROPERTIES */
+	int wireframe;
+	int cull_front;
+	int cull_back;
+	float offset;
+	float smooth_angle;
 } mesh_t;
 
 typedef enum

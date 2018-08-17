@@ -37,6 +37,8 @@ static int c_node_changed(c_node_t *self)
 	{
 		c_node_changed(c_node(&self->children[i]));
 	}
+	entity_signal(c_entity(self), sig("node_changed"), NULL, NULL);
+
 	return CONTINUE;
 }
 
@@ -171,6 +173,8 @@ REG()
 	/* TODO destroyer */
 	ct_t *ct = ct_new("node", sizeof(c_node_t),
 			c_node_init, c_node_destroy, 1, ref("spacial"));
+
+	signal_init(sig("node_changed"), 0);
 
 	ct_listener(ct, ENTITY, sig("spacial_changed"), c_node_changed);
 }

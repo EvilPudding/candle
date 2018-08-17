@@ -49,7 +49,6 @@ typedef struct shader_t
 	int frame_bind;
 
 	GLuint program;
-	GLuint u_m;
 	GLuint u_v;
 	GLuint u_projection;
 	GLuint u_inv_projection;
@@ -100,9 +99,7 @@ vertex_modifier_t vertex_modifier_new(const char *code);
 
 shader_t *shader_new(fs_t *fs, vs_t *vs);
 #ifdef MESH4
-void shader_update(shader_t *self, mat4_t *model_matrix, float angle4);
-#else
-void shader_update(shader_t *self, mat4_t *model_matrix);
+void shader_update(shader_t *self, float angle4);
 #endif
 void shader_bind(shader_t *self);
 void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,

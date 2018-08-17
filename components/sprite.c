@@ -81,7 +81,7 @@ c_sprite_t *c_sprite_new(mat_t *mat, int cast_shadow)
 
 	entity_add_component(c_entity(self),
 			c_model_new(g_sprite_mesh, mat, 0, 0));
-	c_model_cull_face(c_model(self), 0, 2);
+	c_model_cull_face(c_model(self), 2);
 
 	return self;
 }
@@ -107,17 +107,13 @@ static int c_sprite_render_selectable(c_sprite_t *self)
 	shader_t *shader = vs_bind(g_sprite_vs);
 	if(!shader) return STOP;
 	c_node_t *node = c_node(self);
-	if(node)
-	{
-		c_node_update_model(node);
-#ifdef MESH4
-		shader_update(shader, &node->model, node->angle4);
-#else
-		shader_update(shader, &node->model);
-#endif
-	}
+	c_node_update_model(node);
 
-	c_mesh_gl_draw(c_mesh_gl(self), 2);
+#ifdef MESH4
+	shader_update(shader, node->angle4);
+#endif
+
+	c_mesh_gl_draw(c_mesh_gl(self), &node->model, 2);
 	return CONTINUE;
 }
 
@@ -128,17 +124,14 @@ static int c_sprite_render_transparent(c_sprite_t *self)
 	shader_t *shader = vs_bind(g_sprite_vs);
 	if(!shader) return STOP;
 	c_node_t *node = c_node(self);
-	if(node)
-	{
-		c_node_update_model(node);
-#ifdef MESH4
-		shader_update(shader, &node->model, node->angle4);
-#else
-		shader_update(shader, &node->model);
-#endif
-	}
 
-	c_mesh_gl_draw(c_mesh_gl(self), 1);
+	c_node_update_model(node);
+
+#ifdef MESH4
+	shader_update(shader, node->angle4);
+#endif
+
+	c_mesh_gl_draw(c_mesh_gl(self), &node->model, 1);
 	return CONTINUE;
 }
 
@@ -149,17 +142,13 @@ static int c_sprite_render_visible(c_sprite_t *self)
 	shader_t *shader = vs_bind(g_sprite_vs);
 	if(!shader) return STOP;
 	c_node_t *node = c_node(self);
-	if(node)
-	{
-		c_node_update_model(node);
-#ifdef MESH4
-		shader_update(shader, &node->model, node->angle4);
-#else
-		shader_update(shader, &node->model);
-#endif
-	}
 
-	c_mesh_gl_draw(c_mesh_gl(self), 0);
+	c_node_update_model(node);
+#ifdef MESH4
+	shader_update(shader, node->angle4);
+#endif
+
+	c_mesh_gl_draw(c_mesh_gl(self), &node->model, 0);
 	return CONTINUE;
 }
 

@@ -168,7 +168,7 @@ REG()
 
 	ct_listener(ct, WORLD, sig("mouse_wheel"), c_editlook_mouse_wheel);
 
-	ct_listener(ct, WORLD, sig("mouse_move"), c_editlook_mouse_move);
+	ct_listener(ct, WORLD | 100, sig("mouse_move"), c_editlook_mouse_move);
 
 	ct_listener(ct, WORLD, sig("window_resize"), c_editlook_window_resize);
 

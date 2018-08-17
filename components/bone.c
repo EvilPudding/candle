@@ -79,24 +79,20 @@ int c_bone_render(c_bone_t *self, int flags)
 	mat4_t par_model = mat4_mul(par->model, model);
 
 #ifdef MESH4
-	shader_update(shader, &par_model, par->angle4);
-#else
-	shader_update(shader, &par_model);
+	shader_update(shader, par->angle4);
 #endif
 
 	glDepthRange(0, 0.01);
-	c_mesh_gl_draw_ent(c_mesh_gl(&g_bone), n->parent, flags);
+	c_mesh_gl_draw_ent(c_mesh_gl(&g_bone), n->parent, &par_model, flags);
 
 	/* if(!n->children_size) */
 	{
 		c_node_update_model(n);
 #ifdef MESH4
-		shader_update(shader, &n->model, n->angle4);
-#else
-		shader_update(shader, &n->model);
+		shader_update(shader, n->angle4);
 #endif
 
-		c_mesh_gl_draw_ent(c_mesh_gl(&g_end), c_entity(self), flags);
+		c_mesh_gl_draw_ent(c_mesh_gl(&g_end), c_entity(self), &n->model, flags);
 	}
 	glDepthRange(0, 1.0f);
 

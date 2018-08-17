@@ -7,15 +7,17 @@
 #include <string.h>
 #include <stdlib.h>
 
-static int c_mesh_gl_new_loader(c_mesh_gl_t *self);
+KHASH_MAP_INIT_INT(meshes, glg_t*)
+
+static khash_t(meshes) *g_glos;
+
 static int glg_update_buffers(glg_t *self);
 static void glg_update_vbos(glg_t *self);
-
+static int glg_add_instance(glg_t *self, mat4_t model);
 
 static void c_mesh_gl_init(c_mesh_gl_t *self)
 {
-
-	self->groups = calloc(8, sizeof(*self->groups));
+	if(!g_glos) g_glos = kh_init(meshes);
 }
 
 c_mesh_gl_t *c_mesh_gl_new()
@@ -25,29 +27,21 @@ c_mesh_gl_t *c_mesh_gl_new()
 	return self;
 }
 
-static void mesh_gl_add_group(c_mesh_gl_t *self)
-{
-	int i = self->groups_num++;
-	glg_t *group = &self->groups[i];
+/* static void mesh_gl_add_group(c_mesh_gl_t *self) */
+/* { */
+/* 	int i = self->groups_num++; */
+/* 	glg_t *group = &self->groups[i]; */
 
-	group->gl_ind_num = 0;
-	group->gl_vert_num = 0;
-	group->ready = 0;
-	group->update_id = -1;
-	group->updated = 1;
-	group->vao = 0;
-	group->entity = c_entity(self);
-	group->layer_id = i;
-	group->skinned = !!c_skin(self);
-}
-
-static int c_mesh_gl_new_loader(c_mesh_gl_t *self)
-{
-	/* mesh_gl_add_group(self); */
-
-	return 1;
-}
-
+/* 	group->gl_ind_num = 0; */
+/* 	group->gl_vert_num = 0; */
+/* 	group->ready = 0; */
+/* 	group->update_id = -1; */
+/* 	group->updated = 1; */
+/* 	group->vao = 0; */
+/* 	group->entity = c_entity(self); */
+/* 	group->layer_id = i; */
+/* 	group->skinned = !!c_skin(self); */
+/* } */
 
 /* #ifdef MESH4 */
 /* static int glg_get_vert(glg_t *self, vec4_t p, vec3_t n, vec2_t t) */
@@ -92,12 +86,28 @@ void glg_vert_prealloc(glg_t *self, int size)
 	self->tex = realloc(self->tex, self->vert_alloc * sizeof(*self->tex));
 	self->tan = realloc(self->tan, self->vert_alloc * sizeof(*self->tan));
 	self->col = realloc(self->col, self->vert_alloc * sizeof(*self->col));
-	if(self->skinned)
+	if(self->skin)
 	{
 		self->wei = realloc(self->wei, self->vert_alloc * sizeof(*self->wei));
 		self->bid = realloc(self->bid, self->vert_alloc * sizeof(*self->bid));
 	}
 	self->id = realloc(self->id, self->vert_alloc * sizeof(*self->id));
+}
+
+void glg_inst_prealloc(glg_t *self, int size)
+{
+	self->inst_alloc += size;
+
+	self->inst = realloc(self->inst, self->inst_alloc * sizeof(*self->inst));
+}
+void glg_inst_grow(glg_t *self)
+{
+	if(self->inst_alloc < self->inst_num)
+	{
+		self->inst_alloc = self->inst_num;
+
+		glg_inst_prealloc(self, 0);
+	}
 }
 
 void glg_vert_grow(glg_t *self)
@@ -127,14 +137,29 @@ void glg_ind_grow(glg_t *self)
 }
 
 
-static int glg_add_vert(glg_t *self, vecN_t p, vec3_t n, vec2_t t, vec3_t tg,
-		vec3_t c, int id, vec4_t wei, uvec4_t bid)
+static int glg_add_instance(glg_t *self, mat4_t model)
+{
+	int i = self->inst_num++;
+	glg_inst_grow(self);
+
+	self->inst[i] = model;
+	return i;
+}
+
+static int glg_add_vert(
+		glg_t *self,
+		vecN_t p,
+		vec3_t n,
+		vec2_t t,
+		vec3_t tg,
+		vec3_t c,
+		int id,
+		vec4_t wei,
+		uvec4_t bid)
 {
 	/* int i = glg_get_vert(self, p, n, t); */
 	/* if(i >= 0) return i; */
-	int i;
-
-	i = self->vert_num++;
+	int i = self->vert_num++;
 	glg_vert_grow(self);
 
 	self->pos[i] = p;
@@ -144,7 +169,7 @@ static int glg_add_vert(glg_t *self, vecN_t p, vec3_t n, vec2_t t, vec3_t tg,
 	self->col[i] = c;
 	self->id[i] = int_to_vec2(id);
 
-	if(self->skinned)
+	if(self->skin)
 	{
 		self->bid[i] = bid;
 		self->wei[i] = wei;
@@ -198,7 +223,7 @@ void glg_add_triangle(glg_t *self, int v1, int v2, int v3)
 void glg_edges_to_gl(glg_t *self)
 {
 	int i;
-	mesh_t *mesh = c_model(&self->entity)->mesh;
+	mesh_t *mesh = self->mesh;
 
 	glg_ind_prealloc(self, vector_count(mesh->edges) * 2);
 
@@ -224,7 +249,7 @@ void glg_edges_to_gl(glg_t *self)
 
 void glg_face_to_gl(glg_t *self, face_t *f, int id)
 {
-	mesh_t *mesh = c_model(&self->entity)->mesh;
+	mesh_t *mesh = self->mesh;
 	int v[4], i;
 	for(i = 0; i < f->e_size; i++)
 	{
@@ -233,11 +258,10 @@ void glg_face_to_gl(glg_t *self, face_t *f, int id)
 
 		vec4_t  wei = vec4(0,0,0,0);
 		uvec4_t bid = uvec4(0,0,0,0);
-		if(self->skinned)
+		if(self->skin)
 		{
-			c_skin_t *skin = c_skin(&self->entity);
-			wei = skin->wei[hedge->v];
-			bid = skin->bid[hedge->v];
+			wei = self->skin->wei[hedge->v];
+			bid = self->skin->bid[hedge->v];
 		}
 		v[i] = glg_add_vert(self, V->pos, hedge->n,
 				hedge->t, hedge->tg, V->color.xyz, id, wei, bid);
@@ -326,44 +350,104 @@ void glg_face_to_gl(glg_t *self, face_t *f, int id)
 /* 	} */
 /* } */
 
-static inline void create_buffer(glg_t *self, int id, void *arr, uint type, int dim)
+static inline void create_buffer(glg_t *self, int id, void *arr, uint type, int dim,
+		int instanced_divisor)
 {
+	unsigned int usage = instanced_divisor ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW;
+	unsigned int num = instanced_divisor ? self->gl_inst_num : self->gl_vert_num;
 	if(!self->vbo[id])
 	{
 		glGenBuffers(1, &self->vbo[id]); glerr();
 		self->vbo_num++;
 	}
 	glBindBuffer(GL_ARRAY_BUFFER, self->vbo[id]); glerr();
-	glBufferData(GL_ARRAY_BUFFER, dim * sizeof(GLfloat) * self->gl_vert_num, arr,
-			GL_STATIC_DRAW); glerr();
-	glEnableVertexAttribArray(id); glerr();
-	if(type == GL_FLOAT)
-	{
-		glVertexAttribPointer(id, dim, type, GL_FALSE, 0, NULL); glerr();
-	}
-	else
-	{
-		glVertexAttribIPointer(id, dim, type, 0, NULL); glerr();
-	}
+	glBufferData(GL_ARRAY_BUFFER, dim * sizeof(GLfloat) * num, arr, usage);
+	glerr();
 
+
+	{
+		// Because OpenGL doesn't support attributes with more than 4
+		// elements, each set of 4 elements gets its own attribute.
+		uint elementSizeDiv = dim / 4;
+		uint remaining = dim % 4;
+		uint j;
+		for(j = 0; j < elementSizeDiv; j++) {
+			glEnableVertexAttribArray(id);
+			if(type == GL_FLOAT)
+			{
+				glVertexAttribPointer(id, 4, type, GL_FALSE,
+					dim * sizeof(GLfloat),
+					(const GLvoid*)(sizeof(GLfloat) * j * 4));
+			}
+			else
+			{
+				glVertexAttribIPointer(id, 4, type,
+					dim * sizeof(GLfloat),
+					(const GLvoid*)(sizeof(GLfloat) * j * 4));
+			}
+
+			glVertexAttribDivisor(id, instanced_divisor);
+			glerr();
+			id++;
+		}
+		if(remaining > 0)
+		{
+			glEnableVertexAttribArray(id);
+			if(type == GL_FLOAT)
+			{
+				glVertexAttribPointer(id, remaining, type, GL_FALSE,
+					remaining * sizeof(GLfloat),
+					(const GLvoid*)(sizeof(GLfloat) * elementSizeDiv * 4));
+			}
+			else
+			{
+				glVertexAttribIPointer(id, remaining, type,
+					remaining * sizeof(GLfloat),
+					(const GLvoid*)(sizeof(GLfloat) * elementSizeDiv * 4));
+			}
+
+			glVertexAttribDivisor(id, instanced_divisor);
+			glerr();
+			id++;
+		}
+	}
 }
 
-static inline void update_buffer(glg_t *self, int id, void *arr, int dim)
+static inline void update_buffer(glg_t *self, int id, void *arr, int dim, int inst)
 {
+	if(!self->vbo[id]) return;
+	unsigned int num = inst ? self->gl_inst_num : self->gl_vert_num;
+
 	glBindBuffer(GL_ARRAY_BUFFER, self->vbo[id]);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, dim * sizeof(GLfloat) *
-			self->gl_vert_num, arr);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, dim * sizeof(GLfloat) * num, arr);
 }
 
 
 int c_mesh_gl_on_mesh_changed(c_mesh_gl_t *self)
 {
-	/* TODO strange code */
-	if(self->groups[0].vao == 0)
+	c_model_t *model = c_model(self);
+	if(!self->glo || model->mesh != self->glo->mesh)
 	{
-		self->groups[0].vao = 1;
-		loader_push(g_candle->loader, (loader_cb)c_mesh_gl_new_loader, NULL,
-				(c_t*)self);
+		uint p = hash_ptr(model->mesh);
+		khiter_t k = kh_get(meshes, g_glos, p);
+		if(k == kh_end(g_glos))
+		{
+			int ret;
+			k = kh_put(meshes, g_glos, p, &ret);
+
+			self->glo = kh_value(g_glos, k) = calloc(1, sizeof(glg_t));
+			self->glo->mesh = model->mesh;
+			self->glo->mat = model->mat;
+			self->glo->updated = 1;
+			c_skin_t *skin = c_skin(self);
+			if(skin) self->glo->skin = &skin->info;
+		}
+		else
+		{
+			self->glo = kh_value(g_glos, k) = calloc(1, sizeof(glg_t));
+		}
+
+		self->instance_id = glg_add_instance(self->glo, mat4());
 	}
 
 	return CONTINUE;
@@ -393,30 +477,29 @@ vec4_t get_cell_normal(mesh_t *mesh, cell_t *cell)
 
 int glg_update_ram(glg_t *self)
 {
-	c_model_t *model = c_model(&self->entity);
-	mesh_t *mesh = model->mesh;
+	mesh_t *mesh = self->mesh;
 	glg_clear(self);
 
-	mat_layer_t *layer = &model->layers[self->layer_id];
+	/* mat_layer_t *layer = &model->layers[self->layer_id]; */
 	glg_vert_prealloc(self, vector_count(mesh->verts));
 
-	int selection = layer->selection;
+	/* int selection = layer->selection; */
 
 	vector_t *faces = mesh->faces;
 	vector_t *edges = mesh->edges;
 
 	/* mesh_selection_t *sel = &mesh->selections[selection]; */
-	if(selection != -1)
-	{
-		return 1;
+	/* if(selection != -1) */
+	/* { */
+		/* return 1; */
 	/* 	faces = sel->faces; */
 	/* 	edges = sel->edges; */
-	}
+	/* } */
 
 	int i;
 	if(vector_count(faces))
 	{
-		mesh_update_smooth_normals(mesh, 1.0f - layer->smooth_angle);
+		mesh_update_smooth_normals(mesh, 1.0f - mesh->smooth_angle);
 		int triangle_count = 0;
 		for(i = 0; i < vector_count(faces); i++)
 		{
@@ -469,11 +552,12 @@ int glg_update_ram(glg_t *self)
 
 int c_mesh_gl_updated(c_mesh_gl_t *self)
 {
-	int i;
-	for(i = 0; i < self->groups_num; i++)
-	{
-		if(!self->groups[i].updated) return STOP;
-	}
+	if(!self->glo) return STOP;
+	/* int i; */
+	/* for(i = 0; i < self->groups_num; i++) */
+	/* { */
+		if(!self->glo->updated) return STOP;
+	/* } */
 	return CONTINUE;
 }
 
@@ -493,39 +577,46 @@ static int glg_update_buffers(glg_t *self)
 
 		/* VERTEX BUFFER */
 #ifdef MESH4
-		create_buffer(self, 0, self->pos, GL_FLOAT, 4);
+		create_buffer(self, 0, self->pos, GL_FLOAT, 4, 0);
 #else
-		create_buffer(self, 0, self->pos, GL_FLOAT, 3);
+		create_buffer(self, 0, self->pos, GL_FLOAT, 3, 0);
 #endif
 
 		/* NORMAL BUFFER */
-		create_buffer(self, 1, self->nor, GL_FLOAT, 3);
+		create_buffer(self, 1, self->nor, GL_FLOAT, 3, 0);
 
 		/* TEXTURE COORDS BUFFER */
-		create_buffer(self, 2, self->tex, GL_FLOAT, 2);
+		create_buffer(self, 2, self->tex, GL_FLOAT, 2, 0);
 
 		/* TANGENT BUFFER */
-		create_buffer(self, 3, self->tan, GL_FLOAT, 3);
+		create_buffer(self, 3, self->tan, GL_FLOAT, 3, 0);
 
 		/* ID BUFFER */
-		create_buffer(self, 4, self->id, GL_FLOAT, 2);
+		create_buffer(self, 4, self->id, GL_FLOAT, 2, 0);
 
 		/* COLOR BUFFER */
-		create_buffer(self, 5, self->col, GL_FLOAT, 3);
+		create_buffer(self, 5, self->col, GL_FLOAT, 3, 0);
 
-		if(self->skinned)
+		if(self->skin)
 		{
 			/* BONEID BUFFER */
-			create_buffer(self, 6, self->bid, GL_UNSIGNED_INT, 4);
+			create_buffer(self, 7, self->bid, GL_UNSIGNED_INT, 4, 0);
 
 			/* BONE WEIGHT BUFFER */
-			create_buffer(self, 7, self->wei, GL_FLOAT, 4);
+			create_buffer(self, 8, self->wei, GL_FLOAT, 4, 0);
 		}
+	}
+	if(self->inst_num > self->gl_inst_num)
+	{
+		self->gl_inst_num = self->inst_num;
+
+		/* TRANSFORM BUFFER */
+		create_buffer(self, 9, self->inst, GL_FLOAT, 16, 1);
 	}
 
 	if(self->ind_num > self->gl_ind_num)
 	{
-		int id = self->skinned ? 8 : 6;
+		int id = 13;
 		if(!self->vbo[id])
 		{
 			glGenBuffers(1, &self->vbo[id]); glerr();
@@ -546,9 +637,9 @@ static int glg_update_buffers(glg_t *self)
 
 	self->updated = 1;
 	/* if(!self->ready) */
-	{
-		entity_signal(self->entity, sig("spacial_changed"), NULL, NULL);
-	}
+	/* { */
+		/* entity_signal(self->entity, sig("spacial_changed"), NULL, NULL); */
+	/* } */
 	self->ready = 1;
 
 	glBindVertexArray(0); glerr();
@@ -561,17 +652,17 @@ void c_mesh_gl_update(c_mesh_gl_t *self)
 	/* TODO update only dirty group */
 	c_model_t *model = c_model(self);
 
-	int i;
+	/* int i; */
 	if(!model->mesh || model->mesh->locked_read ||
 			self->ram_update_id == model->mesh->update_id) return;
 
 	mesh_lock_write(model->mesh);
 
-	for(i = 0; i < model->layers_num; i++)
-	{
-		if(i >= self->groups_num) mesh_gl_add_group(self);
+	/* for(i = 0; i < model->layers_num; i++) */
+	/* { */
+		/* if(i >= self->groups_num) mesh_gl_add_group(self); */
 
-		glg_t *group = &self->groups[i];
+		glg_t *group = self->glo;
 		if(model->mesh->update_id != group->update_id && group->updated)
 		{
 			group->updated = 0;
@@ -580,14 +671,14 @@ void c_mesh_gl_update(c_mesh_gl_t *self)
 
 		}
 
-	}
+	/* } */
 	self->ram_update_id = model->mesh->update_id;
 	mesh_unlock_write(model->mesh);
 }
 
 int glg_draw(glg_t *self, shader_t *shader, int flags)
 {
-	mesh_t *mesh = c_model(&self->entity)->mesh;
+	mesh_t *mesh = self->mesh;
 
 	if(!mesh || !self->ready)
 	{
@@ -596,20 +687,20 @@ int glg_draw(glg_t *self, shader_t *shader, int flags)
 
 	int cull_face;
 	int wireframe;
-	c_model_t *model = c_model(&self->entity);
-	mat_layer_t *layer = &model->layers[self->layer_id];
+	/* c_model_t *model = c_model(&self->entity); */
+	/* mat_layer_t *layer = &model->layers[self->layer_id]; */
 	int is_emissive = 0;
 	int is_transparent = 0;
 
-	if(layer->mat && shader)
+	if(self->mat && shader)
 	{
-		is_transparent = layer->mat->transparency.color.a > 0.0f ||
-			layer->mat->transparency.texture;
+		is_transparent = self->mat->transparency.color.a > 0.0f ||
+			self->mat->transparency.texture;
 
 		if(flags == 1)
 		{
-			is_emissive = layer->mat->emissive.color.a > 0.0f ||
-				layer->mat->emissive.texture;
+			is_emissive = self->mat->emissive.color.a > 0.0f ||
+				self->mat->emissive.texture;
 			if(!is_emissive && !is_transparent)
 			{
 				return CONTINUE;
@@ -620,12 +711,12 @@ int glg_draw(glg_t *self, shader_t *shader, int flags)
 			return CONTINUE;
 		}
 
-		mat_bind(layer->mat, shader);
+		mat_bind(self->mat, shader);
 	}
 
-	if(layer->cull_front)
+	if(mesh->cull_front)
 	{
-		if(layer->cull_back)
+		if(mesh->cull_back)
 		{
 			cull_face = GL_FRONT_AND_BACK;
 		}
@@ -634,7 +725,7 @@ int glg_draw(glg_t *self, shader_t *shader, int flags)
 			cull_face = GL_FRONT;
 		}
 	}
-	else if(layer->cull_back)
+	else if(mesh->cull_back)
 	{
 		cull_face = GL_BACK;
 	}
@@ -643,9 +734,9 @@ int glg_draw(glg_t *self, shader_t *shader, int flags)
 		cull_face = GL_NONE;
 	}
 
-	wireframe = layer->wireframe;
+	wireframe = mesh->wireframe;
 
-	/* glPolygonOffset(0.0f, model->layers[self->layer_id].offset); */
+	/* glPolygonOffset(0.0f, self->layers[self->layer_id].offset); */
 	glerr();
 
 	c_renderer_t *renderer = c_renderer(&SYS);
@@ -734,9 +825,10 @@ int glg_draw(glg_t *self, shader_t *shader, int flags)
 
 }
 
-int c_mesh_gl_draw_ent(c_mesh_gl_t *self, entity_t ent, int transparent)
+int c_mesh_gl_draw_ent(c_mesh_gl_t *self, entity_t ent,
+		mat4_t *transform, int transparent)
 {
-	int i;
+	/* int i; */
 	int res = CONTINUE;
 
 	mesh_t *mesh = c_model(self)->mesh;
@@ -757,16 +849,22 @@ int c_mesh_gl_draw_ent(c_mesh_gl_t *self, entity_t ent, int transparent)
 		glerr();
 	}
 
-	for(i = 0; i < self->groups_num; i++)
+	if(self->glo->moved)
 	{
-		res &= glg_draw(&self->groups[i], shader, transparent);
+		self->glo->moved = 0;
+		update_buffer(self->glo, 9, self->glo->inst, 16, 1); glerr();
 	}
+
+	/* for(i = 0; i < self->groups_num; i++) */
+	/* { */
+		res &= glg_draw(self->glo, shader, transparent);
+	/* } */
 	return res;
 }
 
-int c_mesh_gl_draw(c_mesh_gl_t *self, int transparent)
+int c_mesh_gl_draw(c_mesh_gl_t *self, mat4_t *transform, int transparent)
 {
-	return c_mesh_gl_draw_ent(self, c_entity(self), transparent);
+	return c_mesh_gl_draw_ent(self, c_entity(self), transform, transparent);
 }
 
 static void glg_update_vbos(glg_t *self)
@@ -774,48 +872,53 @@ static void glg_update_vbos(glg_t *self)
 	/* VERTEX BUFFER */
 	int i = 0;
 #ifdef MESH4
-	update_buffer(self, i, self->pos, 4); glerr();
+	update_buffer(self, i, self->pos, 4, 0); glerr();
 #else
-	update_buffer(self, i, self->pos, 3); glerr();
+	update_buffer(self, i, self->pos, 3, 0); glerr();
 #endif
 	i++;
 
 	/* NORMAL BUFFER */
-	update_buffer(self, i, self->nor, 3); glerr();
+	update_buffer(self, i, self->nor, 3, 0); glerr();
 	i++;
 
 	/* TEXTURE COORDS BUFFER */
-	update_buffer(self, i, self->tex, 2); glerr();
+	update_buffer(self, i, self->tex, 2, 0); glerr();
 	i++;
 
 	/* TANGENT BUFFER */
-	update_buffer(self, i, self->tan, 3); glerr();
+	update_buffer(self, i, self->tan, 3, 0); glerr();
 	i++;
 
 	/* ID BUFFER */
-	update_buffer(self, i, self->id, 2); glerr();
+	update_buffer(self, i, self->id, 2, 0); glerr();
 	i++;
 
 	/* COLOR BUFFER */
-	update_buffer(self, i, self->col, 3); glerr();
+	update_buffer(self, i, self->col, 3, 0); glerr();
 	i++;
 
-	if(self->skinned)
+	if(self->skin)
 	{
 		/* BONEID BUFFER */
-		update_buffer(self, i, self->bid, 4); glerr();
+		update_buffer(self, i, self->bid, 4, 0); glerr();
 		i++;
 
 		/* BONE WEIGHT BUFFER */
-		update_buffer(self, i, self->wei, 4); glerr();
+		update_buffer(self, i, self->wei, 4, 0); glerr();
 		i++;
 	}
 
+	/* TRANSFORM BUFFER */
+	update_buffer(self, 9, self->inst, 16, 1); glerr();
+	i++;
+
 	/* INDEX BUFFER */
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self->vbo[i]);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self->vbo[13]);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
 			self->gl_ind_num * sizeof(*self->ind), self->ind);
 	glerr();
+
 
 }
 
@@ -840,22 +943,36 @@ void glg_destroy(glg_t *self)
 
 }
 
+int c_mesh_gl_position_changed(c_mesh_gl_t *self)
+{
+	c_node_t *node = c_node(self);
+	c_node_update_model(node);
+	if(self->glo)
+	{
+		/* printf("update position %p\n", self); */
+		self->glo->inst[self->instance_id] = node->model;
+		self->glo->moved = 1;
+	}
+	return CONTINUE;
+}
+
 void c_mesh_gl_destroy(c_mesh_gl_t *self)
 {
-	int i;
-	for(i = 0; i < self->groups_num; i++)
-	{
-		glg_destroy(&self->groups[i]);
-	}
-	free(self->groups);
+	/* int i; */
+	/* for(i = 0; i < self->groups_num; i++) */
+	/* { */
+		glg_destroy(self->glo);
+	/* } */
+	/* free(self->groups); */
 }
 
 REG()
 {
 	ct_t *ct = ct_new("mesh_gl", sizeof(c_mesh_gl_t), c_mesh_gl_init,
-			c_mesh_gl_destroy, 0);
+			c_mesh_gl_destroy, 1, ref("node"));
 
 	ct_listener(ct, ENTITY, sig("mesh_changed"), c_mesh_gl_on_mesh_changed);
+	ct_listener(ct, ENTITY, sig("node_changed"), c_mesh_gl_position_changed);
 
 	ct_add_interaction(ct, ref("model"));
 
