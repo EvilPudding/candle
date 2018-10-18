@@ -11,13 +11,13 @@ typedef struct
 	mat4_t projection_matrix;
 	mat4_t model_matrix;
 	mat4_t view_matrix;
-	mat4_t vp;
 	vec3_t pos;
 	int view_cached;
 	float near, far, fov;
 	float exposure;
 	int width;
 	int height;
+	int id;
 } c_camera_t;
 
 DEF_CASTER("camera", c_camera, c_camera_t)

@@ -60,6 +60,7 @@ static void texture_update_gl_loader(texture_t *self)
 	}
 	glBindTexture(self->target, 0); glerr();
 	glActiveTexture(GL_TEXTURE0 + 0);
+	glerr();
 }
 
 void texture_update_gl(texture_t *self)
@@ -120,16 +121,53 @@ void texture_update_brightness(texture_t *self)
 
 void texture_alloc_buffer(texture_t *self, int i)
 {
+	if(!self->bufs[i].id)
+	{
+		glGenTextures(1, &self->bufs[i].id); glerr();
+	}
+	uint wrap = self->repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE;
+
+	glActiveTexture(GL_TEXTURE0 + ID_2D);
 	glBindTexture(self->target, self->bufs[i].id); glerr();
 	glTexImage2D(self->target, 0, self->bufs[i].internal,
 			self->width, self->height,
 			0, self->bufs[i].format,
-			(self->bufs[i].dims == -1) ? GL_FLOAT : GL_UNSIGNED_BYTE, NULL);
+			(self->bufs[i].dims == -1) ? GL_FLOAT : GL_UNSIGNED_BYTE, NULL); glerr();
+
+	glTexParameteri(self->target, GL_TEXTURE_WRAP_S, wrap);
+	glTexParameteri(self->target, GL_TEXTURE_WRAP_T, wrap);
+
+	if(self->mipmaped)
+	{
+		glTexParameteri(self->target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(self->target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glGenerateMipmap(self->target); glerr();
+	}
+	else
+	{
+		glTexParameteri(self->target, GL_TEXTURE_MAG_FILTER, self->interpolate ?
+				GL_LINEAR : GL_NEAREST);
+		glTexParameteri(self->target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	}
+
+	if(!self->bufs[i].handle)
+	{
+		self->bufs[i].handle = glGetTextureHandleARB(self->bufs[i].id); glerr();
+		glMakeTextureHandleResidentARB(self->bufs[i].handle); glerr();
+	}
 
 	self->framebuffer_ready = 0;
 	self->bufs[i].ready = 0;
 	self->last_depth = NULL;
-	glerr();
+	glBindTexture(self->target, 0); glerr();
+	glActiveTexture(GL_TEXTURE0);
+}
+
+unsigned int texture_handle(texture_t *self, int tex)
+{
+	tex = tex >= 0 ? tex : self->draw_id;
+
+	return self->bufs[tex].handle;
 }
 
 static int texture_from_file_loader(texture_t *self)
@@ -170,40 +208,51 @@ static int texture_from_file_loader(texture_t *self)
 	glTexParameteri(self->target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(self->target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glerr();
+	if(!self->bufs[0].handle)
+	{
+		self->bufs[0].handle = glGetTextureHandleARB(self->bufs[0].id); glerr();
+		glMakeTextureHandleResidentARB(self->bufs[0].handle); glerr();
+	}
 
 	glActiveTexture(GL_TEXTURE0);
 
 	return 1;
 }
+/* static int texture_from_file_loader(texture_t *self) */
+/* { */
+/* 	self->mipmaped = 1; */
+/* 	self->interpolate = 1; */
+/* 	self->repeat = 1; */
+
+/* 	/1* { *1/ */
+
+/* 	/1* 	GLfloat anis = 0; *1/ */
+/* 	/1* 	glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &anis); glerr(); *1/ */
+/* 	/1* 	/2* printf("Max anisotropy filter %f\n", anis); *2/ *1/ */
+/* 	/1* 	if(anis) *1/ */
+/* 	/1* 	{ *1/ */
+/* 	/1* 		glTexParameterf(self->target, GL_TEXTURE_MAX_ANISOTROPY_EXT, 8); *1/ */
+/* 	/1* 	} *1/ */
+/* 	/1* 	glerr(); *1/ */
+/* 	/1* } *1/ */
+
+/* 	texture_alloc_buffer(self, 0); */
+
+/* 	glerr(); */
+/* 	return 1; */
+/* } */
 
 int buffer_new(const char *name, int is_float, int dims)
 {
 	texture_t *texture = _g_tex_creating;
-	GLuint targ = texture->target;
-	glActiveTexture(GL_TEXTURE0 + ID_2D);
 
 	int i = texture->bufs_size++;
 	texture->bufs[i].name = strdup(name);
-
-	glGenTextures(1, &texture->bufs[i].id); glerr();
-
-	int wrap = texture->repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE;
 
 	if(texture->depth_buffer)
 	{
 		texture->prev_id = 1;
 		texture->draw_id = 1;
-	}
-
-	glBindTexture(targ, texture->bufs[i].id); glerr();
-	glTexParameterf(targ, GL_TEXTURE_MAG_FILTER, texture->interpolate ? GL_LINEAR : GL_NEAREST);
-	glTexParameterf(targ, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(targ, GL_TEXTURE_WRAP_S, wrap);
-	glTexParameteri(targ, GL_TEXTURE_WRAP_T, wrap);
-	if(texture->mipmaped)
-	{
-		glTexParameteri(targ, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(targ, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	}
 
 	if(dims == 4)
@@ -238,13 +287,6 @@ int buffer_new(const char *name, int is_float, int dims)
 
 	texture_alloc_buffer(texture, i);
 
-	if(texture->mipmaped)
-	{
-		glGenerateMipmap(texture->target); glerr();
-	}
-
-	glBindTexture(targ, 0);
-	glActiveTexture(GL_TEXTURE0);
 	texture->framebuffer_ready = 0;
 
 	return i;
@@ -306,6 +348,7 @@ static void texture_new_3D_loader(texture_t *self)
 	glBindTexture(self->target, 0); glerr();
 	glActiveTexture(GL_TEXTURE0);
 
+	glerr();
 }
 
 texture_t *texture_new_3D
@@ -583,6 +626,7 @@ void texture_draw_id(texture_t *self, int tex)
 
 void texture_bind(texture_t *self, int tex)
 {
+	/* printf("This shouldn't be used anymore\n"); exit(1); */
 	tex = tex >= 0 ? tex : self->draw_id;
 
 	if(!self->bufs[tex].id) return;
@@ -598,6 +642,7 @@ void texture_destroy(texture_t *self)
 	{
 		if(self->bufs[i].data) stbi_image_free(self->bufs[i].data);
 		if(self->bufs[i].id) glDeleteTextures(1, &self->bufs[i].id);
+		if(self->bufs[i].handle) glMakeTextureHandleNonResidentARB(self->bufs[i].handle);
 	}
 	if(self->frame_buffer[1]) /* CUBEMAP */
 	{
@@ -632,6 +677,14 @@ int texture_2D_resize(texture_t *self, int width, int height)
 		/* } */
 		/* uint imageSize = Bpp * self->width * self->height; */
 		/* self->bufs[i].data = realloc(self->bufs[i].data, imageSize); */
+
+		if(self->bufs[i].id)
+		{
+			glMakeTextureHandleNonResidentARB(self->bufs[i].handle); glerr();
+			glDeleteTextures(1, &self->bufs[i].id);
+			self->bufs[i].handle = 0;
+			self->bufs[i].id = 0;
+		}
 
 		texture_alloc_buffer(self, i);
 
@@ -732,12 +785,19 @@ static int texture_cubemap_loader(texture_t *self)
 			glerr();
 		}
 	}
+	if(!self->bufs[1].handle)
+	{
+		self->bufs[1].handle = glGetTextureHandleARB(self->bufs[1].id); glerr();
+		glMakeTextureHandleResidentARB(self->bufs[1].handle); glerr();
+	}
+
 
 	glBindTexture(self->target, 0); glerr();
 	/* texture_cubemap_frame_buffer(self); */
 
 	glActiveTexture(GL_TEXTURE0);
 
+	glerr();
 	return 1;
 }
 

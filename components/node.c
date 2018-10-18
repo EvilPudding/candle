@@ -14,10 +14,15 @@ static void c_node_init(c_node_t *self)
 	self->cached = 0;
 	self->inherit_scale = 1;
 	self->parent = entity_null;
+}
+
+static int c_node_created(c_node_t *self)
+{
 	if(c_entity(self) != SYS)
 	{
 		c_node_add(c_node(&SYS), 1, c_entity(self));
 	}
+	return CONTINUE;
 }
 
 c_node_t *c_node_new()
@@ -31,13 +36,16 @@ extern int g_update_id;
 static int c_node_changed(c_node_t *self)
 {
 	ulong i;
-	self->cached = 0;
-	g_update_id++;
-	for(i = 0; i < self->children_size; i++)
+	/* if(self->cached) */
 	{
-		c_node_changed(c_node(&self->children[i]));
+		self->cached = 0;
+		g_update_id++;
+		for(i = 0; i < self->children_size; i++)
+		{
+			c_node_changed(c_node(&self->children[i]));
+		}
+		entity_signal(c_entity(self), sig("node_changed"), NULL, NULL);
 	}
-	entity_signal(c_entity(self), sig("node_changed"), NULL, NULL);
 
 	return CONTINUE;
 }
@@ -176,6 +184,7 @@ REG()
 
 	signal_init(sig("node_changed"), 0);
 
+	ct_listener(ct, ENTITY, sig("entity_created"), c_node_created);
 	ct_listener(ct, ENTITY, sig("spacial_changed"), c_node_changed);
 }
 

@@ -6,6 +6,7 @@
 #include <utils/texture.h>
 #include <utils/mesh.h>
 #include <utils/shader.h>
+#include <utils/drawable.h>
 #include <ecs/ecm.h>
 
 typedef struct pass_t pass_t;
@@ -33,14 +34,11 @@ enum
 typedef enum
 {
 	BIND_NONE,
-	BIND_OUT,
-	BIND_DEPTH,
 	BIND_TEX,
 	BIND_NUM,
 	BIND_VEC2,
 	BIND_VEC3,
-	BIND_INT,
-	BIND_CAM
+	BIND_INT
 } bind_type_t;
 
 typedef vec2_t(*vec2_getter)(void *usrptr);
@@ -79,14 +77,6 @@ typedef struct
 		struct {
 			uint u;
 		} integer;
-		struct {
-			uint u_view;
-			uint u_model;
-			uint u_pos;
-			uint u_exposure;
-			uint u_projection;
-			uint u_inv_projection;
-		} camera;
 	};
 } shader_bind_t;
 
@@ -99,11 +89,11 @@ typedef struct
 	union
 	{
 		texture_t *buffer;
+		entity_t entity;
 		float number;
 		vec2_t vec2;
 		vec3_t vec3;
 		int integer;
-		entity_t camera;
 	};
 	unsigned int hash;
 	shader_bind_t vs_uniforms[16];
@@ -118,6 +108,8 @@ typedef struct
 	unsigned int hash;
 } pass_output_t;
 
+#include "shader_input.h"
+
 typedef struct pass_t
 {
 	fs_t *shader;
@@ -129,6 +121,7 @@ typedef struct pass_t
 	int invert_depth;
 	unsigned int clear;
 	ulong draw_signal;
+	entity_t camera;
 
 	int binds_size;
 	bind_t *binds;
@@ -148,17 +141,9 @@ typedef struct c_renderer_t
 	int height;
 	float resolution;
 
-	texture_t *perlin;
-	int perlin_size;
+	/* texture_t *perlin; */
 
 	int probe_update_id;
-	entity_t bound_probe;
-	vec3_t bound_camera_pos;
-	mat4_t *bound_view;
-	mat4_t *bound_projection;
-	mat4_t *bound_camera_model;
-	float bound_exposure;
-	entity_t bound_light;
 
 	pass_output_t outputs[32];
 	int outputs_num;
@@ -181,6 +166,9 @@ typedef struct c_renderer_t
 
 	// GL PROPS
 	int depth_inverted;
+
+	unsigned int scene_ubo;
+	struct gl_scene scene;
 } c_renderer_t;
 
 DEF_CASTER("renderer", c_renderer, c_renderer_t)
@@ -191,6 +179,8 @@ int c_renderer_draw(c_renderer_t *self);
 void c_renderer_register(void);
 void c_renderer_set_resolution(c_renderer_t *self, float resolution);
 void c_renderer_add_camera(c_renderer_t *self, entity_t camera);
+void c_renderer_add_to_group(c_renderer_t *self,
+		const char *name, drawable_t *drawable);
 
 void c_renderer_set_output(c_renderer_t *self, unsigned int hash);
 
@@ -198,11 +188,11 @@ texture_t *c_renderer_tex(c_renderer_t *self, unsigned int hash);
 void c_renderer_add_tex(c_renderer_t *self, const char *name,
 		float resolution, texture_t *buffer);
 void c_renderer_add_pass(c_renderer_t *self, const char *name,
-		const char *shader_name, ulong draw_signal,
-		int flags, bind_t binds[]);
+		const char *shader_name, ulong draw_signal, int flags,
+		texture_t *output, texture_t *depth, bind_t binds[]);
 void c_renderer_replace_pass(c_renderer_t *self, const char *name,
-		const char *shader_name, ulong draw_signal,
-		int flags, bind_t binds[]);
+		const char *shader_name, ulong draw_signal, int flags,
+		texture_t *output, texture_t *depth, bind_t binds[]);
 void c_renderer_toggle_pass(c_renderer_t *self, uint hash, int active);
 
 entity_t c_renderer_get_camera(c_renderer_t *self);

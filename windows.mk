@@ -3,8 +3,7 @@ LD = gcc
 
 DIR = build
 
-SHAD = $(patsubst %.frag, $(DIR)/%.frag.o, $(wildcard shaders/*.frag)) \
-	   $(patsubst %.vert, $(DIR)/%.vert.o, $(wildcard shaders/*.vert)) \
+SHAD = $(patsubst %.glsl, $(DIR)/%.glsl.o, $(wildcard shaders/*.glsl))
 
 SRCS = $(wildcard *.c) $(wildcard components/*.c) $(wildcard systems/*.c) \
 	   $(wildcard formats/*.c)
@@ -29,20 +28,12 @@ $(DIR)/candle.a: init $(OBJS_REL) $(SHAD)
 $(DIR)/%.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS_REL)
 
-$(DIR)/%.frag.o: %.frag
+$(DIR)/%.glsl.o: %.glsl
 	@xxd -i $< > $(DIR)/$<.c
 	@printf "\n#include <shader.h>\n\
 	void shaders_%s_frag_reg(void) { \n\
-	shader_add_source(\"%s.frag\", shaders_%s_frag, shaders_%s_frag_len);}" \
+	shader_add_source(\"%s.glsl\", shaders_%s_frag, shaders_%s_frag_len);}" \
 	$(*F) $(*F) $(*F) $(*F) >> $(DIR)/$<.c
-	$(CC) -o $@ -c $(DIR)/$<.c $(CFLAGS_REL)
-
-$(DIR)/%.vert.o: %.vert
-	@xxd -i $< $(DIR)/$<.c 
-	@printf "\n#include <shader.h>\n\
-	void shaders_%s_vert_reg(void) { \n\
-	shader_add_source(\"%s.vert\", shaders_%s_vert, shaders_%s_vert_len);}" \
-	$(*F) $(*F) $(*F) $(*F) >> $(DIR)/$<.c 
 	$(CC) -o $@ -c $(DIR)/$<.c $(CFLAGS_REL)
 
 

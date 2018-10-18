@@ -5,6 +5,7 @@
 #include <ecs/ecm.h>
 #include <utils/texture.h>
 #include <utils/material.h>
+#include <utils/drawable.h>
 
 typedef struct
 {
@@ -14,6 +15,8 @@ typedef struct
 	float shadow_size;
 	float radius;
 
+	int id;
+	drawable_t draw;
 } c_light_t;
 
 DEF_CASTER("light", c_light, c_light_t)

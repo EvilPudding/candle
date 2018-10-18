@@ -1,12 +1,11 @@
 #include "model.h"
-#include "mesh_gl.h"
 #include "node.h"
 #include "spacial.h"
 #include "light.h"
 #include <utils/nk.h>
+#include <utils/drawable.h>
 #include <candle.h>
 #include <systems/renderer.h>
-#include <utils/shader.h>
 #include <systems/editmode.h>
 #include <systems/lua.h>
 
@@ -373,26 +372,29 @@ static void c_model_init(c_model_t *self)
 		g_model_vs = vs_new("model", 1, vertex_modifier_new(
 			"	{\n"
 			"#ifdef MESH4\n"
-			"		float Y = cos(angle4);\n"
-			"		float W = sin(angle4);\n"
+			"		float Y = cos(ANG4);\n"
+			"		float W = sin(ANG4);\n"
 			"		pos = vec4(vec3(P.x, P.y * Y + P.w * W, P.z), 1.0);\n"
 			"#endif\n"
-			"		vertex_position = (camera.view * M * pos).xyz;\n"
 
 			"		poly_color = COL;\n"
-			"		mat4 MV    = camera.view * M;\n"
+			"		mat4 MV    = scene.camera.view * M;\n"
 			"		vec3 vertex_normal    = normalize(MV * vec4( N, 0.0f)).xyz;\n"
 			"		vec3 vertex_tangent   = normalize(MV * vec4(TG, 0.0f)).xyz;\n"
 			"		vec3 vertex_bitangent = cross(vertex_tangent, vertex_normal);\n"
 
-			"		object_id = id;\n"
 			"		poly_id = ID;\n"
 			"		TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
 
-			"		pos = (camera.projection * MV) * pos;\n"
+			"		pos = (scene.camera.projection * MV) * pos;\n"
 			"	}\n"
 		));
 	}
+	self->vs = g_model_vs;
+
+	drawable_init(&self->draw, "visible");
+	drawable_set_entity(&self->draw, c_entity(self));
+	drawable_set_vs(&self->draw, self->vs);
 }
 
 /* void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset) */
@@ -413,11 +415,14 @@ c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow, int visible)
 	c_model_t *self = component_new("model");
 
 	/* c_model_add_layer(self, mat, -1, 0); */
-	self->mat = mat;
+	/* self->mat = mat; */
 
-	self->mesh = mesh;
+	/* self->mesh = mesh; */
 	self->cast_shadow = cast_shadow;
 	self->visible = visible;
+
+	c_model_set_mesh(self, mesh);
+	c_model_set_mat(self, mat);
 
 	return self;
 }
@@ -474,7 +479,7 @@ void c_model_propagate_edit(c_model_t *self, int cmd_id)
 	self->mesh->update_id = last_update_id + 1;
 	mesh_unlock(self->mesh);
 
-	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL, NULL);
+	entity_signal_same(c_entity(self), sig("model_changed"), NULL, NULL);
 }
 
 void c_model_remove_edit(c_model_t *self, int cmd_id)
@@ -506,7 +511,7 @@ void c_model_edit(c_model_t *self, mesh_edit_t type, geom_t target)
 /* c_model_t *c_model_paint(c_model_t *self, int layer, mat_t *mat) */
 /* { */
 /* 	self->layers[layer].mat = mat; */
-/* 	/1* c_mesh_gl_t *gl = c_mesh_gl(self); *1/ */
+/* 	/1* drawable_t *gl = self->draw; *1/ */
 /* 	/1* gl->groups[layer].mat = mat; *1/ */
 /* 	return self; */
 /* } */
@@ -534,7 +539,20 @@ c_model_t *c_model_cull_face(c_model_t *self, int inverted)
 		self->mesh->cull_back = 1;
 	}
 	/* g_update_id++; */
+	drawable_model_changed(&self->draw);
 	return self;
+}
+
+void c_model_set_vs(c_model_t *self, vs_t *vs)
+{
+	self->vs = vs;
+	drawable_set_vs(&self->draw, vs);
+}
+
+void c_model_set_xray(c_model_t *self, int xray)
+{
+	self->xray = xray;
+	drawable_set_xray(&self->draw, xray);
 }
 
 c_model_t *c_model_smooth(c_model_t *self, int smooth)
@@ -542,6 +560,7 @@ c_model_t *c_model_smooth(c_model_t *self, int smooth)
 	/* self->layers[layer].smooth_angle = smooth; */
 	self->mesh->smooth_angle = smooth;
 	mesh_modified(self->mesh);
+	drawable_model_changed(&self->draw);
 	return self;
 }
 
@@ -550,102 +569,29 @@ c_model_t *c_model_wireframe(c_model_t *self, int wireframe)
 	/* self->layers[layer].wireframe = wireframe; */
 	self->mesh->wireframe = wireframe;
 	g_update_id++;
+	drawable_model_changed(&self->draw);
 	return self;
+}
+
+void c_model_set_mat(c_model_t *self, mat_t *mat)
+{
+	self->mat = mat;
+	drawable_set_mat(&self->draw, mat);
 }
 
 void c_model_set_mesh(c_model_t *self, mesh_t *mesh)
 {
 	mesh_t *old_mesh = self->mesh;
 	self->mesh = mesh;
-	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL, NULL);
 	if(old_mesh) mesh_destroy(old_mesh);
+
+	drawable_set_mesh(&self->draw, mesh);
 }
 
 int c_model_created(c_model_t *self)
 {
-	if(self->mesh)
-	{
-		g_update_id++;
-		entity_signal_same(c_entity(self), sig("mesh_changed"), NULL, NULL);
-	}
-	return CONTINUE;
-}
-
-/* #include "components/name.h" */
-int c_model_render_shadows(c_model_t *self)
-{
-	if(self->cast_shadow) c_model_render_visible(self);
-	return CONTINUE;
-}
-
-int c_model_render_visible(c_model_t *self)
-{
-	if(!self->visible) return CONTINUE;
-
-	return c_model_render(self, vs_bind(g_model_vs), 0);
-}
-
-int c_model_render_selectable(c_model_t *self)
-{
-	if(!self->visible) return CONTINUE;
-	c_model_render(self, vs_bind(g_model_vs), 2);
-	return CONTINUE;
-}
-
-int c_model_render_transparent(c_model_t *self)
-{
-	if(!self->visible) return CONTINUE;
-
-	return c_model_render(self, vs_bind(g_model_vs), 1);
-}
-
-int c_model_render(c_model_t *self, shader_t *shader, int flags)
-{
-	return c_model_render_at(self, shader, c_node(self), flags);
-}
-
-int c_model_render_at(c_model_t *self, shader_t *shader, c_node_t *node,
-		int flags)
-{
-	if(!self->mesh || !shader) return STOP;
-	entity_t ent = c_entity(self);
-
-	c_node_update_model(node);
-	ent = node->unpack_inheritance;
-
-	mat4_t model = node->model;
-
-	if(self->scale_dist > 0.0f)
-	{
-		vec3_t pos = mat4_mul_vec4(model, vec4(0,0,0,1)).xyz;
-		float dist = vec3_dist(pos, c_renderer(&SYS)->bound_camera_pos);
-		model = mat4_scale_aniso(model, vec3(dist * self->scale_dist));
-	}
-#ifdef MESH4
-	shader_update(shader, node->angle4);
-#endif
-
-	int depth_was_enabled = glIsEnabled(GL_DEPTH_TEST);
-	int additive_was_enabled = glIsEnabled(GL_BLEND);
-
-	if(self->xray)
-	{
-		glDepthRange(0, 0.01);
-	}
-	c_mesh_gl_draw_ent(c_mesh_gl(self), ent, &model, flags);
-	if(self->xray)
-	{
-		if(!additive_was_enabled)
-		{
-			/* glDisable(GL_BLEND); */
-		}
-		if(depth_was_enabled)
-		{
-			glEnable(GL_DEPTH_TEST);
-		}
-	}
-	glDepthRange(0.0, 1.00);
-
+	if(self->mesh) g_update_id++;
+	drawable_model_changed(&self->draw);
 	return CONTINUE;
 }
 
@@ -683,18 +629,19 @@ int c_model_menu(c_model_t *self, void *ctx)
 {
 	int i;
 	int new_value;
+	int changes = 0;
 
 	new_value = nk_check_label(ctx, "Visible", self->visible);
 	if(new_value != self->visible)
 	{
 		self->visible = new_value;
-		g_update_id++;
+		changes = 1;
 	}
 	new_value = nk_check_label(ctx, "Cast shadow", self->cast_shadow);
 	if(new_value != self->cast_shadow)
 	{
 		self->cast_shadow = new_value;
-		g_update_id++;
+		changes = 1;
 	}
 
 	/* if(nk_tree_push(ctx, NK_TREE_TAB, "Edit", NK_MAXIMIZED)) */
@@ -734,7 +681,7 @@ int c_model_menu(c_model_t *self, void *ctx)
 		if(new_value != mesh->wireframe)
 		{
 			mesh->wireframe = new_value;
-			g_update_id++;
+			changes = 1;
 		}
 
 		float smooth = mesh->smooth_angle;
@@ -754,7 +701,7 @@ int c_model_menu(c_model_t *self, void *ctx)
 		if(new_value != mesh->cull_front)
 		{
 			mesh->cull_front = new_value;
-			g_update_id++;
+			changes = 1;
 		}
 
 		new_value = nk_check_label(ctx, "Cull back",
@@ -763,13 +710,18 @@ int c_model_menu(c_model_t *self, void *ctx)
 		if(new_value != mesh->cull_back)
 		{
 			mesh->cull_back = new_value;
-			g_update_id++;
+			changes = 1;
 		}
 	}
 
 	if(self->mat && self->mat->name[0] != '_')
 	{
 		mat_menu(self->mat, ctx);
+	}
+	if(changes)
+	{
+		g_update_id++;
+		drawable_model_changed(&self->draw);
 	}
 
 	/* nk_tree_pop(ctx); */
@@ -778,12 +730,16 @@ int c_model_menu(c_model_t *self, void *ctx)
 	return CONTINUE;
 }
 
-int c_model_scene_changed(c_model_t *self, entity_t *entity)
+static int c_model_position_changed(c_model_t *self)
 {
-	if(self->visible)
-	{
-		g_update_id++;
-	}
+	c_node_t *node = c_node(self);
+	c_node_update_model(node);
+	drawable_set_transform(&self->draw, node->model);
+
+#ifdef MESH4
+	drawable_set_angle4(&self->draw, node->angle4
+#endif
+
 	return CONTINUE;
 }
 
@@ -816,13 +772,12 @@ static void c_model_destroy(c_model_t *self)
 	}
 	if(self->mesh) mesh_destroy(self->mesh);
 	g_update_id++;
+	drawable_set_mesh(&self->draw, NULL);
 }
-
-
 
 REG()
 {
-	signal_init(sig("mesh_changed"), sizeof(mesh_t));
+	signal_init(sig("model_changed"), sizeof(mesh_t));
 
 	/* TODO destroyer */
 	ct_t *ct = ct_new("model", sizeof(c_model_t),
@@ -833,15 +788,12 @@ REG()
 	ct_listener(ct, WORLD, sig("component_menu"), c_model_menu);
 	ct_listener(ct, WORLD, sig("component_tool"), c_model_tool);
 
-	ct_listener(ct, ENTITY, sig("spacial_changed"), c_model_scene_changed);
+	ct_listener(ct, ENTITY, sig("node_changed"), c_model_position_changed);
 
-	ct_listener(ct, WORLD, sig("render_visible"), c_model_render_visible);
+	/* ct_listener(ct, WORLD, sig("render_shadows"), c_model_render_shadows); */
 
-	ct_listener(ct, WORLD, sig("render_transparent"), c_model_render_transparent);
+	/* ct_listener(ct, WORLD, sig("render_selectable"), c_model_render_selectable); */
 
-	ct_listener(ct, WORLD, sig("render_shadows"), c_model_render_shadows);
-
-	ct_listener(ct, WORLD, sig("render_selectable"), c_model_render_selectable);
 
 	add_tool("circle", (tool_gui_cb)tool_circle_gui,
 			(tool_edit_cb)tool_circle_edit,

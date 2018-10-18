@@ -1,8 +1,8 @@
 #include "window.h"
 #include <utils/shader.h>
+#include <utils/drawable.h>
 #include <candle.h>
 #include <components/model.h>
-#include <components/mesh_gl.h>
 #include <components/node.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -66,7 +66,7 @@ void c_window_init(c_window_t *self)
 
 	/* SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1); */
 
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
 			SDL_GL_CONTEXT_PROFILE_CORE);
@@ -131,16 +131,16 @@ int c_window_created(c_window_t *self)
 		g_quad_fs = fs_new("quad");
 	}
 
-	mesh_t *mesh = mesh_new();
-	entity_add_component(c_entity(self), c_model_new(mesh, NULL, 0, 0));
-	mesh_quad(mesh);
-	if(!c_model(self)) exit(1);
+	self->quad = mesh_new();
+	mesh_quad(self->quad);
 
-	c_model_cull_face(c_model(self), 2);
-	c_model(self)->super.ghost = 1;
-	c_spacial(self)->super.ghost = 1;
-	c_node(self)->super.ghost = 1;
+	self->quad->cull_back = 0;
+	self->quad->cull_front = 0;
 
+	drawable_init(&self->draw, "quad");
+	drawable_set_entity(&self->draw, c_entity(self));
+	drawable_set_mesh(&self->draw, self->quad);
+	drawable_set_vs(&self->draw, g_quad_vs);
 
 	entity_signal(entity_null, sig("window_resize"),
 			&(window_resize_data){
@@ -161,28 +161,13 @@ c_window_t *c_window_new(int width, int height)
 int c_window_draw(c_window_t *self)
 {
 	SDL_GL_SwapWindow(self->window);
+	glerr();
 	return CONTINUE;
 }
 
 int c_window_render_quad(c_window_t *self, texture_t *texture)
 {
-
-	/* fs_bind(g_quad_fs); */
-	shader_t *shader = vs_bind(g_quad_vs);
-	if(!shader || !shader->ready) return STOP;
-
-	if(texture)
-	{
-		shader_bind_screen(shader, texture, 1, 1);
-	}
-	c_node_t *node = c_node(self);
-	c_node_update_model(node);
-
-#ifdef MESH4
-	shader_update(shader, node->angle4);
-#endif
-
-	c_mesh_gl_draw(c_mesh_gl(self), &node->model, 0);
+	drawable_draw(&self->draw);
 	return CONTINUE;
 }
 
@@ -190,25 +175,31 @@ void c_window_rect(c_window_t *self, int x, int y, int width, int height,
 		texture_t *texture)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); glerr();
+	/* glClear(GL_COLOR_BUFFER_BIT); */
 	glClear(GL_DEPTH_BUFFER_BIT);
-	if(!texture) return;
-	fs_bind(g_quad_fs);
-	shader_t *shader = vs_bind(g_quad_vs);
-	if(!shader || !shader->ready)
+	if(!texture)
 	{
-		exit(1);
+		printf("No texture to draw\n");
+		return;
 	}
 
-	/* Draw to opengl context */
+	fs_bind(g_quad_fs);
 
+	/* Draw to opengl context */
 	glViewport(x, y, width, height); glerr();
 
-	shader_bind_screen(shader, texture, 1, 1);
-	glUniform2f(shader->u_screen_size,
-			self->width,
-			self->height); glerr();
+	shader_t *shader = vs_bind(g_quad_vs);
+	uint uni = shader_uniform(shader, "tex", NULL);
+	glUniformHandleui64ARB(uni, texture->bufs[texture->draw_id].handle);
 
-	c_mesh_gl_draw(c_mesh_gl(self), NULL, 0);
+	/* TODO */
+	/* shader_bind_screen(shader, texture, 1, 1); */
+	/* glUniform2f(shader->u_screen_size, */
+	/* 		self->width, */
+	/* 		self->height); glerr(); */
+
+	drawable_draw(&self->draw);
+	glerr();
 
 }
 

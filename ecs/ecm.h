@@ -252,7 +252,7 @@ static inline c_t *ct_get(ct_t *self, entity_t *entity)
 
 
 /* TODO maybe this shouldn't be here */
-static inline vec2_t entity_to_vec2(entity_t self)
+static inline uvec2_t entity_to_uvec2(entity_t self)
 {
 	int pos = entity_pos(self);
 
@@ -263,7 +263,12 @@ static inline vec2_t entity_to_vec2(entity_t self)
 		};
 	} convert = {.i = pos};
 
-	return vec2((float)convert.r / 255, (float)convert.g / 255);
+	return uvec2(convert.r, convert.g);
+}
+static inline vec2_t entity_to_vec2(entity_t self)
+{
+	uvec2_t v = entity_to_uvec2(self);
+	return vec2((float)v.x / 255.0f, (float)v.y / 255.0f);
 }
 
 #define SYS ((entity_t){0x0000000100000001})

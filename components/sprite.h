@@ -3,6 +3,7 @@
 
 #include <ecs/ecm.h>
 #include <systems/renderer.h>
+#include <utils/drawable.h>
 
 typedef struct
 {
@@ -11,6 +12,7 @@ typedef struct
 	int visible;
 	int cast_shadow;
 	int xray;
+	drawable_t draw;
 } c_sprite_t;
 
 DEF_CASTER("sprite", c_sprite, c_sprite_t)

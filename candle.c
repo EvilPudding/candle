@@ -183,18 +183,23 @@ static int render_loop(void)
 	while(!g_candle->exit)
 	{
 		candle_handle_events();
+
 		loader_update(g_candle->loader);
+		glerr();
 
 		/* if(state->gameStarted) */
 		{
 			/* candle_handle_events(self); */
 			/* printf("\t%ld\n", self->render_id); */
+			glerr();
 			entity_signal(entity_null, sig("world_draw"), NULL, NULL);
+			glerr();
 
 			ecm_clean(0);
 
 			c_window_draw(c_window(&SYS));
 
+			glerr();
 			fps++;
 			/* candle_handle_events(self); */
 

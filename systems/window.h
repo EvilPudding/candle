@@ -3,6 +3,7 @@
 
 #include <ecs/ecm.h>
 #include <utils/shader.h>
+#include <utils/drawable.h>
 
 extern int window_width;
 extern int window_height;
@@ -26,6 +27,8 @@ typedef struct c_window_t
 
 	const unsigned char *key_state;
 
+	mesh_t *quad;
+	drawable_t draw;
 } c_window_t;
 
 DEF_CASTER("window", c_window, c_window_t)

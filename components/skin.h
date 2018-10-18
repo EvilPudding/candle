@@ -4,18 +4,6 @@
 #include <ecs/ecm.h>
 #include <utils/mafs.h>
 
-typedef struct skin_t
-{
-	int bones_num;
-	entity_t bones[30];
-	mat4_t off[30];
-
-	vec4_t  *wei;
-	uvec4_t *bid;
-	int vert_alloc;
-
-} skin_t;
-
 typedef struct
 {
 	c_t super; /* extends c_t */

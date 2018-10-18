@@ -162,7 +162,7 @@ void c_spacial_set_rot(c_spacial_t *self, float x, float y, float z, float angle
 	float new_z = z * angle;
 	c_spacial_lock(self);
 
-	mat4_t rot_matrix = mat4_rotate(rot_matrix, x, 0, 0,
+	mat4_t rot_matrix = mat4_rotate(mat4(), x, 0, 0,
 			new_x - self->rot.x);
 	rot_matrix = mat4_rotate(rot_matrix, 0, 0, z,
 			new_z - self->rot.z);

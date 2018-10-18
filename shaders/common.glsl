@@ -1,100 +1,55 @@
 #ifndef FRAG_COMMON
 #define FRAG_COMMON
 #line 3
-#extension GL_ARB_texture_query_levels : enable
-#extension GL_EXT_shader_texture_lod: enable
-#extension GL_OES_standard_derivatives : enable
+
+#include "uniforms.glsl"
 
 #define _CAT(a, b) a ## b
 #define CAT(a, b) _CAT(a,b)
 #define BUFFER uniform struct 
-struct property_t
-{
-	float texture_blend;
-	sampler2D texture;
-	float texture_scale;
-	vec4 color;
-};
-
-uniform vec2 output_size;
 
 const float M_PI = 3.141592653589793;
 const float c_MinRoughness = 0.04;
-
-uniform property_t albedo;
-uniform property_t roughness;
-uniform property_t metalness;
-uniform property_t transparency;
-uniform property_t normal;
-uniform property_t emissive;
 
 
 /* uniform gbuffer_t gbuffer; */
 /* uniform sbuffer_t sbuffer; */
 
-uniform float distortion;
-uniform float scattering;
+/* uniform samplerCube ambient_map; */
+/* uniform sampler3D perlin_map; */
 
-uniform samplerCube ambient_map;
 
-uniform sampler3D perlin_map;
-
-struct camera_t
-{
-	vec3 pos;
-	float exposure;
-	mat4 projection;
-	mat4 inv_projection;
-	mat4 view;
-	mat4 model;
-};
-
-uniform camera_t camera;
-
-uniform vec3 light_pos;
-uniform float light_radius;
-uniform vec4 light_color;
-uniform samplerCube light_shadow_map;
-
-uniform float has_tex;
-uniform float cameraspace_normals;
-
-in vec3 tgspace_light_dir;
-in vec3 tgspace_eye_dir;
-in vec3 worldspace_position;
-in vec3 cameraspace_light_dir;
-
-in vec2 object_id;
 in vec2 poly_id;
 in vec3 poly_color;
-
-in vec3 vertex_position;
+in flat vec3 obj_pos;
 
 in vec2 texcoord;
-in vec4 vertex_color;
 
 in mat4 model;
 in mat3 TM;
 
-uniform vec2 screen_size;
+in flat uint has_tex;
+in flat uint matid;
+in flat uvec2 id;
 
 vec2 pixel_pos()
 {
-	return gl_FragCoord.xy / screen_size;
+	/* return gl_SamplePosition.xy; */
+	return gl_FragCoord.xy / pass(screen_size);
 }
 
 
 vec4 resolveProperty(property_t prop, vec2 coords)
 {
 	/* vec3 tex; */
-	if(prop.texture_blend > 0.001)
+	if(prop.blend > 0.001)
 	{
-		coords *= prop.texture_scale;
+		coords *= prop.scale;
 		return mix(
 			prop.color,
 			texture2D(prop.texture, vec2(coords.x, 1.0f-coords.y)),
-			/* textureLod(prop.texture, prop.texture_scale * coords, 3), */
-			prop.texture_blend
+			/* textureLod(prop.texture, prop.scale * coords, 3), */
+			prop.blend
 		);
 	}
 	return prop.color;
@@ -105,7 +60,7 @@ vec4 resolveProperty(property_t prop, vec2 coords)
 
 float lookup_single(vec3 shadowCoord)
 {
-	return texture(light_shadow_map, shadowCoord).a;
+	return texture(light(shadow_map), shadowCoord).a;
 }
 
 /* float prec = 0.05; */
@@ -140,27 +95,27 @@ vec3 decode_normal(vec2 enc)
 
 vec4 get_emissive()
 {
-	return resolveProperty(emissive, texcoord);
+	return resolveProperty(mat(emissive), texcoord);
 }
 
 float get_metalness()
 {
-	return resolveProperty(metalness, texcoord).r;
+	return resolveProperty(mat(metalness), texcoord).r;
 }
 
 float get_roughness()
 {
-	return resolveProperty(roughness, texcoord).r;
+	return resolveProperty(mat(roughness), texcoord).r;
 }
 
 
 vec4 get_transparency()
 {
-	return resolveProperty(transparency, texcoord);
+	return resolveProperty(mat(transparency), texcoord);
 }
 
 
-vec3 get_position(sampler2D depth)
+vec3 get_position(const camera_t camera, sampler2D depth)
 {
 	vec2 pos = pixel_pos();
 	vec3 raw_pos = vec3(pos, textureLod(depth, pos, 0).r);
@@ -169,7 +124,7 @@ vec3 get_position(sampler2D depth)
 	return view_pos.xyz / view_pos.w;
 }
 
-vec3 get_position(sampler2D depth, vec2 pos)
+vec3 get_position(const camera_t camera, sampler2D depth, vec2 pos)
 {
 	vec3 raw_pos = vec3(pos, textureLod(depth, pos, 0).r);
 	vec4 clip_pos = vec4(raw_pos * 2.0 - 1.0, 1.0);
@@ -184,9 +139,9 @@ vec3 get_normal(sampler2D buffer)
 }
 vec3 get_normal(vec2 tc)
 {
-	if(has_tex > 0.5)
+	if(has_tex == 1)
 	{
-		vec3 texcolor = resolveProperty(normal, tc).rgb * 2.0f - 1.0f;
+		vec3 texcolor = resolveProperty(mat(normal), tc).rgb * 2.0f - 1.0f;
 		return normalize(TM * texcolor);
 
 	}
@@ -194,9 +149,9 @@ vec3 get_normal(vec2 tc)
 }
 vec3 get_normal()
 {
-	if(has_tex > 0.5)
+	if(has_tex == 1)
 	{
-		vec3 texcolor = resolveProperty(normal, texcoord).rgb * 2.0f - 1.0f;
+		vec3 texcolor = resolveProperty(mat(normal), texcoord).rgb * 2.0f - 1.0f;
 		return normalize(TM * texcolor);
 
 	}
@@ -249,7 +204,7 @@ float unlinearize(float depth)
 	return 100.0f * (1.0f - (0.1f / depth)) / (100.0f - 0.1f);
 }
 
-float get_shadow(vec3 vec, float point_to_light, float dist_to_eye)
+float get_shadow(const camera_t camera, vec3 vec, float point_to_light, float dist_to_eye)
 {
 	float ocluder_to_light = lookup_single(-vec);
 
@@ -285,10 +240,10 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye)
 	return 0.0f;
 }
 
-float doAmbientOcclusion(sampler2D depth, vec2 tcoord, vec2 uv, vec3 p, vec3 cnorm)
+float doAmbientOcclusion(const camera_t camera, sampler2D depth, vec2 tcoord, vec2 uv, vec3 p, vec3 cnorm)
 {
     float scale = 1.2, bias = 0.01, intensity = 5; 
-    vec3 diff = get_position(depth, tcoord + uv) - p;
+    vec3 diff = get_position(camera, depth, tcoord + uv) - p;
     vec3 v = normalize(diff);
 	float dist = length(diff);
 	/* if(dist > 0.7) return 0.0f; */
@@ -311,7 +266,7 @@ vec3 ppp[] = vec3[](
 		vec3(0.14642092069816068, 0.5859713297143408, -0.7969934220147054),
 		vec3(0.968975404819239, -0.07683527155447646, 0.234910633860074));
 
-float ambientOcclusion(sampler2D depth, vec3 p, vec3 n, float dist_to_eye)
+float ambientOcclusion(const camera_t camera, sampler2D depth, vec3 p, vec3 n, float dist_to_eye)
 {
 	vec2 rnd = normalize(vec2(rand(p.xy), rand(n.xy)));
 
@@ -337,10 +292,10 @@ float ambientOcclusion(sampler2D depth, vec3 p, vec3 n, float dist_to_eye)
 		vec2 coord2 = vec2(coord1.x * 0.707 - coord1.y * 0.707,
 				coord1.x * 0.707 + coord1.y * 0.707);
 
-		ao += doAmbientOcclusion(depth, texcoord, coord1 * 0.25, p, n);
-		ao += doAmbientOcclusion(depth, texcoord, coord2 * 0.5, p, n);
-		ao += doAmbientOcclusion(depth, texcoord, coord1 * 0.75, p, n);
-		ao += doAmbientOcclusion(depth, texcoord, coord2, p, n);
+		ao += doAmbientOcclusion(camera, depth, texcoord, coord1 * 0.25, p, n);
+		ao += doAmbientOcclusion(camera, depth, texcoord, coord2 * 0.5, p, n);
+		ao += doAmbientOcclusion(camera, depth, texcoord, coord1 * 0.75, p, n);
+		ao += doAmbientOcclusion(camera, depth, texcoord, coord2, p, n);
 	}
 	ao /= float(iterations) * 4.0f;
 	return clamp(1.0f - ao * 0.4f, 0.0f, 1.0f); 
@@ -352,22 +307,23 @@ const float maxSteps = 20;
 const float searchDist = 20;
 const float searchDistInv = 1.0f / searchDist;
 
-vec3 get_proj_coord(sampler2D depthmap, vec3 hitCoord) // z = hitCoord.z - depth
+vec3 get_proj_coord(const camera_t camera, sampler2D depthmap, vec3 hitCoord)
+	// z = hitCoord.z - depth
 {
 	vec4 projectedCoord     = camera.projection * vec4(hitCoord, 1.0); \
 	projectedCoord.xy      /= projectedCoord.w; \
 	projectedCoord.xy       = projectedCoord.xy * 0.5 + 0.5;  \
-	float depth             = get_position(depthmap, projectedCoord.xy).z; \
+	float depth             = get_position(camera, depthmap, projectedCoord.xy).z; \
 	return vec3(projectedCoord.xy, hitCoord.z - depth);
 }
 
-vec3 BinarySearch(sampler2D depthmap, vec3 dir, inout vec3 hitCoord)
+vec3 BinarySearch(const camera_t camera, sampler2D depthmap, vec3 dir, inout vec3 hitCoord)
 {
     float depth;
 	vec3 pc;
     for(int i = 0; i < 16; i++)
     {
-		pc = get_proj_coord(depthmap, hitCoord);
+		pc = get_proj_coord(camera, depthmap, hitCoord);
 		if(pc.x > 1.0 || pc.y > 1.0 || pc.x < 0.0 || pc.y < 0.0) break;
 		if(abs(pc.z) <= 0.01f)
 		{
@@ -381,7 +337,7 @@ vec3 BinarySearch(sampler2D depthmap, vec3 dir, inout vec3 hitCoord)
     return vec3(pc.xy, 1.0f);
 }
 
-vec3 RayCast(sampler2D depth, vec3 dir, inout vec3 hitCoord)
+vec3 RayCast(const camera_t camera, sampler2D depth, vec3 dir, inout vec3 hitCoord)
 {
     dir *= 0.1f;  
 
@@ -389,7 +345,7 @@ vec3 RayCast(sampler2D depth, vec3 dir, inout vec3 hitCoord)
         hitCoord               += dir; 
 		dir *= 1.1f;
 
-		vec3 pc = get_proj_coord(depth, hitCoord);
+		vec3 pc = get_proj_coord(camera, depth, hitCoord);
 		if(pc.x > 1.0 || pc.y > 1.0 || pc.x < 0.0 || pc.y < 0.0) break;
 
 		if(pc.z < -2.0f) break;
@@ -445,11 +401,11 @@ vec4 coneSampleWeightedColor(sampler2D screen, vec2 samplePos,
 
 #define CNST_1DIVPI 0.31830988618
 #define CNST_MAX_SPECULAR_EXP 64
-vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
+vec4 ssr2(const camera_t camera, sampler2D depth, sampler2D screen, vec4 base_color,
 		vec2 metallic_roughness, vec3 nor)
 {
 	vec2 tc = pixel_pos();
-	vec3 pos = get_position(depth, pixel_pos());
+	vec3 pos = get_position(camera, depth, pixel_pos());
 
 	float perceptualRoughness = metallic_roughness.y;
 	float metallic = metallic_roughness.x;
@@ -473,7 +429,7 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
 	// Ray cast
 	vec3 hitPos = pos.xyz; // + vec3(0.0, 0.0, rand(camPos.xz) * 0.2 - 0.1);
 
-	vec3 coords = RayCast(depth, reflected, hitPos);
+	vec3 coords = RayCast(camera, depth, reflected, hitPos);
 
 	vec2 dCoords = abs(vec2(0.5, 0.5) - coords.xy) * 2;
 	/* vec2 dCoords = abs((vec2(0.5, 0.5) - texcoord.xy) * 2 ); */
@@ -501,8 +457,7 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
         float oppositeLength = 2.0f * tan(coneTheta) * adjacentLength;
         float incircleSize = isoscelesTriangleInRadius(oppositeLength, adjacentLength);
         vec2 samplePos = texcoord + adjacentUnit * (adjacentLength - incircleSize);
-		float mipChannel = clamp(log2(incircleSize * max(screen_size.x,
-						screen_size.y)), 0.0f, maxMipLevel);
+		float mipChannel = clamp(log2(incircleSize), 0.0f, maxMipLevel);
 
         vec4 newColor = coneSampleWeightedColor(screen, samplePos, mipChannel, glossMult);
 

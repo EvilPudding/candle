@@ -56,14 +56,14 @@ int c_probe_render(c_probe_t *self, uint signal)
 	int f;
 
 	if(!self->map) return STOP;
-	c_spacial_t *ps = c_spacial(self);
+	/* c_spacial_t *ps = c_spacial(self); */
 
 	if(self->last_update == g_update_id) return STOP;
 
-	c_renderer_t *renderer = c_renderer(&SYS);
-	renderer->bound_probe = c_entity(self);
-	renderer->bound_camera_pos = ps->pos;
-	renderer->bound_projection = &self->projection;
+	/* TODO BIND PROBE */
+	/* renderer->bound_probe = c_entity(self); */
+	/* renderer->bound_camera_pos = ps->pos; */
+	/* renderer->bound_projection = &self->projection; */
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
@@ -73,20 +73,20 @@ int c_probe_render(c_probe_t *self, uint signal)
 		texture_target(self->map, NULL, f);
 		glClear(GL_DEPTH_BUFFER_BIT);
 
-		renderer->bound_view = &self->views[f];
-		renderer->bound_camera_model = &self->models[f];
-		renderer->bound_exposure = 1.0f;
+		/* renderer->bound_view = &self->views[f]; */
+		/* renderer->bound_camera_model = &self->models[f]; */
+		/* renderer->bound_exposure = 1.0f; */
 
 		int res = entity_signal(c_entity(self), signal, NULL, NULL);
 		if(res == STOP)
 		{
-			renderer->bound_probe = entity_null;
+			/* renderer->bound_probe = entity_null; */
 			return STOP;
 		}
 	}
 
 	self->last_update = g_update_id;
-	renderer->bound_probe = entity_null;
+	/* renderer->bound_probe = entity_null; */
 	return CONTINUE;
 }
 

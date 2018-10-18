@@ -124,6 +124,8 @@ typedef struct
 	/* before_draw_cb before_draw; */
 	int xray;
 
+	vs_t *vs;
+	drawable_t draw;
 } c_model_t;
 
 DEF_CASTER("model", c_model, c_model_t)
@@ -137,11 +139,15 @@ c_model_t *c_model_cull_face(c_model_t *self, int inverted);
 c_model_t *c_model_wireframe(c_model_t *self, int wireframe);
 c_model_t *c_model_smooth(c_model_t *self, int smooth);
 c_model_t *c_model_paint(c_model_t *self, mat_t *mat);
-int c_model_render_transparent(c_model_t *self);
-int c_model_render_visible(c_model_t *self);
-int c_model_render(c_model_t *self, shader_t *shader, int transp);
-int c_model_render_at(c_model_t *self, shader_t *shader,
-		c_node_t *node, int transp);
+void c_model_set_xray(c_model_t *self, int xray);
+void c_model_set_vs(c_model_t *self, vs_t *vs);
+void c_model_set_mat(c_model_t *self, mat_t *mat);
+void c_model_set_mesh(c_model_t *self, mesh_t *mesh);
+
+/* int c_model_render_transparent(c_model_t *self); */
+/* int c_model_render_visible(c_model_t *self); */
+/* int c_model_render(c_model_t *self, int transp); */
+/* int c_model_render_at(c_model_t *self, c_node_t *node, int transp); */
 void c_model_set_mesh(c_model_t *self, mesh_t *mesh);
 
 #endif /* !MODEL_H */

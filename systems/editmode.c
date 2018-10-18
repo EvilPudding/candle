@@ -200,8 +200,8 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 	c_renderer_t *renderer = c_renderer(self);
 	c_renderer_add_pass(renderer, "highlights", "highlight", sig("render_quad"),
 			PASS_MULTIPLY,
+			c_renderer_tex(renderer, ref("final")), NULL,
 		(bind_t[]){
-			{BIND_OUT, .buffer = c_renderer_tex(renderer, ref("final"))},
 			{BIND_TEX, "sbuffer", .buffer = c_renderer_tex(renderer, ref("selectable"))},
 			{BIND_INT, "mode", (getter_cb)c_editmode_bind_mode, self},
 			{BIND_VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
@@ -214,8 +214,8 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 
 	c_renderer_add_pass(renderer, "highlights_0", "border", sig("render_quad"),
 			PASS_CLEAR_COLOR,
+			c_renderer_tex(renderer, ref("tmp")), NULL,
 		(bind_t[]){
-			{BIND_OUT, .buffer = c_renderer_tex(renderer, ref("tmp"))},
 			{BIND_TEX, "sbuffer", .buffer = c_renderer_tex(renderer, ref("selectable"))},
 			{BIND_INT, "mode", (getter_cb)c_editmode_bind_mode, self},
 			{BIND_VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
@@ -228,8 +228,8 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 
 	c_renderer_add_pass(renderer, "highlights_1", "border", sig("render_quad"),
 			PASS_ADDITIVE,
+			c_renderer_tex(renderer, ref("final")), NULL,
 		(bind_t[]){
-			{BIND_OUT, .buffer = c_renderer_tex(renderer, ref("final"))},
 			{BIND_TEX, "sbuffer", .buffer = c_renderer_tex(renderer, ref("selectable"))},
 			{BIND_TEX, "tmp", .buffer = c_renderer_tex(renderer, ref("tmp"))},
 			{BIND_INT, "mode", (getter_cb)c_editmode_bind_mode, self},
@@ -242,9 +242,8 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 	);
 	c_renderer_add_pass(renderer, "tool", "editmode", sig("render_quad"),
 			PASS_ADDITIVE,
+			c_renderer_tex(renderer, ref("final")), NULL,
 		(bind_t[]){
-			{BIND_OUT, .buffer = c_renderer_tex(renderer, ref("final"))},
-			{BIND_CAM, "camera", (getter_cb)c_renderer_get_camera, c_renderer(self)},
 			{BIND_VEC2, "mouse_pos", (getter_cb)c_editmode_bind_mouse_pos, self},
 			{BIND_NUM, "start_radius", (getter_cb)c_editmode_bind_start_radius, self},
 			{BIND_NUM, "tool_fade", (getter_cb)c_editmode_bind_tool_fade, self},
@@ -290,7 +289,6 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 			self->over_poly = 0;
 		}
 	}
-	return CONTINUE;
 }
 
 /* entity_t g_disk = entity_null; */

@@ -10,6 +10,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+int g_camera_num;
+
 c_camera_t *c_camera_new(float fov, float near, float far)
 {
 	c_camera_t *self = component_new("camera");
@@ -19,6 +21,7 @@ c_camera_t *c_camera_new(float fov, float near, float far)
 	self->fov = fov;
 	self->view_cached = 0;
 	self->exposure = 0.25f;
+	self->id = g_camera_num++;
 
 	c_camera_update(self, NULL);
 
@@ -98,8 +101,7 @@ void c_camera_update_view(c_camera_t *self)
 
 	self->pos = mat4_mul_vec4(n->model, vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 	self->view_matrix = mat4_invert(n->model);
-
-	self->vp = mat4_mul(self->projection_matrix, self->view_matrix);
+	self->view_cached = 1;
 }
 
 void c_camera_activate(c_camera_t *self)
@@ -152,7 +154,7 @@ REG()
 	ct_t *ct = ct_new("camera", sizeof(c_camera_t), NULL,
 			NULL, 1, ref("node"));
 
-	ct_listener(ct, ENTITY, sig("spacial_changed"), c_camera_changed);
+	ct_listener(ct, ENTITY, sig("node_changed"), c_camera_changed);
 	ct_listener(ct, WORLD, sig("window_resize"), c_camera_update);
 
 	ct_listener(ct, WORLD, sig("component_menu"), c_camera_component_menu);

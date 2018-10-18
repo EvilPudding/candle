@@ -1,5 +1,5 @@
 
-#include "common.frag"
+#include "common.glsl"
 #line 4
 
 layout (location = 0) out vec4 FragColor;
@@ -10,7 +10,7 @@ BUFFER {
 
 void main()
 {
-    FragColor = textureLod(buf.color, texcoord, 0);
+    FragColor = texelFetch(buf.color, ivec2(gl_FragCoord), 0);
 }
 
 // vim: set ft=c:
