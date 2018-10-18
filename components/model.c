@@ -576,7 +576,7 @@ c_model_t *c_model_wireframe(c_model_t *self, int wireframe)
 void c_model_set_mat(c_model_t *self, mat_t *mat)
 {
 	self->mat = mat;
-	drawable_set_mat(&self->draw, mat);
+	drawable_set_mat(&self->draw, mat->id);
 }
 
 void c_model_set_mesh(c_model_t *self, mesh_t *mesh)

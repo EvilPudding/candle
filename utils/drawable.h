@@ -77,7 +77,7 @@ typedef struct drawable_t
 	char updates; /* updates cover vbos */
 	mesh_t *mesh;
 	int xray;
-	mat_t *mat;
+	int mat;
 	mat4_t transform;
 #ifdef MESH4
 	float angle4;
@@ -104,7 +104,7 @@ void drawable_init(drawable_t *self, const char *group);
 void drawable_update(drawable_t *self);
 
 void drawable_set_mesh(drawable_t *self, mesh_t *mesh);
-void drawable_set_mat(drawable_t *self, mat_t *mat);
+void drawable_set_mat(drawable_t *self, int mat);
 void drawable_set_visible(drawable_t *self, int visible);
 void drawable_set_vs(drawable_t *self, vs_t *vs);
 void drawable_set_xray(drawable_t *self, int xray);

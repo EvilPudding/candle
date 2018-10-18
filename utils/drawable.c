@@ -149,9 +149,9 @@ void drawable_set_xray(drawable_t *self, int xray)
 	drawable_model_changed(self);
 }
 
-void drawable_set_mat(drawable_t *self, mat_t *mat)
+void drawable_set_mat(drawable_t *self, int id)
 {
-	self->mat = mat;
+	self->mat = id;
 	drawable_model_changed(self);
 }
 
@@ -179,7 +179,7 @@ static int draw_conf_add_instance(draw_conf_t *self, drawable_t *draw)
 	int i = self->inst_num++;
 	draw_conf_inst_grow(self);
 
-	self->props[i].x = draw->mat ? draw->mat->id : 0;
+	self->props[i].x = draw->mat;
 	self->props[i].y = draw->mesh ? draw->mesh->has_texcoords : 0;
 	self->props[i].zw = entity_to_uvec2(draw->entity);
 	self->comps[i] = draw;
@@ -611,17 +611,12 @@ int drawable_model_changed(drawable_t *self)
 	}
 	if(!conf) return CONTINUE;
 
-	int matid = 0;
 	/* BUFFEREABLE INSTANCE PROPERTIES */ 
 	uvec4_t *props = &self->conf->props[self->instance_id];
 	uvec2_t new_ent = entity_to_uvec2(self->entity);
-	if(self->mat)
-	{
-		matid = self->mat->id;
-	}
 
 	uvec4_t new_props = uvec4(
-			matid,
+			self->mat,
 			self->mesh ? self->mesh->has_texcoords : 0,
 			new_ent.x,
 			new_ent.y);
