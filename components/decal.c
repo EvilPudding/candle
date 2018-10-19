@@ -15,19 +15,22 @@ void c_decal_init(c_decal_t *self)
 	if(!g_decal_mesh)
 	{
 		g_decal_mesh = mesh_new();
-		mesh_cube(g_decal_mesh, 1, 1);
+		mesh_cube(g_decal_mesh, -1, 1);
 	}
 	self->visible = 1;
-
-
 } 
 
-c_decal_t *c_decal_new(mat_t *mat)
+c_decal_t *c_decal_new(mat_t *mat, int visible)
 {
 	c_decal_t *self = component_new("decal");
 
 	self->mat = mat;
 
+	entity_add_component(c_entity(self),
+			c_model_new(g_decal_mesh, mat, 0, visible));
+
+	c_model_t *mc = c_model(self);
+	drawable_set_group(&mc->draw, ref("decals"));
 
 	return self;
 }

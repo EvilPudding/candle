@@ -35,7 +35,7 @@ mat_t *mat_new(const char *name)
 vec4_t color_from_hex(const char *hex_str)
 {
 	vec4_t self;
-	ulong hex = strtol(hex_str + 1, NULL, 16);
+	uint64_t hex = strtol(hex_str + 1, NULL, 16);
 	self.a = (float)((hex >> 24) & 0XFF) / 255.0f;
 	self.r = (float)((hex >> 16) & 0xFF) / 255.0f;
 	self.g = (float)((hex >> 8) & 0xFF) / 255.0f;

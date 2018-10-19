@@ -390,11 +390,6 @@ static void c_model_init(c_model_t *self)
 			"	}\n"
 		));
 	}
-	self->vs = g_model_vs;
-
-	drawable_init(&self->draw, "visible");
-	drawable_set_entity(&self->draw, c_entity(self));
-	drawable_set_vs(&self->draw, self->vs);
 }
 
 /* void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset) */
@@ -410,6 +405,17 @@ static void c_model_init(c_model_t *self)
 /* 	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL, NULL); */
 /* } */
 
+void c_model_init_drawables(c_model_t *self)
+{
+	drawable_init(&self->draw, ref("visible"), NULL);
+	drawable_set_entity(&self->draw, c_entity(self));
+	drawable_set_vs(&self->draw, g_model_vs);
+
+	drawable_init(&self->select, ref("selectable"), NULL);
+	drawable_set_entity(&self->select, c_entity(self));
+	drawable_set_vs(&self->select, g_model_vs);
+}
+
 c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow, int visible)
 {
 	c_model_t *self = component_new("model");
@@ -420,6 +426,8 @@ c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow, int visible)
 	/* self->mesh = mesh; */
 	self->cast_shadow = cast_shadow;
 	self->visible = visible;
+
+	c_model_init_drawables(self);
 
 	c_model_set_mesh(self, mesh);
 	c_model_set_mat(self, mat);
@@ -516,43 +524,34 @@ void c_model_edit(c_model_t *self, mesh_edit_t type, geom_t target)
 /* 	return self; */
 /* } */
 
-c_model_t *c_model_cull_face(c_model_t *self, int inverted)
+c_model_t *c_model_cull_invert(c_model_t *self)
 {
-	if(inverted == 0)
-	{
-		self->mesh->cull_front = 1;
-		self->mesh->cull_back = 0;
-	}
-	else if(inverted == 1)
-	{
-		self->mesh->cull_front = 1;
-		self->mesh->cull_back = 0;
-	}
-	else if(inverted == 2)
-	{
-		self->mesh->cull_front = 0;
-		self->mesh->cull_back = 0;
-	}
-	else
-	{
-		self->mesh->cull_front = 1;
-		self->mesh->cull_back = 1;
-	}
+	self->mesh->cull = (~self->mesh->cull) & 0x3;
+	drawable_model_changed(&self->draw);
+	drawable_model_changed(&self->select);
+	return self;
+}
+
+c_model_t *c_model_cull_face(c_model_t *self, int cull_front, int cull_back)
+{
+	self->mesh->cull = cull_front | (cull_back << 1);
 	/* g_update_id++; */
 	drawable_model_changed(&self->draw);
+	drawable_model_changed(&self->select);
 	return self;
 }
 
 void c_model_set_vs(c_model_t *self, vs_t *vs)
 {
-	self->vs = vs;
 	drawable_set_vs(&self->draw, vs);
+	drawable_set_vs(&self->select, vs);
 }
 
 void c_model_set_xray(c_model_t *self, int xray)
 {
 	self->xray = xray;
 	drawable_set_xray(&self->draw, xray);
+	drawable_set_xray(&self->select, xray);
 }
 
 c_model_t *c_model_smooth(c_model_t *self, int smooth)
@@ -561,6 +560,7 @@ c_model_t *c_model_smooth(c_model_t *self, int smooth)
 	self->mesh->smooth_angle = smooth;
 	mesh_modified(self->mesh);
 	drawable_model_changed(&self->draw);
+	drawable_model_changed(&self->select);
 	return self;
 }
 
@@ -570,28 +570,49 @@ c_model_t *c_model_wireframe(c_model_t *self, int wireframe)
 	self->mesh->wireframe = wireframe;
 	g_update_id++;
 	drawable_model_changed(&self->draw);
+	drawable_model_changed(&self->select);
 	return self;
 }
 
 void c_model_set_mat(c_model_t *self, mat_t *mat)
 {
 	self->mat = mat;
-	drawable_set_mat(&self->draw, mat->id);
+	drawable_set_mat(&self->draw, mat ? mat->id : 0);
+}
+
+void c_model_set_visible(c_model_t *self, int visible)
+{
+	self->visible = visible;
+	if(!visible)
+	{
+		drawable_set_mesh(&self->draw, NULL);
+		drawable_set_mesh(&self->select, NULL);
+	}
+	else
+	{
+		drawable_set_mesh(&self->draw, self->mesh);
+		drawable_set_mesh(&self->select, self->mesh);
+	}
 }
 
 void c_model_set_mesh(c_model_t *self, mesh_t *mesh)
 {
-	mesh_t *old_mesh = self->mesh;
-	self->mesh = mesh;
-	if(old_mesh) mesh_destroy(old_mesh);
+	if(mesh != self->mesh)
+	{
+		mesh_t *old_mesh = self->mesh;
+		self->mesh = mesh;
+		if(old_mesh) mesh_destroy(old_mesh);
 
-	drawable_set_mesh(&self->draw, mesh);
+		drawable_set_mesh(&self->draw, mesh);
+		drawable_set_mesh(&self->select, mesh);
+	}
 }
 
 int c_model_created(c_model_t *self)
 {
 	if(self->mesh) g_update_id++;
 	drawable_model_changed(&self->draw);
+	drawable_model_changed(&self->select);
 	return CONTINUE;
 }
 
@@ -695,21 +716,22 @@ int c_model_menu(c_model_t *self, void *ctx)
 			mesh_update(mesh);
 		}
 
-		new_value = nk_check_label(ctx, "Cull front",
-				mesh->cull_front);
+		int cull_front = mesh->cull & 0x1;
+		int cull_back = mesh->cull >> 0x1;
 
-		if(new_value != mesh->cull_front)
+		new_value = nk_check_label(ctx, "Cull front", cull_front);
+
+		if(new_value != cull_front)
 		{
-			mesh->cull_front = new_value;
+			mesh->cull = cull_back | new_value;
 			changes = 1;
 		}
 
-		new_value = nk_check_label(ctx, "Cull back",
-				mesh->cull_back);
+		new_value = nk_check_label(ctx, "Cull back", cull_back);
 
-		if(new_value != mesh->cull_back)
+		if(new_value != cull_back)
 		{
-			mesh->cull_back = new_value;
+			mesh->cull = cull_front | (new_value << 1);
 			changes = 1;
 		}
 	}
@@ -722,6 +744,7 @@ int c_model_menu(c_model_t *self, void *ctx)
 	{
 		g_update_id++;
 		drawable_model_changed(&self->draw);
+		drawable_model_changed(&self->select);
 	}
 
 	/* nk_tree_pop(ctx); */
@@ -734,10 +757,20 @@ static int c_model_position_changed(c_model_t *self)
 {
 	c_node_t *node = c_node(self);
 	c_node_update_model(node);
+
+	/* mat4_t model = node->model; */
+	/* if(self->scale_dist > 0.0f) */
+	/* { */
+	/* 	vec3_t pos = mat4_mul_vec4(model, vec4(0,0,0,1)).xyz; */
+	/* 	float dist = vec3_dist(pos, c_renderer(&SYS)->bound_camera_pos); */
+	/* 	mat4_t model = mat4_scale_aniso(model, vec3(dist * self->scale_dist)); */
+	/* } */
 	drawable_set_transform(&self->draw, node->model);
+	drawable_set_transform(&self->select, node->model);
 
 #ifdef MESH4
-	drawable_set_angle4(&self->draw, node->angle4
+	drawable_set_angle4(&self->draw, node->angle4);
+	drawable_set_angle4(&self->select, node->angle4);
 #endif
 
 	return CONTINUE;
@@ -773,6 +806,7 @@ static void c_model_destroy(c_model_t *self)
 	if(self->mesh) mesh_destroy(self->mesh);
 	g_update_id++;
 	drawable_set_mesh(&self->draw, NULL);
+	drawable_set_mesh(&self->select, NULL);
 }
 
 REG()

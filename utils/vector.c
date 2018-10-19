@@ -69,7 +69,7 @@ vector_t *vector_clone(vector_t *self)
 static struct element *_vector_get(vector_t *self, int i)
 {
 	if(i < 0 || i >= self->count) return NULL;
-	return (struct element *)(((ulong)self->elements) + i * self->elem_size);
+	return (struct element *)(((uint64_t)self->elements) + i * self->elem_size);
 }
 
 void *vector_get(vector_t *self, int i)

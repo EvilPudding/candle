@@ -4,7 +4,7 @@
 #include <string.h>
 #include <ecs/ecm.h>
 
-void path_join(char *path, ulong size, const char *other)
+void path_join(char *path, uint64_t size, const char *other)
 {
 	/* printf("\t\t%s + %s\n", path, other); */
 	if(other == NULL) return;
@@ -13,7 +13,7 @@ void path_join(char *path, ulong size, const char *other)
 
 	char buffer[size];
 
-	ulong len = strlen(path);
+	uint64_t len = strlen(path);
 
 	if(path[len] == '/') path[len] = '\0';
 	strncpy(buffer, path, size);

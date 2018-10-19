@@ -48,7 +48,7 @@ vs_t *sprite_vs()
 static void c_sprite_init(c_sprite_t *self)
 {
 	sprite_vs();
-	drawable_init(&self->draw, "visible");
+	drawable_init(&self->draw, ref("visible"), NULL);
 	drawable_set_mesh(&self->draw, g_sprite_mesh);
 	drawable_set_entity(&self->draw, c_entity(self));
 	drawable_set_vs(&self->draw, g_sprite_vs);
@@ -62,7 +62,7 @@ c_sprite_t *c_sprite_new(mat_t *mat, int cast_shadow)
 	self->cast_shadow = cast_shadow;
 
 	self->mat = mat;
-	drawable_set_mat(&self->draw, self->mat);
+	drawable_set_mat(&self->draw, self->mat ? self->mat->id : 0);
 
 	return self;
 }

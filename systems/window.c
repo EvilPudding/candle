@@ -137,7 +137,7 @@ int c_window_created(c_window_t *self)
 	self->quad->cull_back = 0;
 	self->quad->cull_front = 0;
 
-	drawable_init(&self->draw, "quad");
+	drawable_init(&self->draw, ref("quad"), NULL);
 	drawable_set_entity(&self->draw, c_entity(self));
 	drawable_set_mesh(&self->draw, self->quad);
 	drawable_set_vs(&self->draw, g_quad_vs);

@@ -25,10 +25,11 @@ enum
 	PASS_CUBEMAP   		= 1 << 0,
 	PASS_CLEAR_COLOR	= 1 << 1,
 	PASS_CLEAR_DEPTH	= 1 << 2,
-	PASS_LOCK_DEPTH		= 1 << 4,
-	PASS_INVERT_DEPTH	= 1 << 5,
-	PASS_ADDITIVE		= 1 << 6,
-	PASS_MULTIPLY		= 1 << 7
+	PASS_DEPTH_LOCK		= 1 << 4,
+	PASS_DEPTH_GREATER	= 1 << 5,
+	PASS_DEPTH_EQUAL	= 1 << 6,
+	PASS_ADDITIVE		= 1 << 7,
+	PASS_MULTIPLY		= 1 << 8
 } pass_options;
 
 typedef enum
@@ -118,9 +119,10 @@ typedef struct pass_t
 	int additive;
 	int multiply;
 	int depth_update;
-	int invert_depth;
+	uint32_t depth_func;
 	unsigned int clear;
-	ulong draw_signal;
+	uint32_t draw_signal;
+	int32_t draw_filter;
 	entity_t camera;
 
 	int binds_size;
@@ -187,12 +189,9 @@ void c_renderer_set_output(c_renderer_t *self, unsigned int hash);
 texture_t *c_renderer_tex(c_renderer_t *self, unsigned int hash);
 void c_renderer_add_tex(c_renderer_t *self, const char *name,
 		float resolution, texture_t *buffer);
-void c_renderer_add_pass(c_renderer_t *self, const char *name,
-		const char *shader_name, ulong draw_signal, int flags,
-		texture_t *output, texture_t *depth, bind_t binds[]);
-void c_renderer_replace_pass(c_renderer_t *self, const char *name,
-		const char *shader_name, ulong draw_signal, int flags,
-		texture_t *output, texture_t *depth, bind_t binds[]);
+void c_renderer_add_pass(c_renderer_t *self, const char *name, const char
+		*shader_name, uint32_t draw_signal, int32_t filter,
+		int flags, texture_t *output, texture_t *depth, bind_t binds[]);
 void c_renderer_toggle_pass(c_renderer_t *self, uint hash, int active);
 
 entity_t c_renderer_get_camera(c_renderer_t *self);

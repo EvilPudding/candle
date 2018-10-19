@@ -181,24 +181,12 @@ void c_editmode_activate(c_editmode_t *self)
 static int c_editmode_activate_loader(c_editmode_t *self)
 {
 	self->nk = nk_can_init(c_window(self)->window); 
-
-
-	{ 
-		struct nk_font_atlas *atlas; 
-		nk_can_font_stash_begin(&atlas); 
-		/* struct nk_font *droid = nk_font_atlas_add_from_file(atlas, "../../../extra_font/DroidSans.ttf", 14, 0); */
-		/* struct nk_font *roboto = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Roboto-Regular.ttf", 16, 0); */
-		/* struct nk_font *future = nk_font_atlas_add_from_file(atlas, "../../../extra_font/kenvector_future_thin.ttf", 13, 0); */
-		/* struct nk_font *clean = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyClean.ttf", 12, 0); */
-		/* struct nk_font *tiny = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyTiny.ttf", 10, 0); */
-		/* struct nk_font *cousine = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Cousine-Regular.ttf", 13, 0); */
-		nk_can_font_stash_end(); 
-		/* nk_style_load_all_cursors(self->nk, atlas->cursors); */
-		/* nk_style_set_font(self->nk, &roboto->handle); */
-	} 
+	struct nk_font_atlas *atlas; 
+	nk_can_font_stash_begin(&atlas); 
+	nk_can_font_stash_end(); 
 
 	c_renderer_t *renderer = c_renderer(self);
-	c_renderer_add_pass(renderer, "highlights", "highlight", sig("render_quad"),
+	c_renderer_add_pass(renderer, "highlights", "highlight", sig("quad"), -1,
 			PASS_MULTIPLY,
 			c_renderer_tex(renderer, ref("final")), NULL,
 		(bind_t[]){
@@ -212,7 +200,7 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 		}
 	);
 
-	c_renderer_add_pass(renderer, "highlights_0", "border", sig("render_quad"),
+	c_renderer_add_pass(renderer, "highlights_0", "border", sig("quad"), -1,
 			PASS_CLEAR_COLOR,
 			c_renderer_tex(renderer, ref("tmp")), NULL,
 		(bind_t[]){
@@ -226,7 +214,7 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 		}
 	);
 
-	c_renderer_add_pass(renderer, "highlights_1", "border", sig("render_quad"),
+	c_renderer_add_pass(renderer, "highlights_1", "border", sig("quad"), -1,
 			PASS_ADDITIVE,
 			c_renderer_tex(renderer, ref("final")), NULL,
 		(bind_t[]){
@@ -240,7 +228,7 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 			{BIND_NONE}
 		}
 	);
-	c_renderer_add_pass(renderer, "tool", "editmode", sig("render_quad"),
+	c_renderer_add_pass(renderer, "tool", "editmode", sig("quad"), -1,
 			PASS_ADDITIVE,
 			c_renderer_tex(renderer, ref("final")), NULL,
 		(bind_t[]){
@@ -589,17 +577,17 @@ static void c_editmode_update_axis(c_editmode_t *self)
 {
 	if(entity_exists(arrows))
 	{
-		c_model(&SX)->visible = self->selected && self->tool == 2;
-		c_model(&SY)->visible = self->selected && self->tool == 2;
-		c_model(&SZ)->visible = self->selected && self->tool == 2;
-		c_model(&RX)->visible = self->selected && self->tool == 1;
-		c_model(&RY)->visible = self->selected && self->tool == 1;
-		c_model(&RZ)->visible = self->selected && self->tool == 1;
-		c_model(&X)->visible = self->selected && self->tool == 0;
-		c_model(&Y)->visible = self->selected && self->tool == 0;
-		c_model(&Z)->visible = self->selected && self->tool == 0;
+		c_model_set_visible(c_model(&SX), self->selected && self->tool == 2);
+		c_model_set_visible(c_model(&SY), self->selected && self->tool == 2);
+		c_model_set_visible(c_model(&SZ), self->selected && self->tool == 2);
+		c_model_set_visible(c_model(&RX), self->selected && self->tool == 1);
+		c_model_set_visible(c_model(&RY), self->selected && self->tool == 1);
+		c_model_set_visible(c_model(&RZ), self->selected && self->tool == 1);
+		c_model_set_visible(c_model(&X), self->selected && self->tool == 0);
+		c_model_set_visible(c_model(&Y), self->selected && self->tool == 0);
+		c_model_set_visible(c_model(&Z), self->selected && self->tool == 0);
 #ifdef MESH4
-		c_model(&W)->visible = self->selected && self->tool == 0;
+		c_model_set_visible(c_model(&W), self->selected && self->tool == 0);
 #endif
 	}
 }

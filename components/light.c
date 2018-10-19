@@ -39,7 +39,7 @@ void c_light_init(c_light_t *self)
 	}
 	self->id = g_lights_num++;
 
-	drawable_init(&self->draw, "light");
+	drawable_init(&self->draw, ref("light"), NULL);
 	drawable_set_vs(&self->draw, g_model_vs);
 	drawable_set_mesh(&self->draw, g_light);
 	drawable_set_mat(&self->draw, self->id);

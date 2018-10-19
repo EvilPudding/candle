@@ -70,14 +70,13 @@ typedef struct
 
 typedef struct drawable_t
 {
-	int instance_id;
+	int32_t instance_id;
 	/* int groups_num; */
 
-	int visible;
-	char updates; /* updates cover vbos */
+	uint8_t updates; /* updates cover vbos */
 	mesh_t *mesh;
-	int xray;
-	int mat;
+	int32_t xray;
+	int32_t mat;
 	mat4_t transform;
 #ifdef MESH4
 	float angle4;
@@ -85,9 +84,10 @@ typedef struct drawable_t
 	entity_t entity;
 	vs_t *vs;
 
-	int grp;
-	int box;
+	int32_t grp;
+	int32_t box;
 	draw_conf_t *conf;
+	void *userptr;
 } drawable_t;
 
 KHASH_MAP_INIT_INT(config, draw_conf_t*)
@@ -95,22 +95,22 @@ KHASH_MAP_INIT_INT(config, draw_conf_t*)
 typedef khash_t(config) draw_box_t;
 typedef struct
 {
-	int (*filter)(drawable_t *);
+	int32_t (*filter)(drawable_t *);
 	draw_box_t *boxes[8];
 } draw_group_t;
 
-void drawable_init(drawable_t *self, const char *group);
+void drawable_init(drawable_t *self, uint32_t group, void *usrptr);
 
 void drawable_update(drawable_t *self);
 
+void drawable_set_group(drawable_t *self, uint32_t group);
 void drawable_set_mesh(drawable_t *self, mesh_t *mesh);
-void drawable_set_mat(drawable_t *self, int mat);
-void drawable_set_visible(drawable_t *self, int visible);
+void drawable_set_mat(drawable_t *self, int32_t mat);
 void drawable_set_vs(drawable_t *self, vs_t *vs);
-void drawable_set_xray(drawable_t *self, int xray);
+void drawable_set_xray(drawable_t *self, int32_t xray);
 void drawable_set_entity(drawable_t *self, entity_t entity);
 
-int drawable_draw(drawable_t *self);
+int32_t drawable_draw(drawable_t *self);
 
 void drawable_set_transform(drawable_t *self, mat4_t transform);
 
@@ -118,8 +118,9 @@ void drawable_set_transform(drawable_t *self, mat4_t transform);
 void drawable_set_angle4(drawable_t *self, float angle4);
 #endif
 
-int drawable_model_changed(drawable_t *self);
+int32_t drawable_model_changed(drawable_t *self);
 
-void draw_group(int ref, int filter);
+void draw_group(uint32_t ref, int32_t filter);
+void draw_filter(uint32_t ref, int32_t(*filter)(drawable_t *drawable));
 
 #endif /* !MESH_GL_H */

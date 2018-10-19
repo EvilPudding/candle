@@ -9,10 +9,11 @@ KHASH_MAP_INIT_INT(varray, varray_t*)
 
 static khash_t(varray) *g_varrays;
 
-static int draw_conf_add_instance(draw_conf_t *self, drawable_t *gl);
-static void draw_conf_update_inst(draw_conf_t *self, int id);
-static int drawable_position_changed(drawable_t *self);
-draw_group_t *drawable_get_group(drawable_t *self);
+static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *gl);
+static void draw_conf_update_inst(draw_conf_t *self, int32_t id);
+static int32_t drawable_position_changed(drawable_t *self);
+static draw_group_t *get_group(uint32_t ref);
+static void draw_conf_remove_instance(draw_conf_t *self, int32_t id);
 
 #define MASK_TRANS (1 << 0)
 #define MASK_PROPS (1 << 1)
@@ -21,31 +22,28 @@ KHASH_MAP_INIT_INT(draw_group, draw_group_t)
 khash_t(draw_group) *g_draw_groups;
 draw_box_t g_ungrouped;
 
-void drawable_init(drawable_t *self, const char *group)
+void drawable_init(drawable_t *self, uint32_t group, void *userptr)
 {
-	self->visible = 1;
 	self->transform = mat4();
 
 	self->box = -1;
-	if(group)
-	{
-		self->grp = ref(group);
-	}
-	else
-	{
-		self->grp = -1;
-	}
+	self->userptr = userptr;
+	self->grp = group;
 }
 
-draw_group_t *drawable_get_group(drawable_t *self)
+static draw_group_t *get_group(uint32_t ref)
 {
-	int ret;
+	if(ref == 0) return NULL;
+	int32_t ret;
 	draw_group_t *grp;
 	khiter_t k;
-	k = kh_get(draw_group, g_draw_groups, self->grp);
+
+	if(!g_draw_groups) g_draw_groups = kh_init(draw_group);
+	k = kh_get(draw_group, g_draw_groups, ref);
+
 	if(k == kh_end(g_draw_groups))
 	{
-		k = kh_put(draw_group, g_draw_groups, self->grp, &ret);
+		k = kh_put(draw_group, g_draw_groups, ref, &ret);
 		grp = &kh_value(g_draw_groups, k);
 		*grp = (draw_group_t){ 0 };
 	}
@@ -62,7 +60,7 @@ static void varray_clear(varray_t *self)
 	self->ind_num = 0;
 }
 
-void varray_vert_prealloc(varray_t *self, int size)
+void varray_vert_prealloc(varray_t *self, int32_t size)
 {
 	self->vert_alloc += size;
 
@@ -79,7 +77,7 @@ void varray_vert_prealloc(varray_t *self, int size)
 	self->id = realloc(self->id, self->vert_alloc * sizeof(*self->id));
 }
 
-void draw_conf_inst_prealloc(draw_conf_t *self, int size)
+void draw_conf_inst_prealloc(draw_conf_t *self, int32_t size)
 {
 	self->inst_alloc += size;
 
@@ -114,7 +112,7 @@ void varray_vert_grow(varray_t *self)
 	}
 }
 
-void varray_ind_prealloc(varray_t *self, int size)
+void varray_ind_prealloc(varray_t *self, int32_t size)
 {
 	self->ind_alloc += size;
 
@@ -130,11 +128,32 @@ void varray_ind_grow(varray_t *self)
 	}
 }
 
+void drawable_set_group(drawable_t *self, uint32_t group)
+{
+	if(group == self->grp) return;
+	if(self->conf)
+	{
+		if(self->grp == 0)
+		{
+			free(self->conf);
+		}
+		else
+		{
+			draw_conf_remove_instance(self->conf, self->instance_id);
+			self->conf = NULL;
+			drawable_model_changed(self);
+		}
+	}
+	self->grp = group;
+}
 
 void drawable_set_mesh(drawable_t *self, mesh_t *mesh)
 {
-	self->mesh = mesh;
-	drawable_model_changed(self);
+	if(mesh != self->mesh)
+	{
+		self->mesh = mesh;
+		drawable_model_changed(self);
+	}
 }
 
 void drawable_set_vs(drawable_t *self, vs_t *vs)
@@ -143,16 +162,22 @@ void drawable_set_vs(drawable_t *self, vs_t *vs)
 	drawable_model_changed(self);
 }
 
-void drawable_set_xray(drawable_t *self, int xray)
+void drawable_set_xray(drawable_t *self, int32_t xray)
 {
-	self->xray = xray;
-	drawable_model_changed(self);
+	if(self->xray != xray)
+	{
+		self->xray = xray;
+		drawable_model_changed(self);
+	}
 }
 
-void drawable_set_mat(drawable_t *self, int id)
+void drawable_set_mat(drawable_t *self, int32_t id)
 {
-	self->mat = id;
-	drawable_model_changed(self);
+	if(self->mat != id)
+	{
+		self->mat = id;
+		drawable_model_changed(self);
+	}
 }
 
 #ifdef MESH4
@@ -174,9 +199,9 @@ void drawable_set_entity(drawable_t *self, entity_t entity)
 	self->entity = entity;
 }
 
-static int draw_conf_add_instance(draw_conf_t *self, drawable_t *draw)
+static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw)
 {
-	int i = self->inst_num++;
+	int32_t i = self->inst_num++;
 	draw_conf_inst_grow(self);
 
 	self->props[i].x = draw->mat;
@@ -189,20 +214,20 @@ static int draw_conf_add_instance(draw_conf_t *self, drawable_t *draw)
 	return i;
 }
 
-static int varray_add_vert(
+static int32_t varray_add_vert(
 		varray_t *self,
 		vecN_t p,
 		vec3_t n,
 		vec2_t t,
 		vec3_t tg,
 		vec3_t c,
-		int id,
+		int32_t id,
 		vec4_t wei,
 		uvec4_t bid)
 {
-	/* int i = draw_conf_get_vert(self, p, n, t); */
+	/* int32_t i = draw_conf_get_vert(self, p, n, t); */
 	/* if(i >= 0) return i; */
-	int i = self->vert_num++;
+	int32_t i = self->vert_num++;
 	varray_vert_grow(self);
 
 	self->pos[i] = p;
@@ -216,29 +241,14 @@ static int varray_add_vert(
 	{
 		self->bid[i] = bid;
 		self->wei[i] = wei;
-		/* printf("%u %u %u %u\n", self->bid[i].x, self->bid[i].y, */
-		/* 		self->bid[i].z, self->bid[i].w); */
-		/* printf("%f %f %f %f\n", self->wei[i].x, self->wei[i].y, */
-		/* 		self->wei[i].z, self->wei[i].w); */
 	}
-
-
-	/* union { */
-	/* 	unsigned int i; */
-	/* 	struct{ */
-	/* 		unsigned char r, g, b, a; */
-	/* 	}; */
-	/* } convert = {.i = id + 1}; */
-	/* printf("%d = [%d]%d(%f) [%d]%d(%f)\n", id + 1, */
-	/* 		convert.r, (int)round(self->id[i].x*255), self->id[i].x, */
-	/* 		convert.g, (int)round(self->id[i].y*255), self->id[i].y); */
 
 	return i;
 }
 
-void varray_add_line(varray_t *self, int v1, int v2)
+void varray_add_line(varray_t *self, int32_t v1, int32_t v2)
 {
-	int i = self->ind_num;
+	int32_t i = self->ind_num;
 
 	self->ind_num += 2;
 	varray_ind_grow(self);
@@ -247,9 +257,9 @@ void varray_add_line(varray_t *self, int v1, int v2)
 	self->ind[i + 1] = v2;
 }
 
-void varray_add_triangle(varray_t *self, int v1, int v2, int v3)
+void varray_add_triangle(varray_t *self, int32_t v1, int32_t v2, int32_t v3)
 {
-	int i = self->ind_num;
+	int32_t i = self->ind_num;
 	self->ind_num += 3;
 	varray_ind_grow(self);
 
@@ -265,7 +275,7 @@ void varray_add_triangle(varray_t *self, int v1, int v2, int v3)
 
 void varray_edges_to_gl(varray_t *self)
 {
-	int i;
+	int32_t i;
 	mesh_t *mesh = self->mesh;
 
 	varray_ind_prealloc(self, vector_count(mesh->edges) * 2);
@@ -280,9 +290,9 @@ void varray_edges_to_gl(varray_t *self)
 
 		vertex_t *V1 = e_vert(curr_edge, mesh);
 		vertex_t *V2 = e_vert(next_edge, mesh);
-		int v1 = varray_add_vert(self, V1->pos,
+		int32_t v1 = varray_add_vert(self, V1->pos,
 				vec3(0.0f), vec2(0.0f), vec3(0.0f), V1->color.xyz, 0, vec4(0,0,0,0), uvec4(0,0,0,0));
-		int v2 = varray_add_vert(self, V2->pos,
+		int32_t v2 = varray_add_vert(self, V2->pos,
 				vec3(0.0f), vec2(0.0f), vec3(0.0f), V2->color.xyz, 0, vec4(0,0,0,0), uvec4(0,0,0,0));
 
 		varray_add_line(self, v1, v2);
@@ -290,10 +300,10 @@ void varray_edges_to_gl(varray_t *self)
 	}
 }
 
-void varray_face_to_gl(varray_t *self, face_t *f, int id)
+void varray_face_to_gl(varray_t *self, face_t *f, int32_t id)
 {
 	mesh_t *mesh = self->mesh;
-	int v[4], i;
+	int32_t v[4], i;
 	for(i = 0; i < f->e_size; i++)
 	{
 		edge_t *hedge = f_edge(f, i, mesh);
@@ -326,83 +336,16 @@ void varray_face_to_gl(varray_t *self, face_t *f, int id)
 
 }
 
-/* void draw_conf_get_tg_bt(draw_conf_t *self) */
-/* { */
-/* 	int i; */
-
-/* 	/1* memset(self->tan, 0, self->ind_num * sizeof(*self->tan)); *1/ */
-/* 	/1* memset(self->bit, 0, self->ind_num * sizeof(*self->bit)); *1/ */
-
-/* 	for(i = 0; i < self->ind_num; i += 3) */
-/* 	{ */
-/* 		int i0 = self->ind[i + 0]; */
-/* 		int i1 = self->ind[i + 1]; */
-/* 		int i2 = self->ind[i + 2]; */
-/* 		self->tan[i0] = vec3(0.0f); */
-/* 		self->tan[i1] = vec3(0.0f); */
-/* 		self->tan[i2] = vec3(0.0f); */
-
-/* 		/1* self->bit[i0] = vec3(0.0f); *1/ */
-/* 		/1* self->bit[i1] = vec3(0.0f); *1/ */
-/* 		/1* self->bit[i2] = vec3(0.0f); *1/ */
-/* 	} */
-/* 	for(i = 0; i < self->ind_num; i += 3) */
-/* 	{ */
-/* 		int i0 = self->ind[i + 0]; */
-/* 		int i1 = self->ind[i + 1]; */
-/* 		int i2 = self->ind[i + 2]; */
-
-/* 		vec3_t v0 = ((vec3_t*)self->pos)[i0]; */
-/* 		vec3_t v1 = ((vec3_t*)self->pos)[i1]; */
-/* 		vec3_t v2 = ((vec3_t*)self->pos)[i2]; */
-
-/* 		vec2_t w0 = ((vec2_t*)self->tex)[i0]; */
-/* 		vec2_t w1 = ((vec2_t*)self->tex)[i1]; */
-/* 		vec2_t w2 = ((vec2_t*)self->tex)[i2]; */
-
-/* 		vec3_t dp1 = vec3_sub(v1, v0); */
-/* 		vec3_t dp2 = vec3_sub(v2, v0); */
-
-/* 		vec2_t duv1 = vec2_sub(w1, w0); */
-/* 		vec2_t duv2 = vec2_sub(w2, w0); */
-
-/* 		float r = 1.0f / (duv1.x * duv2.y - duv1.y * duv2.x); */
-/* 		vec3_t tangent   = vec3_scale(vec3_sub(vec3_scale(dp1, duv2.y), vec3_scale(dp2, duv1.y)), r); */
-/* 		/1* vec3_t bitangent = vec3_scale(vec3_sub(vec3_scale(dp2, duv1.x), vec3_scale(dp1, duv2.x)), r); *1/ */
-
-
-/* 		self->tan[i0] = vec3_add(self->tan[i0], tangent); */
-/* 		self->tan[i1] = vec3_add(self->tan[i1], tangent); */
-/* 		self->tan[i2] = vec3_add(self->tan[i2], tangent); */
-
-/* 		/1* self->bit[i0] = vec3_add(self->bit[i0], bitangent); *1/ */
-/* 		/1* self->bit[i1] = vec3_add(self->bit[i1], bitangent); *1/ */
-/* 		/1* self->bit[i2] = vec3_add(self->bit[i2], bitangent); *1/ */
-/* 	} */
-/* 	for(i = 0; i < self->ind_num; i++) */
-/* 	{ */
-/* 		int i0 = self->ind[i]; */
-/* 		vec3_t n = self->nor[i0]; */
-/* 		vec3_t t = self->tan[i0]; */
-/* 		/1* vec3_t b = self->bit[i]; *1/ */
-
-/* 		/1* Gram-Schmidt orthogonalize *1/ */
-/* 		t = vec3_norm(vec3_sub(t, vec3_scale(n, vec3_dot(n, t)))); */
-
-/* 		self->tan[i0] = t; */
-/* 	} */
-/* } */
-
-static void bind_buffer(uint *vbo, int id, uint type, int dim,
-		int instanced_divisor)
+static void bind_buffer(uint32_t *vbo, int32_t id, uint32_t type, int32_t dim,
+		int32_t instanced_divisor)
 {
 	glBindBuffer(GL_ARRAY_BUFFER, *vbo); glerr();
 
 	// Because OpenGL doesn't support attributes with more than 4
 	// elements, each set of 4 elements gets its own attribute.
-	uint elementSizeDiv = dim / 4;
-	uint remaining = dim % 4;
-	uint j;
+	uint32_t elementSizeDiv = dim / 4;
+	uint32_t remaining = dim % 4;
+	uint32_t j;
 	for(j = 0; j < elementSizeDiv; j++) {
 		glEnableVertexAttribArray(id); glerr();
 
@@ -446,10 +389,10 @@ static void bind_buffer(uint *vbo, int id, uint type, int dim,
 	}
 }
 
-static inline void create_buffer(uint *vbo, void *arr,
-		int dim, int count, int instanced_divisor)
+static inline void create_buffer(uint32_t *vbo, void *arr,
+		int32_t dim, int32_t count, int32_t instanced_divisor)
 {
-	unsigned int usage = instanced_divisor ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW;
+	uint32_t usage = instanced_divisor ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW;
 	if(!*vbo)
 	{
 		glGenBuffers(1, vbo); glerr();
@@ -461,24 +404,24 @@ static inline void create_buffer(uint *vbo, void *arr,
 
 }
 
-static inline void update_inst(uint *vbo, int id, void *arr, int dim)
+static inline void update_inst(uint32_t *vbo, int32_t id, void *arr, int32_t dim)
 {
 	glBindBuffer(GL_ARRAY_BUFFER, *vbo);
 	glBufferSubData(GL_ARRAY_BUFFER, id * dim * sizeof(GLfloat), dim *
 			sizeof(GLfloat) * 1, arr);
 }
 
-static inline void update_buffer(uint *vbo, void *arr, int dim,
-		int count, int inst)
+static inline void update_buffer(uint32_t *vbo, void *arr, int32_t dim,
+		int32_t count, int32_t inst)
 {
 	glBindBuffer(GL_ARRAY_BUFFER, *vbo);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, dim * sizeof(GLfloat) * count, arr);
 }
 
 
-void draw_conf_remove_instance(draw_conf_t *self, int id)
+static void draw_conf_remove_instance(draw_conf_t *self, int32_t id)
 {
-	int i = --self->inst_num;
+	int32_t i = --self->inst_num;
 
 	self->inst[id] = self->inst[i];
 	self->props[id] = self->props[i];
@@ -490,13 +433,13 @@ void draw_conf_remove_instance(draw_conf_t *self, int id)
 
 varray_t *varray_get(mesh_t *mesh)
 {
-	uint p = hash_ptr(mesh);
+	uint32_t p = hash_ptr(mesh);
 
 	varray_t *varray;
 	khiter_t k = kh_get(varray, g_varrays, p);
 	if(k == kh_end(g_varrays))
 	{
-		int ret;
+		int32_t ret;
 		k = kh_put(varray, g_varrays, p, &ret);
 
 		varray = kh_value(g_varrays, k) = calloc(1, sizeof(varray_t));
@@ -511,8 +454,10 @@ varray_t *varray_get(mesh_t *mesh)
 
 draw_box_t *drawable_refilter(drawable_t *self)
 {
-	int b;
-	draw_group_t *grp = drawable_get_group(self);
+	int32_t b;
+	draw_group_t *grp = get_group(self->grp);
+
+	if(!grp) return NULL;
 
 	if(grp->filter)
 	{
@@ -540,17 +485,11 @@ draw_conf_t *drawable_get_conf(drawable_t *self)
 	draw_conf_t *result;
 	struct conf_vars conf = {
 		.mesh = self->mesh,
-		/* .transparent = self->mat ? */
-		/* 	self->mat->transparency.color.a > 0.0f || */
-		/* 	self->mat->transparency.texture || */
-		/* 	self->mat->emissive.color.a > 0.0f || */
-		/* 	self->mat->emissive.texture */
-		/* 	: 0, */
 		.xray = self->xray,
 		.vs = self->vs
 	};
 
-	if(self->grp == -1)
+	if(self->grp == 0)
 	{
 		if(!self->conf)
 		{
@@ -568,12 +507,12 @@ draw_conf_t *drawable_get_conf(drawable_t *self)
 	if(box == NULL) return NULL;
 
 
-	uint p = murmur_hash(&conf, sizeof(conf), 0);
+	uint32_t p = murmur_hash(&conf, sizeof(conf), 0);
 
 	khiter_t k = kh_get(config, box, p);
 	if(k == kh_end(box))
 	{
-		int ret;
+		int32_t ret;
 		k = kh_put(config, box, p, &ret);
 
 		result = kh_value(box, k) = calloc(1, sizeof(draw_conf_t));
@@ -586,8 +525,9 @@ draw_conf_t *drawable_get_conf(drawable_t *self)
 	return result;
 }
 
-int drawable_model_changed(drawable_t *self)
+int32_t drawable_model_changed(drawable_t *self)
 {
+	self->box = -1;
 	draw_conf_t *conf = drawable_get_conf(self);
 
 	/* NON BUFFEREABLE INSTANCE PROPERTIES */
@@ -605,9 +545,7 @@ int drawable_model_changed(drawable_t *self)
 			self->instance_id = draw_conf_add_instance(self->conf, self);
 
 			drawable_position_changed(self);
-
 		}
-
 	}
 	if(!conf) return CONTINUE;
 
@@ -652,7 +590,7 @@ vec4_t get_cell_normal(mesh_t *mesh, cell_t *cell)
 }
 #endif
 
-int varray_update_ram(varray_t *self)
+int32_t varray_update_ram(varray_t *self)
 {
 	mesh_t *mesh = self->mesh;
 	varray_clear(self);
@@ -660,7 +598,7 @@ int varray_update_ram(varray_t *self)
 	/* mat_layer_t *layer = &model->layers[self->layer_id]; */
 	varray_vert_prealloc(self, vector_count(mesh->verts));
 
-	/* int selection = layer->selection; */
+	/* int32_t selection = layer->selection; */
 
 	vector_t *faces = mesh->faces;
 	vector_t *edges = mesh->edges;
@@ -673,14 +611,14 @@ int varray_update_ram(varray_t *self)
 	/* 	edges = sel->edges; */
 	/* } */
 
-	int i;
+	int32_t i;
 	if(vector_count(faces))
 	{
 		mesh_update_smooth_normals(mesh, 1.0f - mesh->smooth_angle);
-		int triangle_count = 0;
+		int32_t triangle_count = 0;
 		for(i = 0; i < vector_count(faces); i++)
 		{
-			int id = i;
+			int32_t id = i;
 			face_t *face = m_face(mesh, id); if(!face) continue;
 
 			if(face->e_size == 3) triangle_count++;
@@ -690,7 +628,7 @@ int varray_update_ram(varray_t *self)
 
 		for(i = 0; i < vector_count(faces); i++)
 		{
-			int id = i;
+			int32_t id = i;
 			face_t *face = m_face(mesh, id); if(!face) continue;
 
 #ifdef MESH4
@@ -722,7 +660,7 @@ int varray_update_ram(varray_t *self)
 
 static void varray_update_buffers(varray_t *self)
 {
-	uint *vbo = self->vbo;
+	uint32_t *vbo = self->vbo;
 	if(self->vert_num > self->vert_num_gl)
 	{
 		self->vert_num_gl = self->vert_num;
@@ -826,7 +764,7 @@ void varray_update(varray_t *self)
 
 static void varray_bind(varray_t *self)
 {
-	uint *vbo = self->vbo;
+	uint32_t *vbo = self->vbo;
 	/* VERTEX BUFFER */
 	bind_buffer(&vbo[0], 0, GL_FLOAT, N, 0);
 
@@ -890,105 +828,40 @@ void draw_conf_update(draw_conf_t *self)
 }
 
 
-int draw_conf_draw(draw_conf_t *self, int instance_id)
+int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 {
-
 	mesh_t *mesh = self->vars.mesh;
-	c_renderer_t *renderer = c_renderer(&SYS);
 	/* printf("%d %p %d %s\n", self->vars.transparent, self->vars.mesh, */
 			/* self->vars.xray, self->vars.vs->name); */
 
 	draw_conf_update(self);
 	draw_conf_update_inst(self, instance_id);
 
+	if(!self->vao) return 0;
+
 	vs_bind(self->vars.vs);
 
-	int cull_face;
-	if(mesh->cull_front)
+	int32_t cull_was_enabled = glIsEnabled(GL_CULL_FACE);
+	if(mesh->cull)
 	{
-		if(mesh->cull_back)
-		{
-			cull_face = GL_FRONT_AND_BACK;
-		}
-		else
-		{
-			cull_face = GL_FRONT;
-		}
-	}
-	else if(mesh->cull_back)
-	{
-		cull_face = GL_BACK;
+		const uint32_t culls[4] = {0, GL_FRONT, GL_BACK, GL_FRONT_AND_BACK};
+		glCullFace(culls[mesh->cull]);
 	}
 	else
-	{
-		cull_face = GL_NONE;
-	}
-
-	/* glPolygonOffset(0.0f, self->layers[self->layer_id].offset); */
-	glerr();
-
-	/* c_renderer_t *renderer = c_renderer(&SYS); */
-	/* if(self->vars.transparent) */
-	/* { */
-	/* 	if(renderer->depth_inverted) */
-	/* 	{ */
-	/* 		glDepthFunc(GL_GEQUAL); */
-	/* 	} */
-	/* 	else */
-	/* 	{ */
-	/* 		glDepthFunc(GL_LEQUAL); */
-	/* 	} */
-	/* } */
-	/* else */
-	/* { */
-		if(renderer->depth_inverted)
-		{
-			glDepthFunc(GL_GREATER);
-		}
-		else
-		{
-			glDepthFunc(GL_LESS);
-		}
-	/* } */
-
-	int cull_was_enabled = glIsEnabled(GL_CULL_FACE);
-	if(cull_face == GL_NONE)
 	{
 		glDisable(GL_CULL_FACE); glerr();
 	}
-	else
-	{
-		glCullFace(cull_face); glerr();
-	}
 
-	if(self->vbo[8] == 0) return 0;
-	if(self->vao == 0) return 0;
-
-	/* printf("%u\n", self->vao); */
 	glBindVertexArray(self->vao); glerr();
-	glerr();
 
+	glLineWidth(3);
 
-	if(mesh->wireframe)
-	{
-		glLineWidth(2);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	}
-	else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glerr();
+	glPolygonMode(GL_FRONT_AND_BACK, mesh->wireframe ? GL_LINE : GL_FILL);
 
-	uint primitive;
-	if(vector_count(mesh->faces))
-	{
-		primitive = GL_TRIANGLES;
-	}
-	else
-	{
-		glLineWidth(3); glerr();
-		/* glLineWidth(5); */
-		primitive = GL_LINES;
-	}
+	if(self->vars.xray) glDepthRange(0, 0.01);
 
+	uint32_t primitive = vector_count(mesh->faces) ? GL_TRIANGLES : GL_LINES;
+	
 	if(instance_id == -1)
 	{
 		glDrawElementsInstancedBaseInstance(primitive,
@@ -1001,27 +874,19 @@ int draw_conf_draw(draw_conf_t *self, int instance_id)
 				self->varray->ind_num_gl, GL_UNSIGNED_INT, 0, 1, instance_id);
 		glerr();
 	}
-	/* } */
 
-	if(cull_was_enabled)
-	{
-		glEnable(GL_CULL_FACE);
-	}
-	/* printf("/GLG_DRAW\n"); */
-	return CONTINUE;
+	glDepthRange(0.0, 1.00);
+	if(cull_was_enabled) glEnable(GL_CULL_FACE);
+
+	return 1;
 
 }
 
-int drawable_draw(drawable_t *self)
+int32_t drawable_draw(drawable_t *self)
 {
 	if(!self->conf) return CONTINUE;
 	/* int i; */
-	int res = CONTINUE;
-
-	if(self->xray)
-	{
-		glDepthRange(0, 0.01);
-	}
+	int32_t res = CONTINUE;
 
 	/* if(self->conf->vars.scale_dist > 0.0f) */
 	/* { */
@@ -1045,14 +910,13 @@ int drawable_draw(drawable_t *self)
 	/* { */
 		res &= draw_conf_draw(self->conf, self->instance_id);
 	/* } */
-	glDepthRange(0.0, 1.00);
 
 	return res;
 }
 
-static void draw_conf_update_inst_single(draw_conf_t *self, int id)
+static void draw_conf_update_inst_single(draw_conf_t *self, int32_t id)
 {
-	int flags = self->comps[id]->updates;
+	int32_t flags = self->comps[id]->updates;
 	if(flags & MASK_TRANS)
 	{
 		/* TRANSFORM BUFFER */
@@ -1073,7 +937,7 @@ static void draw_conf_update_inst_single(draw_conf_t *self, int id)
 	self->comps[id]->updates = 0;
 }
 
-static void draw_conf_update_inst(draw_conf_t *self, int id)
+static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 {
 	if(self->inst_num > self->gl_inst_num)
 	{
@@ -1094,7 +958,7 @@ static void draw_conf_update_inst(draw_conf_t *self, int id)
 
 	if(id == -1)
 	{
-		int i;
+		int32_t i;
 		for(i = 0; i < self->inst_num; i++)
 		{
 			draw_conf_update_inst_single(self, i);
@@ -1108,7 +972,7 @@ static void draw_conf_update_inst(draw_conf_t *self, int id)
 
 void varray_destroy(varray_t *self)
 {
-	int i;
+	int32_t i;
 	for(i = 0; i < 24; i++) if(self->vbo[i]) glDeleteBuffers(1, &self->vbo[i]);
 	if(self->tex) free(self->tex);
 	if(self->nor) free(self->nor);
@@ -1125,7 +989,7 @@ void varray_destroy(varray_t *self)
 
 void draw_conf_destroy(draw_conf_t *self)
 {
-	int i;
+	int32_t i;
 	if(self->vao)
 	{
 		glDeleteVertexArrays(1, &self->vao);
@@ -1144,7 +1008,7 @@ void draw_conf_destroy(draw_conf_t *self)
 
 }
 
-static int drawable_position_changed(drawable_t *self)
+static int32_t drawable_position_changed(drawable_t *self)
 {
 	if(self->conf)
 	{
@@ -1168,32 +1032,34 @@ void drawable_destroy(drawable_t *self)
 	/* free(self->groups); */
 }
 
-void draw_box_draw(draw_box_t *self)
+static int32_t draw_box_draw(draw_box_t *self)
 {
+	if(!self) return 0;
+	int32_t res = 0;
 	khiter_t k;
 	for(k = kh_begin(self); k != kh_end(self); ++k)
 	{
 		if(!kh_exist(self, k)) continue;
 		draw_conf_t *conf = kh_value(self, k);
-		draw_conf_draw(conf, -1);
+		res |= draw_conf_draw(conf, -1);
 	}
+	return res;
 }
 
-void draw_group(int ref, int filter)
+void draw_filter(uint32_t ref, int32_t(*filter)(drawable_t *drawable))
 {
-	int b;
-	draw_group_t *group;
-	khiter_t k;
-	
-	k = kh_get(draw_group, g_draw_groups, ref);
+	get_group(ref)->filter = filter;
+}
 
-	if(k == kh_end(g_draw_groups)) return;
-
-	group = &kh_value(g_draw_groups, k);
+void draw_group(uint32_t ref, int32_t filter)
+{
+	int32_t b;
+	draw_group_t *group = get_group(ref);
 
 	if(filter > -1)
 	{
-		draw_box_draw(group->boxes[filter]);
+		int32_t res = draw_box_draw(group->boxes[filter]);
+		if(filter > 0 && res) printf("DRAWING TRANSP\n");
 	}
 	else
 	{
@@ -1211,5 +1077,4 @@ void draw_group(int ref, int filter)
 REG()
 {
 	g_varrays = kh_init(varray);
-	g_draw_groups = kh_init(draw_group);
 }

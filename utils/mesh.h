@@ -206,15 +206,14 @@ typedef struct mesh_t
 	int changes;
 
 	void *semaphore;
-	ulong owner_thread;
+	uint64_t owner_thread;
 
 
 	skin_t *skin;
 
 	/* DISPAY PROPERTIES */
 	int wireframe;
-	int cull_front;
-	int cull_back;
+	int cull;
 	float offset;
 	float smooth_angle;
 } mesh_t;

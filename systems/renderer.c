@@ -33,11 +33,6 @@ int c_renderer_scene_changed(c_renderer_t *self)
 	return CONTINUE;
 }
 
-void c_renderer_invert_depth(c_renderer_t *self, int inverted)
-{
-	self->depth_inverted = inverted;
-}
-
 static int c_renderer_bind_buffer(c_renderer_t *self, pass_t *pass,
 		bind_t *bind)
 {
@@ -141,6 +136,7 @@ void c_renderer_update_passes(c_renderer_t *self)
 	for(i = 0; i < self->passes_size; i++)
 	{
 		pass_t *pass = &self->passes[i];
+		if(!pass->active) continue;
 		self->scene.passes[i].screen_size = vec2(
 				pass->output->width,
 				pass->output->height);
@@ -392,73 +388,67 @@ static int c_renderer_gl(c_renderer_t *self)
 	/* c_renderer_add_tex(self, "bloom",		0.3f, bloom); */
 	/* c_renderer_add_tex(self, "bloom2",		0.3f, bloom2); */
 
-	c_renderer_add_pass(self, "gbuffer", "gbuffer", sig("visible"),
-			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR,
-			c_renderer_tex(self, ref("gbuffer")),
-			c_renderer_tex(self, ref("gbuffer")),
+	c_renderer_add_pass(self, "gbuffer", "gbuffer", sig("visible"), -1,
+			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR, gbuffer, gbuffer,
 		(bind_t[]){ {BIND_NONE} }
 	);
 
-	c_renderer_add_pass(self, "selectable", "select", sig("selectable"),
-			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR,
-			c_renderer_tex(self, ref("selectable")),
-			c_renderer_tex(self, ref("selectable")),
+	c_renderer_add_pass(self, "selectable", "select", sig("selectable"), 0,
+			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR, selectable, selectable,
 		(bind_t[]){ {BIND_NONE} }
 	);
 
 	/* DECAL PASS */
-	c_renderer_add_pass(self, "decals_pass", "decals", sig("decals"),
-			PASS_LOCK_DEPTH,
+	c_renderer_add_pass(self, "decals_pass", "decals", sig("decals"), 0,
+			PASS_DEPTH_LOCK | PASS_DEPTH_EQUAL | PASS_DEPTH_GREATER,
 			c_renderer_tex(self, ref("gbuffer")), NULL,
 		(bind_t[]){
-			{BIND_TEX, "gbuffer", .buffer = c_renderer_tex(self, ref("gbuffer"))},
+			{BIND_TEX, "gbuffer", .buffer = gbuffer},
 			{BIND_NONE}
 		}
 	);
 
-	c_renderer_add_pass(self, "ssao_pass", "ssao", sig("quad"), 0,
+	c_renderer_add_pass(self, "ssao_pass", "ssao", sig("quad"), 0, 0,
 			c_renderer_tex(self, ref("ssao")), NULL,
 		(bind_t[]){
-			{BIND_TEX, "gbuffer", .buffer = c_renderer_tex(self, ref("gbuffer"))},
+			{BIND_TEX, "gbuffer", .buffer = gbuffer},
 			{BIND_NONE}
 		}
 	);
 
 
-	c_renderer_add_pass(self, "render_pass", "phong", sig("light"),
-			PASS_ADDITIVE | PASS_CLEAR_COLOR,
-			c_renderer_tex(self, ref("rendered")), NULL,
+	c_renderer_add_pass(self, "render_pass", "phong", sig("light"), 0,
+			PASS_ADDITIVE | PASS_CLEAR_COLOR, rendered, NULL,
 		(bind_t[]){
-			{BIND_TEX, "gbuffer", .buffer = c_renderer_tex(self, ref("gbuffer"))},
+			{BIND_TEX, "gbuffer", .buffer = gbuffer},
 			{BIND_NONE}
 		}
 	);
 
 
-	c_renderer_add_pass(self, "refraction", "copy", sig("quad"), 0,
-			c_renderer_tex(self, ref("refr")), NULL,
+	c_renderer_add_pass(self, "refraction", "copy", sig("quad"), 0, 0,
+			refr, NULL,
 		(bind_t[]){
-			{BIND_TEX, "buf", .buffer = c_renderer_tex(self, ref("rendered"))},
+			{BIND_TEX, "buf", .buffer = rendered},
 			{BIND_NONE}
 		}
 	);
 
-	c_renderer_add_pass(self, "transp", "transparency", sig("transparent"), 0,
-			c_renderer_tex(self, ref("rendered")),
-			c_renderer_tex(self, ref("gbuffer")),
+	c_renderer_add_pass(self, "transp", "transparency", sig("transparent"), 1,
+			0, rendered, gbuffer,
 		(bind_t[]){
-			{BIND_TEX, "refr", .buffer = c_renderer_tex(self, ref("refr"))},
+			{BIND_TEX, "refr", .buffer = refr},
 			{BIND_NONE}
 		}
 	);
 
 	/* c_renderer_tex(self, ref(rendered))->mipmaped = 1; */
-	c_renderer_add_pass(self, "final", "ssr", sig("quad"), PASS_CLEAR_COLOR,
-			c_renderer_tex(self, ref("final")), NULL,
+	c_renderer_add_pass(self, "final", "ssr", sig("quad"), 0, PASS_CLEAR_COLOR,
+			final, NULL,
 		(bind_t[]){
-			{BIND_TEX, "gbuffer", .buffer = c_renderer_tex(self, ref("gbuffer"))},
-			{BIND_TEX, "rendered", .buffer = c_renderer_tex(self, ref("rendered"))},
-			{BIND_TEX, "ssao", .buffer = c_renderer_tex(self, ref("ssao"))},
+			{BIND_TEX, "gbuffer", .buffer = gbuffer},
+			{BIND_TEX, "rendered", .buffer = rendered},
+			{BIND_TEX, "ssao", .buffer = ssao},
 			{BIND_NONE}
 		}
 	);
@@ -553,20 +543,12 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 	self->frame++;
 	if(!pass->active) return NULL;
 
-	if(!pass->output) exit(1);
-
 	if(!pass->shader) /* Maybe drawing without OpenGL */
 	{
 		/* CALL DRAW */
 		entity_signal(c_entity(self), pass->draw_signal, NULL, NULL);
 		return pass->output;
 	}
-	else if(!pass->shader->ready)
-	{
-		printf("pass not ready\n");
-		return NULL;
-	}
-
 
 	if(!texture_target(pass->output,
 				pass->depth ? pass->depth : self->fallback_depth, 0))
@@ -601,13 +583,13 @@ static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass)
 	}
 	if(pass->depth)
 	{
-		glDepthFunc(pass->invert_depth ? GL_GREATER : GL_LESS);
+		glDepthFunc(pass->depth_func);
 		glEnable(GL_DEPTH_TEST);
 	}
 
 	/* CALL DRAW */
 	/* entity_signal(c_entity(self), pass->draw_signal, NULL, NULL); */
-	draw_group(pass->draw_signal, 0);
+	draw_group(pass->draw_signal, pass->draw_filter);
 
 	glDisable(GL_DEPTH_TEST);
 
@@ -705,8 +687,6 @@ unsigned int c_renderer_geom_at_pixel(c_renderer_t *self, int x, int y,
 entity_t c_renderer_entity_at_pixel(c_renderer_t *self, int x, int y,
 		float *depth)
 {
-	/* FIXME */
-	return entity_null;
 	entity_t result;
 	texture_t *tex = c_renderer_tex(self, ref("selectable"));
 	if(!tex) return entity_null;
@@ -788,6 +768,15 @@ int c_renderer_mouse_release(c_renderer_t *self, mouse_button_data *event)
 	return CONTINUE;
 }
 
+static int visible_type_filter(drawable_t *drawable)
+{
+	mat_t *mat = g_mats[drawable->mat];
+	return mat->transparency.color.a > 0.0f ||
+		mat->transparency.texture ||
+		mat->emissive.color.a > 0.0f ||
+		mat->emissive.texture;
+}
+
 REG()
 {
 	ct_t *ct = ct_new("renderer", sizeof(c_renderer_t),
@@ -809,6 +798,7 @@ REG()
 	signal_init(ref("model_release"), 0);
 
 	signal_init(ref("offscreen_render"), 0);
+	draw_filter(ref("visible"), visible_type_filter);
 }
 
 
@@ -851,8 +841,8 @@ void c_renderer_toggle_pass(c_renderer_t *self, uint hash, int active)
 }
 
 void c_renderer_add_pass(c_renderer_t *self, const char *name,
-		const char *shader_name, ulong draw_signal, int flags,
-		texture_t *output, texture_t *depth, bind_t binds[])
+		const char *shader_name, uint32_t draw_signal, int32_t filter,
+		int flags, texture_t *output, texture_t *depth, bind_t binds[])
 {
 	char buffer[32];
 	snprintf(buffer, sizeof(buffer), name, self->passes_size);
@@ -870,21 +860,42 @@ void c_renderer_add_pass(c_renderer_t *self, const char *name,
 	pass_t *pass = &self->passes[i];
 	pass->shader = fs_new(shader_name);
 	pass->hash = hash;
-	pass->active = 1;
 
 	pass->clear = 0;
 	if(flags & PASS_CLEAR_COLOR) pass->clear |= GL_COLOR_BUFFER_BIT;
 	if(flags & PASS_CLEAR_DEPTH) pass->clear |= GL_DEPTH_BUFFER_BIT;
 
-	pass->depth_update =	!(flags & PASS_LOCK_DEPTH);
+	pass->depth_update =	!(flags & PASS_DEPTH_LOCK);
 	pass->depth = NULL;
 
 	pass->output = output;
 	pass->depth = depth;
 
-	pass->invert_depth = flags & PASS_INVERT_DEPTH;
+	if(flags & PASS_DEPTH_EQUAL)
+	{
+		if(flags & PASS_DEPTH_GREATER)
+		{
+			pass->depth_func = GL_GREATER;
+		}
+		else
+		{
+			pass->depth_func = GL_LESS;
+		}
+	}
+	else
+	{
+		if(flags & PASS_DEPTH_GREATER)
+		{
+			pass->depth_func = GL_GEQUAL;
+		}
+		else
+		{
+			pass->depth_func = GL_LEQUAL;
+		}
+	}
 
 	pass->draw_signal = draw_signal;
+	pass->draw_filter = filter;
 	pass->additive = flags & PASS_ADDITIVE;
 	pass->multiply = flags & PASS_MULTIPLY;
 	strncpy(pass->name, buffer, sizeof(pass->name));
@@ -911,6 +922,7 @@ void c_renderer_add_pass(c_renderer_t *self, const char *name,
 		}
 	}
 	self->ready = 0;
+	pass->active = 1;
 }
 
 void c_renderer_clear_shaders(c_renderer_t *self, shader_t *shader)

@@ -13,19 +13,17 @@
 #define _GNU_SOURCE
 #include <search.h>
 
-typedef unsigned long ulong;
-
 typedef struct ecm_t ecm_t;
 
 typedef struct c_t c_t;
 
 typedef void(*init_cb)(c_t *self);
 typedef void(*destroy_cb)(c_t *self);
-typedef int(*signal_cb)(c_t *self, void *data, void *output);
+typedef int32_t(*signal_cb)(c_t *self, void *data, void *output);
 typedef void(*c_reg_cb)(void);
 
 /* TODO: find appropriate place */
-/* typedef int(*before_draw_cb)(c_t *self); */
+/* typedef int32_t(*before_draw_cb)(c_t *self); */
 
 
 #define IDENT_NULL UINT_MAX
@@ -71,15 +69,15 @@ typedef struct
 {
 	uint signal;
 	signal_cb cb;
-	int flags;
+	int32_t flags;
 	uint target;
-	int priority;
+	int32_t priority;
 } listener_t;
 
 typedef struct
 {
 	uint ct;
-	int is_interaction;
+	int32_t is_interaction;
 } dep_t;
 
 #define PAGE_SIZE 32
@@ -109,7 +107,7 @@ typedef struct ct_t
 	dep_t *depends;
 	uint depends_size;
 
-	int is_interaction;
+	int32_t is_interaction;
 
 } ct_t;
 
@@ -127,8 +125,8 @@ KHASH_MAP_INIT_INT(ct, ct_t)
 
 typedef struct
 {
-	unsigned int next_free;
-	unsigned int uid;
+	uint32_t next_free;
+	uint32_t uid;
 } entity_info_t;
 
 typedef struct ecm_t
@@ -144,11 +142,11 @@ typedef struct ecm_t
 
 	uint global;
 
-	int regs_size;
+	int32_t regs_size;
 	c_reg_cb *regs;
 
-	int dirty;
-	int safe;
+	int32_t dirty;
+	int32_t safe;
 } ecm_t; /* Entity Component System */
 
 typedef struct c_t
@@ -173,7 +171,7 @@ void _signal_init(uint id, uint size);
 #define signal_init(id, size) \
 	(_signal_init(id, size))
 
-void _ct_listener(ct_t *self, int flags, uint signal, signal_cb cb);
+void _ct_listener(ct_t *self, int32_t flags, uint signal, signal_cb cb);
 #define ct_listener(self, flags, signal, cb) \
 	(_ct_listener(self, flags, signal, (signal_cb)cb))
 
@@ -188,7 +186,7 @@ void ecm_init(void);
 entity_t ecm_new_entity(void);
 void ecm_add_reg(c_reg_cb reg);
 void ecm_register_all(void);
-void ecm_clean(int force);
+void ecm_clean(int32_t force);
 void ecm_destroy_all(void);
 
 void ecm_add_entity(entity_t *entity);
@@ -198,7 +196,7 @@ void ecm_add_entity(entity_t *entity);
 	_ct_new(name, ref(name), size, (init_cb)init, (destroy_cb)destroy, \
 			depend_size, ##__VA_ARGS__)
 ct_t *_ct_new(const char *name, uint hash, uint size, init_cb init,
-		destroy_cb destroy, int depend_size, ...);
+		destroy_cb destroy, int32_t depend_size, ...);
 
 void ct_add_dependency(ct_t *dep, uint target);
 void ct_add_interaction(ct_t *dep, uint target);
@@ -216,14 +214,14 @@ static inline ct_t *ecm_get(uint comp_type)
 #define component_new(comp_type) _component_new(ref(comp_type))
 void *_component_new(uint comp_type);
 
-static inline unsigned int entity_exists(entity_t self)
+static inline uint32_t entity_exists(entity_t self)
 {
 	if(self == entity_null) return 0;
 	entity_info_t info = g_ecm->entities_info[entity_pos(self)];
 	return info.uid == entity_uid(self);
 }
 
-static inline c_t *ct_get_nth(ct_t *self, int n)
+static inline c_t *ct_get_nth(ct_t *self, int32_t n)
 {
 	khiter_t k;
 	for(k = kh_begin(self->cs); k != kh_end(self->cs); ++k)
@@ -254,12 +252,12 @@ static inline c_t *ct_get(ct_t *self, entity_t *entity)
 /* TODO maybe this shouldn't be here */
 static inline uvec2_t entity_to_uvec2(entity_t self)
 {
-	int pos = entity_pos(self);
+	int32_t pos = entity_pos(self);
 
 	union {
-		unsigned int i;
+		uint32_t i;
 		struct{
-			unsigned char r, g, b, a;
+			uint8_t r, g, b, a;
 		};
 	} convert = {.i = pos};
 

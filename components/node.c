@@ -35,7 +35,7 @@ c_node_t *c_node_new()
 extern int g_update_id;
 static int c_node_changed(c_node_t *self)
 {
-	ulong i;
+	uint64_t i;
 	/* if(self->cached) */
 	{
 		self->cached = 0;
@@ -59,7 +59,7 @@ void c_node_pack(c_node_t *self, int packed)
 
 entity_t c_node_get_by_name(c_node_t *self, uint hash)
 {
-	ulong i;
+	uint64_t i;
 	for(i = 0; i < self->children_size; i++)
 	{
 		entity_t child = self->children[i];

@@ -1,5 +1,6 @@
 #ifndef MACROS_H
 #define MACROS_H
+#include <stdint.h>
 
 #define _GNU_SOURCE
 #ifndef ARGNUM
@@ -31,28 +32,27 @@
 #define TP2(a, b) a##b
 #define TP(a, b) TP2(a, b)
 
-typedef unsigned int uint;
 __attribute__((always_inline))
 __attribute__((optimize("unroll-loops")))
-static inline uint murmur_hash(const void *key, int len, uint seed)
+static inline uint32_t murmur_hash(const void *key, int32_t len, uint32_t seed)
 {
     /* 32-Bit MurmurHash3: https://code.google.com/p/smhasher/wiki/MurmurHash3*/
     #define ROTL(x,r) ((x) << (r) | ((x) >> (32 - r)))
-    union {const uint *i; const char *b;} conv = {0};
+    union {const uint32_t *i; const char *b;} conv = {0};
     const char *data = (const char*)key;
-    const int nblocks = len/4;
-    uint h1 = seed;
-    const uint c1 = 0xcc9e2d51;
-    const uint c2 = 0x1b873593;
+    const int32_t nblocks = len/4;
+    uint32_t h1 = seed;
+    const uint32_t c1 = 0xcc9e2d51;
+    const uint32_t c2 = 0x1b873593;
     const char *tail;
-    const uint *blocks;
-    uint k1;
-    int i;
+    const uint32_t *blocks;
+    uint32_t k1;
+    int32_t i;
 
     /* body */
     if (!key) return 0;
     conv.b = (data + nblocks*4);
-    blocks = (const uint*)conv.i;
+    blocks = (const uint32_t*)conv.i;
     for (i = -nblocks; i; ++i) {
         k1 = blocks[i];
         k1 *= c1;
@@ -68,8 +68,8 @@ static inline uint murmur_hash(const void *key, int len, uint seed)
     tail = (const char*)(data + nblocks*4);
     k1 = 0;
     switch (len & 3) {
-    case 3: k1 ^= (uint)(tail[2] << 16); /* fallthrough */
-    case 2: k1 ^= (uint)(tail[1] << 8u); /* fallthrough */
+    case 3: k1 ^= (uint32_t)(tail[2] << 16); /* fallthrough */
+    case 2: k1 ^= (uint32_t)(tail[1] << 8u); /* fallthrough */
     case 1: k1 ^= tail[0];
             k1 *= c1;
             k1 = ROTL(k1,15);
@@ -80,7 +80,7 @@ static inline uint murmur_hash(const void *key, int len, uint seed)
     }
 
     /* finalization */
-    h1 ^= (uint)len;
+    h1 ^= (uint32_t)len;
     /* fmix32 */
     h1 ^= h1 >> 16;
     h1 *= 0x85ebca6b;
@@ -91,13 +91,13 @@ static inline uint murmur_hash(const void *key, int len, uint seed)
     #undef ROTL
     return h1;
 }
-static inline uint murmur_hash_step(uint h1, uint block)
+static inline uint32_t murmur_hash_step(uint32_t h1, uint32_t block)
 {
     /* 32-Bit MurmurHash3: https://code.google.com/p/smhasher/wiki/MurmurHash3*/
     #define ROTL(x,r) ((x) << (r) | ((x) >> (32 - r)))
-    const uint c1 = 0xcc9e2d51;
-    const uint c2 = 0x1b873593;
-    uint k1 = block;
+    const uint32_t c1 = 0xcc9e2d51;
+    const uint32_t c2 = 0x1b873593;
+    uint32_t k1 = block;
 
     /* body */
 	k1 *= c1;
@@ -112,7 +112,7 @@ static inline uint murmur_hash_step(uint h1, uint block)
     return h1;
 }
 
-static inline uint hash_ptr(void *ptr)
+static inline uint32_t hash_ptr(void *ptr)
 {
 	return murmur_hash(&ptr, sizeof(ptr), 0);
 }

@@ -133,12 +133,8 @@ void mesh_selection_init(mesh_selection_t *self)
 	self->edges = kh_init(id);
 	self->verts = kh_init(id);
 
-	/* self->faces = vector_new(sizeof(int), 0, &fallback, NULL); */
-	/* self->edges = vector_new(sizeof(int), 0, &fallback, NULL); */
-	/* self->verts = vector_new(sizeof(int), 0, &fallback, NULL); */
 #ifdef MESH4
 	self->cells = kh_init(id);
-	/* self->cells = vector_new(sizeof(int), 0, &fallback, NULL); */
 #endif
 }
 
@@ -146,7 +142,7 @@ mesh_t *mesh_new()
 {
 	mesh_t *self = calloc(1, sizeof *self);
 
-	self->cull_back = 1;
+	self->cull = 0x2; // CULL_BACK
 	self->smooth_angle = 0.2f;
 	self->transformation = mat4();
 	self->backup = mat4();
@@ -882,7 +878,7 @@ void mesh_unlock(mesh_t *self)
 
 void mesh_lock(mesh_t *self)
 {
-	ulong current_thread = SDL_ThreadID();
+	uint64_t current_thread = SDL_ThreadID();
 	if(self->owner_thread != current_thread)
 	{
 		mesh_wait(self);
@@ -2325,7 +2321,7 @@ void mesh_assign(mesh_t *self, mesh_t *other)
 	mesh_lock(self);
 
 	void *semaphore = self->semaphore;
-	ulong owner = self->owner_thread;
+	uint64_t owner = self->owner_thread;
 	int locked_read = self->locked_read;
 
 	_mesh_destroy(self);
