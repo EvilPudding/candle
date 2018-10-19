@@ -64,7 +64,8 @@ layout(std140, binding = 21) uniform bones_t
 	mat4 transforms[30];
 } bones;
 
-layout(location = 23) uniform int passid;
+layout(location = 23) uniform uint passid;
+layout(location = 24) uniform uint has_tex;
 
 #define mat(prop) (scene.materials[matid].prop)
 #define light(prop) (scene.lights[matid].prop)

@@ -45,8 +45,18 @@ struct conf_vars
 	int xray;
 	int padding;
 };
+typedef struct draw_conf_t draw_conf_t;
 
-typedef struct
+struct draw_grp
+{
+	uint32_t grp;
+	int32_t box;
+	draw_conf_t *conf;
+	int32_t instance_id;
+	uint8_t updates;
+};
+
+typedef struct draw_conf_t
 {
 	varray_t *varray;
 
@@ -55,7 +65,7 @@ typedef struct
 #ifdef MESH4
 	float *angle4;	/* 13 */
 #endif
-	drawable_t **comps;
+	struct draw_grp **comps;
 
 	int inst_num;
 	int inst_alloc;
@@ -66,14 +76,13 @@ typedef struct
 	GLuint vbo[24];
 
 	struct conf_vars vars;
+	void *semaphore;
 } draw_conf_t;
 
 typedef struct drawable_t
 {
-	int32_t instance_id;
 	/* int groups_num; */
 
-	uint8_t updates; /* updates cover vbos */
 	mesh_t *mesh;
 	int32_t xray;
 	int32_t mat;
@@ -84,9 +93,9 @@ typedef struct drawable_t
 	entity_t entity;
 	vs_t *vs;
 
-	int32_t grp;
-	int32_t box;
-	draw_conf_t *conf;
+	struct draw_grp grp[8];
+	uint32_t grp_num;
+
 	void *userptr;
 } drawable_t;
 
@@ -103,6 +112,8 @@ void drawable_init(drawable_t *self, uint32_t group, void *usrptr);
 
 void drawable_update(drawable_t *self);
 
+void drawable_add_group(drawable_t *self, uint32_t group);
+void drawable_remove_group(drawable_t *self, uint32_t group);
 void drawable_set_group(drawable_t *self, uint32_t group);
 void drawable_set_mesh(drawable_t *self, mesh_t *mesh);
 void drawable_set_mat(drawable_t *self, int32_t mat);
@@ -118,7 +129,7 @@ void drawable_set_transform(drawable_t *self, mat4_t transform);
 void drawable_set_angle4(drawable_t *self, float angle4);
 #endif
 
-int32_t drawable_model_changed(drawable_t *self);
+void drawable_model_changed(drawable_t *self);
 
 void draw_group(uint32_t ref, int32_t filter);
 void draw_filter(uint32_t ref, int32_t(*filter)(drawable_t *drawable));

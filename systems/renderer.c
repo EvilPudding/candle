@@ -191,7 +191,7 @@ int c_renderer_bind_pass(c_renderer_t *self, pass_t *pass)
 	if(self->shader->frame_bind == self->frame) return 0;
 	self->shader->frame_bind = self->frame;
 
-	glUniform1i(23, pass - self->passes);
+	glUniform1ui(23, pass - self->passes);
 	glerr();
 
 	for(i = 0; i < pass->binds_size; i++)
@@ -388,27 +388,27 @@ static int c_renderer_gl(c_renderer_t *self)
 	/* c_renderer_add_tex(self, "bloom",		0.3f, bloom); */
 	/* c_renderer_add_tex(self, "bloom2",		0.3f, bloom2); */
 
-	c_renderer_add_pass(self, "gbuffer", "gbuffer", sig("visible"), -1,
+	c_renderer_add_pass(self, "gbuffer", "gbuffer", ref("visible"), -1,
 			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR, gbuffer, gbuffer,
 		(bind_t[]){ {BIND_NONE} }
 	);
 
-	c_renderer_add_pass(self, "selectable", "select", sig("selectable"), 0,
+	c_renderer_add_pass(self, "selectable", "select", ref("selectable"), 0,
 			PASS_CLEAR_DEPTH | PASS_CLEAR_COLOR, selectable, selectable,
 		(bind_t[]){ {BIND_NONE} }
 	);
 
 	/* DECAL PASS */
-	c_renderer_add_pass(self, "decals_pass", "decals", sig("decals"), 0,
+	c_renderer_add_pass(self, "decals_pass", "decals", ref("decals"), 0,
 			PASS_DEPTH_LOCK | PASS_DEPTH_EQUAL | PASS_DEPTH_GREATER,
-			c_renderer_tex(self, ref("gbuffer")), NULL,
+			gbuffer, gbuffer,
 		(bind_t[]){
 			{BIND_TEX, "gbuffer", .buffer = gbuffer},
 			{BIND_NONE}
 		}
 	);
 
-	c_renderer_add_pass(self, "ssao_pass", "ssao", sig("quad"), 0, 0,
+	c_renderer_add_pass(self, "ssao_pass", "ssao", ref("quad"), 0, 0,
 			c_renderer_tex(self, ref("ssao")), NULL,
 		(bind_t[]){
 			{BIND_TEX, "gbuffer", .buffer = gbuffer},
@@ -417,8 +417,17 @@ static int c_renderer_gl(c_renderer_t *self)
 	);
 
 
-	c_renderer_add_pass(self, "render_pass", "phong", sig("light"), 0,
-			PASS_ADDITIVE | PASS_CLEAR_COLOR, rendered, NULL,
+	c_renderer_add_pass(self, "ambient_light_pass", "phong", ref("ambient"), 0,
+			PASS_ADDITIVE | PASS_CLEAR_COLOR , rendered, NULL,
+		(bind_t[]){
+			{BIND_TEX, "gbuffer", .buffer = gbuffer},
+			{BIND_NONE}
+		}
+	);
+
+	c_renderer_add_pass(self, "render_pass", "phong", ref("light"), 0,
+			PASS_DEPTH_LOCK | PASS_ADDITIVE | 
+			PASS_DEPTH_EQUAL | PASS_DEPTH_GREATER, rendered, gbuffer,
 		(bind_t[]){
 			{BIND_TEX, "gbuffer", .buffer = gbuffer},
 			{BIND_NONE}
@@ -426,7 +435,7 @@ static int c_renderer_gl(c_renderer_t *self)
 	);
 
 
-	c_renderer_add_pass(self, "refraction", "copy", sig("quad"), 0, 0,
+	c_renderer_add_pass(self, "refraction", "copy", ref("quad"), 0, 0,
 			refr, NULL,
 		(bind_t[]){
 			{BIND_TEX, "buf", .buffer = rendered},
@@ -434,7 +443,7 @@ static int c_renderer_gl(c_renderer_t *self)
 		}
 	);
 
-	c_renderer_add_pass(self, "transp", "transparency", sig("transparent"), 1,
+	c_renderer_add_pass(self, "transp", "transparency", ref("transparent"), 1,
 			0, rendered, gbuffer,
 		(bind_t[]){
 			{BIND_TEX, "refr", .buffer = refr},
@@ -443,7 +452,7 @@ static int c_renderer_gl(c_renderer_t *self)
 	);
 
 	/* c_renderer_tex(self, ref(rendered))->mipmaped = 1; */
-	c_renderer_add_pass(self, "final", "ssr", sig("quad"), 0, PASS_CLEAR_COLOR,
+	c_renderer_add_pass(self, "final", "ssr", ref("quad"), 0, PASS_CLEAR_COLOR,
 			final, NULL,
 		(bind_t[]){
 			{BIND_TEX, "gbuffer", .buffer = gbuffer},
@@ -453,7 +462,7 @@ static int c_renderer_gl(c_renderer_t *self)
 		}
 	);
 
-	/* c_renderer_add_pass(self, "bloom_%d", "bright", sig("quad"), 0, */
+	/* c_renderer_add_pass(self, "bloom_%d", "bright", ref("quad"), 0, */
 	/* 		c_renderer_tex(self, ref("bloom")), NULL, */
 	/* 	(bind_t[]){ */
 	/* 		{BIND_TEX, "buf", .buffer = c_renderer_tex(self, ref("final"))}, */
@@ -463,7 +472,7 @@ static int c_renderer_gl(c_renderer_t *self)
 	/* int i; */
 	/* for(i = 0; i < 2; i++) */
 	/* { */
-	/* 	c_renderer_add_pass(self, "bloom_%d", "blur", sig("quad"), 0, */
+	/* 	c_renderer_add_pass(self, "bloom_%d", "blur", ref("quad"), 0, */
 	/* 			c_renderer_tex(self, ref("bloom2")), NULL */
 	/* 		(bind_t[]){ */
 	/* 			{BIND_TEX, "buf", .buffer = c_renderer_tex(self, ref("bloom"))}, */
@@ -471,7 +480,7 @@ static int c_renderer_gl(c_renderer_t *self)
 	/* 			{BIND_NONE} */
 	/* 		} */
 	/* 	); */
-	/* 	c_renderer_add_pass(self, "bloom_%d", "blur", sig("quad"), 0, */
+	/* 	c_renderer_add_pass(self, "bloom_%d", "blur", ref("quad"), 0, */
 	/* 			c_renderer_tex(self, ref("bloom")), NULL, */
 	/* 		(bind_t[]){ */
 	/* 			{BIND_TEX, "buf", .buffer = c_renderer_tex(self, ref("bloom2"))}, */
@@ -480,7 +489,7 @@ static int c_renderer_gl(c_renderer_t *self)
 	/* 		} */
 	/* 	); */
 	/* } */
-	/* c_renderer_add_pass(self, "bloom_%d", "copy", sig("quad"), PASS_ADDITIVE, */
+	/* c_renderer_add_pass(self, "bloom_%d", "copy", ref("quad"), PASS_ADDITIVE, */
 	/* 		c_renderer_tex(self, ref("final")), NULL, */
 	/* 	(bind_t[]){ */
 	/* 		{BIND_TEX, "buf", .buffer = c_renderer_tex(self, ref("bloom"))}, */
@@ -533,7 +542,6 @@ static int c_renderer_resize(c_renderer_t *self, window_resize_data *event)
     self->height = event->height;
 
 	c_renderer_update_screen_texture(self);
-
 	return CONTINUE;
 }
 
@@ -658,6 +666,8 @@ c_renderer_t *c_renderer_new(float resolution, int auto_exposure,
 	SDL_GL_SetSwapInterval(lock_fps);
 
 	c_renderer_t *self = component_new("renderer");
+    self->width = c_window(self)->width;
+    self->height = c_window(self)->height;
 
 	self->resolution = resolution;
 	self->auto_exposure = auto_exposure;
@@ -810,7 +820,7 @@ static void c_renderer_update_probes(c_renderer_t *self)
 	glEnable(GL_CULL_FACE); glerr();
 	glEnable(GL_DEPTH_TEST); glerr();
 
-	entity_signal(c_entity(self), sig("offscreen_render"), NULL, NULL);
+	entity_signal(c_entity(self), ref("offscreen_render"), NULL, NULL);
 
 	glerr();
 

@@ -13,6 +13,7 @@ typedef struct
 	int cast_shadow;
 	int xray;
 	drawable_t draw;
+	drawable_t select;
 } c_sprite_t;
 
 DEF_CASTER("sprite", c_sprite, c_sprite_t)

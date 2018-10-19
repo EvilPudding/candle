@@ -125,7 +125,7 @@ typedef struct
 	int xray;
 
 	drawable_t draw;
-	drawable_t select;
+	/* drawable_t select; */
 } c_model_t;
 
 DEF_CASTER("model", c_model, c_model_t)
@@ -141,6 +141,7 @@ c_model_t *c_model_smooth(c_model_t *self, int smooth);
 c_model_t *c_model_paint(c_model_t *self, mat_t *mat);
 void c_model_set_xray(c_model_t *self, int xray);
 void c_model_set_visible(c_model_t *self, int visible);
+void c_model_set_cast_shadow(c_model_t *self, int cast_shadow);
 void c_model_set_vs(c_model_t *self, vs_t *vs);
 void c_model_set_mat(c_model_t *self, mat_t *mat);
 void c_model_set_mesh(c_model_t *self, mesh_t *mesh);

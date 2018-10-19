@@ -28,7 +28,6 @@ in vec2 texcoord;
 in mat4 model;
 in mat3 TM;
 
-in flat uint has_tex;
 in flat uint matid;
 in flat uvec2 id;
 

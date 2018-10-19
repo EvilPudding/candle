@@ -208,7 +208,6 @@ typedef struct mesh_t
 	void *semaphore;
 	uint64_t owner_thread;
 
-
 	skin_t *skin;
 
 	/* DISPAY PROPERTIES */

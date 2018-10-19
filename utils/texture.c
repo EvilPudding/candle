@@ -119,8 +119,15 @@ void texture_update_brightness(texture_t *self)
 	self->brightness = ((float)(r + g + b)) / 256.0f;
 }
 
-void texture_alloc_buffer(texture_t *self, int i)
+struct tpair {
+	texture_t *tex;
+	int i;
+};
+static int alloc_buffer_gl(struct tpair *data)
 {
+	texture_t *self = data->tex;
+	int i = data->i;
+
 	if(!self->bufs[i].id)
 	{
 		glGenTextures(1, &self->bufs[i].id); glerr();
@@ -136,6 +143,7 @@ void texture_alloc_buffer(texture_t *self, int i)
 
 	glTexParameteri(self->target, GL_TEXTURE_WRAP_S, wrap);
 	glTexParameteri(self->target, GL_TEXTURE_WRAP_T, wrap);
+	glerr();
 
 	if(self->mipmaped)
 	{
@@ -148,6 +156,7 @@ void texture_alloc_buffer(texture_t *self, int i)
 		glTexParameteri(self->target, GL_TEXTURE_MAG_FILTER, self->interpolate ?
 				GL_LINEAR : GL_NEAREST);
 		glTexParameteri(self->target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glerr();
 	}
 
 	if(!self->bufs[i].handle)
@@ -155,12 +164,20 @@ void texture_alloc_buffer(texture_t *self, int i)
 		self->bufs[i].handle = glGetTextureHandleARB(self->bufs[i].id); glerr();
 		glMakeTextureHandleResidentARB(self->bufs[i].handle); glerr();
 	}
-
-	self->framebuffer_ready = 0;
-	self->bufs[i].ready = 0;
-	self->last_depth = NULL;
 	glBindTexture(self->target, 0); glerr();
+
+	self->bufs[i].ready = 0;
 	glActiveTexture(GL_TEXTURE0);
+
+	return 1;
+}
+
+void texture_alloc_buffer(texture_t *self, int i)
+{
+	self->last_depth = NULL;
+	self->framebuffer_ready = 0;
+	loader_push_wait(g_candle->loader, (loader_cb)alloc_buffer_gl,
+			&((struct tpair){self, i}), NULL);
 }
 
 unsigned int texture_handle(texture_t *self, int tex)

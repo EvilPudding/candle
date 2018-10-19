@@ -21,13 +21,11 @@ vs_t *sprite_vs()
 	{
 		g_sprite_mesh = mesh_new();
 		mesh_quad(g_sprite_mesh);
-		g_sprite_mesh->cull_front = 0;
-		g_sprite_mesh->cull_back = 0;
+		g_sprite_mesh->cull = 0;
 		g_sprite_vs = vs_new("sprite", 1, vertex_modifier_new(
 			"	{\n"
-			"		vec4 center = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
 			"		mat4 MV = scene.camera.view * M;\n"
-			"		pos = (scene.camera.projection * MV) * center;\n"
+			"		pos = (scene.camera.projection * MV) * vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
 			"		vec2 size = vec2(P.x * (pass(screen_size).y / pass(screen_size).x), P.y);\n"
 			"		pos = vec4(pos.xy + 0.5 * size, pos.z, pos.w);\n"
 
@@ -50,8 +48,13 @@ static void c_sprite_init(c_sprite_t *self)
 	sprite_vs();
 	drawable_init(&self->draw, ref("visible"), NULL);
 	drawable_set_mesh(&self->draw, g_sprite_mesh);
-	drawable_set_entity(&self->draw, c_entity(self));
 	drawable_set_vs(&self->draw, g_sprite_vs);
+	drawable_init(&self->select, ref("selectable"), NULL);
+	drawable_set_mesh(&self->select, g_sprite_mesh);
+	drawable_set_vs(&self->select, g_sprite_vs);
+
+	drawable_set_entity(&self->draw, c_entity(self));
+	drawable_set_entity(&self->select, c_entity(self));
 	self->visible = 1;
 }
 
@@ -63,6 +66,7 @@ c_sprite_t *c_sprite_new(mat_t *mat, int cast_shadow)
 
 	self->mat = mat;
 	drawable_set_mat(&self->draw, self->mat ? self->mat->id : 0);
+	drawable_set_mat(&self->select, self->mat ? self->mat->id : 0);
 
 	return self;
 }
@@ -84,11 +88,8 @@ static int c_sprite_position_changed(c_sprite_t *self)
 {
 	c_node_t *node = c_node(self);
 	c_node_update_model(node);
-	drawable_set_transform(&self->draw, node->model
-#ifdef MESH4
-			node->angle4
-#endif
-	);
+	drawable_set_transform(&self->draw, node->model);
+	drawable_set_transform(&self->select, node->model);
 
 	return CONTINUE;
 }

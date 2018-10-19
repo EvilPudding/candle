@@ -65,6 +65,9 @@ static void c_skin_init(c_skin_t *self)
 			"	}\n"
 		));
 	}
+	c_model_t *mc = c_model(self);
+	drawable_set_vs(&mc->draw, g_skin_vs);
+	drawable_set_vs(&mc->select, g_skin_vs);
 }
 
 c_skin_t *c_skin_new()

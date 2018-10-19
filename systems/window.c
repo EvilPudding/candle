@@ -11,8 +11,9 @@
 int window_width = 1360;
 int window_height = 765;
 
-static vs_t *g_quad_vs = NULL;
-static fs_t *g_quad_fs = NULL;
+vs_t *g_quad_vs;
+fs_t *g_quad_fs;
+mesh_t *g_quad_mesh;
 
 extern SDL_GLContext *context;
 extern SDL_Window *mainWindow;
@@ -131,21 +132,19 @@ int c_window_created(c_window_t *self)
 		g_quad_fs = fs_new("quad");
 	}
 
-	self->quad = mesh_new();
-	mesh_quad(self->quad);
-
-	self->quad->cull_back = 0;
-	self->quad->cull_front = 0;
+	g_quad_mesh = mesh_new();
+	mesh_quad(g_quad_mesh);
+	g_quad_mesh->cull = 0;
 
 	drawable_init(&self->draw, ref("quad"), NULL);
 	drawable_set_entity(&self->draw, c_entity(self));
-	drawable_set_mesh(&self->draw, self->quad);
+	drawable_set_mesh(&self->draw, g_quad_mesh);
 	drawable_set_vs(&self->draw, g_quad_vs);
 
-	entity_signal(entity_null, sig("window_resize"),
-			&(window_resize_data){
-			.width = self->width,
-			.height = self->height}, NULL);
+/* 	entity_signal(entity_null, sig("window_resize"), */
+/* 			&(window_resize_data){ */
+/* 			.width = self->width, */
+/* 			.height = self->height}, NULL); */
 
 	return CONTINUE;
 }

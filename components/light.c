@@ -12,6 +12,8 @@
 
 static fs_t *g_depth_fs = NULL;
 static mesh_t *g_light;
+extern vs_t *g_quad_vs;
+extern mesh_t *g_quad_mesh;
 /* entity_t g_light = entity_null; */
 static int g_lights_num;
 
@@ -48,13 +50,26 @@ void c_light_init(c_light_t *self)
 
 static int c_light_position_changed(c_light_t *self)
 {
-	c_node_t *node = c_node(self);
-	c_node_update_model(node);
-	vec3_t pos = c_node_local_to_global(node, vec3(0, 0, 0));
-	mat4_t model = mat4_translate(pos);
-	model = mat4_scale_aniso(model, vec3(self->radius));
+	if(self->radius == -1)
+	{
+		drawable_set_group(&self->draw, ref("ambient"));
+		drawable_set_vs(&self->draw, g_quad_vs);
+		drawable_set_mesh(&self->draw, g_quad_mesh);
+	}
+	else
+	{
+		drawable_set_group(&self->draw, ref("light"));
+		drawable_set_vs(&self->draw, g_model_vs);
+		drawable_set_mesh(&self->draw, g_light);
 
-	drawable_set_transform(&self->draw, model);
+		c_node_t *node = c_node(self);
+		c_node_update_model(node);
+		vec3_t pos = c_node_local_to_global(node, vec3(0, 0, 0));
+		mat4_t model = mat4_translate(pos);
+		model = mat4_scale_aniso(model, vec3(self->radius * 1.15f));
+
+		drawable_set_transform(&self->draw, model);
+	}
 
 	return CONTINUE;
 }
@@ -86,6 +101,7 @@ int c_light_menu(c_light_t *self, void *ctx)
 		if(rad != self->radius)
 		{
 			self->radius = rad;
+			c_light_position_changed(self);
 		}
 	}
 	else

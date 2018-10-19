@@ -9,9 +9,10 @@ KHASH_MAP_INIT_INT(varray, varray_t*)
 
 static khash_t(varray) *g_varrays;
 
-static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *gl);
+static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
+		uint32_t gid);
 static void draw_conf_update_inst(draw_conf_t *self, int32_t id);
-static int32_t drawable_position_changed(drawable_t *self);
+static int32_t drawable_position_changed(drawable_t *self, struct draw_grp *grp);
 static draw_group_t *get_group(uint32_t ref);
 static void draw_conf_remove_instance(draw_conf_t *self, int32_t id);
 
@@ -26,9 +27,8 @@ void drawable_init(drawable_t *self, uint32_t group, void *userptr)
 {
 	self->transform = mat4();
 
-	self->box = -1;
 	self->userptr = userptr;
-	self->grp = group;
+	drawable_add_group(self, group);
 }
 
 static draw_group_t *get_group(uint32_t ref)
@@ -128,23 +128,68 @@ void varray_ind_grow(varray_t *self)
 	}
 }
 
-void drawable_set_group(drawable_t *self, uint32_t group)
+void drawable_remove_group(drawable_t *self, uint32_t group)
 {
-	if(group == self->grp) return;
-	if(self->conf)
+	uint32_t gid;
+
+	if(group == 0) return;
+
+	for(gid = 0; gid < self->grp_num; gid++)
 	{
-		if(self->grp == 0)
+		if(self->grp[gid].grp == group) break;
+	}
+	if(gid == self->grp_num) return;
+
+	if(self->grp[gid].conf)
+	{
+		if(self->grp[gid].grp == 0)
 		{
-			free(self->conf);
+			free(self->grp[gid].conf);
 		}
 		else
 		{
-			draw_conf_remove_instance(self->conf, self->instance_id);
-			self->conf = NULL;
-			drawable_model_changed(self);
+			draw_conf_remove_instance(self->grp[gid].conf,
+					self->grp[gid].instance_id);
 		}
 	}
-	self->grp = group;
+	self->grp_num--;
+	if(gid < self->grp_num)
+	{
+		self->grp[gid] = self->grp[self->grp_num];
+	}
+	if(self->grp_num == 0)
+	{
+		drawable_add_group(self, 0);
+	}
+}
+
+void drawable_add_group(drawable_t *self, uint32_t group)
+{
+	uint32_t gid;
+	if(group == 0 && self->grp_num > 0) return;
+
+	for(gid = 0; gid < self->grp_num; gid++)
+	{
+		if(self->grp[gid].grp == group) return;
+	}
+	if(self->grp[0].grp == 0)
+	{
+		if(self->grp[0].conf) free(self->grp[0].conf);
+		self->grp_num = 0;
+		gid = 0;
+	}
+
+	self->grp[gid].grp = group;
+	self->grp[gid].instance_id = 0;
+	self->grp[gid].conf = NULL;
+	self->grp[gid].box = -1;
+	self->grp_num++;
+}
+
+void drawable_set_group(drawable_t *self, uint32_t group)
+{
+	drawable_remove_group(self, self->grp[0].grp);
+	drawable_add_group(self, group);
 }
 
 void drawable_set_mesh(drawable_t *self, mesh_t *mesh)
@@ -183,15 +228,25 @@ void drawable_set_mat(drawable_t *self, int32_t id)
 #ifdef MESH4
 void drawable_set_angel4(drawable_t *self, mat4_t transform)
 {
+	uint32_t gid;
+
 	self->angle4 = angle4;
-	drawable_position_changed(self);
+	for(gid = 0; gid < self->grp_num; gid++)
+	{
+		drawable_position_changed(self, &self->grp[gid]);
+	}
 }
 #endif
 
 void drawable_set_transform(drawable_t *self, mat4_t transform)
 {
+	uint32_t gid;
+
 	self->transform = transform;
-	drawable_position_changed(self);
+	for(gid = 0; gid < self->grp_num; gid++)
+	{
+		drawable_position_changed(self, &self->grp[gid]);
+	}
 }
 
 void drawable_set_entity(drawable_t *self, entity_t entity)
@@ -199,18 +254,22 @@ void drawable_set_entity(drawable_t *self, entity_t entity)
 	self->entity = entity;
 }
 
-static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw)
+static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
+		uint32_t gid)
 {
+	SDL_SemWait(self->semaphore);
+
 	int32_t i = self->inst_num++;
 	draw_conf_inst_grow(self);
 
 	self->props[i].x = draw->mat;
-	self->props[i].y = draw->mesh ? draw->mesh->has_texcoords : 0;
+	/* self->props[i].y = TODO: use y for something; */
 	self->props[i].zw = entity_to_uvec2(draw->entity);
-	self->comps[i] = draw;
+	self->comps[i] = &draw->grp[gid];
 
-	draw->updates = ~0;
+	draw->grp[gid].updates = ~0;
 
+	SDL_SemPost(self->semaphore);
 	return i;
 }
 
@@ -361,10 +420,8 @@ static void bind_buffer(uint32_t *vbo, int32_t id, uint32_t type, int32_t dim,
 					dim * sizeof(GLfloat),
 					(const GLvoid*)(sizeof(GLfloat) * j * 4));
 		}
-		glerr();
 
-		glVertexAttribDivisor(id, instanced_divisor);
-		glerr();
+		glVertexAttribDivisor(id, instanced_divisor); glerr();
 		id++;
 	}
 	if(remaining > 0)
@@ -383,8 +440,7 @@ static void bind_buffer(uint32_t *vbo, int32_t id, uint32_t type, int32_t dim,
 					(const GLvoid*)(sizeof(GLfloat) * elementSizeDiv * 4));
 		}
 
-		glVertexAttribDivisor(id, instanced_divisor);
-		glerr();
+		glVertexAttribDivisor(id, instanced_divisor); glerr();
 		id++;
 	}
 }
@@ -421,6 +477,7 @@ static inline void update_buffer(uint32_t *vbo, void *arr, int32_t dim,
 
 static void draw_conf_remove_instance(draw_conf_t *self, int32_t id)
 {
+	SDL_SemWait(self->semaphore);
 	int32_t i = --self->inst_num;
 
 	self->inst[id] = self->inst[i];
@@ -428,7 +485,13 @@ static void draw_conf_remove_instance(draw_conf_t *self, int32_t id)
 #ifdef MESH4
 	self->angle4[id] = self->angle4[i];
 #endif
+	self->comps[id] = self->comps[i];
+
+	self->comps[id]->instance_id = id;
+
 	self->comps[id]->updates = ~0;
+
+	SDL_SemPost(self->semaphore);
 }
 
 varray_t *varray_get(mesh_t *mesh)
@@ -452,16 +515,16 @@ varray_t *varray_get(mesh_t *mesh)
 	return varray;
 }
 
-draw_box_t *drawable_refilter(drawable_t *self)
+static draw_box_t *drawable_refilter(drawable_t *self, int gid)
 {
 	int32_t b;
-	draw_group_t *grp = get_group(self->grp);
+	draw_group_t *draw_group = get_group(self->grp[gid].grp);
 
-	if(!grp) return NULL;
+	if(!draw_group) return NULL;
 
-	if(grp->filter)
+	if(draw_group->filter)
 	{
-		b = grp->filter(self);
+		b = draw_group->filter(self);
 	}
 	else
 	{
@@ -470,14 +533,14 @@ draw_box_t *drawable_refilter(drawable_t *self)
 
 	if(b >= 0 || b < 8)
 	{
-		if(!grp->boxes[b]) grp->boxes[b] = kh_init(config);
-		return grp->boxes[b];
+		if(!draw_group->boxes[b]) draw_group->boxes[b] = kh_init(config);
+		return draw_group->boxes[b];
 	}
 
 	return NULL;
 }
 
-draw_conf_t *drawable_get_conf(drawable_t *self)
+draw_conf_t *drawable_get_conf(drawable_t *self, uint32_t gid)
 {
 	if(!self->vs) return NULL;
 	if(!self->mesh) return NULL;
@@ -489,21 +552,22 @@ draw_conf_t *drawable_get_conf(drawable_t *self)
 		.vs = self->vs
 	};
 
-	if(self->grp == 0)
+	if(self->grp[gid].grp == 0)
 	{
-		if(!self->conf)
+		if(!self->grp[gid].conf)
 		{
-			result = calloc(1, sizeof(*self->conf));
+			result = calloc(1, sizeof(draw_conf_t));
+			result->semaphore = SDL_CreateSemaphore(1);
 		}
 		else
 		{
-			result = self->conf;
+			result = self->grp[gid].conf;
 		}
 		result->vars = conf;
 		return result;
 	}
 
-	draw_box_t *box = drawable_refilter(self);
+	draw_box_t *box = drawable_refilter(self, gid);
 	if(box == NULL) return NULL;
 
 
@@ -516,6 +580,7 @@ draw_conf_t *drawable_get_conf(drawable_t *self)
 		k = kh_put(config, box, p, &ret);
 
 		result = kh_value(box, k) = calloc(1, sizeof(draw_conf_t));
+		result->semaphore = SDL_CreateSemaphore(1);
 		result->vars = conf;
 	}
 	else
@@ -525,47 +590,51 @@ draw_conf_t *drawable_get_conf(drawable_t *self)
 	return result;
 }
 
-int32_t drawable_model_changed(drawable_t *self)
+void drawable_model_changed(drawable_t *self)
 {
-	self->box = -1;
-	draw_conf_t *conf = drawable_get_conf(self);
-
-	/* NON BUFFEREABLE INSTANCE PROPERTIES */
-	if(conf != self->conf)
+	uint32_t gid;
+	for(gid = 0; gid < self->grp_num; gid++)
 	{
-		if(self->conf)
+		struct draw_grp *grp = &self->grp[gid];
+		grp->box = -1;
+		draw_conf_t *conf = drawable_get_conf(self, gid);
+
+		/* NON BUFFEREABLE INSTANCE PROPERTIES */
+		if(conf != grp->conf)
 		{
-			draw_conf_remove_instance(self->conf, self->instance_id);
-			self->conf = NULL;
+			if(grp->conf)
+			{
+				draw_conf_remove_instance(grp->conf,
+						grp->instance_id);
+				grp->conf = NULL;
+			}
+
+			if(conf)
+			{
+				grp->conf = conf;
+				grp->instance_id = draw_conf_add_instance(grp->conf, self, gid);
+
+				drawable_position_changed(self, grp);
+			}
 		}
+		if(!conf) continue;
 
-		if(conf)
+		/* BUFFEREABLE INSTANCE PROPERTIES */ 
+		uvec4_t *props = &grp->conf->props[grp->instance_id];
+		uvec2_t new_ent = entity_to_uvec2(self->entity);
+
+		uvec4_t new_props = uvec4(
+				self->mat,
+				0 /* TODO use y for something */,
+				new_ent.x,
+				new_ent.y);
+
+		if(!uvec4_equals(*props, new_props))
 		{
-			self->conf = conf;
-			self->instance_id = draw_conf_add_instance(self->conf, self);
-
-			drawable_position_changed(self);
+			*props = new_props;
+			grp->updates |= MASK_PROPS;
 		}
 	}
-	if(!conf) return CONTINUE;
-
-	/* BUFFEREABLE INSTANCE PROPERTIES */ 
-	uvec4_t *props = &self->conf->props[self->instance_id];
-	uvec2_t new_ent = entity_to_uvec2(self->entity);
-
-	uvec4_t new_props = uvec4(
-			self->mat,
-			self->mesh ? self->mesh->has_texcoords : 0,
-			new_ent.x,
-			new_ent.y);
-
-	if(!uvec4_equals(*props, new_props))
-	{
-		*props = new_props;
-		self->updates |= MASK_PROPS;
-	}
-
-	return CONTINUE;
 }
 
 #ifdef MESH4
@@ -830,6 +899,7 @@ void draw_conf_update(draw_conf_t *self)
 
 int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 {
+	if(!self) return 0;
 	mesh_t *mesh = self->vars.mesh;
 	/* printf("%d %p %d %s\n", self->vars.transparent, self->vars.mesh, */
 			/* self->vars.xray, self->vars.vs->name); */
@@ -851,6 +921,8 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	{
 		glDisable(GL_CULL_FACE); glerr();
 	}
+
+	glUniform1ui(24, mesh->has_texcoords);
 
 	glBindVertexArray(self->vao); glerr();
 
@@ -884,9 +956,6 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 
 int32_t drawable_draw(drawable_t *self)
 {
-	if(!self->conf) return CONTINUE;
-	/* int i; */
-	int32_t res = CONTINUE;
 
 	/* if(self->conf->vars.scale_dist > 0.0f) */
 	/* { */
@@ -897,19 +966,15 @@ int32_t drawable_draw(drawable_t *self)
 	/* 	vec3_t pos = mat4_mul_vec4(trans, vec4(0,0,0,1)).xyz; */
 	/* 	float dist = vec3_dist(pos, c_renderer(&SYS)->inputs.camera.pos); */
 	/* 	trans = mat4_scale_aniso(trans, vec3(dist * self->conf->vars.scale_dist)); */
-
-	/* 	self->conf->inst[self->instance_id] = trans; */
-
-	/* 	self->conf->comps[self->instance_id]->updates |= MASK_TRANS; */
 	/* } */
-	/* TODO */
-	/* if(self->instance_id != 0) return CONTINUE; */
 
 
-	/* for(i = 0; i < self->groups_num; i++) */
-	/* { */
-		res &= draw_conf_draw(self->conf, self->instance_id);
-	/* } */
+	int32_t res = 0;
+	uint32_t gid;
+	for(gid = 0; gid < self->grp_num; gid++)
+	{
+		res |= draw_conf_draw(self->grp[gid].conf, self->grp[gid].instance_id);
+	}
 
 	return res;
 }
@@ -920,18 +985,18 @@ static void draw_conf_update_inst_single(draw_conf_t *self, int32_t id)
 	if(flags & MASK_TRANS)
 	{
 		/* TRANSFORM BUFFER */
-		update_inst(&self->vbo[8], id, self->inst, 16); glerr();
+		update_inst(&self->vbo[8], id, &self->inst[id], 16); glerr();
 
 #ifdef MESH4
 		/* 4D ANGLE BUFFER */
-		update_inst(&self->vbo[13], id, self->angle4, 1); glerr();
+		update_inst(&self->vbo[13], id, &self->angle4[id], 1); glerr();
 #endif
 	}
 
 	if(flags & MASK_PROPS)
 	{
 		/* PROPERTY BUFFER */
-		update_inst(&self->vbo[12], id, self->props, 4); glerr();
+		update_inst(&self->vbo[12], id, &self->props[id], 4); glerr();
 	}
 
 	self->comps[id]->updates = 0;
@@ -939,6 +1004,7 @@ static void draw_conf_update_inst_single(draw_conf_t *self, int32_t id)
 
 static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 {
+	SDL_SemWait(self->semaphore);
 	if(self->inst_num > self->gl_inst_num)
 	{
 		self->gl_inst_num = self->inst_num;
@@ -968,6 +1034,7 @@ static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 	{
 		draw_conf_update_inst_single(self, id);
 	}
+	SDL_SemPost(self->semaphore);
 }
 
 void varray_destroy(varray_t *self)
@@ -1008,28 +1075,26 @@ void draw_conf_destroy(draw_conf_t *self)
 
 }
 
-static int32_t drawable_position_changed(drawable_t *self)
+static int32_t drawable_position_changed(drawable_t *self, struct draw_grp *grp)
 {
-	if(self->conf)
+	if(grp->conf)
 	{
-		/* printf("update position %p\n", self); */
-		self->conf->inst[self->instance_id] = self->transform;
+		grp->conf->inst[grp->instance_id] = self->transform;
 #ifdef MESH4
-		self->conf->angle4[self->instance_id].y = self->angle4;
+		grp->conf->angle4[grp->instance_id].y = self->angle4;
 #endif
-		self->conf->comps[self->instance_id]->updates |= MASK_TRANS;
+		grp->conf->comps[grp->instance_id]->updates |= MASK_TRANS;
 	}
 	return CONTINUE;
 }
 
 void drawable_destroy(drawable_t *self)
 {
-	/* int i; */
-	/* for(i = 0; i < self->groups_num; i++) */
-	/* { */
-		draw_conf_destroy(self->conf);
-	/* } */
-	/* free(self->groups); */
+	uint32_t gid;
+	for(gid = 0; gid < self->grp_num; gid++)
+	{
+		draw_conf_destroy(self->grp[gid].conf);
+	}
 }
 
 static int32_t draw_box_draw(draw_box_t *self)

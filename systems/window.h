@@ -27,7 +27,6 @@ typedef struct c_window_t
 
 	const unsigned char *key_state;
 
-	mesh_t *quad;
 	drawable_t draw;
 } c_window_t;
 

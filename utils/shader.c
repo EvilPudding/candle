@@ -143,14 +143,13 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 
 			"layout (location = 8) in mat4 M;\n"
 			"layout (location = 12) in uvec4 PROPS;\n"
-			/* PROPS.x = material PROPS.y = has_tex PROPS.zw = id */
+			/* PROPS.x = material PROPS.y = NOTHING PROPS.zw = id */
 #ifdef MESH4
 			"layout (location = 13) in float ANG4;\n"
 #endif
 
 			"out flat uvec2 id;\n"
 			"out flat uint matid;\n"
-			"out flat uint has_tex;\n"
 			"out vec2 object_id;\n"
 			"out vec2 poly_id;\n"
 			"out vec3 poly_color;\n"
@@ -168,7 +167,6 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"	obj_pos = (M * vec4(0, 0, 0, 1)).xyz;\n"
 			"	model = M;\n"
 			"	matid = PROPS.x;\n"
-			"	has_tex = PROPS.y;\n"
 			"	id = PROPS.zw;\n"
 			"	texcoord = UV;\n";
 
