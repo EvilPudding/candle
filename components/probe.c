@@ -3,9 +3,11 @@
 #include "candle.h"
 #include <stdlib.h>
 #include <components/model.h>
+#include <utils/drawable.h>
 
 
-c_probe_t *c_probe_new(int map_size)
+c_probe_t *c_probe_new(int32_t map_size, uint32_t group, int32_t filter,
+		fs_t *fs)
 {
 	c_probe_t *self = component_new("probe");
 
@@ -15,6 +17,10 @@ c_probe_t *c_probe_new(int map_size)
 
 	self->projection = mat4_perspective(M_PI / 2.0f, 1.0f, 0.5f, 100.5f); 
 
+	self->group = group;
+	self->filter = filter;
+
+	self->fs = fs;
 	return self;
 }
 
@@ -51,42 +57,35 @@ int c_probe_update_position(c_probe_t *self)
 	return CONTINUE;
 }
 
-int c_probe_render(c_probe_t *self, uint signal)
+int c_probe_draw(c_probe_t *self)
 {
+	return CONTINUE;
 	int f;
 
-	if(!self->map) return STOP;
+	if(!self->map) return CONTINUE;
 	/* c_spacial_t *ps = c_spacial(self); */
 
-	if(self->last_update == g_update_id) return STOP;
+	if(self->last_update == g_update_id) return CONTINUE;
 
 	/* TODO BIND PROBE */
-	/* renderer->bound_probe = c_entity(self); */
-	/* renderer->bound_camera_pos = ps->pos; */
-	/* renderer->bound_projection = &self->projection; */
+	fs_bind(self->fs);
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	glDepthMask(GL_TRUE);
 	for(f = 0; f < 6; f++)
 	{
-		texture_target(self->map, NULL, f);
+		texture_target(self->map, self->map, f);
 		glClear(GL_DEPTH_BUFFER_BIT);
 
-		/* renderer->bound_view = &self->views[f]; */
-		/* renderer->bound_camera_model = &self->models[f]; */
-		/* renderer->bound_exposure = 1.0f; */
-
-		int res = entity_signal(c_entity(self), signal, NULL, NULL);
-		if(res == STOP)
-		{
-			/* renderer->bound_probe = entity_null; */
-			return STOP;
-		}
+		draw_group(self->group, self->filter);
+		/* if(res == STOP) */
+		/* { */
+			/* return CONTINUE; */
+		/* } */
 	}
 
 	self->last_update = g_update_id;
-	/* renderer->bound_probe = entity_null; */
 	return CONTINUE;
 }
 
@@ -102,6 +101,7 @@ REG()
 			NULL, c_probe_destroy, 1, ref("spacial"));
 
 	ct_listener(ct, ENTITY, sig("spacial_changed"), c_probe_update_position);
+	ct_listener(ct, WORLD, ref("world_draw"), c_probe_draw);
 }
 
 

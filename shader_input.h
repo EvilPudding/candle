@@ -3,10 +3,10 @@
 
 struct gl_camera
 {
+	mat4_t inv_model;
+	mat4_t model;
 	mat4_t projection;
 	mat4_t inv_projection;
-	mat4_t model;
-	mat4_t inv_model;
 	vec3_t pos;
 	float exposure;
 };

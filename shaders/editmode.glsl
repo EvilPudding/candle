@@ -22,12 +22,12 @@ vec3 real_pos(float depth, vec2 coord)
 	coord = (coord * 2.0f) - 1.0;
 
     vec4 clipSpacePosition = vec4(coord, z, 1.0);
-    vec4 viewSpacePosition = inverse(scene.camera.projection) * clipSpacePosition;
+    vec4 viewSpacePosition = inverse(camera(projection)) * clipSpacePosition;
 
     // Perspective division
     viewSpacePosition = viewSpacePosition / viewSpacePosition.w;
 
-    vec4 worldSpacePosition = (inverse(scene.camera.view) * viewSpacePosition);
+    vec4 worldSpacePosition = (inverse(camera(view)) * viewSpacePosition);
 
     return worldSpacePosition.xyz;
 }
@@ -42,7 +42,7 @@ void main()
 	float intensity = 0.0f;
 	vec2 p = pixel_pos();
 
-	float dist = -(scene.camera.view * vec4(selected_pos, 1.0f)).z;
+	float dist = -(camera(view) * vec4(selected_pos, 1.0f)).z;
 	dist = unlinearize(dist);
 
 	vec3 proj_pixel = real_pos(dist, p);

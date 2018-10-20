@@ -378,15 +378,17 @@ static void c_model_init(c_model_t *self)
 			"#endif\n"
 
 			"		poly_color = COL;\n"
-			"		mat4 MV    = scene.camera.view * M;\n"
+			"		mat4 MV    = camera(view) * M;\n"
 			"		vec3 vertex_normal    = normalize(MV * vec4( N, 0.0f)).xyz;\n"
 			"		vec3 vertex_tangent   = normalize(MV * vec4(TG, 0.0f)).xyz;\n"
 			"		vec3 vertex_bitangent = cross(vertex_tangent, vertex_normal);\n"
+			"		pos   = (MV * pos);\n"
+			"		vertex_position = pos.xyz;\n"
 
 			"		poly_id = ID;\n"
 			"		TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
 
-			"		pos = (scene.camera.projection * MV) * pos;\n"
+			"		pos = camera(projection) * pos;\n"
 			"	}\n"
 		));
 	}

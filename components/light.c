@@ -46,6 +46,7 @@ void c_light_init(c_light_t *self)
 	drawable_set_mesh(&self->draw, g_light);
 	drawable_set_mat(&self->draw, self->id);
 	drawable_set_entity(&self->draw, c_entity(self));
+
 }
 
 static int c_light_position_changed(c_light_t *self)
@@ -69,6 +70,11 @@ static int c_light_position_changed(c_light_t *self)
 		model = mat4_scale_aniso(model, vec3(self->radius * 1.15f));
 
 		drawable_set_transform(&self->draw, model);
+	}
+	if(self->radius > 0 && !c_probe(self))
+	{
+		entity_add_component(c_entity(self),
+				(c_t*)c_probe_new(self->shadow_size, ref("shadow"), 0, g_depth_fs));
 	}
 
 	return CONTINUE;
@@ -121,36 +127,12 @@ void c_light_destroy(c_light_t *self)
 {
 }
 
-int c_light_probe_render(c_light_t *self)
-{
-	if(self->radius < 0.0f) return CONTINUE;
-	c_probe_t *probe = c_probe(self);
-	if(!probe)
-	{
-		entity_add_component(c_entity(self), (c_t*)c_probe_new(self->shadow_size));
-		entity_signal(c_entity(self), sig("spacial_changed"), &c_entity(self), NULL);
-		return STOP;
-	}
-	if(!g_depth_fs) return STOP;
-
-	fs_bind(g_depth_fs);
-
-	glDisable(GL_CULL_FACE);
-	c_probe_render(probe, sig("render_shadows"));
-	glEnable(GL_CULL_FACE);
-	return CONTINUE;
-}
-
 REG()
 {
 	ct_t *ct = ct_new("light", sizeof(c_light_t), c_light_init,
 			c_light_destroy, 1, ref("node"));
 
-	ct_listener(ct, WORLD, sig("offscreen_render"), c_light_probe_render);
-
 	ct_listener(ct, WORLD, sig("component_menu"), c_light_menu);
 
 	ct_listener(ct, ENTITY, sig("node_changed"), c_light_position_changed);
-
-	signal_init(sig("render_shadows"), 0);
 }

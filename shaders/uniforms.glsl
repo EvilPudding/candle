@@ -7,10 +7,10 @@
 
 struct camera_t
 {
+	mat4 view;
+	mat4 model;
 	mat4 projection;
 	mat4 inv_projection;
-	mat4 model;
-	mat4 view;
 	vec3 pos;
 	float exposure;
 };
@@ -66,6 +66,8 @@ layout(std140, binding = 21) uniform bones_t
 
 layout(location = 23) uniform uint passid;
 layout(location = 24) uniform uint has_tex;
+
+/* layout(location = 25) uniform camera_t camera; */
 
 #define mat(prop) (scene.materials[matid].prop)
 #define light(prop) (scene.lights[matid].prop)

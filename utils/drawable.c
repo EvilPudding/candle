@@ -1123,8 +1123,7 @@ void draw_group(uint32_t ref, int32_t filter)
 
 	if(filter > -1)
 	{
-		int32_t res = draw_box_draw(group->boxes[filter]);
-		if(filter > 0 && res) printf("DRAWING TRANSP\n");
+		draw_box_draw(group->boxes[filter]);
 	}
 	else
 	{

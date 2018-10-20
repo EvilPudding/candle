@@ -39,7 +39,6 @@ static int c_node_changed(c_node_t *self)
 	/* if(self->cached) */
 	{
 		self->cached = 0;
-		g_update_id++;
 		for(i = 0; i < self->children_size; i++)
 		{
 			c_node_changed(c_node(&self->children[i]));

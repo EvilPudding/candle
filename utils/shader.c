@@ -154,6 +154,7 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"out vec2 poly_id;\n"
 			"out vec3 poly_color;\n"
 			"out flat vec3 obj_pos;\n"
+			"out flat vec3 vertex_position;\n"
 			"\n"
 			"out vec2 texcoord;\n"
 			"\n"

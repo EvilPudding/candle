@@ -24,8 +24,9 @@ vs_t *sprite_vs()
 		g_sprite_mesh->cull = 0;
 		g_sprite_vs = vs_new("sprite", 1, vertex_modifier_new(
 			"	{\n"
-			"		mat4 MV = scene.camera.view * M;\n"
-			"		pos = (scene.camera.projection * MV) * vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
+			"		mat4 MV = camera(view) * M;\n"
+			"		pos = (camera(projection) * MV) * vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
+			"		vertex_position = pos.xyz;\n"
 			"		vec2 size = vec2(P.x * (pass(screen_size).y / pass(screen_size).x), P.y);\n"
 			"		pos = vec4(pos.xy + 0.5 * size, pos.z, pos.w);\n"
 

@@ -2,7 +2,6 @@
 #include <candle.h>
 #include <systems/window.h>
 #include <systems/editmode.h>
-#include <systems/renderer.h>
 #include <components/spacial.h>
 #include <components/camera.h>
 /* #include <components/camera.h> */
@@ -77,7 +76,7 @@ int c_editlook_mouse_release(c_editlook_t *self, mouse_button_data *event)
 int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 {
 	c_editmode_t *edit = c_editmode(&SYS);
-	c_renderer_t *renderer = c_renderer(&SYS);
+	c_window_t *window = c_window(&SYS);
 	if(!edit->control) return CONTINUE;
 	if(!self->pressed_r) return CONTINUE;
 
@@ -91,8 +90,8 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 	fake_y += event->sy;
 	if(c_keyboard(&SYS)->shift)
 	{
-		float px = fake_x / renderer->width;
-		float py = 1.0f - fake_y / renderer->height;
+		float px = fake_x / window->width;
+		float py = 1.0f - fake_y / window->height;
 
 		if(!self->panning)
 		{

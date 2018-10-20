@@ -17,8 +17,6 @@
 #include <utils/nk.h>
 #include <utils/material.h>
 
-static void c_renderer_update_probes(c_renderer_t *self);
-
 static texture_t *c_renderer_draw_pass(c_renderer_t *self, pass_t *pass);
 
 static int c_renderer_resize(c_renderer_t *self, window_resize_data *event);
@@ -104,10 +102,7 @@ void c_renderer_update_materials(c_renderer_t *self)
 		copy_prop(&mat->transparency, &glmat->transparency);
 		copy_prop(&mat->normal, &glmat->normal);
 		copy_prop(&mat->emissive, &glmat->emissive);
-
 	}
-
-#undef copy_prop
 }
 
 void c_renderer_update_camera(c_renderer_t *self)
@@ -180,6 +175,19 @@ void c_renderer_bind_get_uniforms(c_renderer_t *self, bind_t *bind,
 
 }
 
+void c_renderer_bind_camera(c_renderer_t *self)
+{
+	c_camera_t *cam = c_camera(&self->camera);
+	mat4_t inv_projection = mat4_invert(cam->projection_matrix);
+
+	glUniformMatrix4fv(25, 1, GL_FALSE, (float*)&cam->projection_matrix.a.x); glerr();
+	glUniformMatrix4fv(26, 1, GL_FALSE, (float*)&inv_projection.a.x); glerr();
+	glUniformMatrix4fv(27, 1, GL_FALSE, (float*)&cam->model_matrix.a.x); glerr();
+	glUniformMatrix4fv(28, 1, GL_FALSE, (float*)&cam->view_matrix.a.x); glerr();
+	glUniform3fv(29, GL_FALSE, (float*)&cam->pos.x); glerr();
+	glUniform1f(30, cam->exposure); glerr();
+}
+
 int c_renderer_bind_pass(c_renderer_t *self, pass_t *pass)
 {
 	int i;
@@ -192,6 +200,7 @@ int c_renderer_bind_pass(c_renderer_t *self, pass_t *pass)
 	self->shader->frame_bind = self->frame;
 
 	glUniform1ui(23, pass - self->passes);
+
 	glerr();
 
 	for(i = 0; i < pass->binds_size; i++)
@@ -273,7 +282,8 @@ shader_t *vs_bind(vs_t *vs)
 	if(renderer->shader && renderer->shader->index == vs->index)
 	{
 		shader_bind(renderer->shader);
-		glBindBuffer(GL_UNIFORM_BUFFER, renderer->scene_ubo);
+		/* glBindBuffer(GL_UNIFORM_BUFFER, renderer->scene_ubo); */
+		/* c_renderer_bind_camera(renderer); */
 		c_renderer_bind_pass(renderer, renderer->current_pass);
 		return renderer->shader;
 	}
@@ -289,8 +299,9 @@ shader_t *vs_bind(vs_t *vs)
 	renderer->shader = *sh; 
 
 	shader_bind(renderer->shader);
-	glBindBuffer(GL_UNIFORM_BUFFER, renderer->scene_ubo);
+	/* glBindBuffer(GL_UNIFORM_BUFFER, renderer->scene_ubo); */
 
+	/* c_renderer_bind_camera(renderer); */
 	c_renderer_bind_pass(renderer, renderer->current_pass);
 	glerr();
 	return *sh;
@@ -443,7 +454,7 @@ static int c_renderer_gl(c_renderer_t *self)
 		}
 	);
 
-	c_renderer_add_pass(self, "transp", "transparency", ref("transparent"), 1,
+	c_renderer_add_pass(self, "transp", "transparency", ref("visible"), 1,
 			0, rendered, gbuffer,
 		(bind_t[]){
 			{BIND_TEX, "refr", .buffer = refr},
@@ -813,22 +824,6 @@ REG()
 
 
 
-static void c_renderer_update_probes(c_renderer_t *self)
-{
-	/* c_renderer_target(self); */
-
-	glEnable(GL_CULL_FACE); glerr();
-	glEnable(GL_DEPTH_TEST); glerr();
-
-	entity_signal(c_entity(self), ref("offscreen_render"), NULL, NULL);
-
-	glerr();
-
-	glDisable(GL_CULL_FACE); glerr();
-	glDisable(GL_DEPTH_TEST); glerr();
-
-}
-
 static int c_renderer_pass(c_renderer_t *self, unsigned int hash)
 {
 	int i;
@@ -955,6 +950,34 @@ void c_renderer_clear_shaders(c_renderer_t *self, shader_t *shader)
 /* } */
 
 
+void c_renderer_update_ubo(c_renderer_t *self)
+{
+	if(!self->scene_ubo)
+	{
+		glGenBuffers(1, &self->scene_ubo); glerr();
+		glBindBuffer(GL_UNIFORM_BUFFER, self->scene_ubo); glerr();
+		glBufferData(GL_UNIFORM_BUFFER, sizeof(self->scene), &self->scene,
+				GL_DYNAMIC_DRAW); glerr();
+		glBindBufferBase(GL_UNIFORM_BUFFER, 20, self->scene_ubo); glerr();
+	}
+	/* else if(self->scene_changes) */
+	else
+	{
+		glBindBuffer(GL_UNIFORM_BUFFER, self->scene_ubo); glerr();
+		GLvoid* p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY); glerr();
+		/* if(self->scene_changes & 0x2) */
+		/* { */
+			memcpy(p, &self->scene, sizeof(self->scene));
+		/* } */
+		/* else */
+		/* { */
+			/* memcpy(p, &self->scene.camera, sizeof(self->scene.camera)); */
+		/* } */
+		glUnmapBuffer(GL_UNIFORM_BUFFER); glerr();
+		/* self->scene_changes = 0; */
+	}
+}
+
 int c_renderer_draw(c_renderer_t *self)
 {
 	glerr();
@@ -965,25 +988,7 @@ int c_renderer_draw(c_renderer_t *self)
 
 	self->frame++;
 
-	if(!self->scene_ubo)
-	{
-		glGenBuffers(1, &self->scene_ubo); glerr();
-		glBindBuffer(GL_UNIFORM_BUFFER, self->scene_ubo); glerr();
-		glBufferData(GL_UNIFORM_BUFFER, sizeof(self->scene), &self->scene,
-				GL_DYNAMIC_DRAW); glerr();
-		glBindBufferBase(GL_UNIFORM_BUFFER, 20, self->scene_ubo); glerr();
-	}
-	else
-	{
-		glBindBuffer(GL_UNIFORM_BUFFER, self->scene_ubo); glerr();
-		GLvoid* p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY); glerr();
-		memcpy(p, &self->scene, sizeof(self->scene));
-		glUnmapBuffer(GL_UNIFORM_BUFFER); glerr();
-	}
-	glerr();
-
-	c_renderer_update_probes(self);
-
+	c_renderer_update_ubo(self);
 
 	if(!self->ready && self->frame > 20)
 	{

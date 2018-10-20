@@ -565,19 +565,6 @@ static int texture_2D_frame_buffer(texture_t *self)
 		}
 	}
 
-	/* glDrawBuffers(self->bufs_size - self->depth_buffer, attachments); */
-
-	/* GLuint status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER); */
-	/* if(status != GL_FRAMEBUFFER_COMPLETE) */
-	/* { */
-		/* printf("Failed to create framebuffer!\n"); */
-		/* exit(1); */
-	/* } */
-
-	/* glBindTexture(targ, 0); */
-	/* glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); */
-	/* glerr(); */
-
 	self->framebuffer_ready = 1;
 	return 1;
 }
@@ -585,7 +572,10 @@ static int texture_2D_frame_buffer(texture_t *self)
 int texture_target_sub(texture_t *self, int width, int height,
 		texture_t *depth, int fb) 
 {
-	if(!self->bufs[self->depth_buffer].id) return 0;
+	if(!self->bufs[self->depth_buffer /* this is the color buffer 0 */ ].id)
+	{
+		return 0;
+	}
 	if(!self->framebuffer_ready)
 	{
 		if(self->target == GL_TEXTURE_2D)
@@ -600,7 +590,7 @@ int texture_target_sub(texture_t *self, int width, int height,
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, self->frame_buffer[fb]); glerr();
 
-	if(self->last_depth != depth)
+	if(self->last_depth != depth && self->target == GL_TEXTURE_2D)
 	{
 		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
 				self->target, depth->bufs[0].id, 0);
@@ -738,6 +728,7 @@ static int texture_cubemap_frame_buffer(texture_t *self)
 
 		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
 				targ, self->bufs[0].id, 0);
+
 		for(i = 1; i < self->bufs_size; i++)
 		{
 			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER,

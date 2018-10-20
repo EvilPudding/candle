@@ -145,7 +145,7 @@ typedef struct c_renderer_t
 
 	/* texture_t *perlin; */
 
-	int probe_update_id;
+	int scene_changes;
 
 	pass_output_t outputs[32];
 	int outputs_num;
@@ -206,5 +206,7 @@ unsigned int c_renderer_geom_at_pixel(c_renderer_t *self, int x, int y,
 void c_renderer_invert_depth(c_renderer_t *self, int inverted);
 
 void pass_set_model(pass_t *self, mat4_t model);
+
+void c_renderer_bind_camera(c_renderer_t *self);
 
 #endif /* !RENDERER_H */

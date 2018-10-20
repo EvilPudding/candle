@@ -22,6 +22,7 @@ const float c_MinRoughness = 0.04;
 in vec2 poly_id;
 in vec3 poly_color;
 in flat vec3 obj_pos;
+in flat vec3 vertex_position;
 
 in vec2 texcoord;
 
@@ -114,20 +115,20 @@ vec4 get_transparency()
 }
 
 
-vec3 get_position(const camera_t camera, sampler2D depth)
+vec3 get_position(sampler2D depth)
 {
 	vec2 pos = pixel_pos();
 	vec3 raw_pos = vec3(pos, textureLod(depth, pos, 0).r);
 	vec4 clip_pos = vec4(raw_pos * 2.0 - 1.0, 1.0);
-	vec4 view_pos = camera.inv_projection * clip_pos;
+	vec4 view_pos = camera(inv_projection) * clip_pos;
 	return view_pos.xyz / view_pos.w;
 }
 
-vec3 get_position(const camera_t camera, sampler2D depth, vec2 pos)
+vec3 get_position(sampler2D depth, vec2 pos)
 {
 	vec3 raw_pos = vec3(pos, textureLod(depth, pos, 0).r);
 	vec4 clip_pos = vec4(raw_pos * 2.0 - 1.0, 1.0);
-	vec4 view_pos = camera.inv_projection * clip_pos;
+	vec4 view_pos = camera(inv_projection) * clip_pos;
 	return view_pos.xyz / view_pos.w;
 }
 
@@ -198,18 +199,22 @@ float shadow_at_dist_no_tan(vec3 vec, float i)
 	return 0;
 }
 
+float linearize(float depth)
+{
+    return 2.0 * 0.1f * 100.0f / (100.0f + 0.1f - (2.0 * depth - 1.0) * (100.0f - 0.1f));
+}
 float unlinearize(float depth)
 {
 	return 100.0f * (1.0f - (0.1f / depth)) / (100.0f - 0.1f);
 }
 
-float get_shadow(const camera_t camera, vec3 vec, float point_to_light, float dist_to_eye)
+float get_shadow(vec3 vec, float point_to_light, float dist_to_eye)
 {
 	float ocluder_to_light = lookup_single(-vec);
 
 	float sd = ((ocluder_to_light - point_to_light) > -0.05) ? 0.0 : 1.0;
 	vec4 p = vec4(0.005f, 0.005f, unlinearize(dist_to_eye), 1.0f);
-	p = camera.inv_projection * p;
+	p = camera(inv_projection) * p;
 	p /= p.w;
 	if(sd > 0.5)
 	{
@@ -239,10 +244,10 @@ float get_shadow(const camera_t camera, vec3 vec, float point_to_light, float di
 	return 0.0f;
 }
 
-float doAmbientOcclusion(const camera_t camera, sampler2D depth, vec2 tcoord, vec2 uv, vec3 p, vec3 cnorm)
+float doAmbientOcclusion(sampler2D depth, vec2 tcoord, vec2 uv, vec3 p, vec3 cnorm)
 {
     float scale = 1.2, bias = 0.01, intensity = 5; 
-    vec3 diff = get_position(camera, depth, tcoord + uv) - p;
+    vec3 diff = get_position(depth, tcoord + uv) - p;
     vec3 v = normalize(diff);
 	float dist = length(diff);
 	/* if(dist > 0.7) return 0.0f; */
@@ -265,7 +270,7 @@ vec3 ppp[] = vec3[](
 		vec3(0.14642092069816068, 0.5859713297143408, -0.7969934220147054),
 		vec3(0.968975404819239, -0.07683527155447646, 0.234910633860074));
 
-float ambientOcclusion(const camera_t camera, sampler2D depth, vec3 p, vec3 n, float dist_to_eye)
+float ambientOcclusion(sampler2D depth, vec3 p, vec3 n, float dist_to_eye)
 {
 	vec2 rnd = normalize(vec2(rand(p.xy), rand(n.xy)));
 
@@ -291,10 +296,10 @@ float ambientOcclusion(const camera_t camera, sampler2D depth, vec3 p, vec3 n, f
 		vec2 coord2 = vec2(coord1.x * 0.707 - coord1.y * 0.707,
 				coord1.x * 0.707 + coord1.y * 0.707);
 
-		ao += doAmbientOcclusion(camera, depth, texcoord, coord1 * 0.25, p, n);
-		ao += doAmbientOcclusion(camera, depth, texcoord, coord2 * 0.5, p, n);
-		ao += doAmbientOcclusion(camera, depth, texcoord, coord1 * 0.75, p, n);
-		ao += doAmbientOcclusion(camera, depth, texcoord, coord2, p, n);
+		ao += doAmbientOcclusion(depth, texcoord, coord1 * 0.25, p, n);
+		ao += doAmbientOcclusion(depth, texcoord, coord2 * 0.5, p, n);
+		ao += doAmbientOcclusion(depth, texcoord, coord1 * 0.75, p, n);
+		ao += doAmbientOcclusion(depth, texcoord, coord2, p, n);
 	}
 	ao /= float(iterations) * 4.0f;
 	return clamp(1.0f - ao * 0.4f, 0.0f, 1.0f); 
@@ -306,23 +311,23 @@ const float maxSteps = 20;
 const float searchDist = 20;
 const float searchDistInv = 1.0f / searchDist;
 
-vec3 get_proj_coord(const camera_t camera, sampler2D depthmap, vec3 hitCoord)
+vec3 get_proj_coord(sampler2D depthmap, vec3 hitCoord)
 	// z = hitCoord.z - depth
 {
-	vec4 projectedCoord     = camera.projection * vec4(hitCoord, 1.0); \
+	vec4 projectedCoord     = camera(projection) * vec4(hitCoord, 1.0); \
 	projectedCoord.xy      /= projectedCoord.w; \
 	projectedCoord.xy       = projectedCoord.xy * 0.5 + 0.5;  \
-	float depth             = get_position(camera, depthmap, projectedCoord.xy).z; \
+	float depth             = get_position(depthmap, projectedCoord.xy).z; \
 	return vec3(projectedCoord.xy, hitCoord.z - depth);
 }
 
-vec3 BinarySearch(const camera_t camera, sampler2D depthmap, vec3 dir, inout vec3 hitCoord)
+vec3 BinarySearch(sampler2D depthmap, vec3 dir, inout vec3 hitCoord)
 {
     float depth;
 	vec3 pc;
     for(int i = 0; i < 16; i++)
     {
-		pc = get_proj_coord(camera, depthmap, hitCoord);
+		pc = get_proj_coord(depthmap, hitCoord);
 		if(pc.x > 1.0 || pc.y > 1.0 || pc.x < 0.0 || pc.y < 0.0) break;
 		if(abs(pc.z) <= 0.01f)
 		{
@@ -336,7 +341,7 @@ vec3 BinarySearch(const camera_t camera, sampler2D depthmap, vec3 dir, inout vec
     return vec3(pc.xy, 1.0f);
 }
 
-vec3 RayCast(const camera_t camera, sampler2D depth, vec3 dir, inout vec3 hitCoord)
+vec3 RayCast(sampler2D depth, vec3 dir, inout vec3 hitCoord)
 {
     dir *= 0.1f;  
 
@@ -344,7 +349,7 @@ vec3 RayCast(const camera_t camera, sampler2D depth, vec3 dir, inout vec3 hitCoo
         hitCoord               += dir; 
 		dir *= 1.1f;
 
-		vec3 pc = get_proj_coord(camera, depth, hitCoord);
+		vec3 pc = get_proj_coord(depth, hitCoord);
 		if(pc.x > 1.0 || pc.y > 1.0 || pc.x < 0.0 || pc.y < 0.0) break;
 
 		if(pc.z < -2.0f) break;
@@ -400,11 +405,11 @@ vec4 coneSampleWeightedColor(sampler2D screen, vec2 samplePos,
 
 #define CNST_1DIVPI 0.31830988618
 #define CNST_MAX_SPECULAR_EXP 64
-vec4 ssr2(const camera_t camera, sampler2D depth, sampler2D screen, vec4 base_color,
+vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
 		vec2 metallic_roughness, vec3 nor)
 {
 	vec2 tc = pixel_pos();
-	vec3 pos = get_position(camera, depth, pixel_pos());
+	vec3 pos = get_position(depth, pixel_pos());
 
 	float perceptualRoughness = metallic_roughness.y;
 	float metallic = metallic_roughness.x;
@@ -417,9 +422,9 @@ vec4 ssr2(const camera_t camera, sampler2D depth, sampler2D screen, vec4 base_co
     float gloss = 1.0f - perceptualRoughness;
     float specularPower = roughnessToSpecularPower(perceptualRoughness);
 
-	vec3 w_pos = (camera.model * vec4(pos, 1.0f)).xyz;
-	vec3 w_nor = (camera.model * vec4(nor, 0.0f)).xyz;
-	vec3 c_pos = camera.pos - w_pos;
+	vec3 w_pos = (camera(model) * vec4(pos, 1.0f)).xyz;
+	vec3 w_nor = (camera(model) * vec4(nor, 0.0f)).xyz;
+	vec3 c_pos = camera(pos) - w_pos;
 	vec3 eye_dir = normalize(-c_pos);
 
 	// Reflection vector
@@ -428,7 +433,7 @@ vec4 ssr2(const camera_t camera, sampler2D depth, sampler2D screen, vec4 base_co
 	// Ray cast
 	vec3 hitPos = pos.xyz; // + vec3(0.0, 0.0, rand(camPos.xz) * 0.2 - 0.1);
 
-	vec3 coords = RayCast(camera, depth, reflected, hitPos);
+	vec3 coords = RayCast(depth, reflected, hitPos);
 
 	vec2 dCoords = abs(vec2(0.5, 0.5) - coords.xy) * 2;
 	/* vec2 dCoords = abs((vec2(0.5, 0.5) - texcoord.xy) * 2 ); */
