@@ -10,7 +10,7 @@ BUFFER {
 
 void main()
 {
-    FragColor = texelFetch(buf.color, ivec2(gl_FragCoord), 0);
+    FragColor = texture(buf.color, pixel_pos(), 0);
 }
 
 // vim: set ft=c:

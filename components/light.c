@@ -74,7 +74,7 @@ static int c_light_position_changed(c_light_t *self)
 	if(self->radius > 0 && !c_probe(self))
 	{
 		entity_add_component(c_entity(self),
-				(c_t*)c_probe_new(self->shadow_size, ref("shadow"), 0, g_depth_fs));
+				(c_t*)c_probe_new(self->shadow_size, ref("shadow"), g_depth_fs));
 	}
 
 	return CONTINUE;

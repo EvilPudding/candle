@@ -21,7 +21,6 @@ static void draw_conf_remove_instance(draw_conf_t *self, int32_t id);
 
 KHASH_MAP_INIT_INT(draw_group, draw_group_t)
 khash_t(draw_group) *g_draw_groups;
-draw_box_t g_ungrouped;
 
 void drawable_init(drawable_t *self, uint32_t group, void *userptr)
 {
@@ -155,12 +154,18 @@ void drawable_remove_group(drawable_t *self, uint32_t group)
 	self->grp_num--;
 	if(gid < self->grp_num)
 	{
-		self->grp[gid] = self->grp[self->grp_num];
+		struct draw_grp *last = &self->grp[self->grp_num];
+		if(last->conf)
+		{
+			last->conf->comps[last->instance_id] = &self->grp[gid];
+		}
+		self->grp[gid] = *last;
 	}
 	if(self->grp_num == 0)
 	{
 		drawable_add_group(self, 0);
 	}
+	drawable_model_changed(self);
 }
 
 void drawable_add_group(drawable_t *self, uint32_t group)
@@ -183,13 +188,36 @@ void drawable_add_group(drawable_t *self, uint32_t group)
 	self->grp[gid].instance_id = 0;
 	self->grp[gid].conf = NULL;
 	self->grp[gid].box = -1;
+	self->grp[gid].updates = 0;
 	self->grp_num++;
+	drawable_model_changed(self);
 }
 
 void drawable_set_group(drawable_t *self, uint32_t group)
 {
-	drawable_remove_group(self, self->grp[0].grp);
-	drawable_add_group(self, group);
+	uint32_t gid = 0;
+	if(group == 0) return;
+
+	if(self->grp[gid].conf)
+	{
+		if(self->grp[gid].grp == 0)
+		{
+			free(self->grp[gid].conf);
+		}
+		else
+		{
+			draw_conf_remove_instance(self->grp[gid].conf,
+					self->grp[gid].instance_id);
+		}
+	}
+
+	self->grp[gid].grp = group;
+	self->grp[gid].instance_id = 0;
+	self->grp[gid].conf = NULL;
+	self->grp[gid].box = -1;
+	self->grp[gid].updates = 0;
+
+	drawable_model_changed(self);
 }
 
 void drawable_set_mesh(drawable_t *self, mesh_t *mesh)
@@ -267,7 +295,12 @@ static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
 	self->props[i].zw = entity_to_uvec2(draw->entity);
 	self->comps[i] = &draw->grp[gid];
 
-	draw->grp[gid].updates = ~0;
+	draw->grp[gid].instance_id = i;
+	draw->grp[gid].conf = self;
+	draw->grp[gid].updates = MASK_TRANS | MASK_PROPS;
+
+	self->trans_updates++;
+	self->props_updates++;
 
 	SDL_SemPost(self->semaphore);
 	return i;
@@ -460,18 +493,12 @@ static inline void create_buffer(uint32_t *vbo, void *arr,
 
 }
 
-static inline void update_inst(uint32_t *vbo, int32_t id, void *arr, int32_t dim)
-{
-	glBindBuffer(GL_ARRAY_BUFFER, *vbo);
-	glBufferSubData(GL_ARRAY_BUFFER, id * dim * sizeof(GLfloat), dim *
-			sizeof(GLfloat) * 1, arr);
-}
-
 static inline void update_buffer(uint32_t *vbo, void *arr, int32_t dim,
 		int32_t count, int32_t inst)
 {
 	glBindBuffer(GL_ARRAY_BUFFER, *vbo);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, dim * sizeof(GLfloat) * count, arr);
+	glBufferSubData(GL_ARRAY_BUFFER, inst * dim * sizeof(GLfloat),
+			dim * sizeof(GLfloat) * count, arr);
 }
 
 
@@ -489,7 +516,9 @@ static void draw_conf_remove_instance(draw_conf_t *self, int32_t id)
 
 	self->comps[id]->instance_id = id;
 
-	self->comps[id]->updates = ~0;
+	self->comps[id]->updates = MASK_TRANS | MASK_PROPS;
+	self->trans_updates++;
+	self->props_updates++;
 
 	SDL_SemPost(self->semaphore);
 }
@@ -513,31 +542,6 @@ varray_t *varray_get(mesh_t *mesh)
 		varray = kh_value(g_varrays, k);
 	}
 	return varray;
-}
-
-static draw_box_t *drawable_refilter(drawable_t *self, int gid)
-{
-	int32_t b;
-	draw_group_t *draw_group = get_group(self->grp[gid].grp);
-
-	if(!draw_group) return NULL;
-
-	if(draw_group->filter)
-	{
-		b = draw_group->filter(self);
-	}
-	else
-	{
-		b = 0;
-	}
-
-	if(b >= 0 || b < 8)
-	{
-		if(!draw_group->boxes[b]) draw_group->boxes[b] = kh_init(config);
-		return draw_group->boxes[b];
-	}
-
-	return NULL;
 }
 
 draw_conf_t *drawable_get_conf(drawable_t *self, uint32_t gid)
@@ -567,25 +571,25 @@ draw_conf_t *drawable_get_conf(drawable_t *self, uint32_t gid)
 		return result;
 	}
 
-	draw_box_t *box = drawable_refilter(self, gid);
-	if(box == NULL) return NULL;
+	draw_group_t *draw_group = get_group(self->grp[gid].grp);
+	if(draw_group == NULL) return NULL;
 
 
 	uint32_t p = murmur_hash(&conf, sizeof(conf), 0);
 
-	khiter_t k = kh_get(config, box, p);
-	if(k == kh_end(box))
+	khiter_t k = kh_get(config, draw_group, p);
+	if(k == kh_end(draw_group))
 	{
 		int32_t ret;
-		k = kh_put(config, box, p, &ret);
+		k = kh_put(config, draw_group, p, &ret);
 
-		result = kh_value(box, k) = calloc(1, sizeof(draw_conf_t));
+		result = kh_value(draw_group, k) = calloc(1, sizeof(draw_conf_t));
 		result->semaphore = SDL_CreateSemaphore(1);
 		result->vars = conf;
 	}
 	else
 	{
-		result = kh_value(box, k);
+		result = kh_value(draw_group, k);
 	}
 	return result;
 }
@@ -604,17 +608,13 @@ void drawable_model_changed(drawable_t *self)
 		{
 			if(grp->conf)
 			{
-				draw_conf_remove_instance(grp->conf,
-						grp->instance_id);
+				draw_conf_remove_instance(grp->conf, grp->instance_id);
 				grp->conf = NULL;
 			}
 
 			if(conf)
 			{
-				grp->conf = conf;
-				grp->instance_id = draw_conf_add_instance(grp->conf, self, gid);
-
-				drawable_position_changed(self, grp);
+				draw_conf_add_instance(conf, self, gid);
 			}
 		}
 		if(!conf) continue;
@@ -632,7 +632,13 @@ void drawable_model_changed(drawable_t *self)
 		if(!uvec4_equals(*props, new_props))
 		{
 			*props = new_props;
-			grp->updates |= MASK_PROPS;
+			if(!(grp->updates & MASK_PROPS))
+			{
+				SDL_SemWait(conf->semaphore);
+				conf->props_updates++;
+				SDL_SemPost(conf->semaphore);
+				grp->updates |= MASK_PROPS;
+			}
 		}
 	}
 }
@@ -885,29 +891,20 @@ static void draw_conf_update_vao(draw_conf_t *self)
 	glBindVertexArray(0); glerr();
 }
 
-void draw_conf_update(draw_conf_t *self)
-{
-	if(!self->varray)
-	{
-		self->varray = varray_get(self->vars.mesh);
-	}
-	varray_update(self->varray);
-
-	draw_conf_update_vao(self);
-}
-
-
 int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 {
-	if(!self) return 0;
+	if(!self || !self->inst_num) return 0;
 	mesh_t *mesh = self->vars.mesh;
 	/* printf("%d %p %d %s\n", self->vars.transparent, self->vars.mesh, */
 			/* self->vars.xray, self->vars.vs->name); */
 
-	draw_conf_update(self);
+	if(!self->varray) self->varray = varray_get(self->vars.mesh);
+
+	varray_update(self->varray);
+
 	draw_conf_update_inst(self, instance_id);
 
-	if(!self->vao) return 0;
+	draw_conf_update_vao(self);
 
 	vs_bind(self->vars.vs);
 
@@ -979,27 +976,57 @@ int32_t drawable_draw(drawable_t *self)
 	return res;
 }
 
-static void draw_conf_update_inst_single(draw_conf_t *self, int32_t id)
+static void draw_conf_update_props(draw_conf_t *self)
 {
-	int32_t flags = self->comps[id]->updates;
-	if(flags & MASK_TRANS)
+	uint32_t i;
+	/* PROPERTY BUFFER */
+	update_buffer(&self->vbo[12], self->props, 4, self->inst_num, 0); glerr();
+	for(i = 0; i < self->inst_num; i++)
+	{
+		self->comps[i]->updates &= ~MASK_PROPS;
+	}
+}
+
+static void draw_conf_update_trans(draw_conf_t *self)
+{
+	uint32_t i;
+	/* TRANSFORM BUFFER */
+	update_buffer(&self->vbo[8], self->inst, 16, self->inst_num, 0); glerr();
+
+#ifdef MESH4
+	/* 4D ANGLE BUFFER */
+	update_buffer(&self->vbo[13], self->angle4, 1, self->inst_num, 0); glerr();
+#endif
+
+	for(i = 0; i < self->inst_num; i++)
+	{
+		self->comps[i]->updates &= ~MASK_TRANS;
+	}
+}
+
+static void draw_conf_update_inst_props(draw_conf_t *self, int32_t id)
+{
+	if(self->comps[id]->updates & MASK_PROPS)
+	{
+		/* PROPERTY BUFFER */
+		update_buffer(&self->vbo[12], &self->props[id], 4, 1, id); glerr();
+	}
+	self->comps[id]->updates &= ~MASK_PROPS;
+}
+static void draw_conf_update_inst_trans(draw_conf_t *self, int32_t id)
+{
+	if(self->comps[id]->updates & MASK_TRANS)
 	{
 		/* TRANSFORM BUFFER */
-		update_inst(&self->vbo[8], id, &self->inst[id], 16); glerr();
+		update_buffer(&self->vbo[8], &self->inst[id], 16, 1, id); glerr();
 
 #ifdef MESH4
 		/* 4D ANGLE BUFFER */
-		update_inst(&self->vbo[13], id, &self->angle4[id], 1); glerr();
+		update_buffer(&self->vbo[13], &self->angle4[id], 1, 1, id); glerr();
 #endif
 	}
 
-	if(flags & MASK_PROPS)
-	{
-		/* PROPERTY BUFFER */
-		update_inst(&self->vbo[12], id, &self->props[id], 4); glerr();
-	}
-
-	self->comps[id]->updates = 0;
+	self->comps[id]->updates &= ~MASK_TRANS;
 }
 
 static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
@@ -1019,20 +1046,42 @@ static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 		/* 4D ANGLE BUFFER */
 		create_buffer(&self->vbo[13], self->angle4, 1, self->inst_num, 1);
 #endif
+		SDL_SemPost(self->semaphore);
+		return;
 	}
-
 
 	if(id == -1)
 	{
 		int32_t i;
-		for(i = 0; i < self->inst_num; i++)
+		if(self->trans_updates)
 		{
-			draw_conf_update_inst_single(self, i);
+			if(self->inst_num > 8 && self->trans_updates > self->inst_num / 2)
+			{
+				draw_conf_update_trans(self);
+			}
+			else for(i = 0; i < self->inst_num; i++)
+			{
+				draw_conf_update_inst_trans(self, i);
+			}
+			self->trans_updates = 0;
+		}
+		if(self->props_updates)
+		{
+			if(self->inst_num > 8 && self->props_updates > self->inst_num / 2)
+			{
+				draw_conf_update_props(self);
+			}
+			else for(i = 0; i < self->inst_num; i++)
+			{
+				draw_conf_update_inst_props(self, i);
+			}
+			self->props_updates = 0;
 		}
 	}
 	else
 	{
-		draw_conf_update_inst_single(self, id);
+		draw_conf_update_inst_props(self, id);
+		draw_conf_update_inst_trans(self, id);
 	}
 	SDL_SemPost(self->semaphore);
 }
@@ -1083,7 +1132,11 @@ static int32_t drawable_position_changed(drawable_t *self, struct draw_grp *grp)
 #ifdef MESH4
 		grp->conf->angle4[grp->instance_id].y = self->angle4;
 #endif
-		grp->conf->comps[grp->instance_id]->updates |= MASK_TRANS;
+		if(!(grp->conf->comps[grp->instance_id]->updates & MASK_TRANS))
+		{
+			grp->conf->trans_updates++;
+			grp->conf->comps[grp->instance_id]->updates |= MASK_TRANS;
+		}
 	}
 	return CONTINUE;
 }
@@ -1097,7 +1150,7 @@ void drawable_destroy(drawable_t *self)
 	}
 }
 
-static int32_t draw_box_draw(draw_box_t *self)
+static int32_t draw_group_draw(draw_group_t *self)
 {
 	if(!self) return 0;
 	int32_t res = 0;
@@ -1111,31 +1164,9 @@ static int32_t draw_box_draw(draw_box_t *self)
 	return res;
 }
 
-void draw_filter(uint32_t ref, int32_t(*filter)(drawable_t *drawable))
+void draw_group(uint32_t ref)
 {
-	get_group(ref)->filter = filter;
-}
-
-void draw_group(uint32_t ref, int32_t filter)
-{
-	int32_t b;
-	draw_group_t *group = get_group(ref);
-
-	if(filter > -1)
-	{
-		draw_box_draw(group->boxes[filter]);
-	}
-	else
-	{
-		for(b = 0; b < 8; b++)
-		{
-			if(group->boxes[b])
-			{
-				draw_box_draw(group->boxes[b]);
-			}
-		}
-	}
-
+	draw_group_draw(get_group(ref));
 }
 
 REG()

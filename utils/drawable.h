@@ -77,6 +77,8 @@ typedef struct draw_conf_t
 
 	struct conf_vars vars;
 	void *semaphore;
+	int32_t trans_updates;
+	int32_t props_updates;
 } draw_conf_t;
 
 typedef struct drawable_t
@@ -101,12 +103,7 @@ typedef struct drawable_t
 
 KHASH_MAP_INIT_INT(config, draw_conf_t*)
 
-typedef khash_t(config) draw_box_t;
-typedef struct
-{
-	int32_t (*filter)(drawable_t *);
-	draw_box_t *boxes[8];
-} draw_group_t;
+typedef khash_t(config) draw_group_t;
 
 void drawable_init(drawable_t *self, uint32_t group, void *usrptr);
 
@@ -131,7 +128,6 @@ void drawable_set_angle4(drawable_t *self, float angle4);
 
 void drawable_model_changed(drawable_t *self);
 
-void draw_group(uint32_t ref, int32_t filter);
-void draw_filter(uint32_t ref, int32_t(*filter)(drawable_t *drawable));
+void draw_group(uint32_t ref);
 
 #endif /* !MESH_GL_H */

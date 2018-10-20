@@ -186,7 +186,7 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 	nk_can_font_stash_end(); 
 
 	c_renderer_t *renderer = c_renderer(self);
-	c_renderer_add_pass(renderer, "highlights", "highlight", sig("quad"), -1,
+	c_renderer_add_pass(renderer, "highlights", "highlight", sig("quad"),
 			PASS_MULTIPLY,
 			c_renderer_tex(renderer, ref("final")), NULL,
 		(bind_t[]){
@@ -200,7 +200,7 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 		}
 	);
 
-	c_renderer_add_pass(renderer, "highlights_0", "border", sig("quad"), -1,
+	c_renderer_add_pass(renderer, "highlights_0", "border", sig("quad"),
 			PASS_CLEAR_COLOR,
 			c_renderer_tex(renderer, ref("tmp")), NULL,
 		(bind_t[]){
@@ -214,7 +214,7 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 		}
 	);
 
-	c_renderer_add_pass(renderer, "highlights_1", "border", sig("quad"), -1,
+	c_renderer_add_pass(renderer, "highlights_1", "border", sig("quad"),
 			PASS_ADDITIVE,
 			c_renderer_tex(renderer, ref("final")), NULL,
 		(bind_t[]){
@@ -228,7 +228,7 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 			{BIND_NONE}
 		}
 	);
-	c_renderer_add_pass(renderer, "tool", "editmode", sig("quad"), -1,
+	c_renderer_add_pass(renderer, "tool", "editmode", sig("quad"),
 			PASS_ADDITIVE,
 			c_renderer_tex(renderer, ref("final")), NULL,
 		(bind_t[]){
@@ -346,7 +346,13 @@ void c_editmode_pressing(c_editmode_t *self, mouse_move_data *event)
 			pos = c_node_global_to_local(parent, pos);
 		}
 
-		c_spacial_set_pos(sc, vec3_add(self->drag_diff, pos));
+		pos = vec3_add(self->drag_diff, pos);
+		/* TODO REMOVE THIS CONDITION */
+		if(fabs(sc->pos.x - pos.x) > 0.01f || fabs(sc->pos.y - pos.y) > 0.01f ||
+			fabs(sc->pos.z - pos.z) > 0.01f	)
+		{
+			c_spacial_set_pos(sc, pos);
+		}
 	}
 	else if(self->tool == 1)
 	{

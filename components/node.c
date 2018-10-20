@@ -36,6 +36,7 @@ extern int g_update_id;
 static int c_node_changed(c_node_t *self)
 {
 	uint64_t i;
+	entity_signal_same(c_entity(self), sig("node_changed"), NULL, NULL);
 	/* if(self->cached) */
 	{
 		self->cached = 0;
@@ -43,7 +44,6 @@ static int c_node_changed(c_node_t *self)
 		{
 			c_node_changed(c_node(&self->children[i]));
 		}
-		entity_signal(c_entity(self), sig("node_changed"), NULL, NULL);
 	}
 
 	return CONTINUE;

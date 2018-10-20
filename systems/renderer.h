@@ -122,7 +122,6 @@ typedef struct pass_t
 	uint32_t depth_func;
 	unsigned int clear;
 	uint32_t draw_signal;
-	int32_t draw_filter;
 	entity_t camera;
 
 	int binds_size;
@@ -189,9 +188,9 @@ void c_renderer_set_output(c_renderer_t *self, unsigned int hash);
 texture_t *c_renderer_tex(c_renderer_t *self, unsigned int hash);
 void c_renderer_add_tex(c_renderer_t *self, const char *name,
 		float resolution, texture_t *buffer);
-void c_renderer_add_pass(c_renderer_t *self, const char *name, const char
-		*shader_name, uint32_t draw_signal, int32_t filter,
-		int flags, texture_t *output, texture_t *depth, bind_t binds[]);
+void c_renderer_add_pass(c_renderer_t *self, const char *name,
+		const char *shader_name, uint32_t draw_signal, int flags,
+		texture_t *output, texture_t *depth, bind_t binds[]);
 void c_renderer_toggle_pass(c_renderer_t *self, uint hash, int active);
 
 entity_t c_renderer_get_camera(c_renderer_t *self);

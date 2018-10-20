@@ -421,10 +421,10 @@ c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow, int visible)
 
 	c_model_init_drawables(self);
 
-	c_model_set_mesh(self, mesh);
 	c_model_set_mat(self, mat);
 
 	c_model_set_cast_shadow(self, cast_shadow);
+	c_model_set_mesh(self, mesh);
 	c_model_set_visible(self, visible);
 
 	return self;
@@ -563,11 +563,36 @@ c_model_t *c_model_wireframe(c_model_t *self, int wireframe)
 	drawable_model_changed(&self->draw);
 	return self;
 }
+/* static int visible_type_filter(drawable_t *drawable) */
+/* { */
+/* } */
+
 
 void c_model_set_mat(c_model_t *self, mat_t *mat)
 {
-	self->mat = mat;
-	drawable_set_mat(&self->draw, mat?mat->id:rand()%g_mats_num);
+	if(!mat)
+	{
+		mat = g_mats[rand()%g_mats_num];
+	}
+	if(self->mat != mat)
+	{
+		self->mat = mat;
+		if(mat)
+		{
+			int transp = mat->transparency.color.a > 0.0f ||
+				mat->transparency.texture ||
+				mat->emissive.color.a > 0.0f ||
+				mat->emissive.texture;
+			if(self->draw.grp[0].grp == ref("transparent")
+					|| self->draw.grp[0].grp == ref("visible"))
+			{
+				drawable_set_group(&self->draw, transp ? ref("transparent") : ref("visible"));
+			}
+		}
+
+		drawable_set_mat(&self->draw, mat ? mat->id : 0);
+	}
+
 }
 
 void c_model_set_cast_shadow(c_model_t *self, int cast_shadow)

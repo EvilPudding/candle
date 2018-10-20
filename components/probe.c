@@ -6,7 +6,7 @@
 #include <utils/drawable.h>
 
 
-c_probe_t *c_probe_new(int32_t map_size, uint32_t group, int32_t filter,
+c_probe_t *c_probe_new(int32_t map_size, uint32_t group,
 		fs_t *fs)
 {
 	c_probe_t *self = component_new("probe");
@@ -18,7 +18,6 @@ c_probe_t *c_probe_new(int32_t map_size, uint32_t group, int32_t filter,
 	self->projection = mat4_perspective(M_PI / 2.0f, 1.0f, 0.5f, 100.5f); 
 
 	self->group = group;
-	self->filter = filter;
 
 	self->fs = fs;
 	return self;
@@ -78,7 +77,7 @@ int c_probe_draw(c_probe_t *self)
 		texture_target(self->map, self->map, f);
 		glClear(GL_DEPTH_BUFFER_BIT);
 
-		draw_group(self->group, self->filter);
+		draw_group(self->group);
 		/* if(res == STOP) */
 		/* { */
 			/* return CONTINUE; */

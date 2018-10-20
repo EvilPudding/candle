@@ -21,7 +21,7 @@ c_ambient_t *c_ambient_new(int map_size)
 	if(!g_shader) g_shader = fs_new("ambient");
 
 	entity_add_component(c_entity(self),
-			(c_t*)c_probe_new(self->map_size, ref("visible"), 0, g_shader));
+			(c_t*)c_probe_new(self->map_size, ref("visible"), g_shader));
 
 	return self;
 }
