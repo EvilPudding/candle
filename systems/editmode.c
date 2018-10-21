@@ -12,7 +12,7 @@
 #include <utils/mesh.h>
 #include <vil/vil.h>
 #include <stdlib.h>
-#include "renderer.h"
+#include <utils/renderer.h>
 
 static int c_editmode_activate_loader(c_editmode_t *self);
 void c_editmode_open_entity(c_editmode_t *self, entity_t ent);
@@ -151,19 +151,16 @@ void c_editmode_activate(c_editmode_t *self)
 {
 	c_editmode_open_entity(self, c_entity(self));
 
-	loader_push_wait(g_candle->loader, (loader_cb)c_editmode_activate_loader,
-			NULL, (c_t*)self);
-
 	self->activated = 1;
 	self->control = 1;
 
-	self->backup_camera = c_renderer(self)->camera;
+	self->backup_renderer = c_window(self)->renderer;
 
 	if(!entity_exists(self->camera))
 	{
 		self->camera = entity_new(
 			c_name_new("Edit Camera"), c_editlook_new(), c_node_new(),
-			c_camera_new(70, 0.1, 100.0)
+			c_camera_new(70, 0.1, 100.0, renderer_new(0.66f, 1, 1, 0))
 		);
 		c_spacial_t *sc = c_spacial(&self->camera);
 		c_spacial_lock(sc);
@@ -172,9 +169,11 @@ void c_editmode_activate(c_editmode_t *self)
 		c_spacial_rotate_X(sc, -M_PI * 0.05);
 		c_spacial_unlock(sc);
 	}
-	c_camera_activate(c_camera(&self->camera));
-	c_camera_update_view(c_camera(&self->camera));
-	c_renderer(self)->camera = self->camera;
+
+	c_camera_assign(c_camera(&self->camera));
+
+	loader_push_wait(g_candle->loader, (loader_cb)c_editmode_activate_loader,
+			NULL, (c_t*)self);
 
 }
 
@@ -185,12 +184,12 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 	nk_can_font_stash_begin(&atlas); 
 	nk_can_font_stash_end(); 
 
-	c_renderer_t *renderer = c_renderer(self);
-	c_renderer_add_pass(renderer, "highlights", "highlight", sig("quad"),
+	renderer_t *renderer = c_camera(&self->camera)->renderer;
+	renderer_add_pass(renderer, "highlights", "highlight", sig("quad"),
 			PASS_MULTIPLY,
-			c_renderer_tex(renderer, ref("final")), NULL,
+			renderer_tex(renderer, ref("final")), NULL,
 		(bind_t[]){
-			{BIND_TEX, "sbuffer", .buffer = c_renderer_tex(renderer, ref("selectable"))},
+			{BIND_TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
 			{BIND_INT, "mode", (getter_cb)c_editmode_bind_mode, self},
 			{BIND_VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
 			{BIND_VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
@@ -200,11 +199,11 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 		}
 	);
 
-	c_renderer_add_pass(renderer, "highlights_0", "border", sig("quad"),
+	renderer_add_pass(renderer, "highlights_0", "border", sig("quad"),
 			PASS_CLEAR_COLOR,
-			c_renderer_tex(renderer, ref("tmp")), NULL,
+			renderer_tex(renderer, ref("tmp")), NULL,
 		(bind_t[]){
-			{BIND_TEX, "sbuffer", .buffer = c_renderer_tex(renderer, ref("selectable"))},
+			{BIND_TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
 			{BIND_INT, "mode", (getter_cb)c_editmode_bind_mode, self},
 			{BIND_VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
 			{BIND_VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
@@ -214,12 +213,12 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 		}
 	);
 
-	c_renderer_add_pass(renderer, "highlights_1", "border", sig("quad"),
+	renderer_add_pass(renderer, "highlights_1", "border", sig("quad"),
 			PASS_ADDITIVE,
-			c_renderer_tex(renderer, ref("final")), NULL,
+			renderer_tex(renderer, ref("final")), NULL,
 		(bind_t[]){
-			{BIND_TEX, "sbuffer", .buffer = c_renderer_tex(renderer, ref("selectable"))},
-			{BIND_TEX, "tmp", .buffer = c_renderer_tex(renderer, ref("tmp"))},
+			{BIND_TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
+			{BIND_TEX, "tmp", .buffer = renderer_tex(renderer, ref("tmp"))},
 			{BIND_INT, "mode", (getter_cb)c_editmode_bind_mode, self},
 			{BIND_VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
 			{BIND_VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
@@ -228,9 +227,9 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 			{BIND_NONE}
 		}
 	);
-	c_renderer_add_pass(renderer, "tool", "editmode", sig("quad"),
+	renderer_add_pass(renderer, "tool", "editmode", sig("quad"),
 			PASS_ADDITIVE,
-			c_renderer_tex(renderer, ref("final")), NULL,
+			renderer_tex(renderer, ref("final")), NULL,
 		(bind_t[]){
 			{BIND_VEC2, "mouse_pos", (getter_cb)c_editmode_bind_mouse_pos, self},
 			{BIND_NUM, "start_radius", (getter_cb)c_editmode_bind_start_radius, self},
@@ -239,21 +238,20 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 			{BIND_NONE}
 		}
 	);
-	c_renderer_toggle_pass(c_renderer(self), ref("tool"), 0);
-
+	renderer_toggle_pass(c_camera(&self->camera)->renderer, ref("tool"), 0);
 
 	return CONTINUE;
 }
 
 void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 {
-	c_renderer_t *renderer = c_renderer(self);
-	c_camera_t *cam = c_camera(&renderer->camera);
+	c_camera_t *cam = c_camera(&self->camera);
+	renderer_t *renderer = cam->renderer;
 	float px = x / renderer->width;
 	float py = 1.0f - y / renderer->height;
 	self->mouse_screen_pos.x = px;
 	self->mouse_screen_pos.y = py;
-	entity_t result = c_renderer_entity_at_pixel(renderer,
+	entity_t result = renderer_entity_at_pixel(renderer,
 			x, y, &self->mouse_screen_pos.z);
 
 	vec3_t pos = c_camera_real_pos(cam, self->mouse_screen_pos.z, vec2(px, py));
@@ -267,7 +265,7 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 	{
 		if(entity_exists(self->selected) && result == self->selected)
 		{
-			entity_t result = c_renderer_geom_at_pixel(renderer, x, y,
+			entity_t result = renderer_geom_at_pixel(renderer, x, y,
 					&self->mouse_screen_pos.z);
 			self->over_poly = result;
 			/* printf("%lu\n", result); */
@@ -282,8 +280,8 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 /* entity_t g_disk = entity_null; */
 void c_editmode_pressing(c_editmode_t *self, mouse_move_data *event)
 {
-	c_renderer_t *renderer = c_renderer(self);
-	c_camera_t *cam = c_camera(&renderer->camera);
+	c_camera_t *cam = c_camera(&self->camera);
+	renderer_t *renderer = cam->renderer;
 
 	c_spacial_t *sc = c_spacial(&self->selected);
 	c_node_t *ns = c_node(sc);
@@ -330,7 +328,7 @@ void c_editmode_pressing(c_editmode_t *self, mouse_move_data *event)
 		else if(self->tool == 1)
 		{
 			self->start_prop = sc->rot_quat;
-			c_renderer_toggle_pass(c_renderer(self), ref("tool"), 1);
+			renderer_toggle_pass(renderer, ref("tool"), 1);
 		}
 		else if(self->tool == 2)
 		{
@@ -419,6 +417,7 @@ void c_editmode_pressing(c_editmode_t *self, mouse_move_data *event)
 
 int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 {
+	if(!entity_exists(self->camera)) return CONTINUE;
 	if(self->control && !g_candle->pressing)
 	{
 		if(self->mode == EDIT_OBJECT)
@@ -442,6 +441,7 @@ int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 
 int c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 {
+	if(!entity_exists(self->camera)) return CONTINUE;
 	if(event->button == SDL_BUTTON_LEFT)
 	{
 		self->pressing = 1;
@@ -535,10 +535,12 @@ void c_editmode_select(c_editmode_t *self, entity_t select)
 
 int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 {
+	if(!entity_exists(self->camera)) return CONTINUE;
+	renderer_t *renderer = c_camera(&self->camera)->renderer;
 	if(self->dragging)
 	{
 		/* if(c_model(&g_disk)) c_model(&g_disk)->visible = 0; */
-		c_renderer_toggle_pass(c_renderer(self), ref("tool"), 0);
+		renderer_toggle_pass(renderer, ref("tool"), 0);
 		self->dragging = 0;
 		/* self->selected = entity_null; */
 	}
@@ -551,7 +553,7 @@ int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 		}
 		if(self->pressing)
 		{
-			entity_t result = c_renderer_entity_at_pixel(c_renderer(self),
+			entity_t result = renderer_entity_at_pixel(renderer,
 					event->x, event->y, NULL);
 
 			if(self->mode == EDIT_OBJECT)
@@ -561,7 +563,7 @@ int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 			else// if(result == self->selected)
 			{
 				entity_t result =
-					c_renderer_geom_at_pixel(c_renderer(self), event->x,
+					renderer_geom_at_pixel(renderer, event->x,
 							event->y, &self->mouse_screen_pos.z);
 
 				/* TODO: select one more poly */
@@ -632,16 +634,16 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 				if(!self->control)
 				{
 					candle_grab_mouse(c_entity(self), 1);
-					self->backup_camera = c_renderer(self)->camera;
+					self->backup_renderer = c_window(self)->renderer;
 					if(!self->activated) { c_editmode_activate(self); }
-					c_renderer(self)->camera = self->camera;
+					c_window(self)->renderer = c_camera(&self->camera)->renderer;
 					self->control = 1;
 				}
 				else
 				{
 					candle_release_mouse(c_entity(self), 0);
 					self->over = entity_null;
-					c_renderer(self)->camera = self->backup_camera;
+					c_window(self)->renderer = self->backup_renderer;
 					self->control = 0;
 				}
 				break;

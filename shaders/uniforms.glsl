@@ -41,19 +41,13 @@ struct material_t
 	property_t emissive;
 };
 
-struct pass_t
-{
-	vec2 screen_size;
-	vec2 padding;
-};
-
 layout(bindless_sampler) uniform;
+layout(std140, binding = 19) uniform renderer_t
+{
+	camera_t camera;
+} renderer;
 layout(std140, binding = 20) uniform scene_t
 {
-	/* RENDERER */
-	camera_t camera;
-	pass_t passes[32];
-	/* GLOBAL */
 	material_t materials[255];
 	light_t lights[255];
 	vec4 test_color;
@@ -64,14 +58,13 @@ layout(std140, binding = 21) uniform bones_t
 	mat4 transforms[30];
 } bones;
 
-layout(location = 23) uniform uint passid;
-layout(location = 24) uniform uint has_tex;
+layout(location = 22) uniform vec2 screen_size;
+layout(location = 23) uniform uint has_tex;
 
 /* layout(location = 25) uniform camera_t camera; */
 
 #define mat(prop) (scene.materials[matid].prop)
 #define light(prop) (scene.lights[matid].prop)
-#define pass(prop) (scene.passes[passid].prop)
-#define camera(prop) (scene.camera.prop)
+#define camera(prop) (renderer.camera.prop)
 
 // vim: set ft=c:

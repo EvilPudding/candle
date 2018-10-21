@@ -3,6 +3,7 @@
 
 #include <ecs/ecm.h>
 #include <utils/mesh.h>
+#include <utils/renderer.h>
 #include <utils/nk.h>
 
 /* struct tool_event */
@@ -21,8 +22,6 @@ typedef struct
 	int pressing;
 	int activated;
 	int tool;
-	entity_t camera;
-	entity_t backup_camera;
 	/* int outside; */
 
 	vec3_t mouse_position;
@@ -69,6 +68,8 @@ typedef struct
 	char ct_search[32];
 	char shell[512];
 
+	renderer_t *backup_renderer;
+	entity_t camera;
 } c_editmode_t;
 
 DEF_CASTER("editmode", c_editmode, c_editmode_t)

@@ -7,8 +7,8 @@
 #include <candle.h>
 #include <systems/editmode.h>
 #include <systems/window.h>
-#include <systems/renderer.h>
 #include <stdlib.h>
+#include <systems/render_device.h>
 
 static fs_t *g_depth_fs = NULL;
 static mesh_t *g_light;
@@ -47,6 +47,7 @@ void c_light_init(c_light_t *self)
 	drawable_set_mat(&self->draw, self->id);
 	drawable_set_entity(&self->draw, c_entity(self));
 
+	world_changed();
 }
 
 static int c_light_position_changed(c_light_t *self)
@@ -108,6 +109,7 @@ int c_light_menu(c_light_t *self, void *ctx)
 		{
 			self->radius = rad;
 			c_light_position_changed(self);
+			world_changed();
 		}
 	}
 	else
@@ -117,8 +119,15 @@ int c_light_menu(c_light_t *self, void *ctx)
 
 	nk_layout_row_dynamic(ctx, 180, 1);
 
-	union { struct nk_colorf *nk; vec4_t *v; } color = { .v = &self->color };
-	*color.nk = nk_color_picker(ctx, *color.nk, NK_RGBA);
+	struct nk_colorf *old = (struct nk_colorf *)&self->color;
+	union { struct nk_colorf nk; vec4_t v; } new =
+		{ .nk = nk_color_picker(ctx, *old, NK_RGBA)};
+
+	if(memcmp(&new, &self->color, sizeof(vec4_t)))
+	{
+		self->color = new.v;
+		world_changed();
+	}
 
 	return CONTINUE;
 }

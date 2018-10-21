@@ -5,7 +5,6 @@
 #include <utils/nk.h>
 #include <utils/drawable.h>
 #include <candle.h>
-#include <systems/renderer.h>
 #include <systems/editmode.h>
 #include <systems/lua.h>
 
@@ -613,28 +612,22 @@ void c_model_set_cast_shadow(c_model_t *self, int cast_shadow)
 void c_model_set_visible(c_model_t *self, int visible)
 {
 	self->visible = visible;
-	if(!visible)
-	{
-		drawable_set_mesh(&self->draw, NULL);
-	}
-	else
-	{
-		drawable_set_mesh(&self->draw, self->mesh);
-	}
+	drawable_set_mesh(&self->draw, visible ? self->mesh : NULL);
 }
 
 void c_model_set_mesh(c_model_t *self, mesh_t *mesh)
 {
+	/* FIXME this is broken when the mesh is destroyed */
 	if(mesh != self->mesh)
 	{
 		mesh_t *old_mesh = self->mesh;
 		self->mesh = mesh;
-		if(old_mesh) mesh_destroy(old_mesh);
 
 		if(self->visible)
 		{
 			drawable_set_mesh(&self->draw, mesh);
 		}
+		if(old_mesh) mesh_destroy(old_mesh);
 	}
 }
 

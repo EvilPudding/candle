@@ -2,7 +2,6 @@
 #define AXIS_H
 
 #include <ecs/ecm.h>
-#include <systems/renderer.h>
 
 typedef struct
 {

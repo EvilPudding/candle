@@ -7,6 +7,7 @@
 #include <candle.h>
 #include <systems/editmode.h>
 #include <dirent.h>
+#include <systems/render_device.h>
 
 int g_mats_num;
 mat_t *g_mats[255];
@@ -29,6 +30,7 @@ mat_t *mat_new(const char *name)
 	self->id = g_mats_num++;
 	g_mats[self->id] = self;
 
+	world_changed();
 	return self;
 }
 
@@ -139,6 +141,7 @@ mat_t *mat_from_file(const char *filename)
 		mat_destroy(self);
 		return 0;
 	}
+	world_changed();
 
 	return self;
 }
@@ -169,16 +172,19 @@ void mat_bind_prop(u_prop_t *uniforms, prop_t *prop, int *num)
 void mat_set_transparency(mat_t *self, prop_t transparency)
 {
 	self->transparency = transparency;
+	world_changed();
 }
 
 void mat_set_normal(mat_t *self, prop_t normal)
 {
 	self->normal = normal;
+	world_changed();
 }
 
 void mat_set_albedo(mat_t *self, prop_t albedo)
 {
 	self->albedo = albedo;
+	world_changed();
 }
 
 void mat_prop_menu(mat_t *self, const char *name, prop_t *prop, void *ctx)
@@ -227,6 +233,8 @@ void mat_prop_menu(mat_t *self, const char *name, prop_t *prop, void *ctx)
 		}
 		nk_tree_pop(ctx);
 	}
+	/* TODO call this only of the new material is different from previous */
+	world_changed();
 }
 
 void mat_menu(mat_t *self, void *ctx)

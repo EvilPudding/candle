@@ -62,7 +62,7 @@ void main()
 			/* float attenuation = 1.0f/(1.0f+1.3f*pow(l * 3.0f, 2)); */
 			/* attenuation *= clamp(1.0f - l, 0.0f, 1.0f); */
 			float attenuation = ((3.0f - l*3.0f) / (1.0f+1.3f*(pow(l*3.0f-0.1f, 2))))/3.0f;
-			attenuation = clamp(attenuation, 0, 1);
+			attenuation = clamp(attenuation, 0.0f, 1.0f);
 
 			vec4 color_lit = pbr(dif, normal_metalic_roughness.ba,
 					light(color) * attenuation, c_light_dir, c_pos, c_nor);

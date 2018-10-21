@@ -5,9 +5,9 @@
 #include "spacial.h"
 #include "light.h"
 #include <utils/nk.h>
-#include <systems/renderer.h>
 #include <utils/shader.h>
 #include <systems/editmode.h>
+#include <systems/window.h>
 #include <candle.h>
 
 static mesh_t *g_rot_axis_mesh = NULL;

@@ -2,9 +2,9 @@
 #define MODEL_H
 
 #include <ecs/ecm.h>
-#include <systems/renderer.h>
 #include "node.h"
 #include <utils/shader.h>
+#include <utils/drawable.h>
 
 struct conf_sphere
 {

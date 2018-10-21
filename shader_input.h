@@ -1,16 +1,6 @@
 #ifndef SHADER_INPUT_H
 #define SHADER_INPUT_H
 
-struct gl_camera
-{
-	mat4_t inv_model;
-	mat4_t model;
-	mat4_t projection;
-	mat4_t inv_projection;
-	vec3_t pos;
-	float exposure;
-};
-
 struct gl_light
 {
 	vec4_t color;
@@ -45,10 +35,6 @@ struct gl_pass
 
 struct gl_scene
 {
-	/* RENDERER */
-	struct gl_camera camera;
-	struct gl_pass passes[32];
-	/* GLOBAL */
 	struct gl_material materials[255];
 	struct gl_light lights[255];
 	vec4_t test_color;

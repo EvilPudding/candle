@@ -1,6 +1,5 @@
 #include "drawable.h"
 #include <utils/loader.h>
-#include <systems/renderer.h>
 #include <candle.h>
 #include <string.h>
 #include <stdlib.h>
@@ -83,6 +82,8 @@ void draw_conf_inst_prealloc(draw_conf_t *self, int32_t size)
 	self->inst = realloc(self->inst, self->inst_alloc * sizeof(*self->inst));
 	self->props = realloc(self->props, self->inst_alloc *
 			sizeof(*self->props));
+	/* memset(self->props + (self->inst_alloc - size), 0, size * sizeof(*self->props)); */
+
 #ifdef MESH4
 	self->angle4 = realloc(self->angle4, self->inst_alloc *
 			sizeof(*self->angle4));
@@ -224,8 +225,16 @@ void drawable_set_mesh(drawable_t *self, mesh_t *mesh)
 {
 	if(mesh != self->mesh)
 	{
+		mesh_t *previous = self->mesh;
 		self->mesh = mesh;
 		drawable_model_changed(self);
+		if(!previous)
+		{
+			for(uint32_t gid = 0; gid < self->grp_num; gid++)
+			{
+				drawable_position_changed(self, &self->grp[gid]);
+			}
+		}
 	}
 }
 
@@ -291,7 +300,7 @@ static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
 	draw_conf_inst_grow(self);
 
 	self->props[i].x = draw->mat;
-	/* self->props[i].y = TODO: use y for something; */
+	self->props[i].y = 0;/*TODO: use y for something;*/
 	self->props[i].zw = entity_to_uvec2(draw->entity);
 	self->comps[i] = &draw->grp[gid];
 
@@ -919,7 +928,7 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 		glDisable(GL_CULL_FACE); glerr();
 	}
 
-	glUniform1ui(24, mesh->has_texcoords);
+	glUniform1ui(23, mesh->has_texcoords);
 
 	glBindVertexArray(self->vao); glerr();
 

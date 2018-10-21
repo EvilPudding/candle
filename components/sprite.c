@@ -4,7 +4,6 @@
 #include "light.h"
 #include <utils/drawable.h>
 #include <utils/nk.h>
-#include <systems/renderer.h>
 #include <utils/shader.h>
 #include <systems/editmode.h>
 #include <candle.h>

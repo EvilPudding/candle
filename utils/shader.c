@@ -110,7 +110,7 @@ int vs_new_loader(vs_t *self)
 	checkShaderError(self->program, "vertex shader!",
 			self->name, self->code);
 	self->ready = 1;
-	printf("vs ready %s\n", self->name);
+	/* printf("vs ready %s\n", self->name); */
 
 	return 1;
 }
@@ -371,7 +371,7 @@ static int shader_new_loader(shader_t *self)
 	glLinkProgram(self->program); glerr();
 
 	self->ready = 1;
-	printf("shader ready f:%s v:%s\n", self->fs->filename, g_vs[self->index].name);
+	/* printf("shader ready f:%s v:%s\n", self->fs->filename, g_vs[self->index].name); */
 	return 1;
 }
 
@@ -395,7 +395,7 @@ static int fs_new_loader(fs_t *self)
 	checkShaderError(self->program, "fragment shader!",
 			self->filename, self->code);
 	self->ready = 1;
-	printf("fs ready %s\n", buffer);
+	/* printf("fs ready %s\n", buffer); */
 
 	return 1;
 }

@@ -72,6 +72,7 @@ void texture_update_gl(texture_t *self)
 uint texture_get_pixel(texture_t *self, int buffer, int x, int y,
 		float *depth)
 {
+	if(!self->framebuffer_ready) return 0;
 	uint data = 0;
 	y = self->height - y;
 	glFlush();
@@ -111,12 +112,14 @@ void texture_update_brightness(texture_t *self)
 {
 	texture_bind(self, 0);
 
+	unsigned char data[300];
 	glGetTexImage(self->target, 9, self->bufs[0].format, GL_UNSIGNED_BYTE,
-			self->bufs[0].data);
-	int r = *(char*)self->bufs[0].data;
-	int g = *(char*)self->bufs[1].data;
-	int b = *(char*)self->bufs[2].data;
-	self->brightness = ((float)(r + g + b)) / 256.0f;
+			data);
+	unsigned char r = data[0];
+	unsigned char g = data[1];
+	unsigned char b = data[2];
+	self->brightness = ((float)(r + g + b)) / (255.0f * 3.0f);
+	if(self->brightness <= 0) self->brightness = 1;
 }
 
 struct tpair {
@@ -322,6 +325,7 @@ texture_t *_texture_new_2D_pre
 	_g_tex_creating = self;
 
 	self->target = GL_TEXTURE_2D;
+	self->brightness = 1.0f;
 
 	self->repeat = !!(flags & TEX_REPEAT);
 	self->mipmaped = !!(flags & TEX_MIPMAP);

@@ -35,7 +35,7 @@ in flat uvec2 id;
 vec2 pixel_pos()
 {
 	/* return gl_SamplePosition.xy; */
-	return gl_FragCoord.xy / pass(screen_size);
+	return gl_FragCoord.xy / screen_size;
 }
 
 

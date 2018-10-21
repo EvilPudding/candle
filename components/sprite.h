@@ -2,7 +2,6 @@
 #define SPRITE_H
 
 #include <ecs/ecm.h>
-#include <systems/renderer.h>
 #include <utils/drawable.h>
 
 typedef struct

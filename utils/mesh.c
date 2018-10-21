@@ -184,6 +184,7 @@ static void vert_init(vertex_t *self)
 	self->color = vec4(0.0f);
 	self->tmp = -1;
 	self->half = -1;
+
 }
 
 
@@ -1095,8 +1096,6 @@ int mesh_add_vert(mesh_t *self, vecN_t pos)
 
 	vertex_t *vert = vector_get(self->verts, i);
 	vert_init(vert);
-
-	vert->color = vec4(0.0f);
 
 #ifdef MESH4
 	vert->pos = mat4_mul_vec4(self->transformation,

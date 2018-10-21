@@ -32,6 +32,7 @@ typedef struct
 	int bufs_size;
 
 	float brightness;
+	uint32_t track_brightness; 
 	GLuint target;
 	GLuint frame_buffer[6];
 	char *filename;
