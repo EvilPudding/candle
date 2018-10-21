@@ -153,6 +153,7 @@ mesh_t *mesh_new()
 
 	self->faces_hash = kh_init(id);
 	self->edges_hash = kh_init(id);
+	self->ref_num = 1;
 
 	int i;
 	for(i = 0; i < 16; i++)
@@ -262,11 +263,15 @@ void mesh_destroy(mesh_t *self)
 {
 	if(self)
 	{
-		mesh_lock(self);
-		_mesh_destroy(self);
-		SDL_DestroySemaphore(self->semaphore);
-		self->semaphore = NULL;
-		free(self);
+		self->ref_num--;
+		if(self->ref_num == 0)
+		{
+			mesh_lock(self);
+			_mesh_destroy(self);
+			SDL_DestroySemaphore(self->semaphore);
+			self->semaphore = NULL;
+			free(self);
+		}
 	}
 }
 
@@ -2337,6 +2342,7 @@ void mesh_assign(mesh_t *self, mesh_t *other)
 void _mesh_clone(mesh_t *self, mesh_t *into)
 {
 	*into = *self;
+	into->ref_num = 1;
 	/* into->changes = 0; */
 	into->faces_hash = kh_clone(id, self->faces_hash);
 	into->edges_hash = kh_clone(id, self->edges_hash);

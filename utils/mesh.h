@@ -215,6 +215,7 @@ typedef struct mesh_t
 	int cull;
 	float offset;
 	float smooth_angle;
+	int ref_num;
 } mesh_t;
 
 typedef enum

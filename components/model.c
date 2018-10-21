@@ -812,6 +812,7 @@ void add_tool(char *name, tool_gui_cb gui, tool_edit_cb edit, size_t size,
 
 static void c_model_destroy(c_model_t *self)
 {
+	drawable_set_mesh(&self->draw, NULL);
 	int i;
 	for(i = 0; i < vector_count(self->history); i++)
 	{
@@ -824,7 +825,6 @@ static void c_model_destroy(c_model_t *self)
 	}
 	if(self->mesh) mesh_destroy(self->mesh);
 	g_update_id++;
-	drawable_set_mesh(&self->draw, NULL);
 }
 
 REG()

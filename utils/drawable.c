@@ -228,12 +228,20 @@ void drawable_set_mesh(drawable_t *self, mesh_t *mesh)
 		mesh_t *previous = self->mesh;
 		self->mesh = mesh;
 		drawable_model_changed(self);
+		if(mesh)
+		{
+			mesh->ref_num++;
+		}
 		if(!previous)
 		{
 			for(uint32_t gid = 0; gid < self->grp_num; gid++)
 			{
 				drawable_position_changed(self, &self->grp[gid]);
 			}
+		}
+		else
+		{
+			mesh_destroy(previous);
 		}
 	}
 }
