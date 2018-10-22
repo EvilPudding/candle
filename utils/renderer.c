@@ -180,8 +180,6 @@ static int renderer_gl(renderer_t *self)
 	int W = self->width * self->resolution;
 	int H = self->height * self->resolution;
 
-	if(!W || !H) return 0;
-
 	self->fallback_depth =	texture_new_2D(W, H, 0, 0,
 		buffer_new("depth",	1, -1)
 	);
@@ -345,7 +343,6 @@ static int renderer_gl(renderer_t *self)
 
 	self->output = renderer_tex(self, ref("final"));
 
-	glerr();
 	return 1;
 }
 
@@ -376,12 +373,7 @@ int renderer_resize(renderer_t *self, int width, int height)
 {
     self->width = width;
     self->height = height;
-
-	if(!self->output)
-	{
-		loader_push_wait(g_candle->loader, (loader_cb)renderer_gl, self, NULL);
-	}
-	renderer_update_screen_texture(self);
+	self->ready = 0;
 	return CONTINUE;
 }
 
@@ -499,6 +491,7 @@ renderer_t *renderer_new(float resolution, int auto_exposure,
 	self->resolution = resolution;
 	self->auto_exposure = auto_exposure;
 	self->roughness = roughness;
+	renderer_gl(self);
 
 	return self;
 }

@@ -136,11 +136,15 @@ static int alloc_buffer_gl(struct tpair *data)
 		glGenTextures(1, &self->bufs[i].id); glerr();
 	}
 	uint wrap = self->repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE;
+	int32_t width = self->width;
+	int32_t height = self->height;
+	if(width == 0) width = 1;
+	if(height == 0) height = 1;
 
 	glActiveTexture(GL_TEXTURE0 + ID_2D);
 	glBindTexture(self->target, self->bufs[i].id); glerr();
 	glTexImage2D(self->target, 0, self->bufs[i].internal,
-			self->width, self->height,
+			width, height,
 			0, self->bufs[i].format,
 			(self->bufs[i].dims == -1) ? GL_FLOAT : GL_UNSIGNED_BYTE, NULL); glerr();
 
