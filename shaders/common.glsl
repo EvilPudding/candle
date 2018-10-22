@@ -22,7 +22,7 @@ const float c_MinRoughness = 0.04;
 in vec2 poly_id;
 in vec3 poly_color;
 in flat vec3 obj_pos;
-in flat vec3 vertex_position;
+in vec3 vertex_position;
 
 in vec2 texcoord;
 

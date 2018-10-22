@@ -160,8 +160,9 @@ void c_editmode_activate(c_editmode_t *self)
 	{
 		self->camera = entity_new(
 			c_name_new("Edit Camera"), c_editlook_new(), c_node_new(),
-			c_camera_new(70, 0.1, 100.0, renderer_new(0.66f, 1, 1, 0))
+			c_camera_new(70, 0.1, 100.0, renderer_new(0.66f))
 		);
+		renderer_default_pipeline(c_camera(&self->camera)->renderer);
 		c_spacial_t *sc = c_spacial(&self->camera);
 		c_spacial_lock(sc);
 		c_spacial_set_pos(sc, vec3(4, 1.5, 0));
@@ -186,56 +187,52 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 
 	renderer_t *renderer = c_camera(&self->camera)->renderer;
 	renderer_add_pass(renderer, "highlights", "highlight", sig("quad"),
-			PASS_MULTIPLY,
-			renderer_tex(renderer, ref("final")), NULL,
+			MUL, renderer_tex(renderer, ref("final")), NULL,
 		(bind_t[]){
-			{BIND_TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
-			{BIND_INT, "mode", (getter_cb)c_editmode_bind_mode, self},
-			{BIND_VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
-			{BIND_VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
-			{BIND_VEC2, "context_id", (getter_cb)c_editmode_bind_context, self},
-			{BIND_VEC2, "sel_id", (getter_cb)c_editmode_bind_sel, self},
-			{BIND_NONE}
+			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
+			{INT, "mode", (getter_cb)c_editmode_bind_mode, self},
+			{VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
+			{VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
+			{VEC2, "context_id", (getter_cb)c_editmode_bind_context, self},
+			{VEC2, "sel_id", (getter_cb)c_editmode_bind_sel, self},
+			{NONE}
 		}
 	);
 
 	renderer_add_pass(renderer, "highlights_0", "border", sig("quad"),
-			PASS_CLEAR_COLOR,
-			renderer_tex(renderer, ref("tmp")), NULL,
+			CLEAR_COLOR, renderer_tex(renderer, ref("tmp")), NULL,
 		(bind_t[]){
-			{BIND_TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
-			{BIND_INT, "mode", (getter_cb)c_editmode_bind_mode, self},
-			{BIND_VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
-			{BIND_VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
-			{BIND_VEC2, "sel_id", (getter_cb)c_editmode_bind_sel, self},
-			{BIND_INT, "horizontal", .integer = 1},
-			{BIND_NONE}
+			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
+			{INT, "mode", (getter_cb)c_editmode_bind_mode, self},
+			{VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
+			{VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
+			{VEC2, "sel_id", (getter_cb)c_editmode_bind_sel, self},
+			{INT, "horizontal", .integer = 1},
+			{NONE}
 		}
 	);
 
 	renderer_add_pass(renderer, "highlights_1", "border", sig("quad"),
-			PASS_ADDITIVE,
-			renderer_tex(renderer, ref("final")), NULL,
+			ADD, renderer_tex(renderer, ref("final")), NULL,
 		(bind_t[]){
-			{BIND_TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
-			{BIND_TEX, "tmp", .buffer = renderer_tex(renderer, ref("tmp"))},
-			{BIND_INT, "mode", (getter_cb)c_editmode_bind_mode, self},
-			{BIND_VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
-			{BIND_VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
-			{BIND_VEC2, "sel_id", (getter_cb)c_editmode_bind_sel, self},
-			{BIND_INT, "horizontal", .integer = 0},
-			{BIND_NONE}
+			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
+			{TEX, "tmp", .buffer = renderer_tex(renderer, ref("tmp"))},
+			{INT, "mode", (getter_cb)c_editmode_bind_mode, self},
+			{VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
+			{VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
+			{VEC2, "sel_id", (getter_cb)c_editmode_bind_sel, self},
+			{INT, "horizontal", .integer = 0},
+			{NONE}
 		}
 	);
 	renderer_add_pass(renderer, "tool", "editmode", sig("quad"),
-			PASS_ADDITIVE,
-			renderer_tex(renderer, ref("final")), NULL,
+			ADD, renderer_tex(renderer, ref("final")), NULL,
 		(bind_t[]){
-			{BIND_VEC2, "mouse_pos", (getter_cb)c_editmode_bind_mouse_pos, self},
-			{BIND_NUM, "start_radius", (getter_cb)c_editmode_bind_start_radius, self},
-			{BIND_NUM, "tool_fade", (getter_cb)c_editmode_bind_tool_fade, self},
-			{BIND_VEC3, "selected_pos", (getter_cb)c_editmode_bind_selected_pos, self},
-			{BIND_NONE}
+			{VEC2, "mouse_pos", (getter_cb)c_editmode_bind_mouse_pos, self},
+			{NUM, "start_radius", (getter_cb)c_editmode_bind_start_radius, self},
+			{NUM, "tool_fade", (getter_cb)c_editmode_bind_tool_fade, self},
+			{VEC3, "selected_pos", (getter_cb)c_editmode_bind_selected_pos, self},
+			{NONE}
 		}
 	);
 	renderer_toggle_pass(c_camera(&self->camera)->renderer, ref("tool"), 0);
@@ -315,7 +312,9 @@ void c_editmode_pressing(c_editmode_t *self, mouse_move_data *event)
 		self->start_screen = p;
 
 		{
-			float dist = -mat4_mul_vec4(cam->view_matrix, vec4(_vec3(obj_pos), 1.0f)).z;
+			/*TODO get a better way of getting camera view matrix */
+			float dist = -mat4_mul_vec4(cam->renderer->glvars[0].inv_model,
+					vec4(_vec3(obj_pos), 1.0f)).z;
 			dist = c_camera_unlinearize(cam, dist);
 			vec3_t proj = c_camera_real_pos(cam, dist, p);
 			self->tool_fade = 1;
@@ -362,7 +361,9 @@ void c_editmode_pressing(c_editmode_t *self, mouse_move_data *event)
 		float angle2 = atan2f(dif.y, dif.x);
 		float angle = angle1 - angle2;
 
-		float dist = -mat4_mul_vec4(cam->view_matrix, vec4(_vec3(obj_pos), 1.0f)).z;
+		/*TODO get a better way of getting camera view matrix */
+		float dist = -mat4_mul_vec4(cam->renderer->glvars[0].inv_model,
+				vec4(_vec3(obj_pos), 1.0f)).z;
 		vec3_t proj = c_camera_real_pos(cam, c_camera_unlinearize(cam, dist), p);
 
 		float d = vec3_dist(proj, obj_pos);
@@ -406,7 +407,9 @@ void c_editmode_pressing(c_editmode_t *self, mouse_move_data *event)
 	}
 	else if(self->tool == 2)
 	{
-		float dist = -mat4_mul_vec4(cam->view_matrix, vec4(_vec3(obj_pos), 1.0f)).z;
+		/*TODO get a better way of getting camera view matrix */
+		float dist = -mat4_mul_vec4(cam->renderer->glvars[0].inv_model,
+				vec4(_vec3(obj_pos), 1.0f)).z;
 		vec3_t proj = c_camera_real_pos(cam, c_camera_unlinearize(cam, dist), p);
 
 		float r = vec3_dist(proj, obj_pos);

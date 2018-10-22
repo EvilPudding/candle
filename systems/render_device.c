@@ -2,7 +2,6 @@
 #include <components/camera.h>
 #include <components/model.h>
 #include <components/spacial.h>
-#include <components/probe.h>
 #include <components/light.h>
 #include <components/ambient.h>
 #include <components/node.h>
@@ -40,10 +39,9 @@ void c_render_device_update_lights(c_render_device_t *self)
 		struct gl_light *gllight = &self->scene.lights[light->id];
 		gllight->color = light->color;
 		gllight->radius = light->radius;
-		c_probe_t *probe = c_probe(light);
-		if(probe && probe->map)
+		if(light->renderer)
 		{
-			gllight->shadow_map = texture_handle(probe->map, 1);
+			gllight->shadow_map = texture_handle(light->renderer->output, 1);
 		}
 	}
 }

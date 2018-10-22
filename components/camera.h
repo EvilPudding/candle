@@ -8,17 +8,10 @@
 typedef struct
 {
 	c_t super; /* extends c_t */
-
-	mat4_t projection_matrix;
-	mat4_t model_matrix;
-	mat4_t view_matrix;
-	vec3_t pos;
 	int view_cached;
-	float near, far, fov;
 	float exposure;
 	int width;
 	int height;
-	int id;
 	renderer_t *renderer;
 } c_camera_t;
 

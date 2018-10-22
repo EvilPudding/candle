@@ -502,6 +502,11 @@ static inline void update_buffer(uint32_t *vbo, void *arr, int32_t dim,
 
 static void draw_conf_remove_instance(draw_conf_t *self, int32_t id)
 {
+	if(self->inst_num == 0)
+	{
+		printf("??\n");
+		return;
+	}
 	SDL_SemWait(self->semaphore);
 	int32_t i = --self->inst_num;
 

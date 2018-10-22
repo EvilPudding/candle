@@ -1,7 +1,6 @@
 #include "shader.h"
 #include <candle.h>
 #include "components/light.h"
-#include "components/probe.h"
 #include "components/spacial.h"
 #include "components/node.h"
 #include <stdio.h>
@@ -154,7 +153,7 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"out vec2 poly_id;\n"
 			"out vec3 poly_color;\n"
 			"out flat vec3 obj_pos;\n"
-			"out flat vec3 vertex_position;\n"
+			"out vec3 vertex_position;\n"
 			"\n"
 			"out vec2 texcoord;\n"
 			"\n"

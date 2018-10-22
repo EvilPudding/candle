@@ -103,7 +103,6 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 
 		vec3_t old_pos = sc->pos;
 
-		c_camera_update_view(cam);
 		vec3_t pos = c_camera_real_pos(cam, edit->mouse_screen_pos.z, vec2(px, py));
 
 		vec3_t new_pos = vec3_add(self->pan_diff, pos);
@@ -114,7 +113,6 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 		self->pan_diff = vec3_sub(self->pan_diff, diff);
 
 
-		c_camera_update_view(cam);
 		new_pos = vec3_add(self->pan_diff, edit->mouse_position);
 		c_spacial_set_pos(sc, new_pos);
 

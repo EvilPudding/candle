@@ -16,7 +16,7 @@ void main()
 	vec4 dif = texelFetch(gbuffer.albedo, fc, 0);
 
 	vec3 c_pos = get_position(gbuffer.depth);
-	vec3 w_pos = (model * vec4(c_pos, 1.0f)).xyz;
+	vec3 w_pos = (camera(model) * vec4(c_pos, 1.0f)).xyz;
 
 	/* vec3 c_pos2 = get_position2(gbuffer); */
 
@@ -40,6 +40,7 @@ void main()
 
 		vec3 c_light_dir = c_light - c_pos;
 		vec3 w_light_dir = obj_pos - w_pos;
+		/* FragColor = vec4(w_light_dir / 5.0f, 1.0f); return; */
 
 		float point_to_light = length(c_light_dir);
 		/* FragColor = vec4(texture(shadow_map, -vec).rgb, 1.0f); return; */
@@ -47,10 +48,10 @@ void main()
 		/* FragColor = vec4(vec3(nor) * 0.5 + 0.5, 1.0); return; */
 
 		/* FragColor = vec4(w_light_dir, 1.0f); return; */
-		float sd = get_shadow(w_light_dir, point_to_light,
-				dist_to_eye);
-		sd = 0;
-		/* FragColor = vec4(vec3(texture(light(shadow_map), -w_light_dir).a)/100.0f, 1.0); return; */
+		float sd = get_shadow(w_light_dir, point_to_light, dist_to_eye);
+		/* FragColor = vec4(vec3(texture(light(shadow_map), vec3(c_pos)).a) / 10.0f, 1.0f); return; */
+		/* FragColor = vec4(vec3(lookup_single(-w_light_dir)) / 10.0f, 1.0f); return; */
+
 
 		if(sd < 0.95)
 		{

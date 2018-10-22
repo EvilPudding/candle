@@ -6,17 +6,19 @@
 #include <utils/texture.h>
 #include <utils/material.h>
 #include <utils/drawable.h>
+#include <utils/renderer.h>
 
 typedef struct
 {
 	c_t super;
 
 	vec4_t color;
-	float shadow_size;
+	int shadow_size;
 	float radius;
 
 	int id;
 	drawable_t draw;
+	renderer_t *renderer;
 } c_light_t;
 
 DEF_CASTER("light", c_light, c_light_t)

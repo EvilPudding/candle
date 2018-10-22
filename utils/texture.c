@@ -34,7 +34,7 @@ GLenum attachments[16] = {
 };
 
 #define ID_2D 31
-#define ID_CUBE 32
+#define ID_CUBE 64
 #define ID_3D 33
 static void texture_update_gl_loader(texture_t *self)
 {
@@ -580,8 +580,10 @@ static int texture_2D_frame_buffer(texture_t *self)
 int texture_target_sub(texture_t *self, int width, int height,
 		texture_t *depth, int fb) 
 {
-	if(!self->bufs[self->depth_buffer /* this is the color buffer 0 */ ].id)
+	if(!self->bufs[self->depth_buffer].id)
 	{
+		/* This condition is testing if there is a color buffer */
+		/* it's misleading and should be changed */
 		return 0;
 	}
 	if(!self->framebuffer_ready)
@@ -721,7 +723,6 @@ static int texture_cubemap_frame_buffer(texture_t *self)
 {
 	int f;
 	glActiveTexture(GL_TEXTURE0 + ID_CUBE);
-	/* glBindTexture(self->target, self->texId[0]); */
 
 	if(!self->frame_buffer[0])
 	{
@@ -831,8 +832,8 @@ texture_t *texture_cubemap
 	self->width = width;
 	self->height = height;
 	self->depth_buffer = depth_buffer;
-	self->draw_id = 0;
-	self->prev_id = 0;
+	self->draw_id = 1;
+	self->prev_id = 1;
 	self->mipmaped = 0;
 
 	self->bufs[0].dims = -1;
@@ -841,7 +842,7 @@ texture_t *texture_cubemap
 	self->bufs[1].name = strdup("color");
 	self->bufs_size = 2;
 
-	loader_push(g_candle->loader, (loader_cb)texture_cubemap_loader, self, NULL);
+	loader_push_wait(g_candle->loader, (loader_cb)texture_cubemap_loader, self, NULL);
 
 	return self;
 }

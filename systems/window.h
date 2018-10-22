@@ -39,4 +39,6 @@ void c_window_toggle_fullscreen(c_window_t *self);
 
 c_window_t *c_window_new(int width, int height);
 
+void c_window_lock_fps(c_window_t *self, int32_t lock_fps);
+
 #endif /* !WINDOW_H */
