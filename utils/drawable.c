@@ -450,48 +450,29 @@ static void bind_buffer(uint32_t *vbo, int32_t id, uint32_t type, int32_t dim,
 {
 	glBindBuffer(GL_ARRAY_BUFFER, *vbo); glerr();
 
-	// Because OpenGL doesn't support attributes with more than 4
-	// elements, each set of 4 elements gets its own attribute.
-	uint32_t elementSizeDiv = dim / 4;
-	uint32_t remaining = dim % 4;
-	uint32_t j;
-	for(j = 0; j < elementSizeDiv; j++) {
+	int32_t j = 0;
+	while(j < dim)
+	{
+		int step = (dim - j < 4) ? dim - j : 4;
+
+		const void *offset = (const void*)(sizeof(GLfloat) * j);
+		uint64_t size = dim * sizeof(GLfloat);
+
 		glEnableVertexAttribArray(id); glerr();
 
 		if(type == GL_FLOAT)
 		{
-			glVertexAttribPointer(id, 4, type, GL_FALSE,
-					dim * sizeof(GLfloat),
-					(const GLvoid*)(sizeof(GLfloat) * j * 4));
+			glVertexAttribPointer(id, step, type, GL_FALSE, size, offset);
 		}
 		else
 		{
-			glVertexAttribIPointer(id, 4, type,
-					dim * sizeof(GLfloat),
-					(const GLvoid*)(sizeof(GLfloat) * j * 4));
+			glVertexAttribIPointer(id, step, type, size, offset);
 		}
 
 		glVertexAttribDivisor(id, instanced_divisor); glerr();
-		id++;
-	}
-	if(remaining > 0)
-	{
-		glEnableVertexAttribArray(id);
-		if(type == GL_FLOAT)
-		{
-			glVertexAttribPointer(id, remaining, type, GL_FALSE,
-					remaining * sizeof(GLfloat),
-					(const GLvoid*)(sizeof(GLfloat) * elementSizeDiv * 4));
-		}
-		else
-		{
-			glVertexAttribIPointer(id, remaining, type,
-					remaining * sizeof(GLfloat),
-					(const GLvoid*)(sizeof(GLfloat) * elementSizeDiv * 4));
-		}
 
-		glVertexAttribDivisor(id, instanced_divisor); glerr();
 		id++;
+		j += step;
 	}
 }
 
