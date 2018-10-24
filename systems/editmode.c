@@ -147,50 +147,14 @@ c_editmode_t *c_editmode_new()
 	return self;
 }
 
-void c_editmode_activate(c_editmode_t *self)
+static renderer_t *editmode_renderer_new(c_editmode_t *self)
 {
-	c_editmode_open_entity(self, c_entity(self));
-
-	self->activated = 1;
-	self->control = 1;
-
-	self->backup_renderer = c_window(self)->renderer;
-
-	if(!entity_exists(self->camera))
-	{
-		self->camera = entity_new(
-			c_name_new("Edit Camera"), c_editlook_new(), c_node_new(),
-			c_camera_new(70, 0.1, 100.0, 0, 1, 1, renderer_new(0.66f))
-		);
-		renderer_default_pipeline(c_camera(&self->camera)->renderer);
-		c_spacial_t *sc = c_spacial(&self->camera);
-		c_spacial_lock(sc);
-		c_spacial_set_pos(sc, vec3(4, 1.5, 0));
-		c_spacial_rotate_Y(sc, M_PI / 2);
-		c_spacial_rotate_X(sc, -M_PI * 0.05);
-		c_spacial_unlock(sc);
-	}
-
-	c_camera_assign(c_camera(&self->camera));
-
-	loader_push_wait(g_candle->loader, (loader_cb)c_editmode_activate_loader,
-			NULL, (c_t*)self);
-
-}
-
-static int c_editmode_activate_loader(c_editmode_t *self)
-{
-	self->nk = nk_can_init(c_window(self)->window); 
-	struct nk_font_atlas *atlas; 
-	nk_can_font_stash_begin(&atlas); 
-	nk_can_font_stash_end(); 
-
-	renderer_t *renderer = c_camera(&self->camera)->renderer;
+	renderer_t *renderer = renderer_new(0.66f);
+	renderer_default_pipeline(renderer);
 
 	texture_t *tmp = texture_new_2D(0, 0, TEX_INTERPOLATE,
 		buffer_new("color",	1, 4));
 	renderer_add_tex(renderer, "tmp", 1.0f, tmp);
-	renderer->ready = 0;
 
 	renderer_add_pass(renderer, "highlights", "highlight", sig("quad"),
 			MUL, renderer_tex(renderer, ref("final")), NULL,
@@ -242,7 +206,49 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 			{NONE}
 		}
 	);
-	renderer_toggle_pass(c_camera(&self->camera)->renderer, ref("tool"), 0);
+	renderer_toggle_pass(renderer, ref("tool"), 0);
+
+	renderer->ready = 0;
+
+	return renderer;
+}
+
+void c_editmode_activate(c_editmode_t *self)
+{
+	c_editmode_open_entity(self, c_entity(self));
+
+	self->activated = 1;
+	self->control = 1;
+
+	self->backup_renderer = c_window(self)->renderer;
+
+	if(!entity_exists(self->camera))
+	{
+		self->camera = entity_new(
+			c_name_new("Edit Camera"), c_editlook_new(), c_node_new(),
+			c_camera_new(70, 0.1, 100.0, 0, 1, 1, editmode_renderer_new(self))
+		);
+		c_spacial_t *sc = c_spacial(&self->camera);
+		c_spacial_lock(sc);
+		c_spacial_set_pos(sc, vec3(4, 1.5, 0));
+		c_spacial_rotate_Y(sc, M_PI / 2);
+		c_spacial_rotate_X(sc, -M_PI * 0.05);
+		c_spacial_unlock(sc);
+	}
+
+	c_camera_assign(c_camera(&self->camera));
+
+	loader_push_wait(g_candle->loader, (loader_cb)c_editmode_activate_loader,
+			NULL, (c_t*)self);
+
+}
+
+static int c_editmode_activate_loader(c_editmode_t *self)
+{
+	self->nk = nk_can_init(c_window(self)->window); 
+	struct nk_font_atlas *atlas; 
+	nk_can_font_stash_begin(&atlas); 
+	nk_can_font_stash_end(); 
 
 	return CONTINUE;
 }

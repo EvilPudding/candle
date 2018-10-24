@@ -274,15 +274,6 @@ void renderer_default_pipeline(renderer_t *self)
 		}
 	);
 
-	renderer_add_pass(self, "gbuffer", "gbuffer", ref("visible"), 0, gbuffer,
-			gbuffer,
-		(bind_t[]){
-			{CLEAR_DEPTH, .number = 1.0f},
-			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
-			{NONE}
-		}
-	);
-
 	renderer_add_pass(self, "selectable", "select", ref("selectable"),
 			0, selectable, selectable,
 		(bind_t[]){
@@ -746,7 +737,7 @@ void renderer_add_pass(
 	}
 	else
 	{
-		printf("Replacing\n");
+		printf("Replacing %s\n", name);
 	}
 
 	pass_t *pass = &self->passes[i];
