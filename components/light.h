@@ -13,19 +13,21 @@ typedef struct
 	c_t super;
 
 	vec4_t color;
-	int shadow_size;
+	uint32_t shadow_size;
 	float radius;
 
-	int id;
+	uint32_t id;
 	drawable_t draw;
 	renderer_t *renderer;
-	int visible;
+	uint32_t visible;
+	uint32_t ambient_group;
+	uint32_t light_group;
 } c_light_t;
 
 DEF_CASTER("light", c_light, c_light_t)
 
-c_light_t *c_light_new(float radius, vec4_t color, int shadow_size);
+c_light_t *c_light_new(float radius, vec4_t color, uint32_t shadow_size);
 void c_light_destroy(c_light_t *self);
-void c_light_visible(c_light_t *self, int visible);
+void c_light_visible(c_light_t *self, uint32_t visible);
 
 #endif /* !LIGHT_H */

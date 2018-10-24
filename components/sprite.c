@@ -26,7 +26,7 @@ vs_t *sprite_vs()
 			"		mat4 MV = camera(view) * M;\n"
 			"		pos = (camera(projection) * MV) * vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
 			"		vertex_position = pos.xyz;\n"
-			"		vec2 size = vec2(P.x * (pass(screen_size).y / pass(screen_size).x), P.y);\n"
+			"		vec2 size = vec2(P.x * (screen_size.y / screen_size.x), P.y);\n"
 			"		pos = vec4(pos.xy + 0.5 * size, pos.z, pos.w);\n"
 
 			"		vec3 vertex_normal    = (vec4( N, 0.0f)).xyz;\n"

@@ -17,8 +17,7 @@ static int g_lights_num;
 
 static int c_light_position_changed(c_light_t *self);
 
-c_light_t *c_light_new(float radius,
-		vec4_t color, int shadow_size)
+c_light_t *c_light_new(float radius, vec4_t color, uint32_t shadow_size)
 {
 	c_light_t *self = component_new("light");
 
@@ -35,6 +34,9 @@ void c_light_init(c_light_t *self)
 	self->shadow_size = 512;
 	self->radius = 5.0f;
 	self->visible = 1;
+
+	self->ambient_group = ref("ambient");
+	self->light_group = ref("light");
 
 	if(!g_light)
 	{
@@ -53,7 +55,7 @@ void c_light_init(c_light_t *self)
 	}
 	self->id = g_lights_num++;
 
-	drawable_init(&self->draw, ref("light"), NULL);
+	drawable_init(&self->draw, 0, NULL);
 	drawable_set_vs(&self->draw, g_model_vs);
 	drawable_set_mesh(&self->draw, g_light);
 	drawable_set_mat(&self->draw, self->id);
@@ -86,7 +88,7 @@ static void c_light_create_renderer(c_light_t *self)
 	self->renderer = renderer;
 }
 
-void c_light_visible(c_light_t *self, int visible)
+void c_light_visible(c_light_t *self, uint32_t visible)
 {
 	self->visible = visible;
 	drawable_set_mesh(&self->draw, visible ? g_light : NULL);
@@ -96,7 +98,7 @@ static int c_light_position_changed(c_light_t *self)
 {
 	if(self->radius == -1)
 	{
-		drawable_set_group(&self->draw, ref("ambient"));
+		drawable_set_group(&self->draw, self->ambient_group);
 		drawable_set_vs(&self->draw, g_quad_vs);
 		if(self->visible)
 		{
@@ -105,7 +107,7 @@ static int c_light_position_changed(c_light_t *self)
 	}
 	else
 	{
-		drawable_set_group(&self->draw, ref("light"));
+		drawable_set_group(&self->draw, self->light_group);
 		drawable_set_vs(&self->draw, g_model_vs);
 		if(self->visible)
 		{
