@@ -873,13 +873,16 @@ static inline vec4_t quat_scale(vec4_t v, n_t s)
 		r._[i] = v._[i] * s;
 	return r;
 }
-static inline n_t quat_inner_product(vec4_t a, vec4_t b)
+static inline vec4_t quat_invert(vec4_t a)
 {
-	n_t p = 0.f;
-	int i;
-	for(i=0; i<4; ++i)
-		p += b._[i]*a._[i];
-	return p;
+	float len = vec4_len_square(a);
+	if (len != 0.0)
+	{
+		float i = 1.0f / len;
+		vec3_t xyz = vec3_scale(a.xyz, -i);
+		return vec4(xyz.x, xyz.y, xyz.z, a.w * i);
+	}
+	return a;
 }
 static inline vec4_t quat_conj(vec4_t q)
 {

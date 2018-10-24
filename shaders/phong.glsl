@@ -14,6 +14,7 @@ void main()
 {
 	ivec2 fc = ivec2(gl_FragCoord.xy);
 	vec4 dif = texelFetch(gbuffer.albedo, fc, 0);
+	if(dif.a == 0) discard;
 
 	vec3 c_pos = get_position(gbuffer.depth);
 	vec3 w_pos = (camera(model) * vec4(c_pos, 1.0f)).xyz;
@@ -51,6 +52,7 @@ void main()
 		float sd = get_shadow(w_light_dir, point_to_light, dist_to_eye);
 		/* FragColor = vec4(vec3(texture(light(shadow_map), vec3(c_pos)).a) / 10.0f, 1.0f); return; */
 		/* FragColor = vec4(vec3(lookup_single(-w_light_dir)) / 10.0f, 1.0f); return; */
+		/* sd = 0; */
 
 
 		if(sd < 0.95)

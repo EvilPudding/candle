@@ -172,7 +172,7 @@ void c_window_draw(c_window_t *self)
 {
 	if(!self->renderer) return;
 
-	renderer_draw(self->renderer);
+	/* renderer_draw(self->renderer); */
 
 	texture_t *tex = self->renderer->output;
 
@@ -242,7 +242,7 @@ REG()
 	ct_t *ct = ct_new("window", sizeof(c_window_t), c_window_init, NULL, 0);
 
 	ct_listener(ct, ENTITY, sig("entity_created"), c_window_created);
-	ct_listener(ct, WORLD | 100, sig("world_draw"), c_window_draw);
+	ct_listener(ct, WORLD | 50, sig("world_draw"), c_window_draw);
 	ct_listener(ct, WORLD | 100, ref("mouse_press"), c_window_mouse_press);
 	ct_listener(ct, WORLD | 100, ref("mouse_release"), c_window_mouse_release);
 

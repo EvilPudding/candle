@@ -188,7 +188,6 @@ void drawable_add_group(drawable_t *self, uint32_t group)
 	self->grp[gid].grp = group;
 	self->grp[gid].instance_id = 0;
 	self->grp[gid].conf = NULL;
-	self->grp[gid].box = -1;
 	self->grp[gid].updates = 0;
 	self->grp_num++;
 	drawable_model_changed(self);
@@ -198,6 +197,8 @@ void drawable_set_group(drawable_t *self, uint32_t group)
 {
 	uint32_t gid = 0;
 	if(group == 0) return;
+
+	if(self->grp[gid].grp == group) return;
 
 	if(self->grp[gid].conf)
 	{
@@ -215,7 +216,6 @@ void drawable_set_group(drawable_t *self, uint32_t group)
 	self->grp[gid].grp = group;
 	self->grp[gid].instance_id = 0;
 	self->grp[gid].conf = NULL;
-	self->grp[gid].box = -1;
 	self->grp[gid].updates = 0;
 
 	drawable_model_changed(self);
@@ -231,25 +231,28 @@ void drawable_set_mesh(drawable_t *self, mesh_t *mesh)
 		if(mesh)
 		{
 			mesh->ref_num++;
-		}
-		if(!previous)
-		{
-			for(uint32_t gid = 0; gid < self->grp_num; gid++)
+			if(!previous)
 			{
-				drawable_position_changed(self, &self->grp[gid]);
+				for(uint32_t gid = 0; gid < self->grp_num; gid++)
+				{
+					drawable_position_changed(self, &self->grp[gid]);
+				}
 			}
-		}
-		else
-		{
-			mesh_destroy(previous);
+			else
+			{
+				mesh_destroy(previous);
+			}
 		}
 	}
 }
 
 void drawable_set_vs(drawable_t *self, vs_t *vs)
 {
-	self->vs = vs;
-	drawable_model_changed(self);
+	if(self->vs != vs)
+	{
+		self->vs = vs;
+		drawable_model_changed(self);
+	}
 }
 
 void drawable_set_xray(drawable_t *self, int32_t xray)
@@ -305,6 +308,9 @@ static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
 	SDL_SemWait(self->semaphore);
 
 	int32_t i = self->inst_num++;
+	/* if(draw->grp[gid].grp == ref("light")) */
+		/* printf("adding		%d\n", self->inst_num); */
+
 	draw_conf_inst_grow(self);
 
 	self->props[i].x = draw->mat;
@@ -504,24 +510,29 @@ static void draw_conf_remove_instance(draw_conf_t *self, int32_t id)
 {
 	if(self->inst_num == 0)
 	{
-		printf("??\n");
+		puts("??");
 		return;
 	}
 	SDL_SemWait(self->semaphore);
 	int32_t i = --self->inst_num;
+	/* if(self->comps[id]->grp == ref("light")) */
+		/* printf("removing	%d\n", self->inst_num); */
 
-	self->inst[id] = self->inst[i];
-	self->props[id] = self->props[i];
+	if(self->inst_num && id != i)
+	{
+		self->inst[id] = self->inst[i];
+		self->props[id] = self->props[i];
 #ifdef MESH4
-	self->angle4[id] = self->angle4[i];
+		self->angle4[id] = self->angle4[i];
 #endif
-	self->comps[id] = self->comps[i];
+		self->comps[id] = self->comps[i];
 
-	self->comps[id]->instance_id = id;
+		self->comps[id]->instance_id = id;
 
-	self->comps[id]->updates = MASK_TRANS | MASK_PROPS;
-	self->trans_updates++;
-	self->props_updates++;
+		self->comps[id]->updates = MASK_TRANS | MASK_PROPS;
+		self->trans_updates++;
+		self->props_updates++;
+	}
 
 	SDL_SemPost(self->semaphore);
 }
@@ -603,7 +614,6 @@ void drawable_model_changed(drawable_t *self)
 	for(gid = 0; gid < self->grp_num; gid++)
 	{
 		struct draw_grp *grp = &self->grp[gid];
-		grp->box = -1;
 		draw_conf_t *conf = drawable_get_conf(self, gid);
 
 		/* NON BUFFEREABLE INSTANCE PROPERTIES */

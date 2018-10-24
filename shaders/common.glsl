@@ -68,7 +68,7 @@ float lookup(vec3 coord)
 {
 	float dist = length(coord);
 	float dist2 = lookup_single(coord) - dist;
-	return (dist2 > -0.05) ? 1.0 : 0.0;
+	return (dist2 > -0.1) ? 1.0 : 0.0;
 }
 
 /* SPHEREMAP TRANSFORM */

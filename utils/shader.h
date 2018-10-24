@@ -14,7 +14,7 @@ typedef struct
 {
 	char *name;
 	int index;
-	vertex_modifier_t modifiers[16];
+	vertex_modifier_t modifiers[32];
 	int modifier_num;
 	GLuint program;
 	int ready;
@@ -26,7 +26,7 @@ typedef struct
 	char *code;
 	GLuint program;
 
-	shader_t *combinations[16];
+	shader_t *combinations[32];
 
 	char *filename;
 	int ready;
@@ -74,7 +74,7 @@ void shader_add_source(const char *name, unsigned char data[],
 void shaders_reg(void);
 
 /* TODO this should not be shared */
-extern vs_t g_vs[16];
-extern fs_t g_fs[16];
+extern vs_t g_vs[32];
+extern fs_t g_fs[32];
 
 #endif /* !SHADER_H */

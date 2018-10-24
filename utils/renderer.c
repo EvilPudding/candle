@@ -8,7 +8,7 @@
 #include <components/name.h>
 #include <systems/window.h>
 #include <systems/render_device.h>
-/* #include <systems/editmode.h> */
+#include <systems/editmode.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -131,11 +131,20 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			{
 				bind->vec3 = ((vec3_getter)bind->getter)(bind->usrptr);
 			}
-			glUniform3f(sb->vec3.u, bind->vec3.r, bind->vec3.g, bind->vec3.b);
+			glUniform3f(sb->vec3.u, _vec3(bind->vec3));
 			glerr();
 			break;
+		case VEC4:
+			if(bind->getter)
+			{
+				bind->vec4 = ((vec4_getter)bind->getter)(bind->usrptr);
+			}
+			glUniform4f(sb->vec4.u, _vec4(bind->vec4));
+			glerr();
+			break;
+		default:
+			printf("error\n");
 		}
-
 	}
 
 	/* ct_t *ambients = ecm_get(ct_ambient); */
@@ -180,12 +189,12 @@ void renderer_add_tex(renderer_t *self, const char *name,
 	strncpy(buffer->name, name, sizeof(buffer->name));
 }
 
-void renderer_set_model(renderer_t *self, mat4_t *model)
+void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model)
 {
 	vec3_t pos = mat4_mul_vec4(*model, vec4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
-	self->glvars[0].pos = pos;
-	self->glvars[0].model = *model;
-	self->glvars[0].inv_model = mat4_invert(*model);
+	self->glvars[camid].pos = pos;
+	self->glvars[camid].model = *model;
+	self->glvars[camid].inv_model = mat4_invert(*model);
 
 	if(self->output && self->output->target == GL_TEXTURE_CUBE_MAP)
 	{
@@ -211,39 +220,35 @@ void renderer_set_model(renderer_t *self, mat4_t *model)
 
 void renderer_default_pipeline(renderer_t *self)
 {
-	int W = self->width * self->resolution;
-	int H = self->height * self->resolution;
-
-
-	texture_t *gbuffer =	texture_new_2D(W, H, 0, 0,
+	texture_t *gbuffer =	texture_new_2D(0, 0, 0, 0,
 		buffer_new("nmr",		1, 4),
 		buffer_new("albedo",	1, 4),
 		buffer_new("depth",		1, -1)
 	);
 
-	texture_t *ssao =		texture_new_2D(W, H, 0,
+	texture_t *ssao =		texture_new_2D(0, 0, 0,
 		buffer_new("occlusion",	1, 1)
 	);
-	texture_t *rendered =	texture_new_2D(W, H, 0,
+	texture_t *rendered =	texture_new_2D(0, 0, 0,
 		buffer_new("color",	1, 4)
 	);
-	texture_t *refr =		texture_new_2D(W, H, TEX_MIPMAP,
+	texture_t *refr =		texture_new_2D(0, 0, TEX_MIPMAP,
 		buffer_new("color",	1, 4)
 	);
-	texture_t *final =		texture_new_2D(W, H, TEX_INTERPOLATE,
+	texture_t *final =		texture_new_2D(0, 0, TEX_INTERPOLATE,
 		buffer_new("color",	1, 4)
 	);
 	final->track_brightness = 1;
-	/* texture_t *bloom =		texture_new_2D(W, H, TEX_INTERPOLATE, */
+	/* texture_t *bloom =		texture_new_2D(0, 0, TEX_INTERPOLATE, */
 		/* buffer_new("color",	1, 4) */
 	/* ); */
-	/* texture_t *bloom2 =		texture_new_2D(W, H, TEX_INTERPOLATE, */
+	/* texture_t *bloom2 =		texture_new_2D(0, 0, TEX_INTERPOLATE, */
 		/* buffer_new("color",	1, 4) */
 	/* ); */
-	texture_t *tmp =		texture_new_2D(W, H, TEX_INTERPOLATE,
+	texture_t *tmp =		texture_new_2D(0, 0, TEX_INTERPOLATE,
 		buffer_new("color",	1, 4)
 	);
-	texture_t *selectable =	texture_new_2D(W, H, 0,
+	texture_t *selectable =	texture_new_2D(0, 0, 0,
 		buffer_new("geomid",	1, 2),
 		buffer_new("id",		1, 2),
 		buffer_new("depth",		1, -1)
@@ -256,17 +261,35 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_tex(self, "final",			1.0f, final);
 	renderer_add_tex(self, "selectable",	1.0f, selectable);
 	renderer_add_tex(self, "tmp",			1.0f, tmp);
+
 	/* renderer_add_tex(self, "bloom",		0.3f, bloom); */
 	/* renderer_add_tex(self, "bloom2",		0.3f, bloom2); */
 
-	renderer_add_pass(self, "gbuffer", "gbuffer", ref("visible"),
-			CLEAR_DEPTH | CLEAR_COLOR, gbuffer, gbuffer,
-		(bind_t[]){ {NONE} }
+	renderer_add_pass(self, "gbuffer", "gbuffer", ref("visible"), 0, gbuffer,
+			gbuffer,
+		(bind_t[]){
+			{CLEAR_DEPTH, .number = 1.0f},
+			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{NONE}
+		}
+	);
+
+	renderer_add_pass(self, "gbuffer", "gbuffer", ref("visible"), 0, gbuffer,
+			gbuffer,
+		(bind_t[]){
+			{CLEAR_DEPTH, .number = 1.0f},
+			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{NONE}
+		}
 	);
 
 	renderer_add_pass(self, "selectable", "select", ref("selectable"),
-			CLEAR_DEPTH | CLEAR_COLOR, selectable, selectable,
-		(bind_t[]){ {NONE} }
+			0, selectable, selectable,
+		(bind_t[]){
+			{CLEAR_DEPTH, .number = 1.0f},
+			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{NONE}
+		}
 	);
 
 	/* DECAL PASS */
@@ -289,16 +312,16 @@ void renderer_default_pipeline(renderer_t *self)
 
 
 	renderer_add_pass(self, "ambient_light_pass", "phong", ref("ambient"),
-			ADD | CLEAR_COLOR , rendered, NULL,
+			ADD, rendered, NULL,
 		(bind_t[]){
+			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{TEX, "gbuffer", .buffer = gbuffer},
 			{NONE}
 		}
 	);
 
 	renderer_add_pass(self, "render_pass", "phong", ref("light"),
-			DEPTH_LOCK | ADD | 
-			DEPTH_EQUAL | DEPTH_GREATER, rendered, gbuffer,
+			DEPTH_LOCK | ADD | DEPTH_EQUAL | DEPTH_GREATER, rendered, gbuffer,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
 			{NONE}
@@ -327,9 +350,9 @@ void renderer_default_pipeline(renderer_t *self)
 
 
 	/* renderer_tex(self, ref(rendered))->mipmaped = 1; */
-	renderer_add_pass(self, "final", "ssr", ref("quad"), CLEAR_COLOR,
-			final, NULL,
+	renderer_add_pass(self, "final", "ssr", ref("quad"), 0, final, NULL,
 		(bind_t[]){
+			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{TEX, "gbuffer", .buffer = gbuffer},
 			{TEX, "rendered", .buffer = rendered},
 			{TEX, "ssao", .buffer = ssao},
@@ -382,19 +405,16 @@ void renderer_update_projection(renderer_t *self)
 	self->glvars[0].projection = mat4_perspective(
 			self->fov,
 			((float)self->width) / self->height,
-			/* ((float)event->width / 2) / event->height, */
 			self->near, self->far
 	);
 	self->glvars[0].inv_projection = mat4_invert(self->glvars[0].projection); 
-	if(self->output && self->output->target == GL_TEXTURE_CUBE_MAP)
+
+	uint32_t f;
+	for(f = 1; f < 6; f++)
 	{
-		uint32_t f;
-		for(f = 1; f < 6; f++)
-		{
-			self->glvars[f].projection = self->glvars[0].projection;
-			self->glvars[f].inv_projection = self->glvars[0].inv_projection;
-			self->glvars[f].pos = self->glvars[0].pos;
-		}
+		self->glvars[f].projection = self->glvars[0].projection;
+		self->glvars[f].inv_projection = self->glvars[0].inv_projection;
+		self->glvars[f].pos = self->glvars[0].pos;
 	}
 }
 
@@ -485,17 +505,33 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_DST_COLOR, GL_ZERO);
 	}
-	glEnable(GL_CULL_FACE); glerr();
+	if(pass->cull)
+	{
+		glEnable(GL_CULL_FACE); glerr();
+	}
+	else
+	{
+		glDisable(GL_CULL_FACE); glerr();
+	}
+	if(pass->depth)
+	{
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(pass->depth_func);
+	}
+	else
+	{
+		glDisable(GL_DEPTH_TEST); glerr();
+	}
 
 	glDepthMask(pass->depth_update); glerr();
 
-	if(pass->depth)
-	{
-		glDepthFunc(pass->depth_func);
-		glEnable(GL_DEPTH_TEST);
-	}
-
 	texture_t *depth = pass->depth ? pass->depth : self->fallback_depth;
+
+	if(pass->clear)
+	{
+		glClearColor(_vec4(pass->clear_color));
+		glClearDepth(pass->clear_depth);
+	}
 
 	if(pass->output->target == GL_TEXTURE_CUBE_MAP)
 	{
@@ -518,6 +554,15 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 	}
 	else
 	{
+		if(pass->camid != self->camera_bound)
+		{
+			glBindBuffer(GL_UNIFORM_BUFFER, self->ubo); glerr();
+			void *p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+			memcpy(p, &self->glvars[pass->camid],
+					sizeof(self->glvars[pass->camid]));
+			glUnmapBuffer(GL_UNIFORM_BUFFER); glerr();
+			self->camera_bound = pass->camid;
+		}
 		texture_target(pass->output, depth, 0);
 
 		if(pass->clear) glClear(pass->clear);
@@ -582,6 +627,9 @@ renderer_t *renderer_new(float resolution)
 {
 	renderer_t *self = calloc(1, sizeof(*self));
 
+	self->near = 0.1f;
+	self->far = 100.0f;
+
 	self->fallback_depth =	texture_new_2D(1, 1, 0, 0,
 		buffer_new("depth",	1, -1)
 	);
@@ -622,37 +670,37 @@ entity_t renderer_entity_at_pixel(renderer_t *self, int x, int y,
 }
 
 
-/* int renderer_component_menu(renderer_t *self, void *ctx) */
-/* { */
-/* 	nk_layout_row_dynamic(ctx, 0, 1); */
-/* 	int i; */
-/* 	if(nk_button_label(ctx, "Fullscreen")) */
-/* 	{ */
-/* 		c_window_toggle_fullscreen(c_window(self)); */
-/* 	} */
+int renderer_component_menu(renderer_t *self, void *ctx)
+{
+	nk_layout_row_dynamic(ctx, 0, 1);
+	int i;
+	if(nk_button_label(ctx, "Fullscreen"))
+	{
+		c_window_toggle_fullscreen(c_window(&SYS));
+	}
 
-/* 	char fps[12]; sprintf(fps, "%d", g_candle->fps); */
-/* 	nk_layout_row_begin(ctx, NK_DYNAMIC, 30, 2); */
-/* 		nk_layout_row_push(ctx, 0.35); */
-/* 		nk_label(ctx, "FPS: ", NK_TEXT_LEFT); */
-/* 		nk_layout_row_push(ctx, 0.65); */
-/* 		nk_label(ctx, fps, NK_TEXT_RIGHT); */
-/* 	nk_layout_row_end(ctx); */
-/* 	nk_layout_row_dynamic(ctx, 0, 1); */
+	char fps[12]; sprintf(fps, "%d", g_candle->fps);
+	nk_layout_row_begin(ctx, NK_DYNAMIC, 30, 2);
+		nk_layout_row_push(ctx, 0.35);
+		nk_label(ctx, "FPS: ", NK_TEXT_LEFT);
+		nk_layout_row_push(ctx, 0.65);
+		nk_label(ctx, fps, NK_TEXT_RIGHT);
+	nk_layout_row_end(ctx);
+	nk_layout_row_dynamic(ctx, 0, 1);
 
-/* 	for(i = 1; i < self->outputs_num; i++) */
-/* 	{ */
-/* 		pass_output_t *output = &self->outputs[i]; */
-/* 		if(output->buffer) */
-/* 		{ */
-/* 			if (nk_button_label(ctx, output->buffer->name)) */
-/* 			{ */
-/* 				c_editmode_open_texture(c_editmode(self), output->buffer); */
-/* 			} */
-/* 		} */
-/* 	} */
-/* 	return CONTINUE; */
-/* } */
+	for(i = 1; i < self->outputs_num; i++)
+	{
+		pass_output_t *output = &self->outputs[i];
+		if(output->buffer)
+		{
+			if (nk_button_label(ctx, output->buffer->name))
+			{
+				c_editmode_open_texture(c_editmode(&SYS), output->buffer);
+			}
+		}
+	}
+	return CONTINUE;
+}
 
 
 
@@ -687,6 +735,7 @@ void renderer_add_pass(
 		texture_t *depth,
 		bind_t binds[])
 {
+	if(!output) exit(1);
 	char buffer[32];
 	snprintf(buffer, sizeof(buffer), name, self->passes_size);
 	unsigned int hash = ref(buffer);
@@ -705,8 +754,6 @@ void renderer_add_pass(
 
 	strncpy(pass->shader_name, shader_name, sizeof(pass->shader_name));
 	pass->clear = 0;
-	if(flags & CLEAR_COLOR) pass->clear |= GL_COLOR_BUFFER_BIT;
-	if(flags & CLEAR_DEPTH) pass->clear |= GL_DEPTH_BUFFER_BIT;
 
 	pass->depth_update =	!(flags & DEPTH_LOCK);
 	pass->depth = NULL;
@@ -714,7 +761,11 @@ void renderer_add_pass(
 	pass->output = output;
 	pass->depth = depth;
 
-	if(!(flags & DEPTH_EQUAL))
+	if(flags & DEPTH_DISABLE)
+	{
+		pass->depth_func = GL_ALWAYS;
+	}
+	else if(!(flags & DEPTH_EQUAL))
 	{
 		if(flags & DEPTH_GREATER)
 		{
@@ -740,19 +791,42 @@ void renderer_add_pass(
 	pass->draw_signal = draw_signal;
 	pass->additive = flags & ADD;
 	pass->multiply = flags & MUL;
+	pass->cull = !(flags & CULL_DISABLE);
+	pass->clear_depth = 1.0f;
 	strncpy(pass->name, buffer, sizeof(pass->name));
 
-	for(pass->binds_size = 0; binds[pass->binds_size].type != NONE;
-			pass->binds_size++);
+	int bind_count;
+	for(bind_count = 0; binds[bind_count].type != NONE; bind_count++);
 
-	pass->binds = malloc(sizeof(bind_t) * pass->binds_size);
+	pass->binds = malloc(sizeof(bind_t) * bind_count);
 	int j;
-	for(i = 0; i < pass->binds_size; i++)
+	pass->binds_size = 0;
+	for(i = 0; i < bind_count; i++)
 	{
-		pass->binds[i] = binds[i];
+		if(binds[i].type == CAM)
+		{
+			pass->camid = binds[i].integer;
+			continue;
+		}
+		if(binds[i].type == CLEAR_COLOR)
+		{
+			pass->clear |= GL_COLOR_BUFFER_BIT;
+			pass->clear_color = binds[i].vec4;
+			continue;
+		}
+		if(binds[i].type == CLEAR_DEPTH)
+		{
+			pass->clear |= GL_DEPTH_BUFFER_BIT;
+			pass->clear_depth = binds[i].number;
+			continue;
+		}
+
+		bind_t *bind = &pass->binds[pass->binds_size++];
+		*bind = binds[i];
+
 		for(j = 0; j < 16; j++)
 		{
-			shader_bind_t *sb = &pass->binds[i].vs_uniforms[j];
+			shader_bind_t *sb = &bind->vs_uniforms[j];
 
 			sb->cached = 0;
 			int t;
@@ -760,9 +834,10 @@ void renderer_add_pass(
 			{
 				sb->buffer.u_tex[t] = -1;
 			}
-			pass->binds[i].hash = ref(pass->binds[i].name);
+			bind->hash = ref(bind->name);
 		}
 	}
+	pass->binds = realloc(pass->binds, sizeof(bind_t) * pass->binds_size);
 	self->ready = 0;
 	pass->active = 1;
 }
@@ -787,14 +862,6 @@ void renderer_update_ubo(renderer_t *self)
 				GL_DYNAMIC_DRAW); glerr();
 		glBindBufferBase(GL_UNIFORM_BUFFER, 19, self->ubo); glerr();
 	}
-	/* else if(self->scene_changes) */
-	else
-	{
-		glBindBuffer(GL_UNIFORM_BUFFER, self->ubo); glerr();
-		void *p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY); glerr();
-		memcpy(p, &self->glvars[0], sizeof(self->glvars[0]));
-		glUnmapBuffer(GL_UNIFORM_BUFFER); glerr();
-	}
 }
 
 int renderer_draw(renderer_t *self)
@@ -812,13 +879,14 @@ int renderer_draw(renderer_t *self)
 
 	renderer_update_ubo(self);
 
-	/* TODO ubo binding should only happen when camera changes */
 	glBindBufferBase(GL_UNIFORM_BUFFER, 19, self->ubo);
 
 	for(i = 0; i < self->passes_size; i++)
 	{
 		renderer_draw_pass(self, &self->passes[i]);
 	}
+	/* TODO ubo binding should only happen when camera changes */
+	self->camera_bound = -1;
 
 	c_render_device_rebind(c_render_device(&SYS), NULL, NULL);
 

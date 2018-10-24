@@ -10,7 +10,10 @@ BUFFER {
 
 void main()
 {
-    FragColor = texture(buf.color, pixel_pos(), 0);
+	vec4 tex = texture(buf.color, pixel_pos(), 0);
+	if(tex.a == 0) discard;
+
+	FragColor = tex;
 }
 
 // vim: set ft=c:

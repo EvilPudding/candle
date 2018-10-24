@@ -18,6 +18,7 @@ BUFFER {
 	sampler2D color;
 } rendered;
 
+
 void main()
 {
 	ivec2 fc = ivec2(gl_FragCoord.xy);
@@ -31,6 +32,8 @@ void main()
 			normal_metalic_roughness.ba, nor);
 
 	/* FragColor = ssred; return; */
+
+    /* FragColor = vec4(vec3(texelFetch(portal.depth, fc, 0).r), 1.0f); return; */
 
     cc.rgb *= texelFetch(ssao.occlusion, fc, 0).r;
 

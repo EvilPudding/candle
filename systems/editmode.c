@@ -160,7 +160,7 @@ void c_editmode_activate(c_editmode_t *self)
 	{
 		self->camera = entity_new(
 			c_name_new("Edit Camera"), c_editlook_new(), c_node_new(),
-			c_camera_new(70, 0.1, 100.0, renderer_new(0.66f))
+			c_camera_new(70, 0.1, 100.0, 0, 1, 1, renderer_new(0.66f))
 		);
 		renderer_default_pipeline(c_camera(&self->camera)->renderer);
 		c_spacial_t *sc = c_spacial(&self->camera);
@@ -186,6 +186,12 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 	nk_can_font_stash_end(); 
 
 	renderer_t *renderer = c_camera(&self->camera)->renderer;
+
+	texture_t *tmp = texture_new_2D(0, 0, TEX_INTERPOLATE,
+		buffer_new("color",	1, 4));
+	renderer_add_tex(renderer, "tmp", 1.0f, tmp);
+	renderer->ready = 0;
+
 	renderer_add_pass(renderer, "highlights", "highlight", sig("quad"),
 			MUL, renderer_tex(renderer, ref("final")), NULL,
 		(bind_t[]){
@@ -200,8 +206,9 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 	);
 
 	renderer_add_pass(renderer, "highlights_0", "border", sig("quad"),
-			CLEAR_COLOR, renderer_tex(renderer, ref("tmp")), NULL,
+			0, tmp, NULL,
 		(bind_t[]){
+			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
 			{INT, "mode", (getter_cb)c_editmode_bind_mode, self},
 			{VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
@@ -216,7 +223,7 @@ static int c_editmode_activate_loader(c_editmode_t *self)
 			ADD, renderer_tex(renderer, ref("final")), NULL,
 		(bind_t[]){
 			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
-			{TEX, "tmp", .buffer = renderer_tex(renderer, ref("tmp"))},
+			{TEX, "tmp", .buffer = tmp},
 			{INT, "mode", (getter_cb)c_editmode_bind_mode, self},
 			{VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
 			{VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
@@ -344,12 +351,7 @@ void c_editmode_pressing(c_editmode_t *self, mouse_move_data *event)
 		}
 
 		pos = vec3_add(self->drag_diff, pos);
-		/* TODO REMOVE THIS CONDITION */
-		if(fabs(sc->pos.x - pos.x) > 0.01f || fabs(sc->pos.y - pos.y) > 0.01f ||
-			fabs(sc->pos.z - pos.z) > 0.01f	)
-		{
-			c_spacial_set_pos(sc, pos);
-		}
+		c_spacial_set_pos(sc, pos);
 	}
 	else if(self->tool == 1)
 	{

@@ -19,11 +19,13 @@ typedef struct
 	int id;
 	drawable_t draw;
 	renderer_t *renderer;
+	int visible;
 } c_light_t;
 
 DEF_CASTER("light", c_light, c_light_t)
 
 c_light_t *c_light_new(float radius, vec4_t color, int shadow_size);
 void c_light_destroy(c_light_t *self);
+void c_light_visible(c_light_t *self, int visible);
 
 #endif /* !LIGHT_H */

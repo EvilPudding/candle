@@ -13,11 +13,16 @@ typedef struct
 	int width;
 	int height;
 	renderer_t *renderer;
+	int camid;
+	int active;
+	int window;
+	int auto_exposure;
 } c_camera_t;
 
 DEF_CASTER("camera", c_camera, c_camera_t)
 
-c_camera_t *c_camera_new(float fov, float near, float far, renderer_t *renderer);
+c_camera_t *c_camera_new(float fov, float near, float far,
+		int auto_exposure, int active, int window, renderer_t *renderer);
 c_camera_t *c_camera_clone(c_camera_t *self);
 vec3_t c_camera_real_pos(c_camera_t *cam, float depth, vec2_t coord);
 vec3_t c_camera_screen_pos(c_camera_t *self, vec3_t pos);

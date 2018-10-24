@@ -21,10 +21,10 @@ struct source
 
 static char *shader_preprocess(struct source source, int defines);
 
-vs_t g_vs[16];
+vs_t g_vs[32];
 int g_vs_num = 0;
 
-fs_t g_fs[16];
+fs_t g_fs[32];
 int g_fs_num = 0;
 
 static struct source *g_sources = NULL;
@@ -213,7 +213,7 @@ static const struct source shader_source(const char *filename)
 	}
 
 #define prefix "resauces/shaders/"
-	char name[] = prefix "XXXXXXXXXXXXXXXXXX";
+	char name[] = prefix "XXXXXXXXXXXXXXXXXXXXXXXXXXX";
 	strncpy(name + (sizeof(prefix) - 1), filename, sizeof(name) - (sizeof(prefix) - 1));
 	FILE *fp;
 	char *buffer = NULL;
@@ -413,7 +413,7 @@ fs_t *fs_new(const char *filename)
 	self->program = 0;
 	self->ready = 0;
 
-	for(i = 0; i < 16; i++)
+	for(i = 0; i < 32; i++)
 	{
 		self->combinations[i] = NULL;
 	}

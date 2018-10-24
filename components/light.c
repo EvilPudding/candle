@@ -15,6 +15,8 @@ extern mesh_t *g_quad_mesh;
 /* entity_t g_light = entity_null; */
 static int g_lights_num;
 
+static int c_light_position_changed(c_light_t *self);
+
 c_light_t *c_light_new(float radius,
 		vec4_t color, int shadow_size)
 {
@@ -32,6 +34,7 @@ void c_light_init(c_light_t *self)
 	self->color = vec4(1.0f);
 	self->shadow_size = 512;
 	self->radius = 5.0f;
+	self->visible = 1;
 
 	if(!g_light)
 	{
@@ -56,19 +59,24 @@ void c_light_init(c_light_t *self)
 	drawable_set_mat(&self->draw, self->id);
 	drawable_set_entity(&self->draw, c_entity(self));
 
+	c_light_position_changed(self);
+
 	world_changed();
 }
 
 static void c_light_create_renderer(c_light_t *self)
 {
 	renderer_t *renderer = renderer_new(1.0f);
-	renderer->near = 0.1f;
-	renderer->far = 100.0f;
 
 	texture_t *output =	texture_cubemap(self->shadow_size, self->shadow_size, 1);
 
 	renderer_add_pass(renderer, "depth", "depth", ref("visible"),
-			CLEAR_DEPTH | CLEAR_COLOR, output, output, (bind_t[]){ {NONE} }
+			CULL_DISABLE, output, output,
+			(bind_t[]){
+				{CLEAR_DEPTH, .number = 1.0f},
+				{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+				{NONE}
+			}
 	);
 
 	renderer_resize(renderer, self->shadow_size, self->shadow_size);
@@ -78,19 +86,31 @@ static void c_light_create_renderer(c_light_t *self)
 	self->renderer = renderer;
 }
 
+void c_light_visible(c_light_t *self, int visible)
+{
+	self->visible = visible;
+	drawable_set_mesh(&self->draw, visible ? g_light : NULL);
+}
+
 static int c_light_position_changed(c_light_t *self)
 {
 	if(self->radius == -1)
 	{
 		drawable_set_group(&self->draw, ref("ambient"));
 		drawable_set_vs(&self->draw, g_quad_vs);
-		drawable_set_mesh(&self->draw, g_quad_mesh);
+		if(self->visible)
+		{
+			drawable_set_mesh(&self->draw, g_quad_mesh);
+		}
 	}
 	else
 	{
 		drawable_set_group(&self->draw, ref("light"));
 		drawable_set_vs(&self->draw, g_model_vs);
-		drawable_set_mesh(&self->draw, g_light);
+		if(self->visible)
+		{
+			drawable_set_mesh(&self->draw, g_light);
+		}
 
 		c_node_t *node = c_node(self);
 		c_node_update_model(node);
@@ -102,7 +122,7 @@ static int c_light_position_changed(c_light_t *self)
 
 		if(self->renderer)
 		{
-			renderer_set_model(self->renderer, &node->model);
+			renderer_set_model(self->renderer, 0, &node->model);
 		}
 	}
 	if(self->radius > 0 && !self->renderer)
@@ -154,7 +174,7 @@ int c_light_menu(c_light_t *self, void *ctx)
 
 int c_light_draw(c_light_t *self)
 {
-	if(self->renderer && self->radius > 0)
+	if(self->visible && self->renderer && self->radius > 0)
 	{
 		renderer_draw(self->renderer);
 	}
@@ -171,6 +191,6 @@ REG()
 			c_light_destroy, 1, ref("node"));
 
 	ct_listener(ct, WORLD, sig("component_menu"), c_light_menu);
-	ct_listener(ct, WORLD, sig("world_draw"), c_light_draw);
+	ct_listener(ct, WORLD | 30, sig("world_draw"), c_light_draw);
 	ct_listener(ct, ENTITY, sig("node_changed"), c_light_position_changed);
 }

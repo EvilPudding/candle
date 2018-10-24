@@ -54,8 +54,6 @@ void c_spacial_unlock(c_spacial_t *self)
 	{
 		self->modified = 0;
 		c_spacial_update_model_matrix(self);
-		entity_signal_same(self->super.entity, sig("spacial_changed"),
-				&self->super.entity, NULL);
 	}
 }
 
@@ -176,6 +174,23 @@ void c_spacial_set_rot(c_spacial_t *self, float x, float y, float z, float angle
 
 	self->update_id++;
 	self->modified = 1;
+	c_spacial_unlock(self);
+}
+
+void c_spacial_assign(c_spacial_t *self, c_spacial_t *other)
+{
+	c_spacial_lock(self);
+	self->pos = other->pos;
+	self->rot = other->rot;
+	self->scale = other->scale;
+	self->rot_quat = other->rot_quat;
+	self->model_matrix = other->model_matrix;
+	self->modified = 1;
+	self->update_id++;
+
+#ifdef MESH4
+	self->angle4 = other->angle4;
+#endif
 	c_spacial_unlock(self);
 }
 
@@ -305,5 +320,5 @@ void c_spacial_update_model_matrix(c_spacial_t *self)
 
 	self->model_matrix = mat4_scale_aniso(self->model_matrix, self->scale);
 
-	entity_signal(c_entity(self), sig("spacial_changed"), &c_entity(self), NULL);
+	entity_signal_same(c_entity(self), sig("spacial_changed"), &c_entity(self), NULL);
 }

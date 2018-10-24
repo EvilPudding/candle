@@ -22,13 +22,13 @@ typedef struct uniform_t uniform_t;
 
 enum pass_options
 {
-	CLEAR_COLOR	= 1 << 1,
-	CLEAR_DEPTH	= 1 << 2,
 	DEPTH_LOCK		= 1 << 4,
 	DEPTH_GREATER	= 1 << 5,
-	DEPTH_EQUAL	= 1 << 6,
-	ADD		= 1 << 7,
-	MUL		= 1 << 8
+	DEPTH_EQUAL		= 1 << 6,
+	DEPTH_DISABLE	= 1 << 7,
+	CULL_DISABLE	= 1 << 8,
+	ADD				= 1 << 9,
+	MUL				= 1 << 10
 };
 
 enum bind_type
@@ -36,13 +36,18 @@ enum bind_type
 	NONE,
 	TEX,
 	NUM,
+	INT,
 	VEC2,
 	VEC3,
-	INT
+	VEC4,
+	CAM,
+	CLEAR_COLOR,
+	CLEAR_DEPTH
 };
 
 typedef vec2_t(*vec2_getter)(void *usrptr);
 typedef vec3_t(*vec3_getter)(void *usrptr);
+typedef vec4_t(*vec4_getter)(void *usrptr);
 typedef float(*number_getter)(void *usrptr);
 typedef int(*integer_getter)(void *usrptr);
 typedef void*(*getter_cb)(void *usrptr);
@@ -76,6 +81,9 @@ typedef struct
 		} vec3;
 		struct {
 			uint u;
+		} vec4;
+		struct {
+			uint u;
 		} integer;
 	};
 } shader_bind_t;
@@ -93,6 +101,7 @@ typedef struct
 		float number;
 		vec2_t vec2;
 		vec3_t vec3;
+		vec4_t vec4;
 		int integer;
 	};
 	unsigned int hash;
@@ -113,22 +122,26 @@ typedef struct pass_t
 	fs_t *shader;
 	char name[32];
 	char shader_name[32];
-	unsigned int hash;
-	int additive;
-	int multiply;
-	int depth_update;
+	uint32_t hash;
+	int32_t additive;
+	int32_t multiply;
+	int32_t depth_update;
+	int32_t cull;
 	uint32_t depth_func;
 	unsigned int clear;
 	uint32_t draw_signal;
 	entity_t camera;
 
-	int binds_size;
+	int32_t binds_size;
 	bind_t *binds;
 
 	texture_t *output;
 	texture_t *depth;
+	vec4_t clear_color;
+	float clear_depth;
 
-	int active;
+	int32_t active;
+	int32_t camid;
 } pass_t;
 
 struct gl_camera
@@ -144,12 +157,10 @@ struct gl_camera
 typedef struct c_renderer_t
 {
 	int frame;
-	int width;
-	int height;
 	float resolution;
+	int width, height;
+	float near, far;
 	float fov;
-	float near;
-	float far;
 
 	/* texture_t *perlin; */
 
@@ -168,6 +179,8 @@ typedef struct c_renderer_t
 	// GL PROPS
 	int depth_inverted;
 
+	int32_t camera_bound;
+	int32_t camera_count;
 	unsigned int ubo;
 	struct gl_camera glvars[6];
 } renderer_t;
@@ -206,9 +219,10 @@ void renderer_invert_depth(renderer_t *self, int inverted);
 int renderer_resize(renderer_t *self, int width, int height);
 
 void renderer_default_pipeline(renderer_t *self);
-void renderer_set_model(renderer_t *self, mat4_t *model);
+void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model);
 void renderer_update_projection(renderer_t *self);
 vec3_t renderer_real_pos(renderer_t *self, float depth, vec2_t coord);
 vec3_t renderer_screen_pos(renderer_t *self, vec3_t pos);
+int renderer_component_menu(renderer_t *self, void *ctx);
 
 #endif /* !RENDERER_H */

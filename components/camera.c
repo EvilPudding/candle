@@ -12,21 +12,24 @@
 
 static int c_camera_changed(c_camera_t *self);
 
-c_camera_t *c_camera_new(float fov, float near, float far, renderer_t *renderer)
+c_camera_t *c_camera_new(float fov, float near, float far,
+		int auto_exposure, int active, int window, renderer_t *renderer)
 {
 	c_camera_t *self = component_new("camera");
 
-	self->renderer = renderer;
-	self->renderer->near = near;
-	self->renderer->far = far;
-	self->renderer->fov = fov * (M_PI / 180.0f);
-
-	c_window_t *win = c_window(&SYS);
-
+	self->auto_exposure = auto_exposure;
 	self->exposure = 0.25f;
+	self->active = active;
+	self->window = window;
 
-	if(win->renderer == NULL)
+	if(renderer)
 	{
+		self->renderer = renderer;
+		self->renderer->near = near;
+		self->renderer->far = far;
+		self->renderer->fov = fov * (M_PI / 180.0f);
+		self->camid = self->renderer->camera_count++;
+
 		c_camera_assign(self);
 	}
 
@@ -51,7 +54,10 @@ static int c_camera_changed(c_camera_t *self)
 {
 	c_node_t *node = c_node(self);
 	c_node_update_model(node);
-	renderer_set_model(self->renderer, &node->model);
+	if(self->renderer)
+	{
+		renderer_set_model(self->renderer, self->camid, &node->model);
+	}
 	return CONTINUE;
 }
 
@@ -100,12 +106,13 @@ int c_camera_component_menu(c_camera_t *self, void *ctx)
 	{
 		renderer_update_projection(self->renderer);
 	}
+	renderer_component_menu(self->renderer, ctx);
 	return CONTINUE;
 }
 
 int c_camera_update(c_camera_t *self, float *dt)
 {
-	if(self->renderer && self->renderer->output)
+	if(self->auto_exposure && self->renderer && self->renderer->output)
 	{
 		float brightness = self->renderer->output->brightness *2.0f + 0.1;
 		float targetExposure = 0.3 + 1.0f / brightness;
@@ -134,11 +141,23 @@ int c_camera_resize(c_camera_t *self, window_resize_data *event)
 void c_camera_assign(c_camera_t *self)
 {
 	c_window_t *win = c_window(&SYS);
-	win->renderer = self->renderer;
+	if(self->window && !win->renderer)
+	{
+		win->renderer = self->renderer;
+	}
 	self->width = win->width;
 	self->height = win->height;
 
 	renderer_resize(self->renderer, win->width, win->height);
+}
+
+int c_camera_draw(c_camera_t *self)
+{
+	if(self->renderer && self->active)
+	{
+		renderer_draw(self->renderer);
+	}
+	return CONTINUE;
 }
 
 REG()
@@ -148,6 +167,7 @@ REG()
 	ct_listener(ct, ENTITY, sig("node_changed"), c_camera_changed);
 	ct_listener(ct, WORLD, sig("window_resize"), c_camera_resize);
 	ct_listener(ct, WORLD, sig("world_update"), c_camera_update);
+	ct_listener(ct, WORLD | 51, sig("world_draw"), c_camera_draw);
 
 	ct_listener(ct, WORLD, sig("component_menu"), c_camera_component_menu);
 }
