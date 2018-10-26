@@ -3,7 +3,7 @@
 #include <components/spacial.h>
 #include <components/node.h>
 #include <components/model.h>
-#include <components/mesh_gl.h>
+#include <utils/drawable.h>
 #include <utils/mafs.h>
 #include <utils/mesh.h>
 
@@ -33,7 +33,6 @@ static void c_skin_init(c_skin_t *self)
 			"		float W = sin(angle4);\n"
 			"		pos = vec4(vec3(P.x, P.y * Y + P.w * W, P.z), 1.0);\n"
 			"#endif\n"
-			"		vertex_position = (camera.view * M * pos).xyz;\n"
 
 			"		poly_color = COL;\n"
 
@@ -66,6 +65,8 @@ static void c_skin_init(c_skin_t *self)
 			"	}\n"
 		));
 	}
+	c_model_t *mc = c_model(self);
+	drawable_set_vs(&mc->draw, g_skin_vs);
 }
 
 c_skin_t *c_skin_new()
@@ -75,7 +76,7 @@ c_skin_t *c_skin_new()
 	return self;
 }
 
-void c_skin_vert_prealloc(c_skin_t *self, int size)
+void skin_vert_prealloc(skin_t *self, int size)
 {
 	self->wei = realloc(self->wei, (self->vert_alloc + size) *
 			sizeof(*self->wei));
@@ -88,67 +89,64 @@ void c_skin_vert_prealloc(c_skin_t *self, int size)
 	self->vert_alloc += size;
 }
 
-static void c_skin_bind_bones(c_skin_t *self, shader_t *shader)
+void c_skin_bind_bones(c_skin_t *self, shader_t *shader)
 {
-	/* c_node_t *nc = c_node(self); */
-	/* c_node_update_model(nc); */
-	/* mat4_t inverse = mat4_invert(nc->model); */
-	int i;
-	for(i = 0; i < self->bones_num; i++)
-	{
-		c_node_t *node = c_node(&self->bones[i]);
-		c_node_update_model(node);
-		mat4_t transform = mat4_mul(node->model, self->off[i]);
-		glUniformMatrix4fv(shader->u_bones[i], 1, GL_FALSE, (void*)transform._);
-	}
+	/* int i; */
+	/* for(i = 0; i < self->info.bones_num; i++) */
+	/* { */
+	/* 	c_node_t *node = c_node(&self->info.bones[i]); */
+	/* 	c_node_update_model(node); */
+	/* 	mat4_t transform = mat4_mul(node->model, self->info.off[i]); */
+	/* 	glUniformMatrix4fv(shader->u_bones[i], 1, GL_FALSE, (void*)transform._); */
+	/* } */
 }
 
-int c_skin_render_visible(c_skin_t *self)
-{
-	/* if(!self->mesh || !self->visible) return CONTINUE; */
-	shader_t *shader = vs_bind(g_skin_vs);
-	c_skin_bind_bones(self, shader);
-	return c_model_render(c_model(self), shader, 0);
-}
+/* int c_skin_render_visible(c_skin_t *self) */
+/* { */
+/* 	/1* if(!self->mesh || !self->visible) return CONTINUE; *1/ */
+/* 	shader_t *shader = vs_bind(g_skin_vs); */
+/* 	c_skin_bind_bones(self, shader); */
+/* 	return c_model_render(c_model(self), 0); */
+/* } */
 
-int c_skin_render_shadows(c_skin_t *self)
-{
-	c_skin_render_visible(self);
-	return CONTINUE;
-}
-
-
-int c_skin_render_selectable(c_skin_t *self)
-{
-	/* if(!self->mesh || !self->visible) return CONTINUE; */
-	shader_t *shader = vs_bind(g_skin_vs);
-	c_skin_bind_bones(self, shader);
-	c_model_render(c_model(self), shader, 2);
-	return CONTINUE;
-}
+/* int c_skin_render_shadows(c_skin_t *self) */
+/* { */
+/* 	c_skin_render_visible(self); */
+/* 	return CONTINUE; */
+/* } */
 
 
-int c_skin_render_transparent(c_skin_t *self)
-{
-	/* if(!self->mesh || !self->visible) return CONTINUE; */
+/* int c_skin_render_selectable(c_skin_t *self) */
+/* { */
+/* 	/1* if(!self->mesh || !self->visible) return CONTINUE; *1/ */
+/* 	shader_t *shader = vs_bind(g_skin_vs); */
+/* 	c_skin_bind_bones(self, shader); */
+/* 	c_model_render(c_model(self), 2); */
+/* 	return CONTINUE; */
+/* } */
 
-	shader_t *shader = vs_bind(g_skin_vs);
-	c_skin_bind_bones(self, shader);
-	return c_model_render(c_model(self), shader, 1);
-}
+
+/* int c_skin_render_transparent(c_skin_t *self) */
+/* { */
+/* 	/1* if(!self->mesh || !self->visible) return CONTINUE; *1/ */
+
+/* 	shader_t *shader = vs_bind(g_skin_vs); */
+/* 	c_skin_bind_bones(self, shader); */
+/* 	return c_model_render(c_model(self), 1); */
+/* } */
 
 
 REG()
 {
-	ct_t *ct = ct_new("skin", sizeof(c_skin_t),
+	/* ct_t *ct = */ ct_new("skin", sizeof(c_skin_t),
 			c_skin_init, NULL, 2, ref("model"), ref("node"));
 
-	ct_listener(ct, WORLD, sig("render_visible"), c_skin_render_visible);
+	/* ct_listener(ct, WORLD, sig("render_visible"), c_skin_render_visible); */
 
-	ct_listener(ct, WORLD, sig("render_transparent"), c_skin_render_transparent);
+	/* ct_listener(ct, WORLD, sig("render_transparent"), c_skin_render_transparent); */
 
-	ct_listener(ct, WORLD, sig("render_shadows"), c_skin_render_shadows);
+	/* ct_listener(ct, WORLD, sig("render_shadows"), c_skin_render_shadows); */
 
-	ct_listener(ct, WORLD, sig("render_selectable"), c_skin_render_selectable);
+	/* ct_listener(ct, WORLD, sig("render_selectable"), c_skin_render_selectable); */
 }
 

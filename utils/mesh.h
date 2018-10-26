@@ -20,6 +20,7 @@ typedef struct vec3_t(*support_cb)(mesh_t *self, const vec3_t dir);
 #	define XYZ(v) v.xyz
 #	define ZN vec4(0.0f)
 #	define _vecN(a) _vec4(a)
+#	define N 4
 
 #	define dN d4
 #	define dN_t d4_t
@@ -34,6 +35,7 @@ typedef struct vec3_t(*support_cb)(mesh_t *self, const vec3_t dir);
 
 #	define dN d3_t
 #	define D3(...) d3(__VA_ARGS__)
+#	define N 3
 #endif
 
 typedef float(*modifier_cb)(mesh_t *mesh, float percent, void *usrptr);
@@ -161,6 +163,18 @@ typedef struct
 #endif
 } mesh_selection_t;
 
+typedef struct skin_t
+{
+	int bones_num;
+	uint64_t bones[30];
+	mat4_t off[30];
+
+	vec4_t  *wei;
+	uvec4_t *bid;
+	int vert_alloc;
+
+} skin_t;
+
 typedef struct mesh_t
 {
 	vector_t *faces;
@@ -192,7 +206,16 @@ typedef struct mesh_t
 	int changes;
 
 	void *semaphore;
-	ulong owner_thread;
+	uint64_t owner_thread;
+
+	skin_t *skin;
+
+	/* DISPAY PROPERTIES */
+	int wireframe;
+	int cull;
+	float offset;
+	float smooth_angle;
+	int ref_num;
 } mesh_t;
 
 typedef enum

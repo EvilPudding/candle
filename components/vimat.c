@@ -77,7 +77,7 @@ REG()
 		vicall_color(b, vec4(0, 0, 1, 1));
 		vicall_color(a, vec4(1, 1, 1, 1));
 
-	vitype_t *par = vil_add_type(ctx, "parent", NULL, 0);
+	/*vitype_t *par =*/ vil_add_type(ctx, "parent", NULL, 0);
 
 	ct_t *ct = ct_new("vimat", sizeof(c_vimat_t), c_vimat_init, NULL, 0);
 

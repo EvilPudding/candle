@@ -1,44 +1,23 @@
 #include "light.h"
 #include "node.h"
-#include "probe.h"
 #include "spacial.h"
 #include "model.h"
-#include "mesh_gl.h"
+#include <utils/drawable.h>
 #include <candle.h>
 #include <systems/editmode.h>
 #include <systems/window.h>
-#include <systems/renderer.h>
 #include <stdlib.h>
+#include <systems/render_device.h>
 
-static fs_t *g_depth_fs = NULL;
-entity_t g_light = entity_null;
+static mesh_t *g_light;
+extern vs_t *g_quad_vs;
+extern mesh_t *g_quad_mesh;
+/* entity_t g_light = entity_null; */
+static int g_lights_num;
 
-void c_light_init(c_light_t *self)
-{
-	self->color = vec4(1.0f);
-	self->shadow_size = 512;
-	self->radius = 5.0f;
+static int c_light_position_changed(c_light_t *self);
 
-	if(!g_light)
-	{
-		g_depth_fs = fs_new("depth");
-
-		mesh_t *mesh = mesh_new();
-		mesh_lock(mesh);
-		mesh_ico(mesh, -0.5f);
-		mesh_select(mesh, SEL_EDITING, MESH_FACE, -1);
-		mesh_subdivide(mesh, 1);
-		mesh_spherize(mesh, 1.0f);
-
-		mesh_unlock(mesh);
-		g_light = entity_new(c_node_new(), c_model_new(mesh, NULL, 0, 0));
-		c_node(&g_light)->ghost = 1;
-
-	}
-}
-
-c_light_t *c_light_new(float radius,
-		vec4_t color, int shadow_size)
+c_light_t *c_light_new(float radius, vec4_t color, uint32_t shadow_size)
 {
 	c_light_t *self = component_new("light");
 
@@ -49,40 +28,112 @@ c_light_t *c_light_new(float radius,
 	return self;
 }
 
-int c_light_render(c_light_t *self)
+void c_light_init(c_light_t *self)
 {
-	c_renderer(&SYS)->bound_light = c_entity(self);
+	self->color = vec4(1.0f);
+	self->shadow_size = 512;
+	self->radius = 5.0f;
+	self->visible = 1;
 
-	if(!g_light || !c_mesh_gl(&g_light)) return STOP;
-	if(self->radius > 0.0f)
+	self->ambient_group = ref("ambient");
+	self->light_group = ref("light");
+
+	if(!g_light)
 	{
-		shader_t *shader = vs_bind(g_model_vs);
-		if(!shader) return STOP;
-		c_node_t *node = c_node(self);
-		c_spacial_t *sc = c_spacial(self);
 
-		c_node_update_model(node);
+		g_light = mesh_new();
+		mesh_lock(g_light);
+		mesh_ico(g_light, -0.5f);
+		mesh_select(g_light, SEL_EDITING, MESH_FACE, -1);
+		mesh_subdivide(g_light, 1);
+		mesh_spherize(g_light, 1.0f);
+		mesh_unlock(g_light);
 
-		float rad = self->radius * 1.1f;
-		/* float rad = self->radius * 0.5f; */
-		mat4_t model = mat4_scale_aniso(node->model,
-				vec3(rad / sc->scale.x, rad / sc->scale.y, rad / sc->scale.z));
+		/* g_light = entity_new(c_node_new(), c_model_new(mesh, NULL, 0, 0)); */
+		/* c_node(&g_light)->ghost = 1; */
 
-#ifdef MESH4
-		shader_update(shader, &model, node->angle4);
-#else
-		shader_update(shader, &model);
-#endif
+	}
+	self->id = g_lights_num++;
 
-		c_mesh_gl_draw(c_mesh_gl(&g_light), 0);
-		return CONTINUE;
+	drawable_init(&self->draw, 0, NULL);
+	drawable_set_vs(&self->draw, g_model_vs);
+	drawable_set_mesh(&self->draw, g_light);
+	drawable_set_mat(&self->draw, self->id);
+	drawable_set_entity(&self->draw, c_entity(self));
+
+	c_light_position_changed(self);
+
+	world_changed();
+}
+
+static void c_light_create_renderer(c_light_t *self)
+{
+	renderer_t *renderer = renderer_new(1.0f);
+
+	texture_t *output =	texture_cubemap(self->shadow_size, self->shadow_size, 1);
+
+	renderer_add_pass(renderer, "depth", "depth", ref("visible"),
+			CULL_DISABLE, output, output,
+			(bind_t[]){
+				{CLEAR_DEPTH, .number = 1.0f},
+				{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+				{NONE}
+			}
+	);
+
+	renderer_resize(renderer, self->shadow_size, self->shadow_size);
+
+	renderer_set_output(renderer, output);
+
+	self->renderer = renderer;
+}
+
+void c_light_visible(c_light_t *self, uint32_t visible)
+{
+	self->visible = visible;
+	drawable_set_mesh(&self->draw, visible ? g_light : NULL);
+}
+
+static int c_light_position_changed(c_light_t *self)
+{
+	if(self->radius == -1)
+	{
+		drawable_set_group(&self->draw, self->ambient_group);
+		drawable_set_vs(&self->draw, g_quad_vs);
+		if(self->visible)
+		{
+			drawable_set_mesh(&self->draw, g_quad_mesh);
+		}
 	}
 	else
 	{
-		return c_window_render_quad(c_window(&SYS), NULL);
-	}
-}
+		drawable_set_group(&self->draw, self->light_group);
+		drawable_set_vs(&self->draw, g_model_vs);
+		if(self->visible)
+		{
+			drawable_set_mesh(&self->draw, g_light);
+		}
 
+		c_node_t *node = c_node(self);
+		c_node_update_model(node);
+		vec3_t pos = c_node_local_to_global(node, vec3(0, 0, 0));
+		mat4_t model = mat4_translate(pos);
+		model = mat4_scale_aniso(model, vec3(self->radius * 1.15f));
+
+		drawable_set_transform(&self->draw, model);
+
+		if(self->renderer)
+		{
+			renderer_set_model(self->renderer, 0, &node->model);
+		}
+	}
+	if(self->radius > 0 && !self->renderer)
+	{
+		c_light_create_renderer(self);
+	}
+
+	return CONTINUE;
+}
 
 int c_light_menu(c_light_t *self, void *ctx)
 {
@@ -93,8 +144,15 @@ int c_light_menu(c_light_t *self, void *ctx)
 
 	if(!ambient)
 	{
+		float rad = self->radius;
 		if(self->radius < 0.0f) self->radius = 0.01;
-		nk_property_float(ctx, "radius:", 0.01, &self->radius, 1000, 0.1, 0.05);
+		nk_property_float(ctx, "radius:", 0.01, &rad, 1000, 0.1, 0.05);
+		if(rad != self->radius)
+		{
+			self->radius = rad;
+			c_light_position_changed(self);
+			world_changed();
+		}
 	}
 	else
 	{
@@ -103,9 +161,25 @@ int c_light_menu(c_light_t *self, void *ctx)
 
 	nk_layout_row_dynamic(ctx, 180, 1);
 
-	union { struct nk_colorf *nk; vec4_t *v; } color = { .v = &self->color };
-	*color.nk = nk_color_picker(ctx, *color.nk, NK_RGBA);
+	struct nk_colorf *old = (struct nk_colorf *)&self->color;
+	union { struct nk_colorf nk; vec4_t v; } new =
+		{ .nk = nk_color_picker(ctx, *old, NK_RGBA)};
 
+	if(memcmp(&new, &self->color, sizeof(vec4_t)))
+	{
+		self->color = new.v;
+		world_changed();
+	}
+
+	return CONTINUE;
+}
+
+int c_light_draw(c_light_t *self)
+{
+	if(self->visible && self->renderer && self->radius > 0)
+	{
+		renderer_draw(self->renderer);
+	}
 	return CONTINUE;
 }
 
@@ -113,36 +187,12 @@ void c_light_destroy(c_light_t *self)
 {
 }
 
-int c_light_probe_render(c_light_t *self)
-{
-	if(self->radius < 0.0f) return CONTINUE;
-	c_probe_t *probe = c_probe(self);
-	if(!probe)
-	{
-		entity_add_component(c_entity(self), (c_t*)c_probe_new(self->shadow_size));
-		entity_signal(c_entity(self), sig("spacial_changed"), &c_entity(self), NULL);
-		return STOP;
-	}
-	if(!g_depth_fs) return STOP;
-
-	fs_bind(g_depth_fs);
-
-	glDisable(GL_CULL_FACE);
-	c_probe_render(probe, sig("render_shadows"));
-	glEnable(GL_CULL_FACE);
-	return CONTINUE;
-}
-
 REG()
 {
 	ct_t *ct = ct_new("light", sizeof(c_light_t), c_light_init,
 			c_light_destroy, 1, ref("node"));
 
-	ct_listener(ct, WORLD, sig("offscreen_render"), c_light_probe_render);
-
 	ct_listener(ct, WORLD, sig("component_menu"), c_light_menu);
-
-	ct_listener(ct, WORLD, sig("render_lights"), c_light_render);
-
-	signal_init(sig("render_shadows"), 0);
+	ct_listener(ct, WORLD | 30, sig("world_draw"), c_light_draw);
+	ct_listener(ct, ENTITY, sig("node_changed"), c_light_position_changed);
 }

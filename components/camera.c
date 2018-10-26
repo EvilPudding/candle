@@ -5,56 +5,65 @@
 #include "node.h"
 #include <utils/nk.h>
 #include <candle.h>
-#include <systems/renderer.h>
+#include <utils/renderer.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
-c_camera_t *c_camera_new(float fov, float near, float far)
+static int c_camera_changed(c_camera_t *self);
+
+c_camera_t *c_camera_new(float fov, float near, float far,
+		int auto_exposure, int active, int window, renderer_t *renderer)
 {
 	c_camera_t *self = component_new("camera");
 
-	self->near = near;
-	self->far = far;
-	self->fov = fov;
-	self->view_cached = 0;
+	self->auto_exposure = auto_exposure;
 	self->exposure = 0.25f;
+	self->active = active;
+	self->window = window;
 
-	c_camera_update(self, NULL);
+	if(renderer)
+	{
+		self->renderer = renderer;
+		self->renderer->near = near;
+		self->renderer->far = far;
+		self->renderer->fov = fov * (M_PI / 180.0f);
+		self->camid = self->renderer->camera_count++;
+
+		c_camera_assign(self);
+	}
 
 	return self;
 }
 
-c_camera_t *c_camera_clone(c_camera_t *self)
+/* c_camera_t *c_camera_clone(c_camera_t *self) */
+/* { */
+/* 	c_camera_t *clone = malloc(sizeof *clone); */
+
+/* 	clone->near = self->near; */
+/* 	clone->far = self->far; */
+/* 	clone->fov = self->fov; */
+/* 	clone->exposure = self->exposure; */
+
+/* 	c_camera_changed(clone); */
+
+/* 	return clone; */
+/* } */
+
+static int c_camera_changed(c_camera_t *self)
 {
-	c_camera_t *clone = malloc(sizeof *clone);
-
-	clone->near = self->near;
-	clone->far = self->far;
-	clone->fov = self->fov;
-	clone->view_cached = 0;
-	clone->exposure = self->exposure;
-
-	c_camera_update(self, NULL);
-
-	return clone;
-}
-
-int c_camera_changed(c_camera_t *self)
-{
-	self->view_cached = 0;
+	c_node_t *node = c_node(self);
+	c_node_update_model(node);
+	if(self->renderer)
+	{
+		renderer_set_model(self->renderer, self->camid, &node->model);
+	}
 	return CONTINUE;
 }
 
 vec3_t c_camera_screen_pos(c_camera_t *self, vec3_t pos)
 {
-	mat4_t VP = mat4_mul(self->projection_matrix, self->view_matrix); 
-
-	vec4_t viewSpacePosition = mat4_mul_vec4(VP, vec4(_vec3(pos), 1.0f));
-	viewSpacePosition = vec4_div_number(viewSpacePosition, viewSpacePosition.w);
-
-	viewSpacePosition.xyz = vec3_scale(vec3_add_number(viewSpacePosition.xyz, 1.0f), 0.5);
-    return viewSpacePosition.xyz;
+	return renderer_screen_pos(self->renderer, pos);
 }
 
 /* float c_camera_linearize(c_camera_t *self, float depth) */
@@ -64,96 +73,101 @@ vec3_t c_camera_screen_pos(c_camera_t *self, vec3_t pos)
 
 float c_camera_unlinearize(c_camera_t *self, float depth)
 {
-	return self->far * (1.0f - (self->near / depth)) / (self->far - self->near);
+	return self->renderer->far * (1.0f - (self->renderer->near / depth)) /
+		(self->renderer->far - self->renderer->near);
 }
 
 vec3_t c_camera_real_pos(c_camera_t *self, float depth, vec2_t coord)
 {
-	/* float z = depth; */
-	if(depth < 0.01f) depth *= 100.0f;
-    float z = depth * 2.0 - 1.0;
-	coord = vec2_sub_number(vec2_scale(coord, 2.0f), 1.0);
-
-	mat4_t projInv = mat4_invert(self->projection_matrix);
-	mat4_t viewInv = mat4_invert(self->view_matrix);
-
-    vec4_t clipSpacePosition = vec4(_vec2(coord), z, 1.0);
-    vec4_t viewSpacePosition = mat4_mul_vec4(projInv, clipSpacePosition);
-
-    // Perspective division
-    viewSpacePosition = vec4_div_number(viewSpacePosition, viewSpacePosition.w);
-
-    vec4_t worldSpacePosition = mat4_mul_vec4(viewInv, viewSpacePosition);
-
-    return worldSpacePosition.xyz;
+	return renderer_real_pos(self->renderer, depth, coord);
 }
 
-
-void c_camera_update_view(c_camera_t *self)
-{
-	if(self->view_cached) return;
-	c_node_t *n = c_node(self);
-	c_node_update_model(n);
-	self->model_matrix = n->model;
-
-	self->pos = mat4_mul_vec4(n->model, vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-	self->view_matrix = mat4_invert(n->model);
-
-	self->vp = mat4_mul(self->projection_matrix, self->view_matrix);
-}
-
-void c_camera_activate(c_camera_t *self)
-{
-	c_camera_update(self, NULL);
-}
 
 int c_camera_component_menu(c_camera_t *self, void *ctx)
 {
-	float before = self->fov;
-	nk_property_float(ctx, "fov:", 1, &self->fov, 179, 1, 1);
-	if(self->fov != before)
+	float new = self->renderer->fov * (180.0f / M_PI);
+	nk_property_float(ctx, "fov:", 1, &new, 179, 1, 1);
+	if(self->renderer->fov != new)
 	{
-		c_camera_update(self, NULL);
+		self->renderer->fov = new * (M_PI / 180.0f);
+		renderer_update_projection(self->renderer);
 	}
-	before = self->near;
-	nk_property_float(ctx, "near:", 0.01, &self->near, self->far - 0.01, 0.01, 0.1);
-	if(self->near != before)
+	float before = self->renderer->near;
+	nk_property_float(ctx, "near:", 0.01, &self->renderer->near,
+			self->renderer->far - 0.01, 0.01, 0.1);
+	if(self->renderer->near != before)
 	{
-		c_camera_update(self, NULL);
+		renderer_update_projection(self->renderer);
 	}
-	before = self->far;
-	nk_property_float(ctx, "far:", self->near + 0.01, &self->far, 10000, 0.01, 0.1);
-	if(self->far != before)
+	before = self->renderer->far;
+	nk_property_float(ctx, "far:", self->renderer->near + 0.01,
+			&self->renderer->far, 10000, 0.01, 0.1);
+	if(self->renderer->far != before)
 	{
-		c_camera_update(self, NULL);
+		renderer_update_projection(self->renderer);
+	}
+	renderer_component_menu(self->renderer, ctx);
+	return CONTINUE;
+}
+
+int c_camera_update(c_camera_t *self, float *dt)
+{
+	if(self->auto_exposure && self->renderer && self->renderer->output)
+	{
+		float brightness = self->renderer->output->brightness *2.0f + 0.1;
+		float targetExposure = 0.3 + 1.0f / brightness;
+		if(targetExposure > 5) targetExposure = 5;
+		if(targetExposure < 0.1) targetExposure = 0.1;
+
+		float step = (targetExposure - self->exposure) / 30;
+		if(step > 0.3f) step = 0.3f;
+		if(step < -0.3f) step = -0.3f;
+		self->exposure += step;
+		self->renderer->glvars[0].exposure = self->exposure;
+		/* printf("%f %f\n", targetExposure, self->exposure); */
 	}
 	return CONTINUE;
 }
 
-int c_camera_update(c_camera_t *self, void *event)
+int c_camera_resize(c_camera_t *self, window_resize_data *event)
 {
-	/* TODO: remove renderer reference, camera should update on render resize,
-	 * not window */
-	self->width = c_window(&SYS)->width;
-	self->height = c_window(&SYS)->height;
-	
-	self->projection_matrix = mat4_perspective(
-		self->fov * (M_PI / 180.0f),
-		((float)self->width) / self->height,
-		/* ((float)event->width / 2) / event->height, */
-		self->near, self->far
-	);
-	self->view_cached = 0;
+	self->width = event->width;
+	self->height = event->height;
+
+	renderer_resize(self->renderer, self->width, self->height);
+	return CONTINUE;
+}
+
+void c_camera_assign(c_camera_t *self)
+{
+	c_window_t *win = c_window(&SYS);
+	if(self->window && !win->renderer)
+	{
+		win->renderer = self->renderer;
+	}
+	self->width = win->width;
+	self->height = win->height;
+
+	renderer_resize(self->renderer, win->width, win->height);
+}
+
+int c_camera_draw(c_camera_t *self)
+{
+	if(self->renderer && self->active)
+	{
+		renderer_draw(self->renderer);
+	}
 	return CONTINUE;
 }
 
 REG()
 {
-	ct_t *ct = ct_new("camera", sizeof(c_camera_t), NULL,
-			NULL, 1, ref("node"));
+	ct_t *ct = ct_new("camera", sizeof(c_camera_t), NULL, NULL, 1, ref("node"));
 
-	ct_listener(ct, ENTITY, sig("spacial_changed"), c_camera_changed);
-	ct_listener(ct, WORLD, sig("window_resize"), c_camera_update);
+	ct_listener(ct, ENTITY, sig("node_changed"), c_camera_changed);
+	ct_listener(ct, WORLD, sig("window_resize"), c_camera_resize);
+	ct_listener(ct, WORLD, sig("world_update"), c_camera_update);
+	ct_listener(ct, WORLD | 51, sig("world_draw"), c_camera_draw);
 
 	ct_listener(ct, WORLD, sig("component_menu"), c_camera_component_menu);
 }

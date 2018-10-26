@@ -1,4 +1,4 @@
-[submodule "nuklear"]
-	path = nuklear
-	url = https://github.com/vurtun/nuklear
 
+[submodule "utils/nuklear"]
+	path = utils/nuklear
+	url = https://github.com/vurtun/nuklear

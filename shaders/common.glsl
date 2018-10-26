@@ -1,85 +1,40 @@
 #ifndef FRAG_COMMON
 #define FRAG_COMMON
 #line 3
-#extension GL_ARB_texture_query_levels : enable
-#extension GL_EXT_shader_texture_lod: enable
-#extension GL_OES_standard_derivatives : enable
+
+#include "uniforms.glsl"
 
 #define _CAT(a, b) a ## b
 #define CAT(a, b) _CAT(a,b)
 #define BUFFER uniform struct 
-struct property_t
-{
-	float texture_blend;
-	sampler2D texture;
-	float texture_scale;
-	vec4 color;
-};
-
-uniform vec2 output_size;
 
 const float M_PI = 3.141592653589793;
 const float c_MinRoughness = 0.04;
-
-uniform property_t albedo;
-uniform property_t roughness;
-uniform property_t metalness;
-uniform property_t transparency;
-uniform property_t normal;
-uniform property_t emissive;
 
 
 /* uniform gbuffer_t gbuffer; */
 /* uniform sbuffer_t sbuffer; */
 
-uniform float distortion;
-uniform float scattering;
+/* uniform samplerCube ambient_map; */
+/* uniform sampler3D perlin_map; */
 
-uniform samplerCube ambient_map;
 
-uniform sampler3D perlin_map;
-
-struct camera_t
-{
-	vec3 pos;
-	float exposure;
-	mat4 projection;
-	mat4 inv_projection;
-	mat4 view;
-	mat4 model;
-};
-
-uniform camera_t camera;
-
-uniform vec3 light_pos;
-uniform float light_radius;
-uniform vec4 light_color;
-uniform samplerCube light_shadow_map;
-
-uniform float has_tex;
-uniform float cameraspace_normals;
-
-in vec3 tgspace_light_dir;
-in vec3 tgspace_eye_dir;
-in vec3 worldspace_position;
-in vec3 cameraspace_light_dir;
-
-in vec2 object_id;
 in vec2 poly_id;
 in vec3 poly_color;
-
+in flat vec3 obj_pos;
 in vec3 vertex_position;
 
 in vec2 texcoord;
-in vec4 vertex_color;
 
 in mat4 model;
 in mat3 TM;
 
-uniform vec2 screen_size;
+in flat uint matid;
+in flat uvec2 id;
 
 vec2 pixel_pos()
 {
+	/* return gl_SamplePosition.xy; */
 	return gl_FragCoord.xy / screen_size;
 }
 
@@ -87,14 +42,14 @@ vec2 pixel_pos()
 vec4 resolveProperty(property_t prop, vec2 coords)
 {
 	/* vec3 tex; */
-	if(prop.texture_blend > 0.001)
+	if(prop.blend > 0.001)
 	{
-		coords *= prop.texture_scale;
+		coords *= prop.scale;
 		return mix(
 			prop.color,
 			texture2D(prop.texture, vec2(coords.x, 1.0f-coords.y)),
-			/* textureLod(prop.texture, prop.texture_scale * coords, 3), */
-			prop.texture_blend
+			/* textureLod(prop.texture, prop.scale * coords, 3), */
+			prop.blend
 		);
 	}
 	return prop.color;
@@ -105,7 +60,7 @@ vec4 resolveProperty(property_t prop, vec2 coords)
 
 float lookup_single(vec3 shadowCoord)
 {
-	return texture(light_shadow_map, shadowCoord).a;
+	return texture(light(shadow_map), shadowCoord).a;
 }
 
 /* float prec = 0.05; */
@@ -113,7 +68,7 @@ float lookup(vec3 coord)
 {
 	float dist = length(coord);
 	float dist2 = lookup_single(coord) - dist;
-	return (dist2 > -0.05) ? 1.0 : 0.0;
+	return (dist2 > -0.1) ? 1.0 : 0.0;
 }
 
 /* SPHEREMAP TRANSFORM */
@@ -140,23 +95,23 @@ vec3 decode_normal(vec2 enc)
 
 vec4 get_emissive()
 {
-	return resolveProperty(emissive, texcoord);
+	return resolveProperty(mat(emissive), texcoord);
 }
 
 float get_metalness()
 {
-	return resolveProperty(metalness, texcoord).r;
+	return resolveProperty(mat(metalness), texcoord).r;
 }
 
 float get_roughness()
 {
-	return resolveProperty(roughness, texcoord).r;
+	return resolveProperty(mat(roughness), texcoord).r;
 }
 
 
 vec4 get_transparency()
 {
-	return resolveProperty(transparency, texcoord);
+	return resolveProperty(mat(transparency), texcoord);
 }
 
 
@@ -165,7 +120,7 @@ vec3 get_position(sampler2D depth)
 	vec2 pos = pixel_pos();
 	vec3 raw_pos = vec3(pos, textureLod(depth, pos, 0).r);
 	vec4 clip_pos = vec4(raw_pos * 2.0 - 1.0, 1.0);
-	vec4 view_pos = camera.inv_projection * clip_pos;
+	vec4 view_pos = camera(inv_projection) * clip_pos;
 	return view_pos.xyz / view_pos.w;
 }
 
@@ -173,19 +128,30 @@ vec3 get_position(sampler2D depth, vec2 pos)
 {
 	vec3 raw_pos = vec3(pos, textureLod(depth, pos, 0).r);
 	vec4 clip_pos = vec4(raw_pos * 2.0 - 1.0, 1.0);
-	vec4 view_pos = camera.inv_projection * clip_pos;
+	vec4 view_pos = camera(inv_projection) * clip_pos;
 	return view_pos.xyz / view_pos.w;
 }
 
 vec3 get_normal(sampler2D buffer)
 {
-	return decode_normal(textureLod(buffer, pixel_pos(), 0).rg);
+	return decode_normal(texelFetch(buffer, ivec2(int(gl_FragCoord.x),
+					int(gl_FragCoord.y)), 0).rg);
+}
+vec3 get_normal(vec2 tc)
+{
+	if(has_tex == 1)
+	{
+		vec3 texcolor = resolveProperty(mat(normal), tc).rgb * 2.0f - 1.0f;
+		return normalize(TM * texcolor);
+
+	}
+	return normalize(TM[2]);
 }
 vec3 get_normal()
 {
-	if(has_tex > 0.5)
+	if(has_tex == 1)
 	{
-		vec3 texcolor = resolveProperty(normal, texcoord).rgb * 2.0f - 1.0f;
+		vec3 texcolor = resolveProperty(mat(normal), texcoord).rgb * 2.0f - 1.0f;
 		return normalize(TM * texcolor);
 
 	}
@@ -233,6 +199,10 @@ float shadow_at_dist_no_tan(vec3 vec, float i)
 	return 0;
 }
 
+float linearize(float depth)
+{
+    return 2.0 * 0.1f * 100.0f / (100.0f + 0.1f - (2.0 * depth - 1.0) * (100.0f - 0.1f));
+}
 float unlinearize(float depth)
 {
 	return 100.0f * (1.0f - (0.1f / depth)) / (100.0f - 0.1f);
@@ -244,7 +214,7 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye)
 
 	float sd = ((ocluder_to_light - point_to_light) > -0.05) ? 0.0 : 1.0;
 	vec4 p = vec4(0.005f, 0.005f, unlinearize(dist_to_eye), 1.0f);
-	p = camera.inv_projection * p;
+	p = camera(inv_projection) * p;
 	p /= p.w;
 	if(sd > 0.5)
 	{
@@ -341,9 +311,10 @@ const float maxSteps = 20;
 const float searchDist = 20;
 const float searchDistInv = 1.0f / searchDist;
 
-vec3 get_proj_coord(sampler2D depthmap, vec3 hitCoord) // z = hitCoord.z - depth
+vec3 get_proj_coord(sampler2D depthmap, vec3 hitCoord)
+	// z = hitCoord.z - depth
 {
-	vec4 projectedCoord     = camera.projection * vec4(hitCoord, 1.0); \
+	vec4 projectedCoord     = camera(projection) * vec4(hitCoord, 1.0); \
 	projectedCoord.xy      /= projectedCoord.w; \
 	projectedCoord.xy       = projectedCoord.xy * 0.5 + 0.5;  \
 	float depth             = get_position(depthmap, projectedCoord.xy).z; \
@@ -451,9 +422,9 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
     float gloss = 1.0f - perceptualRoughness;
     float specularPower = roughnessToSpecularPower(perceptualRoughness);
 
-	vec3 w_pos = (camera.model * vec4(pos, 1.0f)).xyz;
-	vec3 w_nor = (camera.model * vec4(nor, 0.0f)).xyz;
-	vec3 c_pos = camera.pos - w_pos;
+	vec3 w_pos = (camera(model) * vec4(pos, 1.0f)).xyz;
+	vec3 w_nor = (camera(model) * vec4(nor, 0.0f)).xyz;
+	vec3 c_pos = camera(pos) - w_pos;
 	vec3 eye_dir = normalize(-c_pos);
 
 	// Reflection vector
@@ -490,8 +461,7 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
         float oppositeLength = 2.0f * tan(coneTheta) * adjacentLength;
         float incircleSize = isoscelesTriangleInRadius(oppositeLength, adjacentLength);
         vec2 samplePos = texcoord + adjacentUnit * (adjacentLength - incircleSize);
-		float mipChannel = clamp(log2(incircleSize * max(screen_size.x,
-						screen_size.y)), 0.0f, maxMipLevel);
+		float mipChannel = clamp(log2(incircleSize), 0.0f, maxMipLevel);
 
         vec4 newColor = coneSampleWeightedColor(screen, samplePos, mipChannel, glossMult);
 

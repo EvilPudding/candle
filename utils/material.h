@@ -9,9 +9,9 @@ typedef struct shader_t shader_t;
 
 typedef struct
 {
-	float texture_blend;
+	float blend;
 	texture_t *texture;
-	float texture_scale;
+	float scale;
 	vec4_t color;
 } prop_t;
 
@@ -26,6 +26,7 @@ typedef struct
 	prop_t normal;
 	prop_t emissive;
 
+	int id;
 } mat_t;
 
 extern char g_mats_path[256];
@@ -40,5 +41,8 @@ void mat_destroy(mat_t *self);
 void mat_menu(mat_t *self, void *ctx);
 
 void materials_reg(void);
+
+extern int g_mats_num;
+extern mat_t *g_mats[255];
 
 #endif /* !MATERIAL_H */

@@ -35,7 +35,7 @@ typedef struct type##4_t { union { \
 	struct { n_t x, y, z, w; }; \
 	struct { n_t r, g, b, a; }; \
 	n_t _[4]; \
-	type##2_t xy; \
+	struct { type##2_t xy; type##2_t zw; }; \
 	type##3_t xyz; \
 }; } type##4_t; \
 
@@ -427,9 +427,10 @@ static inline type##3_t type##3_rotate(const type##3_t v, const type##3_t a, \
 	MAFS_DEFINE_VEC_PRINT(n_t, type, format, 4) \
 	MAFS_DEFINE_SPECIFIC(n_t, type, sqrt, pow)
 
-MAFS_DEFINE_STRUCTS(unsigned int, uvec)
-MAFS_DEFINE_CONSTRUCTOR(unsigned int, uvec)
+/* MAFS_DEFINE_STRUCTS(unsigned int, uvec) */
+/* MAFS_DEFINE_CONSTRUCTOR(unsigned int, uvec) */
 
+MAFS_DEFINE_TYPE(uint32_t, uvec, "%u", sqrtf, powf, floorf, roundf)
 MAFS_DEFINE_TYPE(float, vec, "%f", sqrtf, powf, floorf, roundf)
 MAFS_DEFINE_TYPE(double, d, "%lf", sqrt, pow, floor, round)
 
@@ -872,13 +873,16 @@ static inline vec4_t quat_scale(vec4_t v, n_t s)
 		r._[i] = v._[i] * s;
 	return r;
 }
-static inline n_t quat_inner_product(vec4_t a, vec4_t b)
+static inline vec4_t quat_invert(vec4_t a)
 {
-	n_t p = 0.f;
-	int i;
-	for(i=0; i<4; ++i)
-		p += b._[i]*a._[i];
-	return p;
+	float len = vec4_len_square(a);
+	if (len != 0.0)
+	{
+		float i = 1.0f / len;
+		vec3_t xyz = vec3_scale(a.xyz, -i);
+		return vec4(xyz.x, xyz.y, xyz.z, a.w * i);
+	}
+	return a;
 }
 static inline vec4_t quat_conj(vec4_t q)
 {

@@ -4,8 +4,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <systems/renderer.h>
 #include <systems/window.h>
+#include <systems/render_device.h>
 #include <systems/sauces.h>
 #include <systems/nodegraph.h>
 
@@ -90,7 +90,7 @@ int handle_event(SDL_Event event)
 
 			if(entity_exists(g_candle->mouse_owners[0]))
 			{
-				entity_signal_same(g_candle->mouse_owners[0], sig("mouse_move"),
+				entity_signal(g_candle->mouse_owners[0], sig("mouse_move"),
 						&mdata, NULL);
 			}
 			else
@@ -177,23 +177,30 @@ static int render_loop(void)
 	//SDL_GL_MakeCurrent(state->renderer->window, state->renderer->context); 
 	/* SDL_LockMutex(g_candle->mut); */
 	entity_add_component(SYS, c_window_new(0, 0));
+	entity_add_component(SYS, c_render_device_new());
+	/* printf("unlock 2\n"); */
 	SDL_SemPost(g_candle->sem);
 
 	while(!g_candle->exit)
 	{
 		candle_handle_events();
+
 		loader_update(g_candle->loader);
+		glerr();
 
 		/* if(state->gameStarted) */
 		{
 			/* candle_handle_events(self); */
 			/* printf("\t%ld\n", self->render_id); */
+			glerr();
 			entity_signal(entity_null, sig("world_draw"), NULL, NULL);
+			glerr();
 
 			ecm_clean(0);
 
-			c_window_draw(c_window(&SYS));
+			SDL_GL_SwapWindow(c_window(&SYS)->window);
 
+			glerr();
 			fps++;
 			/* candle_handle_events(self); */
 
@@ -418,6 +425,7 @@ void candle_init2(void)
 	entity_add_component(SYS, c_mouse_new());
 	entity_add_component(SYS, c_keyboard_new());
 	entity_add_component(SYS, c_sauces_new());
+	entity_add_component(SYS, c_node_new());
 
 	textures_reg();
 	meshes_reg();

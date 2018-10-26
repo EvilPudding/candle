@@ -129,9 +129,10 @@ static void c_timeline_update_rot(c_timeline_t *self)
 	c_spacial_t *sc = c_spacial(self);
 	struct frame_quat *start = NULL;
 	struct frame_quat *end = NULL;
+	int keys_num = vector_count(self->keys_rot);
 
-	if(vector_count(self->keys_rot) == 0) return;
-	if(vector_count(self->keys_rot) == 1)
+	if(keys_num == 0) return;
+	if(keys_num == 1)
 	{
 		start = vector_get(self->keys_rot, 0);
 		sc->rot_quat = start->quat;
@@ -155,9 +156,10 @@ static void c_timeline_update_scale(c_timeline_t *self)
 	c_spacial_t *sc = c_spacial(self);
 	struct frame_vec *start = NULL;
 	struct frame_vec *end = NULL;
+	int keys_num = vector_count(self->keys_scale);
 
-	if(vector_count(self->keys_scale) == 0) return;
-	if(vector_count(self->keys_scale) == 1)
+	if(keys_num == 0) return;
+	if(keys_num == 1)
 	{
 		start = vector_get(self->keys_scale, 0);
 		c_spacial_set_scale(sc, start->vec);
@@ -177,9 +179,10 @@ static void c_timeline_update_pos(c_timeline_t *self)
 	c_spacial_t *sc = c_spacial(self);
 	struct frame_vec *start = NULL;
 	struct frame_vec *end = NULL;
+	int keys_num = vector_count(self->keys_pos);
 
-	if(vector_count(self->keys_pos) == 0) return;
-	if(vector_count(self->keys_pos) == 1)
+	if(keys_num == 0) return;
+	if(keys_num == 1)
 	{
 		start = vector_get(self->keys_pos, 0);
 		c_spacial_set_pos(sc, start->vec);

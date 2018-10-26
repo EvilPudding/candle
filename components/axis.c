@@ -1,13 +1,13 @@
 #include "axis.h"
-#include "mesh_gl.h"
+#include <utils/drawable.h>
 #include "model.h"
 #include "node.h"
 #include "spacial.h"
 #include "light.h"
 #include <utils/nk.h>
-#include <systems/renderer.h>
 #include <utils/shader.h>
 #include <systems/editmode.h>
+#include <systems/window.h>
 #include <candle.h>
 
 static mesh_t *g_rot_axis_mesh = NULL;
@@ -63,9 +63,8 @@ c_axis_t *c_axis_new(int type, vecN_t dir)
 		mesh_unlock(self->dir_mesh);
 	}
 
-	entity_add_component(c_entity(self),
-			c_model_new(self->dir_mesh, m, 0, !self->type));
-	c_model(self)->xray = 1;
+	entity_add_component(c_entity(self), c_model_new(self->dir_mesh, m, 0, 0));
+	c_model_set_xray(c_model(self), 1);
 	c_model(self)->scale_dist = 0.2f;
 
 	self->dir = XYZ(dir);

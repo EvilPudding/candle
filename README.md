@@ -2,10 +2,8 @@
 C Game Engine
 
 ## Dependencies
-* Assimp
 * GLEW
 * SDL2
-* lua
 
 ## Screenshots
 ![Screenshot](https://i.imgur.com/E2Qxp4Q.png)

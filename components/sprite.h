@@ -2,7 +2,7 @@
 #define SPRITE_H
 
 #include <ecs/ecm.h>
-#include <systems/renderer.h>
+#include <utils/drawable.h>
 
 typedef struct
 {
@@ -11,6 +11,8 @@ typedef struct
 	int visible;
 	int cast_shadow;
 	int xray;
+	drawable_t draw;
+	drawable_t select;
 } c_sprite_t;
 
 DEF_CASTER("sprite", c_sprite, c_sprite_t)

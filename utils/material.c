@@ -7,6 +7,10 @@
 #include <candle.h>
 #include <systems/editmode.h>
 #include <dirent.h>
+#include <systems/render_device.h>
+
+int g_mats_num;
+mat_t *g_mats[255];
 
 mat_t *mat_new(const char *name)
 {
@@ -14,22 +18,26 @@ mat_t *mat_new(const char *name)
 	mat_set_normal(self, (prop_t){.color=vec4(0.5, 0.5, 1.0, 0.0)});
 	self->albedo.color = vec4(0.5, 0.5, 0.5, 1.0);
 
-	self->albedo.texture_scale = 1;
-	self->roughness.texture_scale = 1;
-	self->normal.texture_scale = 1;
-	self->metalness.texture_scale = 1;
-	self->transparency.texture_scale = 1;
-	self->emissive.texture_scale = 1;
+	self->albedo.scale = 1;
+	self->roughness.scale = 1;
+	self->normal.scale = 1;
+	self->metalness.scale = 1;
+	self->transparency.scale = 1;
+	self->emissive.scale = 1;
 
 	strncpy(self->name, name, sizeof(self->name));
 
+	self->id = g_mats_num++;
+	g_mats[self->id] = self;
+
+	world_changed();
 	return self;
 }
 
 vec4_t color_from_hex(const char *hex_str)
 {
 	vec4_t self;
-	ulong hex = strtol(hex_str + 1, NULL, 16);
+	uint64_t hex = strtol(hex_str + 1, NULL, 16);
 	self.a = (float)((hex >> 24) & 0XFF) / 255.0f;
 	self.r = (float)((hex >> 16) & 0xFF) / 255.0f;
 	self.g = (float)((hex >> 8) & 0xFF) / 255.0f;
@@ -95,17 +103,17 @@ void mat_parse(mat_t *self, FILE *fd)
 				{
 					prp->texture = sauces(arg);
 				}
-				prp->texture_scale = 1.0;
+				prp->scale = 1.0;
 
 				char *scale = strtok(NULL, ",");
 				if(scale)
 				{
-					if(sscanf(scale, "%f", &prp->texture_scale) == -1)
+					if(sscanf(scale, "%f", &prp->scale) == -1)
 					{
 						printf("Error in texture format.\n");
 					}
 				}
-				prp->texture_blend = 1;
+				prp->blend = 1;
 			}
 			c = getc(fd);
 		}
@@ -133,6 +141,7 @@ mat_t *mat_from_file(const char *filename)
 		mat_destroy(self);
 		return 0;
 	}
+	world_changed();
 
 	return self;
 }
@@ -145,34 +154,37 @@ void mat_destroy(mat_t *self)
 
 void mat_bind_prop(u_prop_t *uniforms, prop_t *prop, int *num)
 {
-	glUniform1f(uniforms->texture_blend, prop->texture_blend); glerr();
-	glUniform1f(uniforms->texture_scale, prop->texture_scale); glerr();
-	glUniform4f(uniforms->color, prop->color.r, prop->color.g, prop->color.b,
-			prop->color.a); glerr();
+	/* glUniform1f(uniforms->blend, prop->blend); glerr(); */
+	/* glUniform1f(uniforms->scale, prop->scale); glerr(); */
+	/* glUniform4f(uniforms->color, prop->color.r, prop->color.g, prop->color.b, */
+	/* 		prop->color.a); glerr(); */
 
-	if(prop->texture_blend && ((int)uniforms->texture) != -1 && prop->texture)
-	{
-		glUniform1i(uniforms->texture, (*num)); glerr();
-		glActiveTexture(GL_TEXTURE0 + (*num)); glerr();
-		texture_bind(prop->texture, 0);
-		(*num)++;
-	}
+	/* if(prop->blend && ((int)uniforms->texture) != -1 && prop->texture) */
+	/* { */
+	/* 	glUniform1i(uniforms->texture, (*num)); glerr(); */
+	/* 	glActiveTexture(GL_TEXTURE0 + (*num)); glerr(); */
+	/* 	bind(prop->texture, 0); */
+	/* 	(*num)++; */
+	/* } */
 
 }
 
 void mat_set_transparency(mat_t *self, prop_t transparency)
 {
 	self->transparency = transparency;
+	world_changed();
 }
 
 void mat_set_normal(mat_t *self, prop_t normal)
 {
 	self->normal = normal;
+	world_changed();
 }
 
 void mat_set_albedo(mat_t *self, prop_t albedo)
 {
 	self->albedo = albedo;
+	world_changed();
 }
 
 void mat_prop_menu(mat_t *self, const char *name, prop_t *prop, void *ctx)
@@ -182,7 +194,7 @@ void mat_prop_menu(mat_t *self, const char *name, prop_t *prop, void *ctx)
 	{
 		if(prop->texture)
 		{
-			nk_property_float(ctx, "#blend:", 0, &prop->texture_blend, 1, 0.1, 0.05);
+			nk_property_float(ctx, "#blend:", 0, &prop->blend, 1, 0.1, 0.05);
 			if (nk_button_label(ctx, prop->texture->name))
 			{
 				c_editmode_open_texture(c_editmode(&SYS), prop->texture);
@@ -221,6 +233,8 @@ void mat_prop_menu(mat_t *self, const char *name, prop_t *prop, void *ctx)
 		}
 		nk_tree_pop(ctx);
 	}
+	/* TODO call this only of the new material is different from previous */
+	world_changed();
 }
 
 void mat_menu(mat_t *self, void *ctx)
@@ -235,12 +249,13 @@ void mat_menu(mat_t *self, void *ctx)
 
 void mat_bind(mat_t *self, shader_t *shader)
 {
-	mat_bind_prop(&shader->u_albedo, &self->albedo, &shader->bound_textures);
-	mat_bind_prop(&shader->u_roughness, &self->roughness, &shader->bound_textures);
-	mat_bind_prop(&shader->u_metalness, &self->metalness, &shader->bound_textures);
-	mat_bind_prop(&shader->u_transparency, &self->transparency, &shader->bound_textures);
-	mat_bind_prop(&shader->u_normal, &self->normal, &shader->bound_textures);
-	mat_bind_prop(&shader->u_emissive, &self->emissive, &shader->bound_textures);
+	/* TODO */
+	/* mat_bind_prop(&shader->u_albedo, &self->albedo, &shader->bound_textures); */
+	/* mat_bind_prop(&shader->u_roughness, &self->roughness, &shader->bound_textures); */
+	/* mat_bind_prop(&shader->u_metalness, &self->metalness, &shader->bound_textures); */
+	/* mat_bind_prop(&shader->u_transparency, &self->transparency, &shader->bound_textures); */
+	/* mat_bind_prop(&shader->u_normal, &self->normal, &shader->bound_textures); */
+	/* mat_bind_prop(&shader->u_emissive, &self->emissive, &shader->bound_textures); */
 
 	glerr();
 

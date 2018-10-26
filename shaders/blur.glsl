@@ -1,5 +1,5 @@
 
-#include "common.frag"
+#include "common.glsl"
 #line 4
 
 layout (location = 0) out vec4 FragColor;
@@ -14,7 +14,7 @@ BUFFER {
 
 void main()
 {
-	ivec2 tc = ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y));
+	ivec2 tc = ivec2(gl_FragCoord);
 	vec3 c = texelFetch(buf.color, pp, 0).rgb * weight[0];
 
 	if(horizontal)

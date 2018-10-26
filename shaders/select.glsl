@@ -2,14 +2,14 @@
 layout (location = 0) out vec2 ID;
 layout (location = 1) out vec2 GeomID;
 
-#include "common.frag"
+#include "common.glsl"
 
 void main()
 {
-	vec4 dif  = resolveProperty(albedo, texcoord);
+	vec4 dif  = resolveProperty(mat(albedo), texcoord);
 	if(dif.a == 0.0f) discard;
 
-	ID = object_id;
+	ID = vec2(float(id.x) / 255.0f, float(id.y) / 255.0f);
 
 	GeomID = poly_id;
 }

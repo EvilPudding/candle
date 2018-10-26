@@ -133,12 +133,8 @@ void mesh_selection_init(mesh_selection_t *self)
 	self->edges = kh_init(id);
 	self->verts = kh_init(id);
 
-	/* self->faces = vector_new(sizeof(int), 0, &fallback, NULL); */
-	/* self->edges = vector_new(sizeof(int), 0, &fallback, NULL); */
-	/* self->verts = vector_new(sizeof(int), 0, &fallback, NULL); */
 #ifdef MESH4
 	self->cells = kh_init(id);
-	/* self->cells = vector_new(sizeof(int), 0, &fallback, NULL); */
 #endif
 }
 
@@ -146,6 +142,8 @@ mesh_t *mesh_new()
 {
 	mesh_t *self = calloc(1, sizeof *self);
 
+	self->cull = 0x2; // CULL_BACK
+	self->smooth_angle = 0.2f;
 	self->transformation = mat4();
 	self->backup = mat4();
 	self->has_texcoords = 1;
@@ -155,6 +153,7 @@ mesh_t *mesh_new()
 
 	self->faces_hash = kh_init(id);
 	self->edges_hash = kh_init(id);
+	self->ref_num = 1;
 
 	int i;
 	for(i = 0; i < 16; i++)
@@ -186,6 +185,7 @@ static void vert_init(vertex_t *self)
 	self->color = vec4(0.0f);
 	self->tmp = -1;
 	self->half = -1;
+
 }
 
 
@@ -263,11 +263,15 @@ void mesh_destroy(mesh_t *self)
 {
 	if(self)
 	{
-		mesh_lock(self);
-		_mesh_destroy(self);
-		SDL_DestroySemaphore(self->semaphore);
-		self->semaphore = NULL;
-		free(self);
+		self->ref_num--;
+		if(self->ref_num == 0)
+		{
+			mesh_lock(self);
+			_mesh_destroy(self);
+			SDL_DestroySemaphore(self->semaphore);
+			self->semaphore = NULL;
+			free(self);
+		}
 	}
 }
 
@@ -880,7 +884,7 @@ void mesh_unlock(mesh_t *self)
 
 void mesh_lock(mesh_t *self)
 {
-	ulong current_thread = SDL_ThreadID();
+	uint64_t current_thread = SDL_ThreadID();
 	if(self->owner_thread != current_thread)
 	{
 		mesh_wait(self);
@@ -1097,8 +1101,6 @@ int mesh_add_vert(mesh_t *self, vecN_t pos)
 
 	vertex_t *vert = vector_get(self->verts, i);
 	vert_init(vert);
-
-	vert->color = vec4(0.0f);
 
 #ifdef MESH4
 	vert->pos = mat4_mul_vec4(self->transformation,
@@ -2323,7 +2325,7 @@ void mesh_assign(mesh_t *self, mesh_t *other)
 	mesh_lock(self);
 
 	void *semaphore = self->semaphore;
-	ulong owner = self->owner_thread;
+	uint64_t owner = self->owner_thread;
 	int locked_read = self->locked_read;
 
 	_mesh_destroy(self);
@@ -2340,6 +2342,7 @@ void mesh_assign(mesh_t *self, mesh_t *other)
 void _mesh_clone(mesh_t *self, mesh_t *into)
 {
 	*into = *self;
+	into->ref_num = 1;
 	/* into->changes = 0; */
 	into->faces_hash = kh_clone(id, self->faces_hash);
 	into->edges_hash = kh_clone(id, self->edges_hash);

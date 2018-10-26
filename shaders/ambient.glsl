@@ -1,5 +1,5 @@
 
-#include "common.frag"
+#include "common.glsl"
 /* uniform float far_plane; */
 in vec3 Position_worldspace;
 

@@ -12,6 +12,7 @@ typedef struct
 	uint internal;
 	char *name;
 	GLubyte *data;
+	uint64_t handle;
 } buffer_t;
 
 typedef struct
@@ -31,6 +32,7 @@ typedef struct
 	int bufs_size;
 
 	float brightness;
+	uint32_t track_brightness; 
 	GLuint target;
 	GLuint frame_buffer[6];
 	char *filename;
@@ -81,6 +83,8 @@ texture_t *texture_cubemap
 int texture_2D_resize(texture_t *self, int width, int height);
 
 void texture_bind(texture_t *self, int tex);
+unsigned int texture_handle(texture_t *self, int tex);
+
 int texture_target(texture_t *self, texture_t *depth, int fb);
 int texture_target_sub(texture_t *self, int width, int height,
 		texture_t *depth, int fb);

@@ -1,7 +1,6 @@
 #include "shader.h"
 #include <candle.h>
 #include "components/light.h"
-#include "components/probe.h"
 #include "components/spacial.h"
 #include "components/node.h"
 #include <stdio.h>
@@ -10,7 +9,8 @@
 #include <stdarg.h>
 
 static void checkShaderError(GLuint shader, const char *errorMessage,
-		const char *name);
+		const char *name, const char *code);
+static char *string_preprocess(const char *src, int len, int defines);
 
 struct source
 {
@@ -19,56 +19,60 @@ struct source
 	char *src;
 };
 
-vs_t g_vs[16];
+static char *shader_preprocess(struct source source, int defines);
+
+vs_t g_vs[32];
 int g_vs_num = 0;
 
-fs_t g_fs[16];
+fs_t g_fs[32];
 int g_fs_num = 0;
 
 static struct source *g_sources = NULL;
 
 static int g_sources_num = 0;
 
-void shaders_common_frag_reg(void);
-void shaders_depth_frag_reg(void);
-void shaders_gbuffer_frag_reg(void);
-void shaders_select_frag_reg(void);
-void shaders_decals_frag_reg(void);
-void shaders_ambient_frag_reg(void);
-void shaders_bright_frag_reg(void);
-void shaders_copy_frag_reg(void);
-void shaders_quad_frag_reg(void);
-void shaders_sprite_frag_reg(void);
-void shaders_ssr_frag_reg(void);
-void shaders_blur_frag_reg(void);
-void shaders_border_frag_reg(void);
+void shaders_common_glsl_reg(void);
+void shaders_depth_glsl_reg(void);
+void shaders_gbuffer_glsl_reg(void);
+void shaders_select_glsl_reg(void);
+void shaders_decals_glsl_reg(void);
+void shaders_ambient_glsl_reg(void);
+void shaders_bright_glsl_reg(void);
+void shaders_copy_glsl_reg(void);
+void shaders_quad_glsl_reg(void);
+void shaders_sprite_glsl_reg(void);
+void shaders_ssr_glsl_reg(void);
+void shaders_blur_glsl_reg(void);
+void shaders_border_glsl_reg(void);
 
-void shaders_phong_frag_reg(void);
-void shaders_ssao_frag_reg(void);
-void shaders_transparency_frag_reg(void);
-void shaders_highlight_frag_reg(void);
-void shaders_editmode_frag_reg(void);
+void shaders_phong_glsl_reg(void);
+void shaders_ssao_glsl_reg(void);
+void shaders_transparency_glsl_reg(void);
+void shaders_highlight_glsl_reg(void);
+void shaders_editmode_glsl_reg(void);
+void shaders_uniforms_glsl_reg(void);
 
 void shaders_reg()
 {
-	shaders_ambient_frag_reg();
-	shaders_blur_frag_reg();
-	shaders_border_frag_reg();
-	shaders_bright_frag_reg();
-	shaders_common_frag_reg();
-	shaders_copy_frag_reg();
-	shaders_decals_frag_reg();
-	shaders_depth_frag_reg();
-	shaders_gbuffer_frag_reg();
-	shaders_editmode_frag_reg();
-	shaders_highlight_frag_reg();
-	shaders_phong_frag_reg();
-	shaders_quad_frag_reg();
-	shaders_select_frag_reg();
-	shaders_sprite_frag_reg();
-	shaders_ssao_frag_reg();
-	shaders_ssr_frag_reg();
-	shaders_transparency_frag_reg();
+	shaders_ambient_glsl_reg();
+	shaders_blur_glsl_reg();
+	shaders_border_glsl_reg();
+	shaders_bright_glsl_reg();
+	shaders_common_glsl_reg();
+	shaders_copy_glsl_reg();
+	shaders_decals_glsl_reg();
+	shaders_depth_glsl_reg();
+	shaders_gbuffer_glsl_reg();
+	shaders_editmode_glsl_reg();
+	shaders_highlight_glsl_reg();
+	shaders_phong_glsl_reg();
+	shaders_quad_glsl_reg();
+	shaders_select_glsl_reg();
+	shaders_sprite_glsl_reg();
+	shaders_ssao_glsl_reg();
+	shaders_ssr_glsl_reg();
+	shaders_transparency_glsl_reg();
+	shaders_uniforms_glsl_reg();
 }
 
 vertex_modifier_t vertex_modifier_new(const char *code)
@@ -102,9 +106,10 @@ int vs_new_loader(vs_t *self)
 	glerr();
 	glCompileShader(self->program); glerr();
 
-	checkShaderError(self->program, "Error compiling vertex shader!", NULL);
+	checkShaderError(self->program, "vertex shader!",
+			self->name, self->code);
 	self->ready = 1;
-	printf("vs ready %s\n", self->name);
+	/* printf("vs ready %s\n", self->name); */
 
 	return 1;
 }
@@ -121,16 +126,12 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 
 	self->modifier_num = num_modifiers + 2;
 
-	self->modifiers[0] = vertex_modifier_new(
-			"#version 400\n"
+	const char modifier[] = 
 #ifdef MESH4
-			"#define MESH4\n"
-#endif
-			"#ifdef MESH4\n"
 			"layout (location = 0) in vec4 P;\n"
-			"#else\n"
+#else
 			"layout (location = 0) in vec3 P;\n"
-			"#endif\n"
+#endif
 			"layout (location = 1) in vec3 N;\n"
 			"layout (location = 2) in vec2 UV;\n"
 			"layout (location = 3) in vec3 TG;\n"
@@ -138,55 +139,38 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"layout (location = 5) in vec3 COL;\n"
 			"layout (location = 6) in uvec4 BID;\n"
 			"layout (location = 7) in vec4 WEI;\n"
-			"\n"
-			"struct camera_t\n"
-			"{\n"
-			"	vec3 pos;\n"
-			"	float exposure;\n"
-			"	mat4 projection;\n"
-			"	mat4 inv_projection;\n"
-			"	mat4 view;\n"
-			"	mat4 model;\n"
-			"};\n"
-			"\n"
-			"\n"
-			"uniform mat4 bones[30];\n"
-			"uniform mat4 M;\n"
-			"#ifdef MESH4\n"
-			"uniform float angle4;\n"
-			"#endif\n"
-			"uniform camera_t camera;\n"
-			"uniform vec2 id;\n"
-			"uniform float cameraspace_normals;\n"
-			"\n"
-			"out vec3 tgspace_light_dir;\n"
-			"out vec3 tgspace_eye_dir;\n"
-			"out vec3 worldspace_position;\n"
-			"out vec3 cameraspace_light_dir;\n"
-			"\n"
-			"uniform vec2 screen_size;\n"
-			"\n"
-			"out vec2 poly_id;\n"
+
+			"layout (location = 8) in mat4 M;\n"
+			"layout (location = 12) in uvec4 PROPS;\n"
+			/* PROPS.x = material PROPS.y = NOTHING PROPS.zw = id */
+#ifdef MESH4
+			"layout (location = 13) in float ANG4;\n"
+#endif
+
+			"out flat uvec2 id;\n"
+			"out flat uint matid;\n"
 			"out vec2 object_id;\n"
+			"out vec2 poly_id;\n"
 			"out vec3 poly_color;\n"
-			"\n"
+			"out flat vec3 obj_pos;\n"
 			"out vec3 vertex_position;\n"
+			"\n"
 			"out vec2 texcoord;\n"
-			"/* out vec4 vertex_color; */\n"
 			"\n"
 			"out mat4 model;\n"
 			"out mat3 TM;\n"
-			"\n"
-			"uniform float ratio;\n"
-			"uniform float has_tex;\n"
-			"uniform vec3 light_pos;\n"
+			"#include \"uniforms.glsl\"\n"
 			"\n"
 			"void main()\n"
 			"{\n"
 			"	vec4 pos = vec4(P.xyz, 1.0f);\n"
+			"	obj_pos = (M * vec4(0, 0, 0, 1)).xyz;\n"
 			"	model = M;\n"
-			"	texcoord = UV;\n");
+			"	matid = PROPS.x;\n"
+			"	id = PROPS.zw;\n"
+			"	texcoord = UV;\n";
 
+	self->modifiers[0] = vertex_modifier_new(string_preprocess(modifier, sizeof(modifier), 1));
 
 	va_start(va, num_modifiers);
 	for(i = 0; i < num_modifiers; i++)
@@ -214,10 +198,6 @@ void shader_add_source(const char *name, unsigned char data[],
 	g_sources[i].src = malloc(len + 1);
 	memcpy(g_sources[i].src, data, len);
 	g_sources[i].src[len] = '\0';
-
-	/* g_sources[i].src = data; */
-	/* g_sources[i].src[len] = '\0'; */
-	printf("adding source %s\n", name);
 }
 
 static const struct source shader_source(const char *filename)
@@ -233,7 +213,7 @@ static const struct source shader_source(const char *filename)
 	}
 
 #define prefix "resauces/shaders/"
-	char name[] = prefix "XXXXXXXXXXXXXXXXXX";
+	char name[] = prefix "XXXXXXXXXXXXXXXXXXXXXXXXXXX";
 	strncpy(name + (sizeof(prefix) - 1), filename, sizeof(name) - (sizeof(prefix) - 1));
 	FILE *fp;
 	char *buffer = NULL;
@@ -270,12 +250,11 @@ static const struct source shader_source(const char *filename)
 
 }
 
-static char *shader_preprocess(struct source source, int defines)
+static char *string_preprocess(const char *src, int len, int defines)
 {
-	if(!source.src) return NULL;
-	size_t lsize = source.len;
+	size_t lsize = len;
 
-	char defs[][64] = { "#version 400\n"
+	char defs[][64] = { "#version 420\n"
 #ifdef MESH4
 		, "#define MESH4\n"
 #endif
@@ -300,7 +279,7 @@ static char *shader_preprocess(struct source source, int defines)
 			strcat(buffer, defs[i]);
 		}
 	}
-	strcat(buffer, source.src);
+	strcat(buffer, src);
 
 	char *include = NULL;
 	while((include = strstr(buffer, "#include")))
@@ -313,11 +292,13 @@ static char *shader_preprocess(struct source source, int defines)
 		memcpy(include_name, start, end - start);
 		include_name[end - start] = '\0';
 
+		long command_size = end_offset - offset;
+
 		const struct source inc = shader_source(include_name);
 		if(!inc.src)
 		{
-			printf("Could not find '%s' shader to include in '%s'\n",
-					include_name, source.filename);
+			/* printf("Could not find '%s' shader to include in '%s'\n", */
+					/* include_name, source.filename); */
 			break;
 		}
 		else
@@ -325,16 +306,16 @@ static char *shader_preprocess(struct source source, int defines)
 			char *include_buffer = shader_preprocess(inc, 0);
 			size_t inc_size = strlen(include_buffer);
 
-			long nsize = offset + inc_size + lsize - (end_offset - offset);
+			long nsize = offset + inc_size + lsize - command_size;
 
-			char *new_buffer = calloc(nsize + 8, 1);
+			char *new_buffer = calloc(nsize + 1, 1);
 
 			memcpy(new_buffer, buffer, offset);
 
 			memcpy(new_buffer + offset, include_buffer, inc_size);
 
 			memcpy(new_buffer + offset + inc_size, buffer + end_offset,
-					lsize - (end_offset - offset));
+					lsize - end_offset);
 
 			lsize = nsize;
 
@@ -346,8 +327,14 @@ static char *shader_preprocess(struct source source, int defines)
 	return buffer;
 }
 
+static char *shader_preprocess(struct source source, int defines)
+{
+	if(!source.src) return NULL;
+	return string_preprocess(source.src, source.len, defines);
+}
+
 static void checkShaderError(GLuint shader, const char *errorMessage,
-		const char *name)
+		const char *name, const char *code)
 {
 	GLint success = 0;
 	GLint bufflen;
@@ -358,6 +345,10 @@ static void checkShaderError(GLuint shader, const char *errorMessage,
 		GLchar log_string[bufflen + 1];
 		glGetShaderInfoLog(shader, bufflen, 0, log_string);
 		printf("Log found for '%s':\n%s", name, log_string);
+		if(!name)
+		{
+			puts(code);
+		}
 	}
 
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
@@ -368,27 +359,8 @@ static void checkShaderError(GLuint shader, const char *errorMessage,
 	}
 }
 
-static void shader_get_prop_uniforms(shader_t *self, u_prop_t *prop,
-		const char *name)
-{
-	char buffer[128];
-
-	snprintf(buffer, sizeof(buffer), "%s.texture_blend", name);
-	prop->texture_blend = glGetUniformLocation(self->program, buffer); glerr();
-
-	snprintf(buffer, sizeof(buffer), "%s.texture_scale", name);
-	prop->texture_scale = glGetUniformLocation(self->program, buffer); glerr();
-
-	snprintf(buffer, sizeof(buffer), "%s.texture", name);
-	prop->texture = glGetUniformLocation(self->program, buffer); glerr();
-
-	snprintf(buffer, sizeof(buffer), "%s.color", name);
-	prop->color = glGetUniformLocation(self->program, buffer); glerr();
-}
-
 static int shader_new_loader(shader_t *self)
 {
-	int i;
 	self->program = glCreateProgram(); glerr();
 
 	glAttachShader(self->program, self->fs->program); glerr();
@@ -397,73 +369,8 @@ static int shader_new_loader(shader_t *self)
 
 	glLinkProgram(self->program); glerr();
 
-	/* LAYOUTS */
-
-/* 	/1* POSITION *1/ */
-/* 	glBindAttribLocation(self->program, 0, "P"); glerr(); */
-/* 	/1* NORMAL *1/ */
-/* 	glBindAttribLocation(self->program, 1, "N"); glerr(); */
-/* 	/1* UV MAP *1/ */
-/* 	glBindAttribLocation(self->program, 2, "UV"); glerr(); */
-/* 	/1* TANGENT *1/ */
-/* 	glBindAttribLocation(self->program, 3, "TG"); glerr(); */
-/* 	/1* BITANGENT *1/ */
-/* 	/1* glBindAttribLocation(self->program, 4, "BT"); glerr(); *1/ */
-/* 	/1* ID *1/ */
-/* 	glBindAttribLocation(self->program, 4, "ID"); glerr(); */
-
-	self->u_m = glGetUniformLocation(self->program, "M"); glerr();
-#ifdef MESH4
-	self->u_angle4 = glGetUniformLocation(self->program, "angle4"); glerr();
-#endif
-
-	self->u_perlin_map = glGetUniformLocation(self->program, "perlin_map"); glerr();
-
-
-	self->u_ambient_map = glGetUniformLocation(self->program, "ambient_map"); glerr();
-	self->u_probe_pos = glGetUniformLocation(self->program, "probe_pos"); glerr();
-
-	self->u_v = glGetUniformLocation(self->program, "camera.view"); glerr();
-	self->u_projection = glGetUniformLocation(self->program, "camera.projection"); glerr();
-	self->u_inv_projection = glGetUniformLocation(self->program, "camera.inv_projection"); glerr();
-	self->u_camera_pos = glGetUniformLocation(self->program, "camera.pos"); glerr();
-	self->u_camera_model = glGetUniformLocation(self->program, "camera.model"); glerr();
-	self->u_exposure = glGetUniformLocation(self->program, "camera.exposure"); glerr();
-
-	self->u_shadow_map = glGetUniformLocation(self->program, "light_shadow_map"); glerr();
-	self->u_light_pos = glGetUniformLocation(self->program, "light_pos"); glerr();
-	self->u_light_color = glGetUniformLocation(self->program, "light_color"); glerr();
-	self->u_light_radius = glGetUniformLocation(self->program, "light_radius"); glerr();
-
-	self->u_has_tex = glGetUniformLocation(self->program, "has_tex"); glerr();
-
-	self->u_id = glGetUniformLocation(self->program, "id"); glerr();
-	self->u_id_filter = glGetUniformLocation(self->program, "id_filter"); glerr();
-
-	self->u_screen_size = glGetUniformLocation(self->program, "screen_size"); glerr();
-
-
-	self->u_horizontal_blur = glGetUniformLocation(self->program, "horizontal"); glerr();
-
-	self->u_output_size = glGetUniformLocation(self->program, "output_size"); glerr();
-
-	for(i = 0; i < 30; i++)
-	{
-		char buffer[12];
-		snprintf(buffer, sizeof(buffer), "bones[%d]", i);
-		self->u_bones[i] = glGetUniformLocation(self->program, buffer); glerr();
-	}
-
-	/* MATERIALS */
-	shader_get_prop_uniforms(self, &self->u_albedo, "albedo");
-	shader_get_prop_uniforms(self, &self->u_roughness, "roughness");
-	shader_get_prop_uniforms(self, &self->u_metalness, "metalness");
-	shader_get_prop_uniforms(self, &self->u_transparency, "transparency");
-	shader_get_prop_uniforms(self, &self->u_normal, "normal");
-	shader_get_prop_uniforms(self, &self->u_emissive, "emissive");
-
 	self->ready = 1;
-	printf("shader ready f:%s v:%s\n", self->fs->filename, g_vs[self->index].name);
+	/* printf("shader ready f:%s v:%s\n", self->fs->filename, g_vs[self->index].name); */
 	return 1;
 }
 
@@ -472,7 +379,7 @@ static int fs_new_loader(fs_t *self)
 	self->program = 0;
 
 	char buffer[256];
-	snprintf(buffer, sizeof(buffer), "%s.frag", self->filename);
+	snprintf(buffer, sizeof(buffer), "%s.glsl", self->filename);
 
 	self->code  = shader_preprocess(shader_source(buffer), 1);
 
@@ -484,9 +391,10 @@ static int fs_new_loader(fs_t *self)
 	glerr();
 	glCompileShader(self->program); glerr();
 
-	checkShaderError(self->program, "Error compiling fragment shader!", self->filename);
+	checkShaderError(self->program, "fragment shader!",
+			self->filename, self->code);
 	self->ready = 1;
-	printf("fs ready %s\n", buffer);
+	/* printf("fs ready %s\n", buffer); */
 
 	return 1;
 }
@@ -505,7 +413,7 @@ fs_t *fs_new(const char *filename)
 	self->program = 0;
 	self->ready = 0;
 
-	for(i = 0; i < 16; i++)
+	for(i = 0; i < 32; i++)
 	{
 		self->combinations[i] = NULL;
 	}
@@ -527,121 +435,18 @@ shader_t *shader_new(fs_t *fs, vs_t *vs)
 	return self;
 }
 
-void shader_bind_ambient(shader_t *self, texture_t *ambient)
-{
-	int i = self->bound_textures++;
-	glUniform1i(self->u_ambient_map, i); glerr();
-	glActiveTexture(GL_TEXTURE0 + i); glerr();
-	texture_bind(ambient, 0);
-
-	glerr();
-}
-
-void shader_bind_probe(shader_t *self, entity_t probe)
-{
-	/* shader_t *self = c_renderer(&g_systems)->shader; */
-	const vec3_t lpos = c_spacial(&probe)->pos;
-
-	glUniform3f(self->u_probe_pos, lpos.x, lpos.y, lpos.z);
-
-	glerr();
-
-	/* probe_c = c_probe(probe); */
-	/* if(!probe_c->before_draw || probe_c->before_draw((c_t*)probe_c)) */
-	/* { */
-		/* glUniform1f(self->u_probe_intensity, c_probe(probe)->intensity); */
-	/* } */
-	/* else */
-	/* { */
-		/* glUniform1f(self->u_probe_intensity, 0); */
-	/* } */
-}
-
-void shader_bind_light(shader_t *self, entity_t light)
-{
-	c_light_t *light_c;
-	c_probe_t *probe_c;
-
-	c_node_t *node = c_node(&light);
-	c_node_update_model(node);
-	vec3_t lp = mat4_mul_vec4(node->model, vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-	glUniform3f(self->u_light_pos, lp.x, lp.y, lp.z);
-
-	light_c = c_light(&light);
-	probe_c = c_probe(&light);
-	/* if(!light_c->before_draw || light_c->before_draw((c_t*)light_c)) */
-	/* { */
-		glUniform1f(self->u_light_radius, light_c->radius);
-		glUniform4f(self->u_light_color,
-				light_c->color.r,
-				light_c->color.g,
-				light_c->color.b,
-				light_c->color.a);
-	/* } */
-	/* else */
-	/* { */
-		/* glUniform1f(self->u_light_intensity, 0); */
-	/* } */
-
-	if(probe_c && probe_c->map)
-	{
-		/* int i = self->bound_textures++; */
-		glUniform1i(self->u_shadow_map, 32); glerr();
-		glActiveTexture(GL_TEXTURE0 + 32); glerr();
-		texture_bind(probe_c->map, 1);
-	}
-
-}
-
-void shader_bind_camera(shader_t *self, const vec3_t pos, mat4_t *view,
-		mat4_t *projection, mat4_t *model, float exposure)
-{
-	/* shader_t *self = c_renderer(&g_systems)->shader; */
-	glUniformMatrix4fv(self->u_v, 1, GL_FALSE, (void*)view->_);
-	glUniformMatrix4fv(self->u_m, 1, GL_FALSE, (void*)model->_);
-	glUniform3f(self->u_camera_pos, pos.x, pos.y, pos.z);
-	glUniform1f(self->u_exposure, exposure);
-
-	/* TODO unnecessary? */
-	mat4_t inv_projection = mat4_invert(*projection);
-	glUniformMatrix4fv(self->u_projection, 1, GL_FALSE, (void*)projection->_);
-	glUniformMatrix4fv(self->u_inv_projection, 1, GL_FALSE, (void*)inv_projection._);
-
-	glerr();
-}
-
 #ifdef MESH4
-void shader_update(shader_t *self, mat4_t *model_matrix, float angle4)
-#else
-void shader_update(shader_t *self, mat4_t *model_matrix)
-#endif
+void shader_update(shader_t *self, float angle4)
 {
-	glUniformMatrix4fv(self->u_m, 1, GL_FALSE, (void*)model_matrix->_);
-#ifdef MESH4
 	glUniform1f(self->u_angle4, angle4);
+	glerr();
+}
 #endif
-	glerr();
-}
-
-void shader_bind_screen(shader_t *self, texture_t *buffer, float sx, float sy)
-{
-	/* shader_t *self = c_renderer(&g_systems)->shader; */
-
-	glUniform2f(self->u_screen_size, sx * buffer->width, sy * buffer->height);
-	glerr();
-
-	int i = self->bound_textures++;
-	glUniform1i(self->u_albedo.texture, i); glerr();
-	glActiveTexture(GL_TEXTURE0 + i); glerr();
-
-	texture_bind(buffer, -1);
-}
 
 void shader_bind(shader_t *self)
 {
 	/* printf("shader bound f:%s v:%s\n", self->fs->filename, g_vs[self->index].name); */
-	self->bound_textures = 0;
-	glUseProgram(self->program);
+	glUseProgram(self->program); glerr();
 }
 
 GLuint _shader_uniform(shader_t *self, const char *uniform, const char *member)

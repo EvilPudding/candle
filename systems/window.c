@@ -1,9 +1,10 @@
 #include "window.h"
 #include <utils/shader.h>
+#include <utils/drawable.h>
 #include <candle.h>
 #include <components/model.h>
-#include <components/mesh_gl.h>
 #include <components/node.h>
+#include <systems/render_device.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -11,8 +12,9 @@
 int window_width = 1360;
 int window_height = 766;
 
-static vs_t *g_quad_vs = NULL;
-static fs_t *g_quad_fs = NULL;
+vs_t *g_quad_vs;
+fs_t *g_quad_fs;
+mesh_t *g_quad_mesh;
 
 extern SDL_GLContext *context;
 extern SDL_Window *mainWindow;
@@ -66,7 +68,7 @@ void c_window_init(c_window_t *self)
 
 	/* SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1); */
 
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
 			SDL_GL_CONTEXT_PROFILE_CORE);
@@ -91,7 +93,7 @@ int c_window_toggle_fullscreen_gl(c_window_t *self)
 	self->width = dm.w;
 	self->height = dm.h;
 
-	printf("window resize: %dx%d\n", self->width, self->height);
+	/* printf("window resize: %dx%d\n", self->width, self->height); */
 	entity_signal(entity_null, sig("window_resize"),
 		&(window_resize_data){.width = self->width, .height = self->height}, NULL);
 
@@ -102,6 +104,7 @@ int c_window_toggle_fullscreen_gl(c_window_t *self)
 
 	return 1;
 }
+
 void c_window_toggle_fullscreen(c_window_t *self)
 {
 	loader_push(g_candle->loader, (loader_cb)c_window_toggle_fullscreen_gl,
@@ -112,7 +115,11 @@ void c_window_handle_resize(c_window_t *self, const SDL_Event event)
 {
 	self->width = event.window.data1;
 	self->height = event.window.data2;
-	printf("window resize: %dx%d\n", self->width, self->height);
+	/* printf("window resize: %dx%d\n", self->width, self->height); */
+	if(self->renderer)
+	{
+		renderer_resize(self->renderer, self->width, self->height);
+	}
 
 	entity_signal(entity_null, sig("window_resize"),
 		&(window_resize_data){.width = self->width, .height = self->height}, NULL);
@@ -131,21 +138,19 @@ int c_window_created(c_window_t *self)
 		g_quad_fs = fs_new("quad");
 	}
 
-	mesh_t *mesh = mesh_new();
-	entity_add_component(c_entity(self), c_model_new(mesh, NULL, 0, 0));
-	mesh_quad(mesh);
-	if(!c_model(self)) exit(1);
+	g_quad_mesh = mesh_new();
+	mesh_quad(g_quad_mesh);
+	g_quad_mesh->cull = 0;
 
-	c_model_cull_face(c_model(self), 0, 2);
-	c_model(self)->super.ghost = 1;
-	c_spacial(self)->super.ghost = 1;
-	c_node(self)->super.ghost = 1;
+	drawable_init(&self->draw, ref("quad"), NULL);
+	drawable_set_entity(&self->draw, c_entity(self));
+	drawable_set_mesh(&self->draw, g_quad_mesh);
+	drawable_set_vs(&self->draw, g_quad_vs);
 
-
-	entity_signal(entity_null, sig("window_resize"),
-			&(window_resize_data){
-			.width = self->width,
-			.height = self->height}, NULL);
+/* 	entity_signal(entity_null, sig("window_resize"), */
+/* 			&(window_resize_data){ */
+/* 			.width = self->width, */
+/* 			.height = self->height}, NULL); */
 
 	return CONTINUE;
 }
@@ -158,73 +163,91 @@ c_window_t *c_window_new(int width, int height)
 	return self;
 }
 
-int c_window_draw(c_window_t *self)
+void c_window_lock_fps(c_window_t *self, int32_t lock_fps)
 {
-	SDL_GL_SwapWindow(self->window);
-	return CONTINUE;
+	SDL_GL_SetSwapInterval(lock_fps);
 }
 
-int c_window_render_quad(c_window_t *self, texture_t *texture)
+void c_window_draw(c_window_t *self)
 {
+	if(!self->renderer) return;
 
-	/* fs_bind(g_quad_fs); */
-	shader_t *shader = vs_bind(g_quad_vs);
-	if(!shader || !shader->ready) return STOP;
+	/* renderer_draw(self->renderer); */
 
-	if(texture)
+	texture_t *tex = self->renderer->output;
+
+	if(!tex)
 	{
-		shader_bind_screen(shader, texture, 1, 1);
-	}
-	c_node_t *node = c_node(self);
-	if(node)
-	{
-		c_node_update_model(node);
-
-#ifdef MESH4
-			shader_update(shader, &node->model, node->angle4);
-#else
-			shader_update(shader, &node->model);
-#endif
+		printf("No texture to draw\n");
+		return;
 	}
 
-	c_mesh_gl_draw(c_mesh_gl(self), 0);
-	return CONTINUE;
-}
-
-void c_window_rect(c_window_t *self, int x, int y, int width, int height,
-		texture_t *texture)
-{
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); glerr();
+	/* glClear(GL_COLOR_BUFFER_BIT); */
 	glClear(GL_DEPTH_BUFFER_BIT);
-	if(!texture) return;
+
 	fs_bind(g_quad_fs);
+
+	glViewport(0, 0, self->width, self->height); glerr();
+
 	shader_t *shader = vs_bind(g_quad_vs);
-	if(!shader || !shader->ready)
-	{
-		exit(1);
-	}
+	uint uni = shader_uniform(shader, "tex", NULL);
+	glUniformHandleui64ARB(uni, tex->bufs[tex->draw_id].handle);
 
-	/* Draw to opengl context */
+	glUniform2f(22, self->width, self->height); glerr();
 
-	glViewport(x, y, width, height); glerr();
-
-	shader_bind_screen(shader, texture, 1, 1);
-	glUniform2f(shader->u_screen_size,
-			self->width,
-			self->height); glerr();
-
-	c_mesh_gl_draw(c_mesh_gl(self), 0);
-
+	drawable_draw(&self->draw);
+	glerr();
 }
 
+int c_window_mouse_press(c_window_t *self, mouse_button_data *event)
+{
+	float depth;
+	entity_t ent = renderer_entity_at_pixel(self->renderer, event->x, event->y, &depth);
+	unsigned int geom = renderer_geom_at_pixel(self->renderer, event->x, event->y, &depth);
+
+	if(ent)
+	{
+		model_button_data ev = {
+			.x = event->x, .y = event->y, .direction = event->direction,
+			.depth = depth, .geom = geom, .button = event->button
+		};
+		return entity_signal_same(ent, ref("model_press"), &ev, NULL);
+	}
+	return CONTINUE;
+}
+
+int c_window_mouse_release(c_window_t *self, mouse_button_data *event)
+{
+
+	float depth;
+	entity_t ent = renderer_entity_at_pixel(self->renderer, event->x, event->y,
+			&depth);
+	unsigned int geom = renderer_geom_at_pixel(self->renderer, event->x,
+			event->y, &depth);
+
+	if(ent)
+	{
+		model_button_data ev = {
+			.x = event->x, .y = event->y, .direction = event->direction,
+			.depth = depth, .geom = geom, .button = event->button
+		};
+		return entity_signal_same(ent, ref("model_release"), &ev, NULL);
+	}
+	return CONTINUE;
+}
 
 REG()
 {
 	ct_t *ct = ct_new("window", sizeof(c_window_t), c_window_init, NULL, 0);
 
 	ct_listener(ct, ENTITY, sig("entity_created"), c_window_created);
+	ct_listener(ct, WORLD | 50, sig("world_draw"), c_window_draw);
+	ct_listener(ct, WORLD | 100, ref("mouse_press"), c_window_mouse_press);
+	ct_listener(ct, WORLD | 100, ref("mouse_release"), c_window_mouse_release);
 
+
+	signal_init(ref("model_press"), 0);
+	signal_init(ref("model_release"), 0);
 	signal_init(sig("window_resize"), sizeof(window_resize_data));
-
-	ct_listener(ct, WORLD, sig("render_quad"), c_window_render_quad);
 }

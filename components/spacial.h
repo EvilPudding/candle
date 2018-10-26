@@ -38,6 +38,7 @@ void c_spacial_set_model(c_spacial_t *self, mat4_t model);
 void c_spacial_set_rot(c_spacial_t *self, float x, float y, float z, float angle);
 void c_spacial_set_scale(c_spacial_t *self, vec3_t scale);
 void c_spacial_update_model_matrix(c_spacial_t *self);
+void c_spacial_assign(c_spacial_t *self, c_spacial_t *other);
 
 void c_spacial_rotate_X(c_spacial_t *self, float angle);
 void c_spacial_rotate_Y(c_spacial_t *self, float angle);
