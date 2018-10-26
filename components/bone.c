@@ -99,21 +99,9 @@ int c_bone_render(c_bone_t *self, int flags)
 	return CONTINUE;
 }
 
-int c_bone_render_selectable(c_bone_t *self)
-{
-	return c_bone_render(self, 2);
-}
-
-int c_bone_render_transparent(c_bone_t *self)
-{
-	return c_bone_render(self, 1);
-}
-
 REG()
 {
 	ct_t *ct = ct_new("bone", sizeof(c_bone_t),
 			c_bone_init, NULL, 1, ref("node"));
-	ct_listener(ct, WORLD, sig("render_transparent"), c_bone_render_transparent);
-	ct_listener(ct, WORLD, sig("render_selectable"), c_bone_render_selectable);
 }
 
