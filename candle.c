@@ -177,7 +177,6 @@ static int render_loop(void)
 	//SDL_GL_MakeCurrent(state->renderer->window, state->renderer->context); 
 	/* SDL_LockMutex(g_candle->mut); */
 	entity_add_component(SYS, c_window_new(0, 0));
-	/* printf("unlock 2\n"); */
 	SDL_SemPost(g_candle->sem);
 
 	while(!g_candle->exit)

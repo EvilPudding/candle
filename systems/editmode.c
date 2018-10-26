@@ -909,6 +909,19 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 	{
 		title = name->name;
 	}
+
+	struct nk_context *ctx = self->nk;
+	struct nk_style *s = &ctx->style;
+	c_window_t *window = c_window(&self);
+	texture_t *back = NULL;
+	if(window && window->output)
+	{
+		back = window->output;
+		struct nk_image background = nk_image_id(back->bufs[back->prev_id].id);
+		nk_style_push_color(ctx, &s->window.background, nk_rgba(0,0,0,0));
+		nk_style_push_style_item(ctx, &s->window.fixed_background, nk_style_item_image(background));
+	}
+
 	res = nk_begin_titled(self->nk, "entity", title,
 			nk_rect(10, 10, 230, 680),
 			NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
@@ -993,6 +1006,13 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 		}
 	}
 	nk_end(self->nk);
+
+	if(back)
+	{
+		nk_style_pop_color(ctx);
+		nk_style_pop_style_item(ctx);
+	}
+
 	return res;
 }
 

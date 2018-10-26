@@ -467,6 +467,40 @@ int texture_load(texture_t *self, const char *filename)
 	return 1;
 }
 
+texture_t *texture_from_buffer(void *buffer, int width, int height, int Bpp)
+{
+	texture_t *self = texture_new_2D(width, height, TEX_INTERPOLATE);
+
+	self->bufs[0].dims = Bpp;
+	self->bufs[0].data = buffer;
+
+	switch(self->bufs[0].dims)
+	{
+		case 1:	self->bufs[0].format	= GL_RED;
+				self->bufs[0].internal = GL_RED;
+				break;
+		case 2:	self->bufs[0].format	= GL_RG;
+				self->bufs[0].internal = GL_RG;
+				break;
+		case 3:	self->bufs[0].format	= GL_RGB;
+				self->bufs[0].internal = GL_RGB;
+				break;
+		case 4: self->bufs[0].format	= GL_RGBA;
+				self->bufs[0].internal = GL_RGBA;
+				break;
+	}
+
+	strncpy(self->name, "unnamed", sizeof(self->name));
+	self->filename = "unnamed";
+	self->draw_id = 0;
+	self->prev_id = 0;
+	self->bufs_size = 1;
+	self->bufs[0].name = strdup("color");
+
+	loader_push(g_candle->loader, (loader_cb)texture_from_file_loader, self, NULL);
+	return self;
+}
+
 texture_t *texture_from_memory(void *buffer, int len)
 {
 	texture_t *self = texture_new_2D(0, 0, TEX_INTERPOLATE);

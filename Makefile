@@ -3,7 +3,7 @@ LD = cc
 
 DIR = build
 
-DEPS =  $(shell sdl2-config --libs) -lglut -lGLU -lm -lGL -lGLEW
+DEPS =  $(shell sdl2-config --libs) -lm -lGL -lGLEW
 
 SHAD = $(patsubst %.frag, $(DIR)/%.frag.o, $(wildcard shaders/*.frag)) \
 	   $(patsubst %.vert, $(DIR)/%.vert.o, $(wildcard shaders/*.vert)) \

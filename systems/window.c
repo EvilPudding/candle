@@ -9,7 +9,7 @@
 #include <string.h>
 
 int window_width = 1360;
-int window_height = 765;
+int window_height = 766;
 
 static vs_t *g_quad_vs = NULL;
 static fs_t *g_quad_fs = NULL;

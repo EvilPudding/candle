@@ -1,6 +1,7 @@
 #ifndef ECM_H
 #define ECM_H
 
+#include <stdint.h>
 #include <limits.h>
 #include "utils/material.h"
 #include "utils/texture.h"
