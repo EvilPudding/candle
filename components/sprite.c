@@ -8,9 +8,10 @@
 #include <systems/editmode.h>
 #include <candle.h>
 
-vs_t *g_sprite_vs = NULL;
+vs_t *g_sprite_vs;
 
-static mesh_t *g_sprite_mesh = NULL;
+static int c_sprite_position_changed(c_sprite_t *self);
+mesh_t *g_sprite_mesh;
 
 /* int c_sprite_menu(c_sprite_t *self, void *ctx); */
 
@@ -47,14 +48,11 @@ static void c_sprite_init(c_sprite_t *self)
 {
 	sprite_vs();
 	drawable_init(&self->draw, ref("visible"), NULL);
-	drawable_set_mesh(&self->draw, g_sprite_mesh);
+	drawable_add_group(&self->draw, ref("selectable"));
 	drawable_set_vs(&self->draw, g_sprite_vs);
-	drawable_init(&self->select, ref("selectable"), NULL);
-	drawable_set_mesh(&self->select, g_sprite_mesh);
-	drawable_set_vs(&self->select, g_sprite_vs);
-
+	drawable_set_mesh(&self->draw, g_sprite_mesh);
 	drawable_set_entity(&self->draw, c_entity(self));
-	drawable_set_entity(&self->select, c_entity(self));
+
 	self->visible = 1;
 }
 
@@ -65,40 +63,36 @@ c_sprite_t *c_sprite_new(mat_t *mat, int cast_shadow)
 	self->cast_shadow = cast_shadow;
 
 	self->mat = mat;
-	drawable_set_mat(&self->draw, self->mat ? self->mat->id : 0);
-	drawable_set_mat(&self->select, self->mat ? self->mat->id : 0);
+	drawable_set_mat(&self->draw, mat ? mat->id : 0);
 
+	c_sprite_position_changed(self);
 	return self;
 }
 
 int c_sprite_created(c_sprite_t *self)
 {
-	g_update_id++;
 	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL, NULL);
 	return CONTINUE;
 }
-
-/* static int c_sprite_render_shadows(c_sprite_t *self) */
-/* { */
-/* 	c_sprite_render_visible(self); */
-/* 	return CONTINUE; */
-/* } */
 
 static int c_sprite_position_changed(c_sprite_t *self)
 {
 	c_node_t *node = c_node(self);
 	c_node_update_model(node);
 	drawable_set_transform(&self->draw, node->model);
-	drawable_set_transform(&self->select, node->model);
 
 	return CONTINUE;
 }
 
+void c_sprite_destroy(c_sprite_t *self)
+{
+	drawable_set_mesh(&self->draw, NULL);
+}
 
 REG()
 {
 	ct_t *ct = ct_new("sprite", sizeof(c_sprite_t),
-			c_sprite_init, NULL, 1, ref("node"));
+			c_sprite_init, c_sprite_destroy, 1, ref("node"));
 
 	ct_listener(ct, ENTITY, sig("entity_created"), c_sprite_created);
 

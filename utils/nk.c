@@ -69,7 +69,9 @@ nk_can_device_create(void)
         "in vec4 Frag_Color;\n"
         "out vec4 Out_Color;\n"
         "void main(){\n"
-        "   Out_Color = Frag_Color * textureLod(Texture, Frag_UV.st * Scale, 0);\n"
+		"	vec2 uv = Frag_UV;\n"
+		"	if(Scale.y < 0.0f) uv.y = 1.0f - uv.y;\n"
+        "   Out_Color = Frag_Color * textureLod(Texture, uv, 0);\n"
         "}\n";
 
     struct nk_can_device *dev = &can.ogl;
@@ -538,7 +540,7 @@ void nk_can_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
 			if(cmd->userdata.ptr == (void*)(unsigned long)1)
 			{
 				glDisable(GL_BLEND);
-				/* glUniform2f(dev->uniform_scale, 1, -1); */
+				glUniform2f(dev->uniform_scale, 1, -1);
 			}
             glBindTexture(GL_TEXTURE_2D, (GLuint)cmd->texture.id);
             glScissor((GLint)(cmd->clip_rect.x * scale.x),
@@ -547,7 +549,11 @@ void nk_can_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
                 (GLint)(cmd->clip_rect.h * scale.y));
             glDrawElements(GL_TRIANGLES, (GLsizei)cmd->elem_count, GL_UNSIGNED_SHORT, offset);
             offset += cmd->elem_count;
-			if(cmd->userdata.ptr == (void*)(unsigned long)1) glEnable(GL_BLEND);
+			if(cmd->userdata.ptr == (void*)(unsigned long)1)
+			{
+				glEnable(GL_BLEND);
+				glUniform2f(dev->uniform_scale, 1, 1);
+			}
         }
         nk_clear(&can.ctx);
     }
