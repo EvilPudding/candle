@@ -168,9 +168,9 @@ void c_window_lock_fps(c_window_t *self, int32_t lock_fps)
 	SDL_GL_SetSwapInterval(lock_fps);
 }
 
-void c_window_draw(c_window_t *self)
+int c_window_draw(c_window_t *self)
 {
-	if(!self->renderer) return;
+	if(!self->renderer) return CONTINUE;
 
 	/* renderer_draw(self->renderer); */
 
@@ -179,7 +179,7 @@ void c_window_draw(c_window_t *self)
 	if(!tex)
 	{
 		printf("No texture to draw\n");
-		return;
+		return CONTINUE;
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); glerr();
@@ -192,12 +192,13 @@ void c_window_draw(c_window_t *self)
 
 	shader_t *shader = vs_bind(g_quad_vs);
 	uint uni = shader_uniform(shader, "tex", NULL);
-	glUniformHandleui64ARB(uni, tex->bufs[tex->draw_id].handle);
+	glUniformHandleui64ARB(uni, texture_handle(tex, tex->draw_id));
 
 	glUniform2f(22, self->width, self->height); glerr();
 
 	drawable_draw(&self->draw);
 	glerr();
+	return CONTINUE;
 }
 
 int c_window_mouse_press(c_window_t *self, mouse_button_data *event)

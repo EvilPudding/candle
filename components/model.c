@@ -447,6 +447,14 @@ void c_model_run_command(c_model_t *self, mesh_t *last, mesh_history_t *cmd)
 	cmd->state = result;
 }
 
+/* FIXME this function should not be needed */
+/* update id change should be enough for mesh to update */
+void c_model_dirty(c_model_t *self)
+{
+	drawable_set_mesh(&self->draw, NULL);
+	drawable_set_mesh(&self->draw, self->mesh);
+}
+
 void c_model_propagate_edit(c_model_t *self, int cmd_id)
 {
 	if(cmd_id >= vector_count(self->history)) return;
@@ -485,9 +493,7 @@ void c_model_propagate_edit(c_model_t *self, int cmd_id)
 	mesh_assign(self->mesh, last);
 	self->mesh->update_id = last_update_id + 1;
 	mesh_unlock(self->mesh);
-	/* TODO update id change should be enough for mesh to update */
-	drawable_set_mesh(&self->draw, NULL);
-	drawable_set_mesh(&self->draw, self->mesh);
+	c_model_dirty(self);
 
 	entity_signal_same(c_entity(self), sig("model_changed"), NULL, NULL);
 }

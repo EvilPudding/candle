@@ -431,7 +431,9 @@ static inline type##3_t type##3_rotate(const type##3_t v, const type##3_t a, \
 /* MAFS_DEFINE_STRUCTS(unsigned int, uvec) */
 /* MAFS_DEFINE_CONSTRUCTOR(unsigned int, uvec) */
 
+#ifndef __OPENCL_C_VERSION__
 MAFS_DEFINE_TYPE(uint32_t, uvec, "%u", sqrtf, powf, floorf, roundf)
+#endif
 MAFS_DEFINE_TYPE(float, vec, "%f", sqrtf, powf, floorf, roundf)
 MAFS_DEFINE_TYPE(double, d, "%lf", sqrt, pow, floor, round)
 

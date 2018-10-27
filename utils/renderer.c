@@ -42,7 +42,7 @@ static int pass_bind_buffer(pass_t *pass, bind_t *bind, shader_t *shader)
 				printf("texture not ready yet??\n");
 				exit(1);
 			}
-			glUniformHandleui64ARB(sb->buffer.u_tex[t], buffer->bufs[t].handle); glerr();
+			glUniformHandleui64ARB(sb->buffer.u_tex[t], texture_handle(buffer, t)); glerr();
 			/* glUniform1i(sb->buffer.u_tex[t], buffer->bufs[t].id); glerr(); */
 		}
 	}
@@ -480,11 +480,14 @@ int renderer_resize(renderer_t *self, int width, int height)
 static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 {
 	if(!pass->active) return NULL;
-	if(!pass->shader) pass->shader = fs_new(pass->shader_name);
+	if(pass->shader_name && !pass->shader) pass->shader = fs_new(pass->shader_name);
 
 	c_render_device_rebind(c_render_device(&SYS), (void*)bind_pass, pass);
 
-	fs_bind(pass->shader);
+	if(pass->shader)
+	{
+		fs_bind(pass->shader);
+	}
 
 	if(pass->additive)
 	{
@@ -743,7 +746,10 @@ void renderer_add_pass(
 	pass_t *pass = &self->passes[i];
 	pass->hash = hash;
 
-	strncpy(pass->shader_name, shader_name, sizeof(pass->shader_name));
+	if(shader_name)
+	{
+		strncpy(pass->shader_name, shader_name, sizeof(pass->shader_name));
+	}
 	pass->clear = 0;
 
 	pass->depth_update =	!(flags & DEPTH_LOCK);

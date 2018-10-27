@@ -792,7 +792,7 @@ static void varray_update_buffers(varray_t *self)
 
 	}
 
-	if(self->ind_num_gl)
+	if(self->ind_num)
 	{
 		/* VERTEX BUFFER */
 		update_buffer(&vbo[0], self->pos, N, self->vert_num, 0); glerr();
@@ -824,7 +824,7 @@ static void varray_update_buffers(varray_t *self)
 		/* INDEX BUFFER */
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[15]);
 		glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
-				self->ind_num_gl * sizeof(*self->ind), self->ind);
+				self->ind_num * sizeof(*self->ind), self->ind);
 		glerr();
 
 	}
@@ -947,13 +947,13 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	if(instance_id == -1)
 	{
 		glDrawElementsInstancedBaseInstance(primitive,
-				self->varray->ind_num_gl, GL_UNSIGNED_INT, 0, self->inst_num, 0);
+				self->varray->ind_num, GL_UNSIGNED_INT, 0, self->inst_num, 0);
 		glerr();
 	}
 	else
 	{
 		glDrawElementsInstancedBaseInstance(primitive,
-				self->varray->ind_num_gl, GL_UNSIGNED_INT, 0, 1, instance_id);
+				self->varray->ind_num, GL_UNSIGNED_INT, 0, 1, instance_id);
 		glerr();
 	}
 

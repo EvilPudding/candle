@@ -9,10 +9,10 @@
 #define STBI_ASSERT(x)
 #include <utils/stb_image.h>
 
-static int texture_cubemap_frame_buffer(texture_t *self);
-static int texture_2D_frame_buffer(texture_t *self);
+static int32_t texture_cubemap_frame_buffer(texture_t *self);
+static int32_t texture_2D_frame_buffer(texture_t *self);
 
-int g_tex_num = 0;
+int32_t g_tex_num = 0;
 
 GLenum attachments[16] = {
 	GL_COLOR_ATTACHMENT0,
@@ -69,7 +69,7 @@ void texture_update_gl(texture_t *self)
 			NULL);
 }
 
-uint texture_get_pixel(texture_t *self, int buffer, int x, int y,
+uint texture_get_pixel(texture_t *self, int32_t buffer, int32_t x, int32_t y,
 		float *depth)
 {
 	if(!self->framebuffer_ready) return 0;
@@ -112,24 +112,34 @@ void texture_update_brightness(texture_t *self)
 {
 	texture_bind(self, 0);
 
-	unsigned char data[300];
+	uint8_t data[300];
 	glGetTexImage(self->target, 9, self->bufs[0].format, GL_UNSIGNED_BYTE,
 			data);
-	unsigned char r = data[0];
-	unsigned char g = data[1];
-	unsigned char b = data[2];
+	uint8_t r = data[0];
+	uint8_t g = data[1];
+	uint8_t b = data[2];
 	self->brightness = ((float)(r + g + b)) / (255.0f * 3.0f);
 	if(self->brightness <= 0) self->brightness = 1;
 }
 
 struct tpair {
 	texture_t *tex;
-	int i;
+	int32_t i;
 };
-static int alloc_buffer_gl(struct tpair *data)
+static int32_t update_handle(struct tpair *data)
 {
 	texture_t *self = data->tex;
-	int i = data->i;
+	int32_t i = data->i;
+
+	self->bufs[i].handle = glGetTextureHandleARB(self->bufs[i].id); glerr();
+	glMakeTextureHandleResidentARB(self->bufs[i].handle); glerr();
+
+	return 1;
+}
+static int32_t alloc_buffer_gl(struct tpair *data)
+{
+	texture_t *self = data->tex;
+	int32_t i = data->i;
 
 	if(!self->bufs[i].id)
 	{
@@ -165,12 +175,11 @@ static int alloc_buffer_gl(struct tpair *data)
 		glTexParameteri(self->target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glerr();
 	}
-
-	if(!self->bufs[i].handle)
+	if(self->force_handle)
 	{
-		self->bufs[i].handle = glGetTextureHandleARB(self->bufs[i].id); glerr();
-		glMakeTextureHandleResidentARB(self->bufs[i].handle); glerr();
+		update_handle(data);
 	}
+
 	glBindTexture(self->target, 0); glerr();
 
 	self->bufs[i].ready = 0;
@@ -179,7 +188,7 @@ static int alloc_buffer_gl(struct tpair *data)
 	return 1;
 }
 
-void texture_alloc_buffer(texture_t *self, int i)
+void texture_alloc_buffer(texture_t *self, int32_t i)
 {
 	self->last_depth = NULL;
 	self->framebuffer_ready = 0;
@@ -187,14 +196,19 @@ void texture_alloc_buffer(texture_t *self, int i)
 			&((struct tpair){self, i}), NULL);
 }
 
-unsigned int texture_handle(texture_t *self, int tex)
+uint32_t texture_handle(texture_t *self, int32_t tex)
 {
 	tex = tex >= 0 ? tex : self->draw_id;
 
+	if(!self->bufs[tex].handle)
+	{
+		loader_push_wait(g_candle->loader, (loader_cb)update_handle,
+				&((struct tpair){self, tex}), NULL);
+	}
 	return self->bufs[tex].handle;
 }
 
-static int texture_from_file_loader(texture_t *self)
+static int32_t texture_from_file_loader(texture_t *self)
 {
 	glActiveTexture(GL_TEXTURE0 + ID_2D);
 
@@ -223,9 +237,11 @@ static int texture_from_file_loader(texture_t *self)
 	glTexImage2D(self->target, 0, self->bufs[0].internal, self->width,
 			self->height, 0, self->bufs[0].format,
 			GL_UNSIGNED_BYTE, self->bufs[0].data); glerr();
-	self->mipmaped = 1;
 
-	glGenerateMipmap(self->target); glerr();
+	if(self->mipmaped)
+	{
+		glGenerateMipmap(self->target); glerr();
+	}
 
 	glTexParameteri(self->target, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(self->target, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -242,7 +258,7 @@ static int texture_from_file_loader(texture_t *self)
 
 	return 1;
 }
-/* static int texture_from_file_loader(texture_t *self) */
+/* static int32_t texture_from_file_loader(texture_t *self) */
 /* { */
 /* 	self->mipmaped = 1; */
 /* 	self->interpolate = 1; */
@@ -266,11 +282,11 @@ static int texture_from_file_loader(texture_t *self)
 /* 	return 1; */
 /* } */
 
-int buffer_new(const char *name, int is_float, int dims)
+int32_t buffer_new(const char *name, int32_t is_float, int32_t dims)
 {
 	texture_t *texture = _g_tex_creating;
 
-	int i = texture->bufs_size++;
+	int32_t i = texture->bufs_size++;
 	texture->bufs[i].name = strdup(name);
 
 	if(texture->depth_buffer)
@@ -333,6 +349,7 @@ texture_t *_texture_new_2D_pre
 
 	self->repeat = !!(flags & TEX_REPEAT);
 	self->mipmaped = !!(flags & TEX_MIPMAP);
+	self->force_handle = !!(flags & TEX_FORCE_HANDLE);
 	self->interpolate = !!(flags & TEX_INTERPOLATE);
 
 	self->width = width;
@@ -341,7 +358,7 @@ texture_t *_texture_new_2D_pre
 	return self;
 }
 
-texture_t *_texture_new(int ignore, ...)
+texture_t *_texture_new(int32_t ignore, ...)
 {
 	texture_t *self = _g_tex_creating;
 	_g_tex_creating = NULL;
@@ -381,7 +398,7 @@ texture_t *texture_new_3D
 	uint width,
 	uint height,
 	uint depth,
-	int dims
+	int32_t dims
 )
 {
 	texture_t *self = calloc(1, sizeof *self);
@@ -429,33 +446,33 @@ texture_t *texture_new_3D
 	return self;
 }
 
-void texture_set_xyz(texture_t *self, int x, int y, int z,
+void texture_set_xyz(texture_t *self, int32_t x, int32_t y, int32_t z,
 		GLubyte r, GLubyte g, GLubyte b, GLubyte a)
 {
-	int i = (x + (y + z * self->height) * self->width) * 4;
+	int32_t i = (x + (y + z * self->height) * self->width) * 4;
 	self->bufs[0].data[i + 0] = r;
 	self->bufs[0].data[i + 1] = g;
 	self->bufs[0].data[i + 2] = b;
 	self->bufs[0].data[i + 3] = a;
 }
 
-void texture_set_xy(texture_t *self, int x, int y,
+void texture_set_xy(texture_t *self, int32_t x, int32_t y,
 		GLubyte r, GLubyte g, GLubyte b, GLubyte a)
 {
-	int i = (x + y * self->width) * 4;
+	int32_t i = (x + y * self->width) * 4;
 	self->bufs[0].data[i + 0] = r;
 	self->bufs[0].data[i + 1] = g;
 	self->bufs[0].data[i + 2] = b;
 	self->bufs[0].data[i + 3] = a;
 }
 
-int texture_load_from_memory(texture_t *self, void *buffer, int len)
+int32_t texture_load_from_memory(texture_t *self, void *buffer, int32_t len)
 {
 	texture_t temp = {.target = GL_TEXTURE_2D};
 
 	temp.bufs[0].dims = 0;
-	temp.bufs[0].data = stbi_load_from_memory(buffer, len, (int*)&temp.width,
-			(int*)&temp.height, &temp.bufs[0].dims, 0);
+	temp.bufs[0].data = stbi_load_from_memory(buffer, len, (int32_t*)&temp.width,
+			(int32_t*)&temp.height, &temp.bufs[0].dims, 0);
 
 	if(!temp.bufs[0].data)
 	{
@@ -487,18 +504,21 @@ int texture_load_from_memory(texture_t *self, void *buffer, int len)
 	self->prev_id = 0;
 	self->bufs_size = 1;
 	self->bufs[0].name = strdup("color");
+	self->mipmaped = 1;
+	self->force_handle = 1;
+	self->interpolate = 1;
 
 	loader_push(g_candle->loader, (loader_cb)texture_from_file_loader, self, NULL);
 	return 1;
 }
 
-int texture_load(texture_t *self, const char *filename)
+int32_t texture_load(texture_t *self, const char *filename)
 {
 	texture_t temp = {.target = GL_TEXTURE_2D};
 
 	temp.bufs[0].dims = 0;
-	temp.bufs[0].data = stbi_load(filename, (int*)&temp.width,
-			(int*)&temp.height, &temp.bufs[0].dims, 0);
+	temp.bufs[0].data = stbi_load(filename, (int32_t*)&temp.width,
+			(int32_t*)&temp.height, &temp.bufs[0].dims, 0);
 
 	if(!temp.bufs[0].data)
 	{
@@ -530,12 +550,17 @@ int texture_load(texture_t *self, const char *filename)
 	self->prev_id = 0;
 	self->bufs_size = 1;
 	self->bufs[0].name = strdup("color");
+	self->mipmaped = 1;
+	self->force_handle = 1;
+	self->interpolate = 1;
 
-	loader_push(g_candle->loader, (loader_cb)texture_from_file_loader, self, NULL);
+	loader_push(g_candle->loader, (loader_cb)texture_from_file_loader, self,
+			NULL);
 	return 1;
 }
 
-texture_t *texture_from_buffer(void *buffer, int width, int height, int Bpp)
+texture_t *texture_from_buffer(void *buffer, int32_t width, int32_t height,
+		int32_t Bpp)
 {
 	texture_t *self = texture_new_2D(width, height, TEX_INTERPOLATE);
 
@@ -569,7 +594,7 @@ texture_t *texture_from_buffer(void *buffer, int width, int height, int Bpp)
 	return self;
 }
 
-texture_t *texture_from_memory(void *buffer, int len)
+texture_t *texture_from_memory(void *buffer, int32_t len)
 {
 	texture_t *self = texture_new_2D(0, 0, TEX_INTERPOLATE);
 	texture_load_from_memory(self, buffer, len);
@@ -583,7 +608,7 @@ texture_t *texture_from_file(const char *filename)
     return self;
 }
 
-static int texture_2D_frame_buffer(texture_t *self)
+static int32_t texture_2D_frame_buffer(texture_t *self)
 {
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	if(!self->frame_buffer[0])
@@ -594,7 +619,7 @@ static int texture_2D_frame_buffer(texture_t *self)
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, self->frame_buffer[0]);
 
-	int i;
+	int32_t i;
 
 	for(i = self->depth_buffer; i < self->bufs_size; i++)
 	{
@@ -611,8 +636,8 @@ static int texture_2D_frame_buffer(texture_t *self)
 	return 1;
 }
 
-int texture_target_sub(texture_t *self, int width, int height,
-		texture_t *depth, int fb) 
+int32_t texture_target_sub(texture_t *self, int32_t width, int32_t height,
+		texture_t *depth, int32_t fb) 
 {
 	if(!self->bufs[self->depth_buffer].id)
 	{
@@ -665,17 +690,17 @@ int texture_target_sub(texture_t *self, int width, int height,
 	return 1;
 }
 
-int texture_target(texture_t *self, texture_t *depth, int fb)
+int32_t texture_target(texture_t *self, texture_t *depth, int32_t fb)
 {
 	return texture_target_sub(self, self->width, self->height, depth, fb);
 }
 
-void texture_draw_id(texture_t *self, int tex)
+void texture_draw_id(texture_t *self, int32_t tex)
 {
 	self->draw_id = tex;
 }
 
-void texture_bind(texture_t *self, int tex)
+void texture_bind(texture_t *self, int32_t tex)
 {
 	/* printf("This shouldn't be used anymore\n"); exit(1); */
 	tex = tex >= 0 ? tex : self->draw_id;
@@ -687,13 +712,13 @@ void texture_bind(texture_t *self, int tex)
 
 void texture_destroy(texture_t *self)
 {
-	int i;
+	int32_t i;
 
 	for(i = 0; i < self->bufs_size; i++)
 	{
 		if(self->bufs[i].data) stbi_image_free(self->bufs[i].data);
-		if(self->bufs[i].id) glDeleteTextures(1, &self->bufs[i].id);
 		if(self->bufs[i].handle) glMakeTextureHandleNonResidentARB(self->bufs[i].handle);
+		if(self->bufs[i].id) glDeleteTextures(1, &self->bufs[i].id);
 	}
 	if(self->frame_buffer[1]) /* CUBEMAP */
 	{
@@ -709,7 +734,7 @@ void texture_destroy(texture_t *self)
 	free(self);
 }
 
-int texture_2D_resize(texture_t *self, int width, int height)
+int32_t texture_2D_resize(texture_t *self, int32_t width, int32_t height)
 {
 	if(self->width == width && self->height == height) return 0;
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -717,7 +742,7 @@ int texture_2D_resize(texture_t *self, int width, int height)
 	self->width = width;
 	self->height = height;
 
-	int i;
+	int32_t i;
 	for(i = 0; i < self->bufs_size; i++)
 	{
 		/* uint Bpp = self->bufs[i].dims; */
@@ -731,7 +756,10 @@ int texture_2D_resize(texture_t *self, int width, int height)
 
 		if(self->bufs[i].id)
 		{
-			glMakeTextureHandleNonResidentARB(self->bufs[i].handle); glerr();
+			if(self->bufs[i].handle)
+			{
+				glMakeTextureHandleNonResidentARB(self->bufs[i].handle); glerr();
+			}
 			glDeleteTextures(1, &self->bufs[i].id);
 			self->bufs[i].handle = 0;
 			self->bufs[i].id = 0;
@@ -753,9 +781,9 @@ int texture_2D_resize(texture_t *self, int width, int height)
 	return 1;
 }
 
-static int texture_cubemap_frame_buffer(texture_t *self)
+static int32_t texture_cubemap_frame_buffer(texture_t *self)
 {
-	int f;
+	int32_t f;
 	glActiveTexture(GL_TEXTURE0 + ID_CUBE);
 
 	if(!self->frame_buffer[0])
@@ -764,7 +792,7 @@ static int texture_cubemap_frame_buffer(texture_t *self)
 	}
 	for(f = 0; f < 6; f++)
 	{
-		int i;
+		int32_t i;
 		GLuint targ = GL_TEXTURE_CUBE_MAP_POSITIVE_X + f;
 
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, self->frame_buffer[f]);
@@ -796,9 +824,9 @@ static int texture_cubemap_frame_buffer(texture_t *self)
 	return 1;
 }
 
-static int texture_cubemap_loader(texture_t *self)
+static int32_t texture_cubemap_loader(texture_t *self)
 {
-	int i;
+	int32_t i;
 	glActiveTexture(GL_TEXTURE0 + ID_CUBE);
 
 	glGenTextures(1, &self->bufs[0].id); glerr();
@@ -881,7 +909,7 @@ texture_t *texture_cubemap
 	return self;
 }
 
-int load_tex(texture_t *texture)
+int32_t load_tex(texture_t *texture)
 {
 	char buffer[256];
 	strcpy(buffer, texture->name);
@@ -894,7 +922,7 @@ void *tex_loader(const char *path, const char *name, uint ext)
 	texture_t *texture = texture_new_2D(0, 0, TEX_INTERPOLATE);
 	strcpy(texture->name, path);
 
-	SDL_CreateThread((int(*)(void*))load_tex, "load_tex", texture);
+	SDL_CreateThread((int32_t(*)(void*))load_tex, "load_tex", texture);
 
 	return texture;
 }

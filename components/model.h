@@ -151,5 +151,6 @@ void c_model_set_mesh(c_model_t *self, mesh_t *mesh);
 /* int c_model_render(c_model_t *self, int transp); */
 /* int c_model_render_at(c_model_t *self, c_node_t *node, int transp); */
 void c_model_set_mesh(c_model_t *self, mesh_t *mesh);
+void c_model_dirty(c_model_t *self);
 
 #endif /* !MODEL_H */
