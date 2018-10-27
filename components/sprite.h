@@ -12,11 +12,12 @@ typedef struct
 	int cast_shadow;
 	int xray;
 	drawable_t draw;
-	drawable_t select;
 } c_sprite_t;
 
 DEF_CASTER("sprite", c_sprite, c_sprite_t)
-extern int g_update_id;
+extern vs_t *g_sprite_vs;
+extern mesh_t *g_sprite_mesh;
+
 vs_t *sprite_vs(void);
 
 c_sprite_t *c_sprite_new(mat_t *mat, int cast_shadow);

@@ -167,7 +167,7 @@ REG()
 	ct_listener(ct, ENTITY, sig("node_changed"), c_camera_changed);
 	ct_listener(ct, WORLD, sig("window_resize"), c_camera_resize);
 	ct_listener(ct, WORLD, sig("world_update"), c_camera_update);
-	ct_listener(ct, WORLD | 51, sig("world_draw"), c_camera_draw);
+	ct_listener(ct, WORLD | 21, sig("world_draw"), c_camera_draw);
 
 	ct_listener(ct, WORLD, sig("component_menu"), c_camera_component_menu);
 }

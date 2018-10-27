@@ -573,8 +573,7 @@ int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 			}
 			else// if(result == self->selected)
 			{
-				entity_t result =
-					renderer_geom_at_pixel(renderer, event->x,
+				entity_t result = renderer_geom_at_pixel(renderer, event->x,
 							event->y, &self->mouse_screen_pos.z);
 
 				/* TODO: select one more poly */
@@ -693,12 +692,6 @@ int c_editmode_key_down(c_editmode_t *self, char *key)
 	/* { */
 	/* } */
 	return CONTINUE;
-}
-
-void tools_gui(c_editmode_t *self)
-{
-	/* unsigned long i; */
-
 }
 
 int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
@@ -876,11 +869,12 @@ int c_editmode_commands(c_editmode_t *self)
 					c_editmode_selected_delete(self);
 					nk_contextual_close(self->nk);
 				}
+				/* TODO clone tool should be universal */
+				if(c_model(&self->selected))
 				if(nk_button_label(self->nk, "clone"))
 				{
 					mesh_t *mesh = c_model(&self->selected)->mesh;
-					c_editmode_select(self,
-							entity_new(c_model_new(mesh_clone(mesh),
+					c_editmode_select(self, entity_new(c_model_new(mesh_clone(mesh),
 									c_model(&self->selected)->mat, 1, 1)));
 					nk_contextual_close(self->nk);
 				}
@@ -918,14 +912,28 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 
 	struct nk_context *ctx = self->nk;
 	struct nk_style *s = &ctx->style;
-	c_window_t *window = c_window(&self);
+	c_window_t *window = c_window(self);
 	texture_t *back = NULL;
 	if(window && window->renderer && window->renderer->output)
 	{
-		back = window->renderer->output;
+		back = renderer_tex(window->renderer, ref("refr"));
 		struct nk_image background = nk_image_id(back->bufs[back->prev_id].id);
-		nk_style_push_color(ctx, &s->window.background, nk_rgba(0,0,0,0));
-		nk_style_push_style_item(ctx, &s->window.fixed_background, nk_style_item_image(background));
+		
+		s->window.header.normal = nk_style_item_color(nk_rgba(0,0,0,10));
+		s->window.header.hover = nk_style_item_color(nk_rgba(0,0,0,20));
+		s->window.header.active = nk_style_item_color(nk_rgba(0,0,0,20));
+		background.w = window->width;
+		background.h = window->height;
+		background.region[0] = 0;
+		background.region[1] = 0;
+		background.region[2] = window->width;
+		background.region[3] = window->height;
+		/* s->window.background = nk_rgba(0,0,0,0); */
+		/* s->window.menu_padding = nk_vec2(0, 0); */
+		s->window.border_color = nk_rgba(0,0,0,0);
+		/* s->window.scrollbar_size = nk_vec2(0, 0); */
+		/* nk_style_push_color(ctx, &s->window.background, nk_rgba(0,0,0,0)); */
+		s->window.fixed_background = nk_style_item_image(background);
 	}
 
 	res = nk_begin_titled(self->nk, "entity", title,
@@ -934,6 +942,16 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 			NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE);
 	if (res)
 	{
+		/* struct nk_image im = nk_image_id(back->bufs[back->prev_id].id); */
+
+		/* struct nk_command_buffer *canvas = nk_window_get_canvas(self->nk); */
+		/* struct nk_rect total_space; */
+		/* total_space.x = 0; */
+		/* total_space.y = 0; */
+		/* total_space.w = window->width; */
+		/* total_space.h = window->height; */
+		/* nk_draw_image_ext(canvas, total_space, &im, nk_rgba(255, 255, 255, 255), 1); */
+
 		/* c_editmode_shell(self); */
 		int i;
 
@@ -1012,13 +1030,6 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 		}
 	}
 	nk_end(self->nk);
-
-	if(back)
-	{
-		nk_style_pop_color(ctx);
-		nk_style_pop_style_item(ctx);
-	}
-
 	return res;
 }
 

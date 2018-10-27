@@ -10,6 +10,7 @@
 
 static mat_t *g_missing_mat = NULL;
 
+static int c_model_position_changed(c_model_t *self);
 static int paint_3d(mesh_t *mesh, vertex_t *vert);
 static int paint_2d(mesh_t *mesh, vertex_t *vert);
 int c_model_menu(c_model_t *self, void *ctx);
@@ -417,6 +418,8 @@ void c_model_init_drawables(c_model_t *self)
 c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow, int visible)
 {
 	c_model_t *self = component_new("model");
+	int sys = c_entity(self) == SYS;
+	if(sys) self->super.ghost = 1;
 
 	c_model_init_drawables(self);
 
@@ -425,6 +428,7 @@ c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow, int visible)
 	c_model_set_cast_shadow(self, cast_shadow);
 	c_model_set_mesh(self, mesh);
 	c_model_set_visible(self, visible);
+	c_model_position_changed(self);
 
 	return self;
 }
@@ -481,6 +485,9 @@ void c_model_propagate_edit(c_model_t *self, int cmd_id)
 	mesh_assign(self->mesh, last);
 	self->mesh->update_id = last_update_id + 1;
 	mesh_unlock(self->mesh);
+	/* TODO update id change should be enough for mesh to update */
+	drawable_set_mesh(&self->draw, NULL);
+	drawable_set_mesh(&self->draw, self->mesh);
 
 	entity_signal_same(c_entity(self), sig("model_changed"), NULL, NULL);
 }
