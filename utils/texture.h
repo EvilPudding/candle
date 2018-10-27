@@ -6,13 +6,14 @@
 typedef struct
 {
 	GLuint id;
-	uint32_t ready;
+	uint32_t fb_ready;
 	int dims;
 	uint32_t format;
 	uint32_t internal;
 	char *name;
 	GLubyte *data;
 	uint64_t handle;
+	uint32_t ready;
 } buffer_t;
 
 typedef struct
@@ -42,6 +43,7 @@ typedef struct
 	int32_t prev_id;
 	int32_t mipmaped;
 	int32_t interpolate;
+	int32_t loading;
 } texture_t;
 
 texture_t *texture_from_file(const char *filename);

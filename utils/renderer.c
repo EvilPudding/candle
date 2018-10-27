@@ -37,12 +37,11 @@ static int pass_bind_buffer(pass_t *pass, bind_t *bind, shader_t *shader)
 	{
 		if(((int)sb->buffer.u_tex[t]) != -1)
 		{
-			if(!buffer->bufs[t].id)
+			if(buffer->bufs[t].ready)
 			{
-				printf("texture not ready yet??\n");
-				exit(1);
+				glUniformHandleui64ARB(sb->buffer.u_tex[t],
+						texture_handle(buffer, t)); glerr();
 			}
-			glUniformHandleui64ARB(sb->buffer.u_tex[t], texture_handle(buffer, t)); glerr();
 			/* glUniform1i(sb->buffer.u_tex[t], buffer->bufs[t].id); glerr(); */
 		}
 	}

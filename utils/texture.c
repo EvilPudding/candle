@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+void world_changed(void);
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_ASSERT(x)
 #include <utils/stb_image.h>
@@ -33,6 +34,18 @@ GLenum attachments[16] = {
 	GL_COLOR_ATTACHMENT15
 };
 
+struct tpair {
+	texture_t *tex;
+	int32_t i;
+};
+
+static struct tpair *pair(texture_t *tex, int id)
+{
+	struct tpair *p = malloc(sizeof(*p));
+	p->tex = tex;
+	p->i = id;
+	return p;
+}
 #define ID_2D 31
 #define ID_CUBE 64
 #define ID_3D 33
@@ -122,10 +135,6 @@ void texture_update_brightness(texture_t *self)
 	if(self->brightness <= 0) self->brightness = 1;
 }
 
-struct tpair {
-	texture_t *tex;
-	int32_t i;
-};
 static int32_t update_handle(struct tpair *data)
 {
 	texture_t *self = data->tex;
@@ -133,7 +142,9 @@ static int32_t update_handle(struct tpair *data)
 	if(self->bufs[i].handle) return 1;
 	self->bufs[i].handle = glGetTextureHandleARB(self->bufs[i].id); glerr();
 	glMakeTextureHandleResidentARB(self->bufs[i].handle); glerr();
+	self->force_handle = 1;
 
+	free(data);
 	return 1;
 }
 static int32_t alloc_buffer_gl(struct tpair *data)
@@ -175,16 +186,22 @@ static int32_t alloc_buffer_gl(struct tpair *data)
 		glTexParameteri(self->target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glerr();
 	}
-	if(self->force_handle && !self->bufs[i].handle)
+	if(self->force_handle)
 	{
 		update_handle(data);
+		data = NULL;
 	}
 
 	glBindTexture(self->target, 0); glerr();
 
-	self->bufs[i].ready = 0;
+	self->bufs[i].fb_ready = 0;
 	glActiveTexture(GL_TEXTURE0);
+	self->bufs[i].ready = 1;
 
+	if(data)
+	{
+		free(data);
+	}
 	return 1;
 }
 
@@ -192,26 +209,26 @@ void texture_alloc_buffer(texture_t *self, int32_t i)
 {
 	self->last_depth = NULL;
 	self->framebuffer_ready = 0;
-	loader_push_wait(g_candle->loader, (loader_cb)alloc_buffer_gl,
-			&((struct tpair){self, i}), NULL);
+	loader_push(g_candle->loader, (loader_cb)alloc_buffer_gl, pair(self, i),
+			NULL);
 }
 
 uint32_t texture_handle(texture_t *self, int32_t tex)
 {
 	tex = tex >= 0 ? tex : self->draw_id;
 
+	if(!self->bufs[tex].ready) return 0;
 
 	if(!self->bufs[tex].handle)
 	{
 		loader_push_wait(g_candle->loader, (loader_cb)update_handle,
-				&((struct tpair){self, tex}), NULL);
+				pair(self, tex), NULL);
 	}
 	return self->bufs[tex].handle;
 }
 
 static int32_t texture_from_file_loader(texture_t *self)
 {
-		printf("%s\n", self->filename);
 	glActiveTexture(GL_TEXTURE0 + ID_2D);
 
 	glGenTextures(1, &self->bufs[0].id); glerr();
@@ -254,7 +271,9 @@ static int32_t texture_from_file_loader(texture_t *self)
 	}
 
 	glActiveTexture(GL_TEXTURE0);
+	self->bufs[0].ready = 1;
 
+	world_changed();
 	return 1;
 }
 /* static int32_t texture_from_file_loader(texture_t *self) */
@@ -287,6 +306,7 @@ int32_t buffer_new(const char *name, int32_t is_float, int32_t dims)
 
 	int32_t i = texture->bufs_size++;
 	texture->bufs[i].name = strdup(name);
+	texture->bufs[i].ready = 0;
 
 	if(texture->depth_buffer)
 	{
@@ -326,7 +346,6 @@ int32_t buffer_new(const char *name, int32_t is_float, int32_t dims)
 
 	texture_alloc_buffer(texture, i);
 
-	texture->framebuffer_ready = 0;
 
 	return i;
 }
@@ -388,6 +407,7 @@ static void texture_new_3D_loader(texture_t *self)
 
 	glBindTexture(self->target, 0); glerr();
 	glActiveTexture(GL_TEXTURE0);
+	self->bufs[0].ready = 1;
 
 	glerr();
 }
@@ -440,7 +460,8 @@ texture_t *texture_new_3D
 	/* } */
 
 
-	loader_push(g_candle->loader, (loader_cb)texture_new_3D_loader, self, NULL);
+	loader_push(g_candle->loader, (loader_cb)texture_new_3D_loader, self,
+			NULL);
 
 	return self;
 }
@@ -499,15 +520,13 @@ int32_t texture_load_from_memory(texture_t *self, void *buffer, int32_t len)
 
 	strncpy(self->name, "unnamed", sizeof(self->name));
 	self->filename = "unnamed";
-	self->draw_id = 0;
-	self->prev_id = 0;
 	self->bufs_size = 1;
 	self->bufs[0].name = strdup("color");
 	self->mipmaped = 1;
 	self->force_handle = 1;
 	self->interpolate = 1;
 
-	loader_push_wait(g_candle->loader, (loader_cb)texture_from_file_loader, self, NULL);
+	loader_push(g_candle->loader, (loader_cb)texture_from_file_loader, self, NULL);
 	return 1;
 }
 
@@ -545,15 +564,13 @@ int32_t texture_load(texture_t *self, const char *filename)
 
 	strncpy(self->name, filename, sizeof(self->name));
 	self->filename = strdup(filename);
-	self->draw_id = 0;
-	self->prev_id = 0;
 	self->bufs_size = 1;
 	self->bufs[0].name = strdup("color");
 	self->mipmaped = 1;
 	self->force_handle = 1;
 	self->interpolate = 1;
 
-	loader_push_wait(g_candle->loader, (loader_cb)texture_from_file_loader, self,
+	loader_push(g_candle->loader, (loader_cb)texture_from_file_loader, self,
 			NULL);
 	return 1;
 }
@@ -584,15 +601,13 @@ texture_t *texture_from_buffer(void *buffer, int32_t width, int32_t height,
 
 	strncpy(self->name, "unnamed", sizeof(self->name));
 	self->filename = "unnamed";
-	self->draw_id = 0;
-	self->prev_id = 0;
 	self->bufs_size = 1;
 	self->bufs[0].name = strdup("color");
 	self->mipmaped = 1;
 	self->force_handle = 1;
 	self->interpolate = 1;
 
-	loader_push_wait(g_candle->loader, (loader_cb)texture_from_file_loader, self, NULL);
+	loader_push(g_candle->loader, (loader_cb)texture_from_file_loader, self, NULL);
 	return self;
 }
 
@@ -625,12 +640,12 @@ static int32_t texture_2D_frame_buffer(texture_t *self)
 
 	for(i = self->depth_buffer; i < self->bufs_size; i++)
 	{
-		if(!self->bufs[i].ready)
+		if(!self->bufs[i].fb_ready)
 		{
 			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER,
 					GL_COLOR_ATTACHMENT0 + i - self->depth_buffer, targ,
 					self->bufs[i].id, 0);
-			self->bufs[i].ready = 1;
+			self->bufs[i].fb_ready = 1;
 		}
 	}
 
@@ -765,6 +780,7 @@ int32_t texture_2D_resize(texture_t *self, int32_t width, int32_t height)
 			glDeleteTextures(1, &self->bufs[i].id);
 			self->bufs[i].handle = 0;
 			self->bufs[i].id = 0;
+			self->bufs[i].ready = 0;
 		}
 
 		texture_alloc_buffer(self, i);
@@ -877,6 +893,8 @@ static int32_t texture_cubemap_loader(texture_t *self)
 	/* texture_cubemap_frame_buffer(self); */
 
 	glActiveTexture(GL_TEXTURE0);
+	self->bufs[0].ready = 1;
+	self->bufs[1].ready = 1;
 
 	glerr();
 	return 1;
@@ -898,15 +916,15 @@ texture_t *texture_cubemap
 	self->depth_buffer = depth_buffer;
 	self->draw_id = 1;
 	self->prev_id = 1;
-	self->mipmaped = 0;
 
 	self->bufs[0].dims = -1;
 	self->bufs[1].dims = 4;
 	self->bufs[0].name = strdup("depth");
 	self->bufs[1].name = strdup("color");
+
 	self->bufs_size = 2;
 
-	loader_push_wait(g_candle->loader, (loader_cb)texture_cubemap_loader, self, NULL);
+	loader_push(g_candle->loader, (loader_cb)texture_cubemap_loader, self, NULL);
 
 	return self;
 }
