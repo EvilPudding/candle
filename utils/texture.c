@@ -130,7 +130,7 @@ static int32_t update_handle(struct tpair *data)
 {
 	texture_t *self = data->tex;
 	int32_t i = data->i;
-
+	if(self->bufs[i].handle) return 1;
 	self->bufs[i].handle = glGetTextureHandleARB(self->bufs[i].id); glerr();
 	glMakeTextureHandleResidentARB(self->bufs[i].handle); glerr();
 
@@ -175,7 +175,7 @@ static int32_t alloc_buffer_gl(struct tpair *data)
 		glTexParameteri(self->target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glerr();
 	}
-	if(self->force_handle)
+	if(self->force_handle && !self->bufs[i].handle)
 	{
 		update_handle(data);
 	}
@@ -200,6 +200,7 @@ uint32_t texture_handle(texture_t *self, int32_t tex)
 {
 	tex = tex >= 0 ? tex : self->draw_id;
 
+
 	if(!self->bufs[tex].handle)
 	{
 		loader_push_wait(g_candle->loader, (loader_cb)update_handle,
@@ -210,6 +211,7 @@ uint32_t texture_handle(texture_t *self, int32_t tex)
 
 static int32_t texture_from_file_loader(texture_t *self)
 {
+		printf("%s\n", self->filename);
 	glActiveTexture(GL_TEXTURE0 + ID_2D);
 
 	glGenTextures(1, &self->bufs[0].id); glerr();
@@ -238,17 +240,14 @@ static int32_t texture_from_file_loader(texture_t *self)
 			self->height, 0, self->bufs[0].format,
 			GL_UNSIGNED_BYTE, self->bufs[0].data); glerr();
 
-	if(self->mipmaped)
-	{
-		glGenerateMipmap(self->target); glerr();
-	}
+	glGenerateMipmap(self->target); glerr();
 
 	glTexParameteri(self->target, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(self->target, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(self->target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(self->target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glerr();
-	if(!self->bufs[0].handle)
+	/* if(!self->bufs[0].handle) */
 	{
 		self->bufs[0].handle = glGetTextureHandleARB(self->bufs[0].id); glerr();
 		glMakeTextureHandleResidentARB(self->bufs[0].handle); glerr();
@@ -508,7 +507,7 @@ int32_t texture_load_from_memory(texture_t *self, void *buffer, int32_t len)
 	self->force_handle = 1;
 	self->interpolate = 1;
 
-	loader_push(g_candle->loader, (loader_cb)texture_from_file_loader, self, NULL);
+	loader_push_wait(g_candle->loader, (loader_cb)texture_from_file_loader, self, NULL);
 	return 1;
 }
 
@@ -554,7 +553,7 @@ int32_t texture_load(texture_t *self, const char *filename)
 	self->force_handle = 1;
 	self->interpolate = 1;
 
-	loader_push(g_candle->loader, (loader_cb)texture_from_file_loader, self,
+	loader_push_wait(g_candle->loader, (loader_cb)texture_from_file_loader, self,
 			NULL);
 	return 1;
 }
@@ -589,8 +588,11 @@ texture_t *texture_from_buffer(void *buffer, int32_t width, int32_t height,
 	self->prev_id = 0;
 	self->bufs_size = 1;
 	self->bufs[0].name = strdup("color");
+	self->mipmaped = 1;
+	self->force_handle = 1;
+	self->interpolate = 1;
 
-	loader_push(g_candle->loader, (loader_cb)texture_from_file_loader, self, NULL);
+	loader_push_wait(g_candle->loader, (loader_cb)texture_from_file_loader, self, NULL);
 	return self;
 }
 
