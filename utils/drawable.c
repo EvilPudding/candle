@@ -274,7 +274,7 @@ void drawable_set_mat(drawable_t *self, int32_t id)
 }
 
 #ifdef MESH4
-void drawable_set_angel4(drawable_t *self, mat4_t transform)
+void drawable_set_angle4(drawable_t *self, float angle4)
 {
 	uint32_t gid;
 
@@ -1143,7 +1143,7 @@ static int32_t drawable_position_changed(drawable_t *self, struct draw_grp *grp)
 	{
 		grp->conf->inst[grp->instance_id] = self->transform;
 #ifdef MESH4
-		grp->conf->angle4[grp->instance_id].y = self->angle4;
+		grp->conf->angle4[grp->instance_id] = self->angle4;
 #endif
 		if(!(grp->conf->comps[grp->instance_id]->updates & MASK_TRANS))
 		{

@@ -920,9 +920,9 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 	struct nk_style *s = &ctx->style;
 	c_window_t *window = c_window(&self);
 	texture_t *back = NULL;
-	if(window && window->output)
+	if(window && window->renderer && window->renderer->output)
 	{
-		back = window->output;
+		back = window->renderer->output;
 		struct nk_image background = nk_image_id(back->bufs[back->prev_id].id);
 		nk_style_push_color(ctx, &s->window.background, nk_rgba(0,0,0,0));
 		nk_style_push_style_item(ctx, &s->window.fixed_background, nk_style_item_image(background));

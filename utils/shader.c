@@ -435,14 +435,6 @@ shader_t *shader_new(fs_t *fs, vs_t *vs)
 	return self;
 }
 
-#ifdef MESH4
-void shader_update(shader_t *self, float angle4)
-{
-	glUniform1f(self->u_angle4, angle4);
-	glerr();
-}
-#endif
-
 void shader_bind(shader_t *self)
 {
 	/* printf("shader bound f:%s v:%s\n", self->fs->filename, g_vs[self->index].name); */
