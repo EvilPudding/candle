@@ -228,7 +228,7 @@ void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model)
 void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 		int level)
 {
-	renderer_add_pass(self, "kawase_p", "copy", ref("quad"), MANUAL_MIP,
+	renderer_add_pass(self, "kawase_p", "downsample", ref("quad"), MANUAL_MIP,
 			t2, NULL, level,
 		(bind_t[]){
 			{TEX, "buf", .buffer = t1},
@@ -267,25 +267,25 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 		}
 	);
 
-	renderer_add_pass(self, "kawase_3", "kawase", ref("quad"), MANUAL_MIP,
-			t2, NULL, level,
-		(bind_t[]){
-			{TEX, "buf", .buffer = t1},
-			{INT, "distance", .integer = 2},
-			{INT, "level", .integer = level},
-			{NONE}
-		}
-	);
+/* 	renderer_add_pass(self, "kawase_3", "kawase", ref("quad"), MANUAL_MIP, */
+/* 			t2, NULL, level, */
+/* 		(bind_t[]){ */
+/* 			{TEX, "buf", .buffer = t1}, */
+/* 			{INT, "distance", .integer = 2}, */
+/* 			{INT, "level", .integer = level}, */
+/* 			{NONE} */
+/* 		} */
+/* 	); */
 
-	renderer_add_pass(self, "kawase_4", "kawase", ref("quad"), MANUAL_MIP,
-			t1, NULL, level,
-		(bind_t[]){
-			{TEX, "buf", .buffer = t2},
-			{INT, "distance", .integer = 3},
-			{INT, "level", .integer = level},
-			{NONE}
-		}
-	);
+/* 	renderer_add_pass(self, "kawase_4", "kawase", ref("quad"), MANUAL_MIP, */
+/* 			t1, NULL, level, */
+/* 		(bind_t[]){ */
+/* 			{TEX, "buf", .buffer = t2}, */
+/* 			{INT, "distance", .integer = 3}, */
+/* 			{INT, "level", .integer = level}, */
+/* 			{NONE} */
+/* 		} */
+/* 	); */
 }
 
 void renderer_default_pipeline(renderer_t *self)
@@ -397,6 +397,7 @@ void renderer_default_pipeline(renderer_t *self)
 
 	renderer_add_kawase(self, refr, refr2, 1);
 	renderer_add_kawase(self, refr, refr2, 2);
+	renderer_add_kawase(self, refr, refr2, 3);
 
 	renderer_add_pass(self, "transp", "transparency", ref("transparent"),
 			DEPTH_EQUAL, light, gbuffer, 0,
@@ -425,6 +426,7 @@ void renderer_default_pipeline(renderer_t *self)
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{TEX, "gbuffer", .buffer = gbuffer},
 			{TEX, "light", .buffer = light},
+			{TEX, "refr", .buffer = refr},
 			{TEX, "ssao", .buffer = ssao},
 			{NONE}
 		}

@@ -686,6 +686,7 @@ int c_model_tool(c_model_t *self, void *ctx)
 	return CONTINUE;
 }
 
+void world_changed(void);
 int c_model_menu(c_model_t *self, void *ctx)
 {
 	int i;
@@ -783,8 +784,8 @@ int c_model_menu(c_model_t *self, void *ctx)
 	}
 	if(changes)
 	{
-		g_update_id++;
 		drawable_model_changed(&self->draw);
+		world_changed();
 	}
 
 	/* nk_tree_pop(ctx); */
@@ -864,7 +865,6 @@ REG()
 	/* ct_listener(ct, WORLD, sig("render_shadows"), c_model_render_shadows); */
 
 	/* ct_listener(ct, WORLD, sig("render_selectable"), c_model_render_selectable); */
-
 
 	add_tool("circle", (tool_gui_cb)tool_circle_gui,
 			(tool_edit_cb)tool_circle_edit,

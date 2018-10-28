@@ -101,7 +101,6 @@ int c_bone_render(c_bone_t *self, int flags)
 
 REG()
 {
-	ct_t *ct = ct_new("bone", sizeof(c_bone_t),
-			c_bone_init, NULL, 1, ref("node"));
+	ct_new("bone", sizeof(c_bone_t), c_bone_init, NULL, 1, ref("node"));
 }
 

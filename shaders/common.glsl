@@ -452,7 +452,7 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
 	int numMips = textureQueryLevels(screen);
     vec4 reflect_color = vec4(0.0f);
     float remainingAlpha = 1.0f;
-    float maxMipLevel = float(numMips) - 1.0f;
+    float maxMipLevel = 3.0f;
     float glossMult = gloss;
 
     // cone-tracing using an isosceles triangle to approximate a cone in screen space

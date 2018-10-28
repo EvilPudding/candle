@@ -13,7 +13,7 @@ vs_t *g_sprite_vs;
 static int c_sprite_position_changed(c_sprite_t *self);
 mesh_t *g_sprite_mesh;
 
-/* int c_sprite_menu(c_sprite_t *self, void *ctx); */
+void world_changed(void);
 
 vs_t *sprite_vs()
 {
@@ -56,14 +56,61 @@ static void c_sprite_init(c_sprite_t *self)
 	self->visible = 1;
 }
 
+void c_sprite_update_mat(c_sprite_t *self)
+{
+	if(self->mat)
+	{
+		int transp = self->mat->transparency.color.a > 0.0f ||
+			self->mat->transparency.texture ||
+			self->mat->emissive.color.a > 0.0f ||
+			self->mat->emissive.texture;
+		if(self->draw.grp[0].grp == ref("transparent")
+				|| self->draw.grp[0].grp == ref("visible"))
+		{
+			drawable_set_group(&self->draw, transp ? ref("transparent") : ref("visible"));
+		}
+	}
+
+	drawable_set_mat(&self->draw, self->mat ? self->mat->id : 0);
+}
+
+void c_sprite_set_mat(c_sprite_t *self, mat_t *mat)
+{
+	if(!mat)
+	{
+		mat = g_mats[rand()%g_mats_num];
+	}
+	if(self->mat != mat)
+	{
+		self->mat = mat;
+		c_sprite_update_mat(self);
+	}
+
+}
+
+int c_sprite_menu(c_sprite_t *self, void *ctx)
+{
+	int changes = 0;
+	if(self->mat && self->mat->name[0] != '_')
+	{
+		changes |= mat_menu(self->mat, ctx);
+		c_sprite_update_mat(self);
+	}
+	if(changes)
+	{
+		drawable_model_changed(&self->draw);
+		world_changed();
+	}
+	return CONTINUE;
+}
+
 c_sprite_t *c_sprite_new(mat_t *mat, int cast_shadow)
 {
 	c_sprite_t *self = component_new("sprite");
 
 	self->cast_shadow = cast_shadow;
 
-	self->mat = mat;
-	drawable_set_mat(&self->draw, mat ? mat->id : 0);
+	c_sprite_set_mat(self, mat);
 
 	c_sprite_position_changed(self);
 	return self;
@@ -71,7 +118,7 @@ c_sprite_t *c_sprite_new(mat_t *mat, int cast_shadow)
 
 int c_sprite_created(c_sprite_t *self)
 {
-	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL, NULL);
+	entity_signal_same(c_entity(self), ref("mesh_changed"), NULL, NULL);
 	return CONTINUE;
 }
 
@@ -94,9 +141,9 @@ REG()
 	ct_t *ct = ct_new("sprite", sizeof(c_sprite_t),
 			c_sprite_init, c_sprite_destroy, 1, ref("node"));
 
-	ct_listener(ct, ENTITY, sig("entity_created"), c_sprite_created);
+	ct_listener(ct, ENTITY, ref("entity_created"), c_sprite_created);
 
-	/* ct_listener(ct, WORLD, component_menu, c_sprite_menu); */
+	ct_listener(ct, WORLD, ref("component_menu"), c_sprite_menu);
 
-	ct_listener(ct, ENTITY, sig("node_changed"), c_sprite_position_changed);
+	ct_listener(ct, ENTITY, ref("node_changed"), c_sprite_position_changed);
 }

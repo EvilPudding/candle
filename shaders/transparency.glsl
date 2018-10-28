@@ -18,9 +18,9 @@ void main()
 	vec3 final;
 	if(trans.a > 0.0f)
 	{
-		vec2 coord = pixel_pos() + nor.xy * (rough * 0.03);
+		vec2 coord = pixel_pos() + nor.xy * (rough * 0.03f);
 
-		vec3 color = textureLod(refr.color, coord.xy, rough * 2).rgb;
+		vec3 color = textureLod(refr.color, coord.xy, rough * 3.0f).rgb;
 
 		final = color * (1.0f - trans.rgb);
 	}

@@ -705,7 +705,7 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 		title = tex->name;
 	}
 
-	res = nk_begin_titled(self->nk, buffer, title,
+	res = nk_can_begin_titled(self->nk, buffer, title,
 			nk_rect(self->spawn_pos.x, self->spawn_pos.y, tex->width + 30,
 				tex->height + 130),
 			NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
@@ -876,12 +876,17 @@ int c_editmode_commands(c_editmode_t *self)
 					mesh_t *mesh = c_model(&self->selected)->mesh;
 					c_editmode_select(self, entity_new(c_model_new(mesh_clone(mesh),
 									c_model(&self->selected)->mat, 1, 1)));
-					nk_contextual_close(self->nk);
+					close = 1;
 				}
 				close |= entity_signal_same(self->selected, sig("component_tool"), self->nk, NULL) == STOP;
 			}
 			else
 			{
+				if(nk_button_label(self->nk, "empty"))
+				{
+					c_editmode_select(self, entity_new(c_node_new()));
+					close = 1;
+				}
 				close |= entity_signal_same(c_entity(self), sig("component_tool"), self->nk, NULL) == STOP;
 			}
 
@@ -927,7 +932,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 		s->window.fixed_background = nk_style_item_image(background);
 	}
 
-	res = nk_begin_titled(self->nk, "entity", title,
+	res = nk_can_begin_titled(self->nk, "entity", title,
 			nk_rect(10, 10, 230, 680),
 			NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
 			NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE);

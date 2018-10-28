@@ -18,6 +18,9 @@ BUFFER {
 	sampler2D color;
 } light;
 
+BUFFER {
+	sampler2D color;
+} refr;
 
 void main()
 {
@@ -28,7 +31,7 @@ void main()
 	vec4 albedo = texelFetch(gbuffer.albedo, fc, 0);
 	vec3 nor = decode_normal(normal_metalic_roughness.rg);
 
-	vec4 ssred = ssr2(gbuffer.depth, light.color, albedo,
+	vec4 ssred = ssr2(gbuffer.depth, refr.color, albedo,
 			normal_metalic_roughness.ba, nor);
 
 	/* FragColor = ssred; return; */

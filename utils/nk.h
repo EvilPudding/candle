@@ -29,5 +29,7 @@ NK_API void nk_tree_entity_pop(struct nk_context*);
 NK_API void nk_can_font_stash_begin(struct nk_font_atlas **atlas);;
 NK_API void nk_can_font_stash_end(void);
 NK_API int nk_can_handle_event(SDL_Event *evt);
+NK_API int nk_can_begin_titled(struct nk_context *ctx, const char *name,
+		const char *title, struct nk_rect bounds, nk_flags flags);
 
 #endif /* !NK_H */
