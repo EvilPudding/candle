@@ -13,7 +13,7 @@ uniform int level;
 void main()
 {
 	vec4 tex = texelFetch(buf.color, ivec2(gl_FragCoord.xy), level);
-	/* if(tex.a == 0) discard; */
+	if(tex.a == 0) discard;
 
 	FragColor = tex;
 }

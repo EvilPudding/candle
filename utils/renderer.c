@@ -411,13 +411,12 @@ void renderer_default_pipeline(renderer_t *self)
 			DEPTH_EQUAL, gbuffer, gbuffer, 0, (bind_t[]){ {NONE} });
 
 	renderer_add_pass(self, "ssao_pass", "ssao", ref("quad"), 0,
-			renderer_tex(self, ref("ssao")), NULL, 0,
+			ssao, NULL, 0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
 			{NONE}
 		}
 	);
-
 
 
 	/* renderer_tex(self, ref(light))->mipmaped = 1; */
