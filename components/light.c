@@ -73,7 +73,7 @@ static void c_light_create_renderer(c_light_t *self)
 	texture_t *output =	texture_cubemap(self->shadow_size, self->shadow_size, 1);
 
 	renderer_add_pass(renderer, "depth", "depth", ref("visible"),
-			CULL_DISABLE, output, output,
+			CULL_DISABLE, output, output, 0,
 			(bind_t[]){
 				{CLEAR_DEPTH, .number = 1.0f},
 				{CLEAR_COLOR, .vec4 = vec4(0.0f)},

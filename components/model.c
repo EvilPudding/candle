@@ -580,6 +580,24 @@ c_model_t *c_model_wireframe(c_model_t *self, int wireframe)
 /* } */
 
 
+void c_model_update_mat(c_model_t *self)
+{
+	if(self->mat)
+	{
+		int transp = self->mat->transparency.color.a > 0.0f ||
+			self->mat->transparency.texture ||
+			self->mat->emissive.color.a > 0.0f ||
+			self->mat->emissive.texture;
+		if(self->draw.grp[0].grp == ref("transparent")
+				|| self->draw.grp[0].grp == ref("visible"))
+		{
+			drawable_set_group(&self->draw, transp ? ref("transparent") : ref("visible"));
+		}
+	}
+
+	drawable_set_mat(&self->draw, self->mat ? self->mat->id : 0);
+}
+
 void c_model_set_mat(c_model_t *self, mat_t *mat)
 {
 	if(!mat)
@@ -589,20 +607,7 @@ void c_model_set_mat(c_model_t *self, mat_t *mat)
 	if(self->mat != mat)
 	{
 		self->mat = mat;
-		if(mat)
-		{
-			int transp = mat->transparency.color.a > 0.0f ||
-				mat->transparency.texture ||
-				mat->emissive.color.a > 0.0f ||
-				mat->emissive.texture;
-			if(self->draw.grp[0].grp == ref("transparent")
-					|| self->draw.grp[0].grp == ref("visible"))
-			{
-				drawable_set_group(&self->draw, transp ? ref("transparent") : ref("visible"));
-			}
-		}
-
-		drawable_set_mat(&self->draw, mat ? mat->id : 0);
+		c_model_update_mat(self);
 	}
 
 }
@@ -773,7 +778,8 @@ int c_model_menu(c_model_t *self, void *ctx)
 
 	if(self->mat && self->mat->name[0] != '_')
 	{
-		mat_menu(self->mat, ctx);
+		changes |= mat_menu(self->mat, ctx);
+		c_model_update_mat(self);
 	}
 	if(changes)
 	{

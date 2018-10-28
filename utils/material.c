@@ -187,21 +187,29 @@ void mat_set_albedo(mat_t *self, prop_t albedo)
 	world_changed();
 }
 
-void mat_prop_menu(mat_t *self, const char *name, prop_t *prop, void *ctx)
+int mat_prop_menu(mat_t *self, const char *name, prop_t *prop, void *ctx)
 {
+	int changes = 0;
 	uint id = murmur_hash(&prop, 8, 0);
 	if(nk_tree_push_id(ctx, NK_TREE_NODE, name, NK_MINIMIZED, id))
 	{
 		if(prop->texture)
 		{
-			nk_property_float(ctx, "#blend:", 0, &prop->blend, 1, 0.1, 0.05);
+			float blend = prop->blend;
+			nk_property_float(ctx, "#blend:", 0, &blend, 1, 0.1, 0.05);
+			if(blend != prop->blend)
+			{
+				changes = 1;
+				prop->blend = blend;
+			}
 			if (nk_button_label(ctx, prop->texture->name))
 			{
 				c_editmode_open_texture(c_editmode(&SYS), prop->texture);
 			}
 		}
 		/* nk_layout_row_dynamic(ctx, 180, 1); */
-		union { struct nk_colorf *nk; vec4_t *v; } color = { .v = &prop->color };
+		vec4_t vcolor = prop->color;
+		union { struct nk_colorf *nk; vec4_t *v; } color = { .v = &vcolor };
 		/* *color.nk = nk_color_picker(ctx, *color.nk, NK_RGBA); */
 
 		if (nk_combo_begin_color(ctx, nk_rgb_cf(*color.nk), nk_vec2(200,400))) {
@@ -230,21 +238,31 @@ void mat_prop_menu(mat_t *self, const char *name, prop_t *prop, void *ctx)
 				(*color.nk) = nk_hsva_colorfv(hsva);
 			}
 			nk_combo_end(ctx);
+			if(memcmp(&vcolor, &prop->color, sizeof(vec4_t)))
+			{
+				prop->color = vcolor;
+				changes = 1;
+			}
 		}
 		nk_tree_pop(ctx);
 	}
-	/* TODO call this only of the new material is different from previous */
-	world_changed();
+	if(changes)
+	{
+		world_changed();
+	}
+	return changes;
 }
 
-void mat_menu(mat_t *self, void *ctx)
+int mat_menu(mat_t *self, void *ctx)
 {
-	mat_prop_menu(self, "albedo", &self->albedo, ctx); 
-	mat_prop_menu(self, "roughness", &self->roughness, ctx); 
-	mat_prop_menu(self, "normal", &self->normal, ctx); 
-	mat_prop_menu(self, "metalness", &self->metalness, ctx); 
-	mat_prop_menu(self, "transparency", &self->transparency, ctx); 
-	mat_prop_menu(self, "emissive", &self->emissive, ctx); 
+	int changes = 0;
+	changes |= mat_prop_menu(self, "albedo", &self->albedo, ctx); 
+	changes |= mat_prop_menu(self, "roughness", &self->roughness, ctx); 
+	changes |= mat_prop_menu(self, "normal", &self->normal, ctx); 
+	changes |= mat_prop_menu(self, "metalness", &self->metalness, ctx); 
+	changes |= mat_prop_menu(self, "transparency", &self->transparency, ctx); 
+	changes |= mat_prop_menu(self, "emissive", &self->emissive, ctx); 
+	return changes;
 }
 
 void mat_bind(mat_t *self, shader_t *shader)

@@ -2,6 +2,7 @@
 #define TEXTURE_H
 
 #include "glutil.h"
+#include "mafs.h"
 
 typedef struct
 {
@@ -36,7 +37,10 @@ typedef struct
 	float brightness;
 	uint32_t track_brightness; 
 	uint32_t target;
-	uint32_t frame_buffer[6];
+
+	uint32_t frame_buffer[8];
+	uvec2_t sizes[8];
+
 	char *filename;
 	int32_t framebuffer_ready;
 	int32_t draw_id;

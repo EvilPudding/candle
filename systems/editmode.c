@@ -157,7 +157,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	renderer_add_tex(renderer, "tmp", 1.0f, tmp);
 
 	renderer_add_pass(renderer, "highlights", "highlight", sig("quad"),
-			MUL, renderer_tex(renderer, ref("final")), NULL,
+			MUL, renderer_tex(renderer, ref("final")), NULL, 0,
 		(bind_t[]){
 			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
 			{INT, "mode", (getter_cb)c_editmode_bind_mode, self},
@@ -170,7 +170,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	);
 
 	renderer_add_pass(renderer, "highlights_0", "border", sig("quad"),
-			0, tmp, NULL,
+			0, tmp, NULL, 0,
 		(bind_t[]){
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
@@ -184,7 +184,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	);
 
 	renderer_add_pass(renderer, "highlights_1", "border", sig("quad"),
-			ADD, renderer_tex(renderer, ref("final")), NULL,
+			ADD, renderer_tex(renderer, ref("final")), NULL, 0,
 		(bind_t[]){
 			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
 			{TEX, "tmp", .buffer = tmp},
@@ -197,7 +197,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 		}
 	);
 	renderer_add_pass(renderer, "tool", "editmode", sig("quad"),
-			ADD, renderer_tex(renderer, ref("final")), NULL,
+			ADD, renderer_tex(renderer, ref("final")), NULL, 0,
 		(bind_t[]){
 			{VEC2, "mouse_pos", (getter_cb)c_editmode_bind_mouse_pos, self},
 			{NUM, "start_radius", (getter_cb)c_editmode_bind_start_radius, self},
@@ -918,21 +918,12 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 	{
 		back = renderer_tex(window->renderer, ref("refr"));
 		struct nk_image background = nk_image_id(back->bufs[back->prev_id].id);
-		
-		s->window.header.normal = nk_style_item_color(nk_rgba(0,0,0,10));
-		s->window.header.hover = nk_style_item_color(nk_rgba(0,0,0,20));
-		s->window.header.active = nk_style_item_color(nk_rgba(0,0,0,20));
 		background.w = window->width;
 		background.h = window->height;
 		background.region[0] = 0;
 		background.region[1] = 0;
 		background.region[2] = window->width;
 		background.region[3] = window->height;
-		/* s->window.background = nk_rgba(0,0,0,0); */
-		/* s->window.menu_padding = nk_vec2(0, 0); */
-		s->window.border_color = nk_rgba(0,0,0,0);
-		/* s->window.scrollbar_size = nk_vec2(0, 0); */
-		/* nk_style_push_color(ctx, &s->window.background, nk_rgba(0,0,0,0)); */
 		s->window.fixed_background = nk_style_item_image(background);
 	}
 

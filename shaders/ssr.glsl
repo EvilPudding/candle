@@ -16,19 +16,19 @@ BUFFER {
 
 BUFFER {
 	sampler2D color;
-} rendered;
+} light;
 
 
 void main()
 {
 	ivec2 fc = ivec2(gl_FragCoord.xy);
-	vec4 cc = texelFetch(rendered.color, fc, 0);
+	vec4 cc = texelFetch(light.color, fc, 0);
 
 	vec4 normal_metalic_roughness = texelFetch(gbuffer.nmr, fc, 0);
 	vec4 albedo = texelFetch(gbuffer.albedo, fc, 0);
 	vec3 nor = decode_normal(normal_metalic_roughness.rg);
 
-	vec4 ssred = ssr2(gbuffer.depth, rendered.color, albedo,
+	vec4 ssred = ssr2(gbuffer.depth, light.color, albedo,
 			normal_metalic_roughness.ba, nor);
 
 	/* FragColor = ssred; return; */

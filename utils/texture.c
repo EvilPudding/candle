@@ -178,6 +178,16 @@ static int32_t alloc_buffer_gl(struct tpair *data)
 		glTexParameteri(self->target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(self->target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glGenerateMipmap(self->target); glerr();
+
+		int32_t m;
+		for(m = 1; m < 8; m++)
+		{
+			int w;
+			int h;
+			glGetTexLevelParameteriv(GL_TEXTURE_2D, m, GL_TEXTURE_WIDTH, &w);
+			glGetTexLevelParameteriv(GL_TEXTURE_2D, m, GL_TEXTURE_HEIGHT, &h);
+			self->sizes[m] = uvec2(w, h);
+		}
 	}
 	else
 	{
@@ -198,10 +208,7 @@ static int32_t alloc_buffer_gl(struct tpair *data)
 	glActiveTexture(GL_TEXTURE0);
 	self->bufs[i].ready = 1;
 
-	if(data)
-	{
-		free(data);
-	}
+	if(data) free(data);
 	return 1;
 }
 
@@ -372,6 +379,7 @@ texture_t *_texture_new_2D_pre
 
 	self->width = width;
 	self->height = height;
+	self->sizes[0] = uvec2(width, height);
 
 	return self;
 }
@@ -627,24 +635,28 @@ texture_t *texture_from_file(const char *filename)
 
 static int32_t texture_2D_frame_buffer(texture_t *self)
 {
+	int32_t levels = self->mipmaped ? 8 : 1;
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	if(!self->frame_buffer[0])
 	{
-		glGenFramebuffers(1, self->frame_buffer);
+		glGenFramebuffers(levels, self->frame_buffer);
 	}
 	GLuint targ = self->target;
 
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, self->frame_buffer[0]);
-
-	int32_t i;
+	int32_t i, m;
 
 	for(i = self->depth_buffer; i < self->bufs_size; i++)
 	{
 		if(!self->bufs[i].fb_ready)
 		{
-			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER,
-					GL_COLOR_ATTACHMENT0 + i - self->depth_buffer, targ,
-					self->bufs[i].id, 0);
+			for(m = 0; m < levels; m++)
+			{
+				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, self->frame_buffer[m]);
+
+				glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER,
+						GL_COLOR_ATTACHMENT0 + i - self->depth_buffer, targ,
+						self->bufs[i].id, m);
+			}
 			self->bufs[i].fb_ready = 1;
 		}
 	}
@@ -709,7 +721,11 @@ int32_t texture_target_sub(texture_t *self, int32_t width, int32_t height,
 
 int32_t texture_target(texture_t *self, texture_t *depth, int32_t fb)
 {
-	return texture_target_sub(self, self->width, self->height, depth, fb);
+	int w = self->sizes[fb].x;
+	int h = self->sizes[fb].y;
+	/* if(w == 0) w = self->width; */
+	/* if(h == 0) h = self->height; */
+	return texture_target_sub(self, w, h, depth, fb);
 }
 
 void texture_draw_id(texture_t *self, int32_t tex)
@@ -758,6 +774,7 @@ int32_t texture_2D_resize(texture_t *self, int32_t width, int32_t height)
 	glActiveTexture(GL_TEXTURE0 + ID_2D);
 	self->width = width;
 	self->height = height;
+	self->sizes[0] = uvec2(width, height);
 
 	int32_t i;
 	for(i = 0; i < self->bufs_size; i++)
@@ -824,6 +841,7 @@ static int32_t texture_cubemap_frame_buffer(texture_t *self)
 					GL_COLOR_ATTACHMENT0 + i - 1,
 					targ, self->bufs[i].id, 0);
 		}
+		self->sizes[f] = uvec2(self->width, self->height);
 	}
 	glDrawBuffers(self->bufs_size - self->depth_buffer, attachments);
 

@@ -82,7 +82,15 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 	/* if(self->shader->frame_bind == self->frame) return; */
 	/* self->shader->frame_bind = self->frame; */
 
-	glUniform2f(22, pass->output->width, pass->output->height);
+	if(pass->output->target != GL_TEXTURE_2D)
+	{
+		glUniform2f(22, pass->output->width, pass->output->height);
+	}
+	else
+	{
+		uvec2_t size = pass->output->sizes[pass->framebuffer_id];
+		glUniform2f(22, size.x, size.y);
+	}
 
 	glerr();
 
@@ -217,6 +225,69 @@ void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model)
 	}
 }
 
+void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
+		int level)
+{
+	renderer_add_pass(self, "kawase_p", "copy", ref("quad"), MANUAL_MIP,
+			t2, NULL, level,
+		(bind_t[]){
+			{TEX, "buf", .buffer = t1},
+			{INT, "level", .integer = level - 1},
+			{NONE}
+		}
+	);
+
+	renderer_add_pass(self, "kawase_0", "kawase", ref("quad"), MANUAL_MIP,
+			t1, NULL, level,
+		(bind_t[]){
+			{TEX, "buf", .buffer = t2},
+			{INT, "distance", .integer = 0},
+			{INT, "level", .integer = level},
+			{NONE}
+		}
+	);
+
+	renderer_add_pass(self, "kawase_1", "kawase", ref("quad"), MANUAL_MIP,
+			t2, NULL, level,
+		(bind_t[]){
+			{TEX, "buf", .buffer = t1},
+			{INT, "distance", .integer = 1},
+			{INT, "level", .integer = level},
+			{NONE}
+		}
+	);
+
+	renderer_add_pass(self, "kawase_2", "kawase", ref("quad"), MANUAL_MIP,
+			t1, NULL, level,
+		(bind_t[]){
+			{TEX, "buf", .buffer = t2},
+			{INT, "distance", .integer = 2},
+			{INT, "level", .integer = level},
+			{NONE}
+		}
+	);
+
+	renderer_add_pass(self, "kawase_3", "kawase", ref("quad"), MANUAL_MIP,
+			t2, NULL, level,
+		(bind_t[]){
+			{TEX, "buf", .buffer = t1},
+			{INT, "distance", .integer = 2},
+			{INT, "level", .integer = level},
+			{NONE}
+		}
+	);
+
+	renderer_add_pass(self, "kawase_4", "kawase", ref("quad"), MANUAL_MIP,
+			t1, NULL, level,
+		(bind_t[]){
+			{TEX, "buf", .buffer = t2},
+			{INT, "distance", .integer = 3},
+			{INT, "level", .integer = level},
+			{NONE}
+		}
+	);
+}
+
 void renderer_default_pipeline(renderer_t *self)
 {
 	texture_t *gbuffer =	texture_new_2D(0, 0, 0, 0,
@@ -228,10 +299,13 @@ void renderer_default_pipeline(renderer_t *self)
 	texture_t *ssao =		texture_new_2D(0, 0, 0,
 		buffer_new("occlusion",	1, 1)
 	);
-	texture_t *rendered =	texture_new_2D(0, 0, 0,
+	texture_t *light =	texture_new_2D(0, 0, 0,
 		buffer_new("color",	1, 4)
 	);
 	texture_t *refr =		texture_new_2D(0, 0, TEX_MIPMAP,
+		buffer_new("color",	1, 4)
+	);
+	texture_t *refr2 =		texture_new_2D(0, 0, TEX_MIPMAP,
 		buffer_new("color",	1, 4)
 	);
 	texture_t *final =		texture_new_2D(0, 0, TEX_INTERPOLATE,
@@ -255,8 +329,9 @@ void renderer_default_pipeline(renderer_t *self)
 
 	renderer_add_tex(self, "gbuffer",		1.0f, gbuffer);
 	renderer_add_tex(self, "ssao",			1.0f, ssao);
-	renderer_add_tex(self, "rendered",		1.0f, rendered);
+	renderer_add_tex(self, "light",			1.0f, light);
 	renderer_add_tex(self, "refr",			1.0f, refr);
+	renderer_add_tex(self, "refr2",			1.0f, refr2);
 	renderer_add_tex(self, "final",			1.0f, final);
 	renderer_add_tex(self, "selectable",	1.0f, selectable);
 	renderer_add_tex(self, "tmp",			1.0f, tmp);
@@ -265,7 +340,7 @@ void renderer_default_pipeline(renderer_t *self)
 	/* renderer_add_tex(self, "bloom2",		0.3f, bloom2); */
 
 	renderer_add_pass(self, "gbuffer", "gbuffer", ref("visible"), 0, gbuffer,
-			gbuffer,
+			gbuffer, 0,
 		(bind_t[]){
 			{CLEAR_DEPTH, .number = 1.0f},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
@@ -274,7 +349,7 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	renderer_add_pass(self, "selectable", "select", ref("selectable"),
-			0, selectable, selectable,
+			0, selectable, selectable, 0,
 		(bind_t[]){
 			{CLEAR_DEPTH, .number = 1.0f},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
@@ -285,15 +360,7 @@ void renderer_default_pipeline(renderer_t *self)
 	/* DECAL PASS */
 	renderer_add_pass(self, "decals_pass", "decals", ref("decals"),
 			DEPTH_LOCK | DEPTH_EQUAL | DEPTH_GREATER,
-			gbuffer, gbuffer,
-		(bind_t[]){
-			{TEX, "gbuffer", .buffer = gbuffer},
-			{NONE}
-		}
-	);
-
-	renderer_add_pass(self, "ssao_pass", "ssao", ref("quad"), 0,
-			renderer_tex(self, ref("ssao")), NULL,
+			gbuffer, gbuffer, 0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
 			{NONE}
@@ -302,7 +369,7 @@ void renderer_default_pipeline(renderer_t *self)
 
 
 	renderer_add_pass(self, "ambient_light_pass", "phong", ref("ambient"),
-			ADD, rendered, NULL,
+			ADD, light, NULL, 0,
 		(bind_t[]){
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{TEX, "gbuffer", .buffer = gbuffer},
@@ -311,7 +378,7 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	renderer_add_pass(self, "render_pass", "phong", ref("light"),
-			DEPTH_LOCK | ADD | DEPTH_EQUAL | DEPTH_GREATER, rendered, gbuffer,
+			DEPTH_LOCK | ADD | DEPTH_EQUAL | DEPTH_GREATER, light, gbuffer, 0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
 			{NONE}
@@ -319,16 +386,20 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 
-	renderer_add_pass(self, "refraction", "copy", ref("quad"), 0,
-			refr, NULL,
+	renderer_add_pass(self, "refraction", "copy", ref("quad"), MANUAL_MIP,
+			refr, NULL, 0,
 		(bind_t[]){
-			{TEX, "buf", .buffer = rendered},
+			{TEX, "buf", .buffer = light},
+			{INT, "level", .integer = 0},
 			{NONE}
 		}
 	);
 
+	renderer_add_kawase(self, refr, refr2, 1);
+	renderer_add_kawase(self, refr, refr2, 2);
+
 	renderer_add_pass(self, "transp", "transparency", ref("transparent"),
-			DEPTH_EQUAL, rendered, gbuffer,
+			DEPTH_EQUAL, light, gbuffer, 0,
 		(bind_t[]){
 			{TEX, "refr", .buffer = refr},
 			{NONE}
@@ -336,15 +407,24 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	renderer_add_pass(self, "transp_1", "gbuffer", ref("transparent"),
-			DEPTH_EQUAL, gbuffer, gbuffer, (bind_t[]){ {NONE} });
+			DEPTH_EQUAL, gbuffer, gbuffer, 0, (bind_t[]){ {NONE} });
+
+	renderer_add_pass(self, "ssao_pass", "ssao", ref("quad"), 0,
+			renderer_tex(self, ref("ssao")), NULL, 0,
+		(bind_t[]){
+			{TEX, "gbuffer", .buffer = gbuffer},
+			{NONE}
+		}
+	);
 
 
-	/* renderer_tex(self, ref(rendered))->mipmaped = 1; */
-	renderer_add_pass(self, "final", "ssr", ref("quad"), 0, final, NULL,
+
+	/* renderer_tex(self, ref(light))->mipmaped = 1; */
+	renderer_add_pass(self, "final", "ssr", ref("quad"), 0, final, NULL, 0,
 		(bind_t[]){
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{TEX, "gbuffer", .buffer = gbuffer},
-			{TEX, "rendered", .buffer = rendered},
+			{TEX, "light", .buffer = light},
 			{TEX, "ssao", .buffer = ssao},
 			{NONE}
 		}
@@ -385,9 +465,9 @@ void renderer_default_pipeline(renderer_t *self)
 	/* 	} */
 	/* ); */
 
-	/* renderer_tex(self, ref(rendered))->mipmaped = 1; */
+	/* renderer_tex(self, ref(light))->mipmaped = 1; */
 
-	self->output = renderer_tex(self, ref("final"));
+	self->output = final;
 }
 
 void renderer_update_projection(renderer_t *self)
@@ -556,7 +636,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 			glUnmapBuffer(GL_UNIFORM_BUFFER); glerr();
 			self->camera_bound = pass->camid;
 		}
-		texture_target(pass->output, depth, 0);
+		texture_target(pass->output, depth, pass->framebuffer_id);
 
 		if(pass->clear) glClear(pass->clear);
 
@@ -567,7 +647,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 
 	glDisable(GL_BLEND);
 
-	if(pass->output->mipmaped)
+	if(pass->auto_mip && pass->output->mipmaped)
 	{
 		texture_bind(pass->output, 0);
 		glGenerateMipmap(pass->output->target); glerr();
@@ -726,13 +806,15 @@ void renderer_add_pass(
 		enum pass_options flags,
 		texture_t *output,
 		texture_t *depth,
+		uint32_t framebuffer,
 		bind_t binds[])
 {
 	if(!output) exit(1);
 	char buffer[32];
 	snprintf(buffer, sizeof(buffer), name, self->passes_size);
 	unsigned int hash = ref(buffer);
-	int i = renderer_pass(self, hash);
+	/* TODO add pass replacement */
+	int i = -1;// renderer_pass(self, hash);
 	if(i == -1)
 	{
 		i = self->passes_size++;
@@ -744,6 +826,8 @@ void renderer_add_pass(
 
 	pass_t *pass = &self->passes[i];
 	pass->hash = hash;
+	pass->framebuffer_id = framebuffer;
+	pass->auto_mip = !(flags & MANUAL_MIP);
 
 	if(shader_name)
 	{
@@ -751,7 +835,7 @@ void renderer_add_pass(
 	}
 	pass->clear = 0;
 
-	pass->depth_update =	!(flags & DEPTH_LOCK);
+	pass->depth_update = !(flags & DEPTH_LOCK);
 	pass->depth = NULL;
 
 	pass->output = output;

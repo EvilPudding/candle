@@ -20,7 +20,7 @@ void main()
 	{
 		vec2 coord = pixel_pos() + nor.xy * (rough * 0.03);
 
-		vec3 color = textureLod(refr.color, coord.xy, rough * 3).rgb;
+		vec3 color = textureLod(refr.color, coord.xy, rough * 2).rgb;
 
 		final = color * (1.0f - trans.rgb);
 	}

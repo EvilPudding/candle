@@ -28,7 +28,8 @@ enum pass_options
 	DEPTH_DISABLE	= 1 << 7,
 	CULL_DISABLE	= 1 << 8,
 	ADD				= 1 << 9,
-	MUL				= 1 << 10
+	MUL				= 1 << 10,
+	MANUAL_MIP		= 1 << 11
 };
 
 enum bind_type
@@ -136,9 +137,11 @@ typedef struct pass_t
 	bind_t *binds;
 
 	texture_t *output;
+	int32_t framebuffer_id;
 	texture_t *depth;
 	vec4_t clear_color;
 	float clear_depth;
+	int32_t auto_mip;
 
 	int32_t active;
 	int32_t camid;
@@ -203,6 +206,7 @@ void renderer_add_pass(
 		enum pass_options flags,
 		texture_t *output,
 		texture_t *depth,
+		uint32_t framebuffer,
 		bind_t binds[]);
 
 void renderer_toggle_pass(renderer_t *self, uint hash, int active);

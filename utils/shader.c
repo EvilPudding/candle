@@ -43,6 +43,7 @@ void shaders_quad_glsl_reg(void);
 void shaders_sprite_glsl_reg(void);
 void shaders_ssr_glsl_reg(void);
 void shaders_blur_glsl_reg(void);
+void shaders_kawase_glsl_reg(void);
 void shaders_border_glsl_reg(void);
 
 void shaders_phong_glsl_reg(void);
@@ -56,6 +57,7 @@ void shaders_reg()
 {
 	shaders_ambient_glsl_reg();
 	shaders_blur_glsl_reg();
+	shaders_kawase_glsl_reg();
 	shaders_border_glsl_reg();
 	shaders_bright_glsl_reg();
 	shaders_common_glsl_reg();
