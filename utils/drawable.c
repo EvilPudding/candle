@@ -1039,6 +1039,7 @@ static void draw_conf_update_inst_props(draw_conf_t *self, int32_t id)
 	}
 	self->comps[id]->updates &= ~MASK_PROPS;
 }
+
 static void draw_conf_update_inst_trans(draw_conf_t *self, int32_t id)
 {
 	if(self->comps[id]->updates & MASK_TRANS)
@@ -1108,7 +1109,14 @@ static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 	else
 	{
 		draw_conf_update_inst_props(self, id);
-		draw_conf_update_inst_trans(self, id);
+		self->props_updates = 0;
+
+		if(self->last_update_frame != frame)
+		{
+			draw_conf_update_inst_trans(self, id);
+			self->last_update_frame = frame;
+			self->trans_updates = 0;
+		}
 	}
 }
 
