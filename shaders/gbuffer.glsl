@@ -13,7 +13,14 @@ void main()
 	/* dif.rgb = TM[2] / 2.0f + 0.5f; */
 	AlbedoColor = dif;
 
-	NMR.rg = encode_normal(get_normal());
+	if(has_normals)
+	{
+		NMR.rg = encode_normal(get_normal());
+	}
+	else
+	{
+		NMR.rg = encode_normal(vec3(0, 1, 0));
+	}
 
 	NMR.b = resolveProperty(mat(metalness), texcoord).r;
 	NMR.a = resolveProperty(mat(roughness), texcoord).r;

@@ -149,7 +149,7 @@ c_editmode_t *c_editmode_new()
 
 static renderer_t *editmode_renderer_new(c_editmode_t *self)
 {
-	renderer_t *renderer = renderer_new(0.66f);
+	renderer_t *renderer = renderer_new(1.00f);
 	renderer_default_pipeline(renderer);
 
 	texture_t *tmp = texture_new_2D(0, 0, TEX_INTERPOLATE,
