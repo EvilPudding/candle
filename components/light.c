@@ -96,6 +96,13 @@ void c_light_visible(c_light_t *self, uint32_t visible)
 
 static int c_light_position_changed(c_light_t *self)
 {
+	self->modified = 1;
+	return CONTINUE;
+}
+
+static int c_light_pre_draw(c_light_t *self)
+{
+	if(!self->modified) return CONTINUE;
 	if(self->radius == -1)
 	{
 		drawable_set_group(&self->draw, self->ambient_group);
@@ -131,7 +138,6 @@ static int c_light_position_changed(c_light_t *self)
 	{
 		c_light_create_renderer(self);
 	}
-
 	return CONTINUE;
 }
 
@@ -194,5 +200,6 @@ REG()
 
 	ct_listener(ct, WORLD, sig("component_menu"), c_light_menu);
 	ct_listener(ct, WORLD | 30, sig("world_draw"), c_light_draw);
+	ct_listener(ct, WORLD, sig("world_pre_draw"), c_light_pre_draw);
 	ct_listener(ct, ENTITY, sig("node_changed"), c_light_position_changed);
 }

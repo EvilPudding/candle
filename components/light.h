@@ -22,6 +22,7 @@ typedef struct
 	uint32_t visible;
 	uint32_t ambient_group;
 	uint32_t light_group;
+	uint32_t modified;
 } c_light_t;
 
 DEF_CASTER("light", c_light, c_light_t)
