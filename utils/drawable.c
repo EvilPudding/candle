@@ -907,6 +907,7 @@ static void draw_conf_update_vao(draw_conf_t *self)
 int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 {
 	if(!self || !self->inst_num) return 0;
+	SDL_SemWait(self->semaphore);
 	mesh_t *mesh = self->vars.mesh;
 	/* printf("%d %p %d %s\n", self->vars.transparent, self->vars.mesh, */
 			/* self->vars.xray, self->vars.vs->name); */
@@ -956,6 +957,7 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 				self->varray->ind_num, GL_UNSIGNED_INT, 0, 1, instance_id);
 		glerr();
 	}
+	SDL_SemPost(self->semaphore);
 
 	glDepthRange(0.0, 1.00);
 	if(cull_was_enabled) glEnable(GL_CULL_FACE);
@@ -1044,7 +1046,6 @@ static void draw_conf_update_inst_trans(draw_conf_t *self, int32_t id)
 
 static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 {
-	SDL_SemWait(self->semaphore);
 	if(self->inst_num > self->gl_inst_num)
 	{
 		self->gl_inst_num = self->inst_num;
@@ -1059,7 +1060,6 @@ static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 		/* 4D ANGLE BUFFER */
 		create_buffer(&self->vbo[13], self->angle4, 1, self->inst_num, 1);
 #endif
-		SDL_SemPost(self->semaphore);
 		return;
 	}
 
@@ -1096,7 +1096,6 @@ static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 		draw_conf_update_inst_props(self, id);
 		draw_conf_update_inst_trans(self, id);
 	}
-	SDL_SemPost(self->semaphore);
 }
 
 void varray_destroy(varray_t *self)
