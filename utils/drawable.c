@@ -937,13 +937,24 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 
 	glBindVertexArray(self->vao); glerr();
 
-	glLineWidth(3);
+	glLineWidth(2);
 
 	glPolygonMode(GL_FRONT_AND_BACK, mesh->wireframe ? GL_LINE : GL_FILL);
 
 	if(self->vars.xray) glDepthRange(0, 0.01);
 
-	uint32_t primitive = vector_count(mesh->faces) ? GL_TRIANGLES : GL_LINES;
+	uint32_t primitive;
+	if(vector_count(mesh->faces))
+	{
+		primitive = GL_TRIANGLES;
+		glUniform1ui(24, 1);
+	}
+	else
+	{
+
+		primitive = GL_LINES;
+		glUniform1ui(24, 0);
+	}
 	
 	if(instance_id == -1)
 	{
