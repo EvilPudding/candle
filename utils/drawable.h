@@ -79,6 +79,7 @@ typedef struct draw_conf_t
 	void *semaphore;
 	int32_t trans_updates;
 	int32_t props_updates;
+	int32_t last_update_frame;
 } draw_conf_t;
 
 typedef struct drawable_t

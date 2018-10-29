@@ -180,9 +180,16 @@ int c_render_device_draw(c_render_device_t *self)
 		c_render_device_update_ubo(self);
 		self->updates &= ~0x2;
 	}
+	self->frame++;
 	entity_signal(entity_null, sig("world_pre_draw"), NULL, NULL);
 
 	return CONTINUE;
+}
+
+int world_frame()
+{
+	c_render_device_t *rd = c_render_device(&SYS);
+	return rd->frame;
 }
 
 REG()

@@ -1055,8 +1055,10 @@ static void draw_conf_update_inst_trans(draw_conf_t *self, int32_t id)
 	self->comps[id]->updates &= ~MASK_TRANS;
 }
 
+int world_frame(void);
 static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 {
+	int frame = world_frame();
 	if(self->inst_num > self->gl_inst_num)
 	{
 		self->gl_inst_num = self->inst_num;
@@ -1077,7 +1079,7 @@ static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 	if(id == -1)
 	{
 		int32_t i;
-		if(self->trans_updates)
+		if(self->trans_updates && self->last_update_frame != frame)
 		{
 			if(self->inst_num > 8 && self->trans_updates > self->inst_num / 2)
 			{
@@ -1088,6 +1090,7 @@ static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 				draw_conf_update_inst_trans(self, i);
 			}
 			self->trans_updates = 0;
+			self->last_update_frame = frame;
 		}
 		if(self->props_updates)
 		{

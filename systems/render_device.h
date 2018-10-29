@@ -69,6 +69,7 @@ typedef struct c_render_device_t
 	unsigned int ubo;
 	struct gl_scene scene;
 	int updates;
+	int frame;
 } c_render_device_t;
 
 DEF_CASTER("render_device", c_render_device, c_render_device_t)
