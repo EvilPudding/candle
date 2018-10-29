@@ -56,12 +56,12 @@ static void c_skin_init(c_skin_t *self)
 			"		vec3 vertex_normal    = normalize(MODIFIER * vec4( N, 0.0f)).xyz;\n"
 			"		vec3 vertex_tangent   = normalize(MODIFIER * vec4(TG, 0.0f)).xyz;\n"
 			"		vec3 vertex_bitangent = cross(vertex_tangent, vertex_normal);\n"
+			"		pos = (MODIFIER * pos);\n"
+			"		vertex_position = pos.xyz;\n"
 
-			"		object_id = id;\n"
-			"		poly_id = ID;\n"
 			"		TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
 
-			"		pos = (camera.projection * MODIFIER) * pos;\n"
+			"		pos = camera(projection) * pos;\n"
 			"	}\n"
 		));
 	}

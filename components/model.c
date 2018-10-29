@@ -377,7 +377,6 @@ static void c_model_init(c_model_t *self)
 			"		pos = vec4(vec3(P.x, P.y * Y + P.w * W, P.z), 1.0);\n"
 			"#endif\n"
 
-			"		poly_color = COL;\n"
 			"		mat4 MV    = camera(view) * M;\n"
 			"		vec3 vertex_normal    = normalize(MV * vec4( N, 0.0f)).xyz;\n"
 			"		vec3 vertex_tangent   = normalize(MV * vec4(TG, 0.0f)).xyz;\n"
@@ -385,7 +384,6 @@ static void c_model_init(c_model_t *self)
 			"		pos   = (MV * pos);\n"
 			"		vertex_position = pos.xyz;\n"
 
-			"		poly_id = ID;\n"
 			"		TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
 
 			"		pos = camera(projection) * pos;\n"
@@ -419,7 +417,11 @@ c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow, int visible)
 {
 	c_model_t *self = component_new("model");
 	int sys = c_entity(self) == SYS;
-	if(sys) self->super.ghost = 1;
+	if(sys)
+	{
+		self->super.ghost = 1;
+		c_spacial(self)->super.ghost = 1;
+	}
 
 	c_model_init_drawables(self);
 

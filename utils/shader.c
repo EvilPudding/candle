@@ -170,7 +170,9 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"	vec4 pos = vec4(P.xyz, 1.0f);\n"
 			"	obj_pos = (M * vec4(0, 0, 0, 1)).xyz;\n"
 			"	model = M;\n"
+			"	poly_color = COL;\n"
 			"	matid = PROPS.x;\n"
+			"	poly_id = ID;\n"
 			"	id = PROPS.zw;\n"
 			"	texcoord = UV;\n";
 
