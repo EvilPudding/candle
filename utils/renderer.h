@@ -209,6 +209,9 @@ void renderer_add_pass(
 		uint32_t framebuffer,
 		bind_t binds[]);
 
+void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
+		int level);
+
 void renderer_toggle_pass(renderer_t *self, uint hash, int active);
 
 entity_t renderer_get_camera(renderer_t *self);

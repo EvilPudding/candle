@@ -188,8 +188,8 @@ static int32_t alloc_buffer_gl(struct tpair *data)
 			glGetTexLevelParameteriv(GL_TEXTURE_2D, m, GL_TEXTURE_HEIGHT, &h);
 			self->sizes[m] = uvec2(w, h);
 
-			uvec2_t s = self->sizes[m - 1];
-			printf("%f %f\n", ((float)w) / s.x, ((float)h) / s.y);
+			/* uvec2_t s = self->sizes[m - 1]; */
+			/* printf("%f %f\n", ((float)w) / s.x, ((float)h) / s.y); */
 		}
 	}
 	else

@@ -68,7 +68,7 @@ float lookup(vec3 coord)
 {
 	float dist = length(coord);
 	float dist2 = lookup_single(coord) - dist;
-	return (dist2 > -0.1) ? 1.0 : 0.0;
+	return (dist2 > -0.01) ? 1.0 : 0.0;
 }
 
 /* SPHEREMAP TRANSFORM */
@@ -208,36 +208,33 @@ float unlinearize(float depth)
 	return 100.0f * (1.0f - (0.1f / depth)) / (100.0f - 0.1f);
 }
 
-float get_shadow(vec3 vec, float point_to_light, float dist_to_eye)
+float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)
 {
 	float ocluder_to_light = lookup_single(-vec);
 
 	float sd = ((ocluder_to_light - point_to_light) > -0.05) ? 0.0 : 1.0;
-	vec4 p = vec4(0.005f, 0.005f, unlinearize(dist_to_eye), 1.0f);
-	p = camera(inv_projection) * p;
-	p /= p.w;
 	if(sd > 0.5)
 	{
+
 		/* sd = 0.5; */
 		float shadow_len = min(0.8 * (point_to_light / ocluder_to_light - 1), 10);
+		float p = 0.01 * linearize(depth);
 		if(shadow_len > 0.001)
 		{
 			float i;
 
-			/* if(shadow_at_dist_no_tan(vec, shadow_len) < 0.5) return 1.0f; */
-
-			float count = 0;
-			float inc = p.x;
-			float iters = min(shadow_len / inc, 20);
+			float count = 1;
+			float inc = p;
+			float iters = 1 + min(round(shadow_len / inc), 20);
 			inc = shadow_len / iters;
 
-
-			for (i = inc; i <= shadow_len; i += inc)
+			for (i = inc; count < iters; i += inc)
 			{
 				if(shadow_at_dist_no_tan(vec, i) > 0.5) break;
 
 				count++;
 			}
+			if(count == 1) return 0;
 			return (count / iters);
 		}
 	}

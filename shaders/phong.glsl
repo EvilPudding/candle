@@ -48,8 +48,9 @@ void main()
 
 		/* FragColor = vec4(vec3(nor) * 0.5 + 0.5, 1.0); return; */
 
+		float depth = textureLod(gbuffer.depth, pixel_pos(), 0).r;
 		/* FragColor = vec4(w_light_dir, 1.0f); return; */
-		float sd = get_shadow(w_light_dir, point_to_light, dist_to_eye);
+		float sd = get_shadow(w_light_dir, point_to_light, dist_to_eye, depth);
 		/* FragColor = vec4(vec3(texture(light(shadow_map), vec3(c_pos)).a) / 10.0f, 1.0f); return; */
 		/* FragColor = vec4(vec3(lookup_single(-w_light_dir)) / 10.0f, 1.0f); return; */
 		/* sd = 0; */
