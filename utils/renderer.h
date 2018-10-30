@@ -210,7 +210,7 @@ void renderer_add_pass(
 		bind_t binds[]);
 
 void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
-		int level);
+		int from_mip, int to_mip);
 
 void renderer_toggle_pass(renderer_t *self, uint hash, int active);
 

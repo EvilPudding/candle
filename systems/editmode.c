@@ -232,7 +232,7 @@ void c_editmode_activate(c_editmode_t *self)
 		c_spacial_lock(sc);
 		c_spacial_set_pos(sc, vec3(4, 1.5, 0));
 		c_spacial_rotate_Y(sc, M_PI / 2);
-		c_spacial_rotate_X(sc, -M_PI * 0.05);
+		/* c_spacial_rotate_X(sc, -M_PI * 0.05); */
 		c_spacial_unlock(sc);
 	}
 

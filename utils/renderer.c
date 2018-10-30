@@ -226,63 +226,64 @@ void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model)
 }
 
 void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
-		int level)
+		int from_mip, int to_mip)
 {
-	renderer_add_pass(self, "kawase_p", "downsample", ref("quad"), MANUAL_MIP,
-			t2, NULL, level,
+	renderer_add_pass(self, "kawase_p",
+			to_mip == from_mip ? "copy" : "downsample",
+			ref("quad"), MANUAL_MIP, t2, NULL, to_mip,
 		(bind_t[]){
 			{TEX, "buf", .buffer = t1},
-			{INT, "level", .integer = level - 1},
+			{INT, "level", .integer = from_mip},
 			{NONE}
 		}
 	);
 
 	renderer_add_pass(self, "kawase_0", "kawase", ref("quad"), MANUAL_MIP,
-			t1, NULL, level,
+			t1, NULL, to_mip,
 		(bind_t[]){
 			{TEX, "buf", .buffer = t2},
 			{INT, "distance", .integer = 0},
-			{INT, "level", .integer = level},
+			{INT, "level", .integer = to_mip},
 			{NONE}
 		}
 	);
 
 	renderer_add_pass(self, "kawase_1", "kawase", ref("quad"), MANUAL_MIP,
-			t2, NULL, level,
+			t2, NULL, to_mip,
 		(bind_t[]){
 			{TEX, "buf", .buffer = t1},
 			{INT, "distance", .integer = 1},
-			{INT, "level", .integer = level},
+			{INT, "level", .integer = to_mip},
 			{NONE}
 		}
 	);
 
 	renderer_add_pass(self, "kawase_2", "kawase", ref("quad"), MANUAL_MIP,
-			t1, NULL, level,
+			t1, NULL, to_mip,
 		(bind_t[]){
 			{TEX, "buf", .buffer = t2},
 			{INT, "distance", .integer = 2},
-			{INT, "level", .integer = level},
+			{INT, "level", .integer = to_mip},
 			{NONE}
 		}
 	);
 
 /* 	renderer_add_pass(self, "kawase_3", "kawase", ref("quad"), MANUAL_MIP, */
-/* 			t2, NULL, level, */
+/* 			t2, NULL, to_mip, */
 /* 		(bind_t[]){ */
 /* 			{TEX, "buf", .buffer = t1}, */
 /* 			{INT, "distance", .integer = 2}, */
-/* 			{INT, "level", .integer = level}, */
+/* 			{INT, "level", .integer = to_mip}, */
 /* 			{NONE} */
 /* 		} */
 /* 	); */
 
 /* 	renderer_add_pass(self, "kawase_4", "kawase", ref("quad"), MANUAL_MIP, */
-/* 			t1, NULL, level, */
+/* 			t1, NULL, to_mip, */
 /* 		(bind_t[]){ */
 /* 			{TEX, "buf", .buffer = t2}, */
 /* 			{INT, "distance", .integer = 3}, */
-/* 			{INT, "level", .integer = level}, */
+/* 			{INT, "level", .integer = to_mip}, */
 /* 			{NONE} */
 /* 		} */
 /* 	); */
@@ -305,7 +306,7 @@ void renderer_default_pipeline(renderer_t *self)
 	texture_t *refr =		texture_new_2D(0, 0, TEX_MIPMAP,
 		buffer_new("color",	1, 4)
 	);
-	texture_t *refr2 =		texture_new_2D(0, 0, TEX_MIPMAP,
+	texture_t *tmp =		texture_new_2D(0, 0, TEX_MIPMAP,
 		buffer_new("color",	1, 4)
 	);
 	texture_t *final =		texture_new_2D(0, 0, TEX_INTERPOLATE,
@@ -318,9 +319,6 @@ void renderer_default_pipeline(renderer_t *self)
 	/* texture_t *bloom2 =		texture_new_2D(0, 0, TEX_INTERPOLATE, */
 		/* buffer_new("color",	1, 4) */
 	/* ); */
-	texture_t *tmp =		texture_new_2D(0, 0, TEX_INTERPOLATE,
-		buffer_new("color",	1, 4)
-	);
 	texture_t *selectable =	texture_new_2D(0, 0, 0,
 		buffer_new("geomid",	1, 2),
 		buffer_new("id",		1, 2),
@@ -331,10 +329,9 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_tex(self, "ssao",			1.0f, ssao);
 	renderer_add_tex(self, "light",			1.0f, light);
 	renderer_add_tex(self, "refr",			1.0f, refr);
-	renderer_add_tex(self, "refr2",			1.0f, refr2);
+	renderer_add_tex(self, "tmp",			1.0f, tmp);
 	renderer_add_tex(self, "final",			1.0f, final);
 	renderer_add_tex(self, "selectable",	1.0f, selectable);
-	renderer_add_tex(self, "tmp",			1.0f, tmp);
 
 	/* renderer_add_tex(self, "bloom",		0.3f, bloom); */
 	/* renderer_add_tex(self, "bloom2",		0.3f, bloom2); */
@@ -395,9 +392,9 @@ void renderer_default_pipeline(renderer_t *self)
 		}
 	);
 
-	renderer_add_kawase(self, refr, refr2, 1);
-	renderer_add_kawase(self, refr, refr2, 2);
-	renderer_add_kawase(self, refr, refr2, 3);
+	renderer_add_kawase(self, refr, tmp, 0, 1);
+	renderer_add_kawase(self, refr, tmp, 1, 2);
+	renderer_add_kawase(self, refr, tmp, 2, 3);
 
 	renderer_add_pass(self, "transp", "transparency", ref("transparent"),
 			DEPTH_EQUAL, light, gbuffer, 0,
@@ -410,13 +407,14 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_pass(self, "transp_1", "gbuffer", ref("transparent"),
 			DEPTH_EQUAL, gbuffer, gbuffer, 0, (bind_t[]){ {NONE} });
 
-	renderer_add_pass(self, "ssao_pass", "ssao", ref("quad"), 0,
+	renderer_add_pass(self, "ssao_pass", "ssao", ref("quad"), MANUAL_MIP,
 			ssao, NULL, 0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
 			{NONE}
 		}
 	);
+	/* renderer_add_kawase(self, ssao, tmp, 0, 0); */
 
 
 	/* renderer_tex(self, ref(light))->mipmaped = 1; */
