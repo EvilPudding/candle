@@ -48,11 +48,13 @@ static const char default_vs[] =
 	"	vec4 pos = vec4(P.xyz, 1.0f);\n"
 	"	obj_pos = (M * vec4(0, 0, 0, 1)).xyz;\n"
 	"	model = M;\n"
+	"	poly_color = COL;\n"
 	"	matid = PROPS.x;\n"
+	"	poly_id = ID;\n"
 	"	id = PROPS.zw;\n"
 	"	texcoord = UV;\n";
 static const char default_vs_end[] = 
-	"\n\tgl_Position = pos; }"
+	"\n\tgl_Position = pos; }";
 
 static const char default_gs[] = "";
 

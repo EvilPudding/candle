@@ -17,6 +17,7 @@ typedef struct
 	int active;
 	int window;
 	int auto_exposure;
+	int modified;
 } c_camera_t;
 
 DEF_CASTER("camera", c_camera, c_camera_t)
@@ -30,5 +31,6 @@ vec3_t c_camera_screen_pos_flat(c_camera_t *self, vec3_t pos);
 void c_camera_update_view(c_camera_t *self);
 float c_camera_unlinearize(c_camera_t *self, float depth);
 void c_camera_assign(c_camera_t *self);
+int c_camera_pre_draw(c_camera_t *self);
 
 #endif /* !CAMERA_H */

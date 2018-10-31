@@ -22,6 +22,8 @@ typedef struct
 	uint32_t visible;
 	uint32_t ambient_group;
 	uint32_t light_group;
+	uint32_t modified;
+	uint32_t visible_group;
 } c_light_t;
 
 DEF_CASTER("light", c_light, c_light_t)
@@ -29,5 +31,7 @@ DEF_CASTER("light", c_light, c_light_t)
 c_light_t *c_light_new(float radius, vec4_t color, uint32_t shadow_size);
 void c_light_destroy(c_light_t *self);
 void c_light_visible(c_light_t *self, uint32_t visible);
+void c_light_set_groups(c_light_t *self, uint32_t visible_group,
+		uint32_t ambient_group, uint32_t light_group);
 
 #endif /* !LIGHT_H */

@@ -35,8 +35,6 @@ vs_t *sprite_vs()
 			"		vec3 vertex_bitangent = cross(vertex_normal, vertex_tangent);\n"
 			"		texcoord = vec2(UV.x, 1.0f - UV.y);\n"
 
-			"		object_id = id;\n"
-			"		poly_id = ID;\n"
 			"		TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
 			"	}\n"
 		));

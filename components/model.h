@@ -121,6 +121,9 @@ typedef struct
 
 	int visible;
 	int cast_shadow;
+	uint32_t visible_group;
+	uint32_t transparent_group;
+	uint32_t selectable_group;
 	/* before_draw_cb before_draw; */
 	int xray;
 
@@ -145,6 +148,8 @@ void c_model_set_cast_shadow(c_model_t *self, int cast_shadow);
 void c_model_set_vs(c_model_t *self, vs_t *vs);
 void c_model_set_mat(c_model_t *self, mat_t *mat);
 void c_model_set_mesh(c_model_t *self, mesh_t *mesh);
+void c_model_set_groups(c_model_t *self, uint32_t visible, uint32_t transp,
+		uint32_t selectable);
 
 /* int c_model_render_transparent(c_model_t *self); */
 /* int c_model_render_visible(c_model_t *self); */

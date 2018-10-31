@@ -210,7 +210,7 @@ void renderer_add_pass(
 		bind_t binds[]);
 
 void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
-		int level);
+		int from_mip, int to_mip);
 
 void renderer_toggle_pass(renderer_t *self, uint hash, int active);
 
@@ -231,5 +231,6 @@ void renderer_update_projection(renderer_t *self);
 vec3_t renderer_real_pos(renderer_t *self, float depth, vec2_t coord);
 vec3_t renderer_screen_pos(renderer_t *self, vec3_t pos);
 int renderer_component_menu(renderer_t *self, void *ctx);
+void renderer_destroy(renderer_t *self);
 
 #endif /* !RENDERER_H */

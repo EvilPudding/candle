@@ -131,14 +131,16 @@ void varray_ind_grow(varray_t *self)
 void drawable_remove_group(drawable_t *self, uint32_t group)
 {
 	uint32_t gid;
-
 	if(group == 0) return;
 
 	for(gid = 0; gid < self->grp_num; gid++)
 	{
 		if(self->grp[gid].grp == group) break;
 	}
-	if(gid == self->grp_num) return;
+	if(gid == self->grp_num)
+	{
+		return;
+	}
 
 	if(self->grp[gid].conf)
 	{
@@ -166,6 +168,7 @@ void drawable_remove_group(drawable_t *self, uint32_t group)
 	{
 		drawable_add_group(self, 0);
 	}
+
 	drawable_model_changed(self);
 }
 
@@ -196,9 +199,14 @@ void drawable_add_group(drawable_t *self, uint32_t group)
 void drawable_set_group(drawable_t *self, uint32_t group)
 {
 	uint32_t gid = 0;
-	if(group == 0) return;
 
 	if(self->grp[gid].grp == group) return;
+
+	if(group == 0 && self->grp_num > 0)
+	{
+		drawable_remove_group(self, self->grp[gid].grp);
+		return;
+	}
 
 	if(self->grp[gid].conf)
 	{
@@ -238,7 +246,11 @@ void drawable_set_mesh(drawable_t *self, mesh_t *mesh)
 					drawable_position_changed(self, &self->grp[gid]);
 				}
 			}
-			else
+		}
+		if(previous)
+		{
+			previous->ref_num++;
+			if(previous->ref_num == 0)
 			{
 				mesh_destroy(previous);
 			}
@@ -907,6 +919,7 @@ static void draw_conf_update_vao(draw_conf_t *self)
 int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 {
 	if(!self || !self->inst_num) return 0;
+	SDL_SemWait(self->semaphore);
 	mesh_t *mesh = self->vars.mesh;
 	/* printf("%d %p %d %s\n", self->vars.transparent, self->vars.mesh, */
 			/* self->vars.xray, self->vars.vs->name); */
@@ -936,13 +949,24 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 
 	glBindVertexArray(self->vao); glerr();
 
-	glLineWidth(3);
+	glLineWidth(2);
 
 	glPolygonMode(GL_FRONT_AND_BACK, mesh->wireframe ? GL_LINE : GL_FILL);
 
 	if(self->vars.xray) glDepthRange(0, 0.01);
 
-	uint32_t primitive = vector_count(mesh->faces) ? GL_TRIANGLES : GL_LINES;
+	uint32_t primitive;
+	if(vector_count(mesh->faces))
+	{
+		primitive = GL_TRIANGLES;
+		glUniform1ui(24, 1);
+	}
+	else
+	{
+
+		primitive = GL_LINES;
+		glUniform1ui(24, 0);
+	}
 	
 	if(instance_id == -1)
 	{
@@ -956,6 +980,7 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 				self->varray->ind_num, GL_UNSIGNED_INT, 0, 1, instance_id);
 		glerr();
 	}
+	SDL_SemPost(self->semaphore);
 
 	glDepthRange(0.0, 1.00);
 	if(cull_was_enabled) glEnable(GL_CULL_FACE);
@@ -1026,6 +1051,7 @@ static void draw_conf_update_inst_props(draw_conf_t *self, int32_t id)
 	}
 	self->comps[id]->updates &= ~MASK_PROPS;
 }
+
 static void draw_conf_update_inst_trans(draw_conf_t *self, int32_t id)
 {
 	if(self->comps[id]->updates & MASK_TRANS)
@@ -1042,9 +1068,10 @@ static void draw_conf_update_inst_trans(draw_conf_t *self, int32_t id)
 	self->comps[id]->updates &= ~MASK_TRANS;
 }
 
+int world_frame(void);
 static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 {
-	SDL_SemWait(self->semaphore);
+	int frame = world_frame();
 	if(self->inst_num > self->gl_inst_num)
 	{
 		self->gl_inst_num = self->inst_num;
@@ -1059,14 +1086,13 @@ static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 		/* 4D ANGLE BUFFER */
 		create_buffer(&self->vbo[13], self->angle4, 1, self->inst_num, 1);
 #endif
-		SDL_SemPost(self->semaphore);
 		return;
 	}
 
 	if(id == -1)
 	{
 		int32_t i;
-		if(self->trans_updates)
+		if(self->trans_updates && self->last_update_frame != frame)
 		{
 			if(self->inst_num > 8 && self->trans_updates > self->inst_num / 2)
 			{
@@ -1077,6 +1103,7 @@ static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 				draw_conf_update_inst_trans(self, i);
 			}
 			self->trans_updates = 0;
+			self->last_update_frame = frame;
 		}
 		if(self->props_updates)
 		{
@@ -1094,9 +1121,15 @@ static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 	else
 	{
 		draw_conf_update_inst_props(self, id);
-		draw_conf_update_inst_trans(self, id);
+		self->props_updates = 0;
+
+		if(self->last_update_frame != frame)
+		{
+			draw_conf_update_inst_trans(self, id);
+			self->last_update_frame = frame;
+			self->trans_updates = 0;
+		}
 	}
-	SDL_SemPost(self->semaphore);
 }
 
 void varray_destroy(varray_t *self)

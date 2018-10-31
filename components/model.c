@@ -14,7 +14,6 @@ static int c_model_position_changed(c_model_t *self);
 static int paint_3d(mesh_t *mesh, vertex_t *vert);
 static int paint_2d(mesh_t *mesh, vertex_t *vert);
 int c_model_menu(c_model_t *self, void *ctx);
-int g_update_id = 0;
 vs_t *g_model_vs = NULL;
 
 struct edit_tool g_edit_tools[32];
@@ -363,6 +362,9 @@ static void c_model_init(c_model_t *self)
 		g_missing_mat->albedo.color = vec4(0.0, 0.9, 1.0, 1.0);
 	}
 
+	self->visible_group = ref("visible");
+	self->transparent_group = ref("transparent");
+	self->selectable_group = ref("selectable");
 	self->visible = 1;
 	/* self->layers = malloc(sizeof(*self->layers) * 16); */
 	self->history = vector_new(sizeof(mesh_history_t), FIXED_ORDER, NULL, NULL);
@@ -377,7 +379,6 @@ static void c_model_init(c_model_t *self)
 			"		pos = vec4(vec3(P.x, P.y * Y + P.w * W, P.z), 1.0);\n"
 			"#endif\n"
 
-			"		poly_color = COL;\n"
 			"		mat4 MV    = camera(view) * M;\n"
 			"		vec3 vertex_normal    = normalize(MV * vec4( N, 0.0f)).xyz;\n"
 			"		vec3 vertex_tangent   = normalize(MV * vec4(TG, 0.0f)).xyz;\n"
@@ -385,7 +386,6 @@ static void c_model_init(c_model_t *self)
 			"		pos   = (MV * pos);\n"
 			"		vertex_position = pos.xyz;\n"
 
-			"		poly_id = ID;\n"
 			"		TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
 
 			"		pos = camera(projection) * pos;\n"
@@ -409,7 +409,7 @@ static void c_model_init(c_model_t *self)
 
 void c_model_init_drawables(c_model_t *self)
 {
-	drawable_init(&self->draw, ref("visible"), NULL);
+	drawable_init(&self->draw, self->visible_group, NULL);
 	drawable_add_group(&self->draw, ref("selectable"));
 	drawable_set_entity(&self->draw, c_entity(self));
 	drawable_set_vs(&self->draw, g_model_vs);
@@ -419,7 +419,11 @@ c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow, int visible)
 {
 	c_model_t *self = component_new("model");
 	int sys = c_entity(self) == SYS;
-	if(sys) self->super.ghost = 1;
+	if(sys)
+	{
+		self->super.ghost = 1;
+		c_spacial(self)->super.ghost = 1;
+	}
 
 	c_model_init_drawables(self);
 
@@ -542,7 +546,6 @@ c_model_t *c_model_cull_invert(c_model_t *self)
 c_model_t *c_model_cull_face(c_model_t *self, int cull_front, int cull_back)
 {
 	self->mesh->cull = cull_front | (cull_back << 1);
-	/* g_update_id++; */
 	drawable_model_changed(&self->draw);
 	return self;
 }
@@ -571,7 +574,6 @@ c_model_t *c_model_wireframe(c_model_t *self, int wireframe)
 {
 	/* self->layers[layer].wireframe = wireframe; */
 	self->mesh->wireframe = wireframe;
-	g_update_id++;
 	drawable_model_changed(&self->draw);
 	return self;
 }
@@ -588,14 +590,33 @@ void c_model_update_mat(c_model_t *self)
 			self->mat->transparency.texture ||
 			self->mat->emissive.color.a > 0.0f ||
 			self->mat->emissive.texture;
-		if(self->draw.grp[0].grp == ref("transparent")
-				|| self->draw.grp[0].grp == ref("visible"))
+		if(transp)
 		{
-			drawable_set_group(&self->draw, transp ? ref("transparent") : ref("visible"));
+			drawable_remove_group(&self->draw, self->visible_group);
+			drawable_add_group(&self->draw, self->transparent_group);
+		}
+		else
+		{
+			drawable_remove_group(&self->draw, self->transparent_group);
+			drawable_add_group(&self->draw, self->visible_group);
 		}
 	}
 
 	drawable_set_mat(&self->draw, self->mat ? self->mat->id : 0);
+}
+
+void c_model_set_groups(c_model_t *self, uint32_t visible, uint32_t transp,
+		uint32_t selectable)
+{
+	drawable_remove_group(&self->draw, self->selectable_group);
+	drawable_remove_group(&self->draw, self->transparent_group);
+	drawable_remove_group(&self->draw, self->visible_group);
+
+	self->visible_group = visible;
+	self->transparent_group = transp;
+	self->selectable_group = selectable;
+
+	c_model_update_mat(self);
 }
 
 void c_model_set_mat(c_model_t *self, mat_t *mat)
@@ -651,7 +672,6 @@ void c_model_set_mesh(c_model_t *self, mesh_t *mesh)
 
 int c_model_created(c_model_t *self)
 {
-	if(self->mesh) g_update_id++;
 	drawable_model_changed(&self->draw);
 	return CONTINUE;
 }
@@ -696,7 +716,7 @@ int c_model_menu(c_model_t *self, void *ctx)
 	new_value = nk_check_label(ctx, "Visible", self->visible);
 	if(new_value != self->visible)
 	{
-		self->visible = new_value;
+		c_model_set_visible(self, new_value);
 		changes = 1;
 	}
 	new_value = nk_check_label(ctx, "Cast shadow", self->cast_shadow);
@@ -844,7 +864,6 @@ static void c_model_destroy(c_model_t *self)
 		}
 	}
 	if(self->mesh) mesh_destroy(self->mesh);
-	g_update_id++;
 }
 
 REG()
@@ -861,10 +880,6 @@ REG()
 	ct_listener(ct, WORLD, sig("component_tool"), c_model_tool);
 
 	ct_listener(ct, ENTITY, sig("node_changed"), c_model_position_changed);
-
-	/* ct_listener(ct, WORLD, sig("render_shadows"), c_model_render_shadows); */
-
-	/* ct_listener(ct, WORLD, sig("render_selectable"), c_model_render_selectable); */
 
 	add_tool("circle", (tool_gui_cb)tool_circle_gui,
 			(tool_edit_cb)tool_circle_edit,

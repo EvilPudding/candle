@@ -180,7 +180,16 @@ int c_render_device_draw(c_render_device_t *self)
 		c_render_device_update_ubo(self);
 		self->updates &= ~0x2;
 	}
+	self->frame++;
+	entity_signal(entity_null, sig("world_pre_draw"), NULL, NULL);
+
 	return CONTINUE;
+}
+
+int world_frame(void)
+{
+	c_render_device_t *rd = c_render_device(&SYS);
+	return rd->frame;
 }
 
 REG()
@@ -190,7 +199,9 @@ REG()
 
 	ct_listener(ct, WORLD, ref("world_update"), c_render_device_update);
 
-	ct_listener(ct, WORLD | 101, ref("world_draw"), c_render_device_draw);
+	ct_listener(ct, WORLD | 100, ref("world_draw"), c_render_device_draw);
 
 	ct_listener(ct, ENTITY, ref("entity_created"), c_render_device_created);
+
+	signal_init(sig("world_pre_draw"), sizeof(void*));
 }

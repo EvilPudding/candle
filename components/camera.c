@@ -52,12 +52,7 @@ c_camera_t *c_camera_new(float fov, float near, float far,
 
 static int c_camera_changed(c_camera_t *self)
 {
-	c_node_t *node = c_node(self);
-	c_node_update_model(node);
-	if(self->renderer)
-	{
-		renderer_set_model(self->renderer, self->camid, &node->model);
-	}
+	self->modified = 1;
 	return CONTINUE;
 }
 
@@ -114,8 +109,8 @@ int c_camera_update(c_camera_t *self, float *dt)
 {
 	if(self->auto_exposure && self->renderer && self->renderer->output)
 	{
-		float brightness = self->renderer->output->brightness * 2.0f + 0.1;
-		float targetExposure = 0.3 + 1.0f / brightness;
+		float brightness = self->renderer->output->brightness * 2.5f + 0.05;
+		float targetExposure = 0.1 + 1.0f / brightness;
 		if(targetExposure > 5) targetExposure = 5;
 		if(targetExposure < 0.1) targetExposure = 0.1;
 
@@ -151,6 +146,18 @@ void c_camera_assign(c_camera_t *self)
 	renderer_resize(self->renderer, win->width, win->height);
 }
 
+int c_camera_pre_draw(c_camera_t *self)
+{
+	if(self->modified && self->renderer)
+	{
+		c_node_t *node = c_node(self);
+		c_node_update_model(node);
+		renderer_set_model(self->renderer, self->camid, &node->model);
+		self->modified = 0;
+	}
+	return CONTINUE;
+}
+
 int c_camera_draw(c_camera_t *self)
 {
 	if(self->renderer && self->active)
@@ -167,6 +174,7 @@ REG()
 	ct_listener(ct, ENTITY, sig("node_changed"), c_camera_changed);
 	ct_listener(ct, WORLD, sig("window_resize"), c_camera_resize);
 	ct_listener(ct, WORLD, sig("world_update"), c_camera_update);
+	ct_listener(ct, WORLD | 50, sig("world_pre_draw"), c_camera_pre_draw);
 	ct_listener(ct, WORLD | 21, sig("world_draw"), c_camera_draw);
 
 	ct_listener(ct, WORLD, sig("component_menu"), c_camera_component_menu);

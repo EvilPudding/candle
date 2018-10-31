@@ -30,7 +30,7 @@ void main()
 	}
 	if(emit.a > 0.0f)
 	{
-		final += emit.rgb * emit.a;
+		final = final * (1.0f - emit.a) + emit.rgb * emit.a;
 	}
 	FragColor = vec4(final, 1.0f);
 }
