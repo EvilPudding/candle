@@ -7,6 +7,7 @@
 
 typedef struct
 {
+	int type;
 	char *code;
 } vertex_modifier_t;
 
@@ -14,11 +15,15 @@ typedef struct
 {
 	char *name;
 	int index;
-	vertex_modifier_t modifiers[32];
-	int modifier_num;
-	GLuint program;
+	vertex_modifier_t vmodifiers[32];
+	vertex_modifier_t gmodifiers[32];
+	int vmodifier_num;
+	int gmodifier_num;
+	GLuint vprogram;
+	GLuint gprogram;
 	int ready;
-	char *code;
+	char *vcode;
+	char *gcode;
 } vs_t;
 
 typedef struct
@@ -60,6 +65,7 @@ void fs_bind(fs_t *fs);
 vs_t *vs_new(const char *name, int num_modifiers, ...);
 fs_t *fs_new(const char *filename);
 vertex_modifier_t vertex_modifier_new(const char *code);
+vertex_modifier_t geometry_modifier_new(const char *code);
 
 shader_t *shader_new(fs_t *fs, vs_t *vs);
 #ifdef MESH4
