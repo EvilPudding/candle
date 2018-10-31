@@ -186,7 +186,7 @@ int c_render_device_draw(c_render_device_t *self)
 	return CONTINUE;
 }
 
-int world_frame()
+int world_frame(void)
 {
 	c_render_device_t *rd = c_render_device(&SYS);
 	return rd->frame;

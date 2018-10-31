@@ -131,14 +131,16 @@ void varray_ind_grow(varray_t *self)
 void drawable_remove_group(drawable_t *self, uint32_t group)
 {
 	uint32_t gid;
-
 	if(group == 0) return;
 
 	for(gid = 0; gid < self->grp_num; gid++)
 	{
 		if(self->grp[gid].grp == group) break;
 	}
-	if(gid == self->grp_num) return;
+	if(gid == self->grp_num)
+	{
+		return;
+	}
 
 	if(self->grp[gid].conf)
 	{
@@ -166,6 +168,7 @@ void drawable_remove_group(drawable_t *self, uint32_t group)
 	{
 		drawable_add_group(self, 0);
 	}
+
 	drawable_model_changed(self);
 }
 
@@ -196,9 +199,14 @@ void drawable_add_group(drawable_t *self, uint32_t group)
 void drawable_set_group(drawable_t *self, uint32_t group)
 {
 	uint32_t gid = 0;
-	if(group == 0) return;
 
 	if(self->grp[gid].grp == group) return;
+
+	if(group == 0 && self->grp_num > 0)
+	{
+		drawable_remove_group(self, self->grp[gid].grp);
+		return;
+	}
 
 	if(self->grp[gid].conf)
 	{
@@ -238,7 +246,11 @@ void drawable_set_mesh(drawable_t *self, mesh_t *mesh)
 					drawable_position_changed(self, &self->grp[gid]);
 				}
 			}
-			else
+		}
+		if(previous)
+		{
+			previous->ref_num++;
+			if(previous->ref_num == 0)
 			{
 				mesh_destroy(previous);
 			}

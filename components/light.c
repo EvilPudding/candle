@@ -55,7 +55,7 @@ void c_light_init(c_light_t *self)
 	}
 	self->id = g_lights_num++;
 
-	drawable_init(&self->draw, 0, NULL);
+	drawable_init(&self->draw, self->light_group, NULL);
 	drawable_set_vs(&self->draw, g_model_vs);
 	drawable_set_mesh(&self->draw, g_light);
 	drawable_set_mat(&self->draw, self->id);
@@ -72,7 +72,7 @@ static void c_light_create_renderer(c_light_t *self)
 
 	texture_t *output =	texture_cubemap(self->shadow_size, self->shadow_size, 1);
 
-	renderer_add_pass(renderer, "depth", "depth", ref("visible"),
+	renderer_add_pass(renderer, "depth", "depth", self->visible_group,
 			CULL_DISABLE, output, output, 0,
 			(bind_t[]){
 				{CLEAR_DEPTH, .number = 1.0f},
@@ -86,6 +86,21 @@ static void c_light_create_renderer(c_light_t *self)
 	renderer_set_output(renderer, output);
 
 	self->renderer = renderer;
+}
+
+void c_light_set_groups(c_light_t *self, uint32_t visible_group,
+		uint32_t ambient_group, uint32_t light_group)
+{
+	self->visible_group = visible_group;
+	if(!self->renderer)
+	{
+		c_light_create_renderer(self);
+	}
+	self->renderer->passes[0].draw_signal = visible_group;
+
+	self->ambient_group = ambient_group;
+	self->light_group = light_group;
+	self->modified = 1;
 }
 
 void c_light_visible(c_light_t *self, uint32_t visible)
@@ -182,7 +197,8 @@ int c_light_menu(c_light_t *self, void *ctx)
 
 int c_light_draw(c_light_t *self)
 {
-	if(self->visible && self->renderer && self->radius > 0)
+	if(self->visible && self->renderer && self->radius > 0 &&
+			self->visible_group)
 	{
 		renderer_draw(self->renderer);
 	}
@@ -191,6 +207,11 @@ int c_light_draw(c_light_t *self)
 
 void c_light_destroy(c_light_t *self)
 {
+	drawable_set_mesh(&self->draw, NULL);
+	if(self->renderer)
+	{
+		renderer_destroy(self->renderer);
+	}
 }
 
 REG()

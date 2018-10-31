@@ -921,6 +921,16 @@ void renderer_add_pass(
 	pass->active = 1;
 }
 
+void renderer_destroy(renderer_t *self)
+{
+	uint32_t i;
+	for(i = 0; i < self->outputs_num; i++)
+	{
+		pass_output_t *output = &self->outputs[i];
+		texture_destroy(output->buffer);
+	}
+}
+
 void renderer_clear_shaders(renderer_t *self, shader_t *shader)
 {
 	int i;
