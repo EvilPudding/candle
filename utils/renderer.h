@@ -160,6 +160,7 @@ struct gl_camera
 typedef struct c_renderer_t
 {
 	int frame;
+	int update_frame;
 	float resolution;
 	int width, height;
 	float near, far;
@@ -182,10 +183,9 @@ typedef struct c_renderer_t
 	// GL PROPS
 	int depth_inverted;
 
-	int32_t camera_bound;
 	int32_t camera_count;
-	unsigned int ubo;
 	struct gl_camera glvars[6];
+	uint32_t ubos[6];
 } renderer_t;
 
 renderer_t *renderer_new(float resolution);

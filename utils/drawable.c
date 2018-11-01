@@ -329,6 +329,7 @@ static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
 	self->props[i].y = 0;/*TODO: use y for something;*/
 	self->props[i].zw = entity_to_uvec2(draw->entity);
 	self->comps[i] = &draw->grp[gid];
+	self->inst[i] = draw->transform;
 
 	draw->grp[gid].instance_id = i;
 	draw->grp[gid].conf = self;

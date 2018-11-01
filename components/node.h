@@ -43,5 +43,6 @@ vec3_t c_node_local_to_global(c_node_t *self, vec3_t vec);
 vec3_t c_node_dir_to_local(c_node_t *self, vec3_t vec);
 vec3_t c_node_dir_to_global(c_node_t *self, vec3_t vec);
 void c_node_pack(c_node_t *self, int32_t packed);
+int c_node_changed(c_node_t *self);
 
 #endif /* !NODE_H */

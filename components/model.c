@@ -418,8 +418,7 @@ void c_model_init_drawables(c_model_t *self)
 c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow, int visible)
 {
 	c_model_t *self = component_new("model");
-	int sys = c_entity(self) == SYS;
-	if(sys)
+	if(c_entity(self) == SYS)
 	{
 		self->super.ghost = 1;
 		c_spacial(self)->super.ghost = 1;
@@ -599,6 +598,10 @@ void c_model_update_mat(c_model_t *self)
 		{
 			drawable_remove_group(&self->draw, self->transparent_group);
 			drawable_add_group(&self->draw, self->visible_group);
+		}
+		if(self->selectable_group)
+		{
+			drawable_add_group(&self->draw, self->selectable_group);
 		}
 	}
 

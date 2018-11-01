@@ -33,7 +33,7 @@ c_node_t *c_node_new()
 }
 
 extern int g_update_id;
-static int c_node_changed(c_node_t *self)
+int c_node_changed(c_node_t *self)
 {
 	uint64_t i;
 	entity_signal_same(c_entity(self), sig("node_changed"), NULL, NULL);

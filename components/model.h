@@ -132,7 +132,6 @@ typedef struct
 } c_model_t;
 
 DEF_CASTER("model", c_model, c_model_t)
-extern int g_update_id;
 extern vs_t *g_model_vs;
 
 void c_model_edit(c_model_t *self, mesh_edit_t type, geom_t target);

@@ -167,6 +167,12 @@ static void candle_handle_events(void)
 	}
 }
 
+static int skip = 0;
+void candle_skip_frame(int frames)
+{
+	skip += frames;
+}
+
 static int render_loop(void)
 {
 	g_candle->loader = loader_new();
@@ -192,13 +198,18 @@ static int render_loop(void)
 		{
 			/* candle_handle_events(self); */
 			/* printf("\t%ld\n", self->render_id); */
-			glerr();
 			entity_signal(entity_null, sig("world_draw"), NULL, NULL);
-			glerr();
 
 			ecm_clean(0);
 
-			SDL_GL_SwapWindow(c_window(&SYS)->window);
+			if(!skip)
+			{
+				SDL_GL_SwapWindow(c_window(&SYS)->window);
+			}
+			else
+			{
+				skip--;
+			}
 
 			glerr();
 			fps++;
@@ -218,6 +229,8 @@ static int render_loop(void)
 		/* SDL_Delay(1); */
 	}
 
+	/* TODO, cleanup on exit */
+	exit(0);
 	ecm_clean(1);
 	loader_update(g_candle->loader);
 

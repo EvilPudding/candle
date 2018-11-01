@@ -37,10 +37,10 @@ void c_light_init(c_light_t *self)
 
 	self->ambient_group = ref("ambient");
 	self->light_group = ref("light");
+	self->visible_group = ref("visible");
 
 	if(!g_light)
 	{
-
 		g_light = mesh_new();
 		mesh_lock(g_light);
 		mesh_ico(g_light, -0.5f);
@@ -48,10 +48,6 @@ void c_light_init(c_light_t *self)
 		mesh_subdivide(g_light, 1);
 		mesh_spherize(g_light, 1.0f);
 		mesh_unlock(g_light);
-
-		/* g_light = entity_new(c_node_new(), c_model_new(mesh, NULL, 0, 0)); */
-		/* c_node(&g_light)->ghost = 1; */
-
 	}
 	self->id = g_lights_num++;
 
@@ -101,6 +97,7 @@ void c_light_set_groups(c_light_t *self, uint32_t visible_group,
 	self->ambient_group = ambient_group;
 	self->light_group = light_group;
 	self->modified = 1;
+
 }
 
 void c_light_visible(c_light_t *self, uint32_t visible)
@@ -129,6 +126,10 @@ static int c_light_pre_draw(c_light_t *self)
 	}
 	else
 	{
+		if(!self->renderer)
+		{
+			c_light_create_renderer(self);
+		}
 		drawable_set_group(&self->draw, self->light_group);
 		drawable_set_vs(&self->draw, g_model_vs);
 		if(self->visible)
@@ -144,14 +145,7 @@ static int c_light_pre_draw(c_light_t *self)
 
 		drawable_set_transform(&self->draw, model);
 
-		if(self->renderer)
-		{
-			renderer_set_model(self->renderer, 0, &node->model);
-		}
-	}
-	if(self->radius > 0 && !self->renderer)
-	{
-		c_light_create_renderer(self);
+		renderer_set_model(self->renderer, 0, &node->model);
 	}
 	return CONTINUE;
 }
