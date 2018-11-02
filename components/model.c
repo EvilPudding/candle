@@ -241,6 +241,7 @@ static mesh_t *tool_cube_edit(mesh_t *mesh, struct conf_cube *conf)
 
 struct int_int {int a, b;};
 
+#ifdef LUA_H
 static float interpret_scale(mesh_t *self, float x,
 		struct int_int *interpreters)
 {
@@ -264,12 +265,14 @@ static float interpret_offset(mesh_t *self, float x,
 	if (msg) exit(1);
 	return (float)y;
 }
+#endif
 
 
 static mesh_t *tool_extrude_edit(
 		mesh_t *last, struct conf_extrude *new,
 		mesh_t *state, struct conf_extrude *old)
 {
+	#ifdef LUA_H
 
 	c_lua_t *lua = c_lua(&SYS);
 	char *msg = NULL;
@@ -350,6 +353,7 @@ static mesh_t *tool_extrude_edit(
 		mesh_triangulate(state);
 	}
 	mesh_unlock(state);
+	#endif
 
 	return state;
 }

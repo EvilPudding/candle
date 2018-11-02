@@ -287,7 +287,7 @@ void candle_wait(void)
 void candle_reg_cmd(const char *key, cmd_cb cb)
 {
 	int ret;
-	uint hash = ref(key);
+	uint32_t hash = ref(key);
 	khiter_t k = kh_put(cmd, g_candle->cmds, hash, &ret);
 	cmd_t *cmd = &kh_value(g_candle->cmds, k);
 
@@ -318,7 +318,7 @@ entity_t candle_run_command(entity_t root, const char *command)
 		argv[argc++] = strdup(p);
 	}
 
-	uint hash = ref(argv[0]);
+	uint32_t hash = ref(argv[0]);
 	khiter_t k = kh_get(cmd, g_candle->cmds, hash);
 	if(k != kh_end(g_candle->cmds))
 	{

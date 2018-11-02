@@ -33,7 +33,7 @@ typedef struct
 DEF_CASTER("node", c_node, c_node_t)
 
 c_node_t *c_node_new(void);
-entity_t c_node_get_by_name(c_node_t *self, uint hash);
+entity_t c_node_get_by_name(c_node_t *self, uint32_t hash);
 void c_node_add(c_node_t *self, int32_t num, ...);
 void c_node_update_model(c_node_t *self);
 void c_node_unparent(c_node_t *self, int32_t inherit_transform);

@@ -797,7 +797,7 @@ static int renderer_pass(renderer_t *self, unsigned int hash)
 	return -1;
 }
 
-void renderer_toggle_pass(renderer_t *self, uint hash, int active)
+void renderer_toggle_pass(renderer_t *self, uint32_t hash, int active)
 {
 	int i = renderer_pass(self, hash);
 	if(i >= 0)
@@ -969,7 +969,7 @@ int renderer_draw(renderer_t *self)
 	self->frame++;
 
 	glerr();
-	uint i;
+	uint32_t i;
 
 	if(!self->width || !self->height) return CONTINUE;
 

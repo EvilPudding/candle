@@ -26,7 +26,7 @@
 /* 		const struct aiNode *anode, */
 /* 		c_node_t *root */
 /* ); */
-static sauces_loader_cb c_sauces_get_loader(c_sauces_t *self, uint ext);
+static sauces_loader_cb c_sauces_get_loader(c_sauces_t *self, uint32_t ext);
 
 c_sauces_t *c_sauces_new()
 {
@@ -69,7 +69,7 @@ resource_t *c_sauces_get_sauce(c_sauces_t *self, const char *name)
 	return NULL;
 }
 
-static sauces_loader_cb c_sauces_get_loader(c_sauces_t *self, uint ext)
+static sauces_loader_cb c_sauces_get_loader(c_sauces_t *self, uint32_t ext)
 {
 	khiter_t k = kh_get(loa, self->loaders, ext);
 	if(k == kh_end(self->loaders))
@@ -79,7 +79,7 @@ static sauces_loader_cb c_sauces_get_loader(c_sauces_t *self, uint ext)
 	return kh_value(self->loaders, k);
 }
 
-void c_sauces_loader(c_sauces_t *self, uint ref, sauces_loader_cb loader)
+void c_sauces_loader(c_sauces_t *self, uint32_t ref, sauces_loader_cb loader)
 {
 	int ret;
 	khiter_t k = kh_get(loa, self->loaders, ref);
@@ -94,7 +94,7 @@ void c_sauces_loader(c_sauces_t *self, uint ref, sauces_loader_cb loader)
 void c_sauces_register(c_sauces_t *self, const char *name, const char *path, void *data)
 {
 	khiter_t k;
-	uint key;
+	uint32_t key;
 	int ret;
 	char buffer[64];
 	strncpy(buffer, name, sizeof(buffer));
@@ -149,7 +149,7 @@ void *c_sauces_get(c_sauces_t *self, const char *name)
 
 	/* *dot = '\0'; */
 
-	uint ext = ref(dot + 1);
+	uint32_t ext = ref(dot + 1);
 	
 	sauces_loader_cb cb = c_sauces_get_loader(self, ext);
 	if(!cb) return NULL;

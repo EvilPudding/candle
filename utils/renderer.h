@@ -68,23 +68,23 @@ typedef struct
 	union
 	{
 		struct {
-			uint u_brightness;
-			uint u_tex[16];
+			uint32_t u_brightness;
+			uint32_t u_tex[16];
 		} buffer;
 		struct {
-			uint u;
+			uint32_t u;
 		} number;
 		struct {
-			uint u;
+			uint32_t u;
 		} vec2;
 		struct {
-			uint u;
+			uint32_t u;
 		} vec3;
 		struct {
-			uint u;
+			uint32_t u;
 		} vec4;
 		struct {
-			uint u;
+			uint32_t u;
 		} integer;
 	};
 } shader_bind_t;
@@ -212,7 +212,7 @@ void renderer_add_pass(
 void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 		int from_mip, int to_mip);
 
-void renderer_toggle_pass(renderer_t *self, uint hash, int active);
+void renderer_toggle_pass(renderer_t *self, uint32_t hash, int active);
 
 entity_t renderer_get_camera(renderer_t *self);
 

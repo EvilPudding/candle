@@ -152,7 +152,7 @@ static vicall_t *get_call(vitype_t *type, int id)
 	return NULL;
 }
 
-vitype_t *vil_get_type(vil_t *ctx, uint ref)
+vitype_t *vil_get_type(vil_t *ctx, uint32_t ref)
 {
 	khiter_t k = kh_get(vitype, ctx->types, ref);
 	if(k == kh_end(ctx->types))

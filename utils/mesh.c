@@ -6,9 +6,11 @@
 #include <stdio.h>
 #include <string.h>
 
+#if __has_include (<assimp/cimport.h>)
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+#endif
 
 static vec3_t mesh_support(mesh_t *self, const vec3_t dir);
 static int mesh_get_pair_edge(mesh_t *self, int e);
@@ -1246,7 +1248,7 @@ int mesh_get_face_from_verts(mesh_t *self,
 {
 	int v[3] = {v0, v1, v2};
 	sort3(v);
-	uint hash =  murmur_hash((char*)v, sizeof(v), 123);
+	uint32_t hash =  murmur_hash((char*)v, sizeof(v), 123);
 
 	khiter_t k = kh_get(id, self->faces_hash, hash);
 	if(k == kh_end(self->faces_hash))
@@ -1275,7 +1277,7 @@ static int mesh_get_pair_face(mesh_t *self, int face_id)
 {
 	face_t *face = m_face(self, face_id); if(!face) return 0;
 
-	uint hash = mesh_face_to_id(self, face);
+	uint32_t hash = mesh_face_to_id(self, face);
 	if(hash)
 	{
 		khiter_t k = kh_get(id, self->faces_hash, hash);
@@ -1381,7 +1383,7 @@ int mesh_get_pair_edge(mesh_t *self, int edge_id)
 	if(edge->pair >= 0) return 0;
 	edge_t *next = e_next(edge, self); if(!next) return 0;
 
-	uint hash = mesh_edge_to_id(self, edge);
+	uint32_t hash = mesh_edge_to_id(self, edge);
 	/* printf("looking	%d	(%p) [%d %d] ", edge_id, hash, edge->v, next->v); */
 	if(hash)
 	{
@@ -1495,7 +1497,7 @@ void mesh_remove_vert(mesh_t *self, int vert_i)
 
 void mesh_edge_remove_from_hash(mesh_t *self, edge_t *edge)
 {
-	uint hash = mesh_edge_to_id(self, edge);
+	uint32_t hash = mesh_edge_to_id(self, edge);
 	if(hash)
 	{
 		khiter_t k = kh_get(id, self->edges_hash, hash);
@@ -1559,7 +1561,7 @@ void mesh_remove_face(mesh_t *self, int face_i)
 	if(face->pair == -1)
 	{
 		/* remove from faces_hash */
-		uint hash = mesh_face_to_id(self, face);
+		uint32_t hash = mesh_face_to_id(self, face);
 		if(hash)
 		{
 			khiter_t k = kh_get(id, self->faces_hash, hash);
@@ -2581,6 +2583,7 @@ void mesh_wait(mesh_t *self)
 	SDL_SemPost(self->semaphore);
 }
 
+#if __has_include (<assimp/cimport.h>)
 void mesh_load_scene(mesh_t *self, const void *grp)
 {
 	mesh_lock(self);
@@ -2651,6 +2654,7 @@ void mesh_load_scene(mesh_t *self, const void *grp)
 
 	mesh_unlock(self);
 }
+#endif
 
 void mesh_load(mesh_t *self, const char *filename)
 {
@@ -2712,7 +2716,7 @@ int load_mesh(mesh_t *mesh)
 	return 1;
 }
 
-void *mesh_loader(const char *path, const char *name, uint ext)
+void *mesh_loader(const char *path, const char *name, uint32_t ext)
 {
 	mesh_t *mesh = mesh_new();
 	strcpy(mesh->name, path);

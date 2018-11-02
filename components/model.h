@@ -67,7 +67,7 @@ struct edit_tool
 	size_t size;
 	void *defaults;
 	char name[32];
-	uint ref;
+	uint32_t ref;
 	int require_sys;
 };
 extern struct edit_tool g_edit_tools[];

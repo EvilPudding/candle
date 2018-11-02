@@ -242,7 +242,6 @@ void mesh_assign(mesh_t *self, mesh_t *other);
 void mesh_destroy(mesh_t *self);
 
 void mesh_load(mesh_t *self, const char *filename);
-void mesh_load_scene(mesh_t *self, const void *scene);
 void mesh_quad(mesh_t *self);
 void mesh_circle(mesh_t *self, float radius, int segments, vecN_t dir);
 mesh_t *mesh_torus(float radius, float inner_radius, int segments,
@@ -251,6 +250,9 @@ void mesh_disk(mesh_t *self, float radius, float inner_radius, int segments,
 		vecN_t dir);
 void mesh_cube(mesh_t *self, float size, float tex_scale);
 void mesh_ico(mesh_t *self, float size);
+#if __has_include (<assimp/cimport.h>)
+void mesh_load_scene(mesh_t *self, const void *scene);
+#endif
 
 void mesh_clear(mesh_t *self);
 void mesh_subdivide(mesh_t *mesh, int subdivisions);

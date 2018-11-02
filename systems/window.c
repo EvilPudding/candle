@@ -191,7 +191,7 @@ int c_window_draw(c_window_t *self)
 	glViewport(0, 0, self->width, self->height); glerr();
 
 	shader_t *shader = vs_bind(g_quad_vs);
-	uint uni = shader_uniform(shader, "tex", NULL);
+	uint32_t uni = shader_uniform(shader, "tex", NULL);
 	glUniformHandleui64ARB(uni, texture_handle(tex, tex->draw_id));
 
 	glUniform2f(22, self->width, self->height); glerr();

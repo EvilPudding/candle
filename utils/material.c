@@ -56,7 +56,7 @@ void mat_parse(mat_t *self, FILE *fd)
 	{
 		if(fscanf(fd, "%s ", prop) <= 0) continue;
 		prop_t *prp;
-		uint key = ref(prop);
+		uint32_t key = ref(prop);
 
 		if(key == ref("diffuse"))
 		{
@@ -190,7 +190,7 @@ void mat_set_albedo(mat_t *self, prop_t albedo)
 int mat_prop_menu(mat_t *self, const char *name, prop_t *prop, void *ctx)
 {
 	int changes = 0;
-	uint id = murmur_hash(&prop, 8, 0);
+	uint32_t id = murmur_hash(&prop, 8, 0);
 	if(nk_tree_push_id(ctx, NK_TREE_NODE, name, NK_MINIMIZED, id))
 	{
 		if(prop->texture)
@@ -279,7 +279,7 @@ void mat_bind(mat_t *self, shader_t *shader)
 
 }
 
-void *mat_loader(const char *path, const char *name, uint ext)
+void *mat_loader(const char *path, const char *name, uint32_t ext)
 {
 	return mat_from_file(path);
 }

@@ -13,11 +13,11 @@
 static SDL_sem *sem1 = NULL;
 static SDL_sem *sem;
 
-listener_t *ct_get_listener(ct_t *self, uint signal)
+listener_t *ct_get_listener(ct_t *self, uint32_t signal)
 {
 	signal_t *sig = ecm_get_signal(signal);
 	if(!self) return NULL;
-	uint i;
+	uint32_t i;
 	for(i = 0; i < vector_count(sig->listener_types); i++)
 	{
 		listener_t *listener = vector_get(sig->listener_types, i);
@@ -30,7 +30,7 @@ listener_t *ct_get_listener(ct_t *self, uint signal)
 	return NULL;
 }
 
-void *_component_new(uint comp_type)
+void *_component_new(uint32_t comp_type)
 {
 	entity_t entity = _g_creating[_g_creating_num - 1];
 
@@ -112,7 +112,7 @@ int listeners_compare(listener_t *a, listener_t *b)
 	return a->priority - b->priority;
 }
 
-signal_t *ecm_get_signal(uint signal)
+signal_t *ecm_get_signal(uint32_t signal)
 {
 	khiter_t k = kh_get(sig, g_ecm->signals, signal);
 	if(k == kh_end(g_ecm->signals))
@@ -128,7 +128,7 @@ signal_t *ecm_get_signal(uint signal)
 	return &kh_value(g_ecm->signals, k);
 }
 
-void _ct_listener(ct_t *self, int flags, uint signal, signal_cb cb)
+void _ct_listener(ct_t *self, int flags, uint32_t signal, signal_cb cb)
 {
 	signal_t *sig = ecm_get_signal(signal);
 	if(ct_get_listener(self, signal)) exit(1);
@@ -141,7 +141,7 @@ void _ct_listener(ct_t *self, int flags, uint signal, signal_cb cb)
 
 }
 
-void _signal_init(uint id, uint size)
+void _signal_init(uint32_t id, uint32_t size)
 {
 	signal_t *sig = ecm_get_signal(id);
 	if(sig)
@@ -163,7 +163,7 @@ void _signal_init(uint id, uint size)
 
 void ecm_destroy_all()
 {
-	uint i;
+	uint32_t i;
 	entity_info_t *iter;
 	for(i = 0, iter = g_ecm->entities_info;
 			i < g_ecm->entities_info_size; i++, iter++)
@@ -212,7 +212,7 @@ entity_t ecm_new_entity()
 	return ent;
 }
 
-void ct_add_interaction(ct_t *dep, uint target)
+void ct_add_interaction(ct_t *dep, uint32_t target)
 {
 	if(target == IDENT_NULL) return;
 	ct_t * ct = ecm_get(target);
@@ -226,7 +226,7 @@ void ct_add_interaction(ct_t *dep, uint target)
 	ct->depends[i].is_interaction = 1;
 }
 
-void ct_add_dependency(ct_t *dep, uint target)
+void ct_add_dependency(ct_t *dep, uint32_t target)
 {
 	if(target == IDENT_NULL) return;
 	ct_t * ct = ecm_get(target);
@@ -250,16 +250,16 @@ void ct_add_dependency(ct_t *dep, uint target)
 
 /* } */
 
-ct_t *_ct_new(const char *name, uint hash, uint size, init_cb init,
+ct_t *_ct_new(const char *name, uint32_t hash, uint32_t size, init_cb init,
 		destroy_cb destroy, int depend_size, ...)
 {
 	va_list depends;
 
 	va_start(depends, depend_size);
-	uint j;
+	uint32_t j;
 	for(j = 0; j < depend_size; j++)
 	{
-		if(va_arg(depends, uint) == IDENT_NULL) return NULL;
+		if(va_arg(depends, uint32_t) == IDENT_NULL) return NULL;
 	}
 	va_end(depends);
 
@@ -289,7 +289,7 @@ ct_t *_ct_new(const char *name, uint hash, uint size, init_cb init,
 		va_start(depends, depend_size);
 		for(j = 0; j < depend_size; j++)
 		{
-			ct->depends[j].ct = va_arg(depends, uint);
+			ct->depends[j].ct = va_arg(depends, uint32_t);
 			ct->depends[j].is_interaction = 0;
 		}
 		va_end(depends);
@@ -371,7 +371,7 @@ c_t *ct_add(ct_t *self, entity_t entity)
 	/* 	page_id++; */
 	/* } */
 
-	/* uint offset; */
+	/* uint32_t offset; */
 
 	int ret;
 	unsigned int uid = entity_uid(entity);

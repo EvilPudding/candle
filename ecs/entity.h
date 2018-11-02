@@ -5,7 +5,7 @@
 typedef struct c_t c_t;
 typedef struct ct_t ct_t;
 
-typedef unsigned long entity_t;
+typedef uint64_t entity_t;
 
 typedef int(*filter_cb)(c_t *self, c_t *accepted, void *data, void *output);
 #define entity_null ((entity_t)0)
