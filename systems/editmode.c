@@ -520,7 +520,6 @@ void c_editmode_enter_context(c_editmode_t *self)
 		c_node_t *nc = c_node(&self->selected);
 		if(nc)
 		{
-			printf("unpacking %I64u\n", self->selected);
 			c_node_pack(nc, 1);
 			self->context = self->selected;
 			c_editmode_select(self, entity_null);
@@ -908,7 +907,11 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 	c_name_t *name = c_name(&ent);
 	int res;
 	char buffer[64];
+#ifdef WIN32
 	sprintf(buffer, "ENT_%I64u", ent);
+#else
+	sprintf(buffer, "ENT_%lu", ent);
+#endif
 	char *title = buffer;
 	if(name)
 	{

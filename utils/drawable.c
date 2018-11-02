@@ -1193,7 +1193,10 @@ void drawable_destroy(drawable_t *self)
 	uint32_t gid;
 	for(gid = 0; gid < self->grp_num; gid++)
 	{
-		draw_conf_destroy(self->grp[gid].conf);
+		draw_conf_t *conf = self->grp[gid].conf;
+		draw_conf_remove_instance(conf, self->grp[gid].instance_id);
+		/* TODO delete empty configurations */ 
+		/* if(conf->inst_num == 0) draw_conf_destroy(); */
 	}
 }
 

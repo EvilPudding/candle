@@ -34,6 +34,7 @@ void c_light_init(c_light_t *self)
 	self->shadow_size = 512;
 	self->radius = 5.0f;
 	self->visible = 1;
+	self->shadow_cooldown = 4;
 
 	self->ambient_group = ref("ambient");
 	self->light_group = ref("light");
@@ -84,6 +85,11 @@ static void c_light_create_renderer(c_light_t *self)
 	self->renderer = renderer;
 }
 
+void c_light_set_shadow_cooldown(c_light_t *self, uint32_t cooldown)
+{
+	self->shadow_cooldown = cooldown;
+}
+
 void c_light_set_groups(c_light_t *self, uint32_t visible_group,
 		uint32_t ambient_group, uint32_t light_group)
 {
@@ -102,6 +108,10 @@ void c_light_set_groups(c_light_t *self, uint32_t visible_group,
 
 void c_light_visible(c_light_t *self, uint32_t visible)
 {
+	if(!self->visible && visible)
+	{
+		self->frames_passed = -1;
+	}
 	self->visible = visible;
 	drawable_set_mesh(&self->draw, visible ? g_light : NULL);
 }
@@ -126,6 +136,16 @@ static int c_light_pre_draw(c_light_t *self)
 	}
 	else
 	{
+		self->frames_passed++;
+		if(self->frames_passed >= self->shadow_cooldown)
+		{
+			self->frames_passed = 0;
+		}
+		else
+		{
+			return CONTINUE;
+		}
+
 		if(!self->renderer)
 		{
 			c_light_create_renderer(self);
@@ -192,7 +212,7 @@ int c_light_menu(c_light_t *self, void *ctx)
 int c_light_draw(c_light_t *self)
 {
 	if(self->visible && self->renderer && self->radius > 0 &&
-			self->visible_group)
+			self->visible_group && self->frames_passed <= 0)
 	{
 		renderer_draw(self->renderer);
 	}

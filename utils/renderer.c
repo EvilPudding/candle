@@ -215,9 +215,6 @@ void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model)
 {
 	/* if(self->frame == self->update_frame) return; */
 	vec3_t pos = mat4_mul_vec4(*model, vec4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
-	self->glvars[camid].pos = pos;
-	self->glvars[camid].model = *model;
-	self->glvars[camid].inv_model = mat4_invert(*model);
 
 	if(self->output && self->output->target == GL_TEXTURE_CUBE_MAP)
 	{
@@ -242,6 +239,10 @@ void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model)
 	}
 	else
 	{
+		self->glvars[camid].pos = pos;
+		self->glvars[camid].model = *model;
+		self->glvars[camid].inv_model = mat4_invert(*model);
+
 		update_ubo(self, camid);
 	}
 
