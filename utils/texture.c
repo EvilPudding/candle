@@ -82,11 +82,11 @@ void texture_update_gl(texture_t *self)
 			NULL);
 }
 
-uint texture_get_pixel(texture_t *self, int32_t buffer, int32_t x, int32_t y,
+uint32_t texture_get_pixel(texture_t *self, int32_t buffer, int32_t x, int32_t y,
 		float *depth)
 {
 	if(!self->framebuffer_ready) return 0;
-	uint data = 0;
+	uint32_t data = 0;
 	y = self->height - y;
 	glFlush();
 	glFinish();
@@ -156,7 +156,7 @@ static int32_t alloc_buffer_gl(struct tpair *data)
 	{
 		glGenTextures(1, &self->bufs[i].id); glerr();
 	}
-	uint wrap = self->repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE;
+	uint32_t wrap = self->repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE;
 	int32_t width = self->width;
 	int32_t height = self->height;
 	if(width == 0) width = 1;
@@ -364,9 +364,9 @@ __thread texture_t *_g_tex_creating = NULL;
 
 texture_t *_texture_new_2D_pre
 (
-	uint width,
-	uint height,
-	uint flags
+	uint32_t width,
+	uint32_t height,
+	uint32_t flags
 )
 {
 	texture_t *self = calloc(1, sizeof *self);
@@ -425,9 +425,9 @@ static void texture_new_3D_loader(texture_t *self)
 
 texture_t *texture_new_3D
 (
-	uint width,
-	uint height,
-	uint depth,
+	uint32_t width,
+	uint32_t height,
+	uint32_t depth,
 	int32_t dims
 )
 {
@@ -782,13 +782,13 @@ int32_t texture_2D_resize(texture_t *self, int32_t width, int32_t height)
 	int32_t i;
 	for(i = 0; i < self->bufs_size; i++)
 	{
-		/* uint Bpp = self->bufs[i].dims; */
+		/* uint32_t Bpp = self->bufs[i].dims; */
 
 		/* if(self->bufs[i].dims == -1) */ 
 		/* { */
 			/* Bpp = 1 * sizeof(float); */
 		/* } */
-		/* uint imageSize = Bpp * self->width * self->height; */
+		/* uint32_t imageSize = Bpp * self->width * self->height; */
 		/* self->bufs[i].data = realloc(self->bufs[i].data, imageSize); */
 
 		if(self->bufs[i].id)
@@ -807,11 +807,6 @@ int32_t texture_2D_resize(texture_t *self, int32_t width, int32_t height)
 
 		/* glBindTexture(targ, 0); */
 		/* self->framebuffer_ready = 0; */
-	}
-
-	if(self->mipmaped)
-	{
-		glGenerateMipmap(self->target); glerr();
 	}
 
 	glActiveTexture(GL_TEXTURE0);
@@ -923,9 +918,9 @@ static int32_t texture_cubemap_loader(texture_t *self)
 
 texture_t *texture_cubemap
 (
-	uint width,
-	uint height,
-	uint depth_buffer
+	uint32_t width,
+	uint32_t height,
+	uint32_t depth_buffer
 )
 {
 	texture_t *self = calloc(1, sizeof *self);
@@ -958,7 +953,7 @@ int32_t load_tex(texture_t *texture)
 	return 1;
 }
 
-void *tex_loader(const char *path, const char *name, uint ext)
+void *tex_loader(const char *path, const char *name, uint32_t ext)
 {
 	texture_t *texture = texture_new_2D(0, 0, TEX_INTERPOLATE);
 	strcpy(texture->name, path);

@@ -1,3 +1,5 @@
+#if __has_include (<lua.h>)
+#if 0
 #ifndef LUA_H
 #define LUA_H
 
@@ -23,3 +25,6 @@ void c_lua_setvar(c_lua_t *self, char *name, double value);
 double c_lua_getvar(c_lua_t *self, char *name);
 
 #endif /* !LUA_H */
+
+#endif
+#endif

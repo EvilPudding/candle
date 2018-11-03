@@ -67,6 +67,7 @@ entity_t candle_run_command(entity_t root,
 /* TODO send this to mouse.h */
 void candle_grab_mouse(entity_t ent, int visibility);
 void candle_release_mouse(entity_t ent, int reset);
+void candle_skip_frame(int frames);
 
 extern candle_t *g_candle;
 

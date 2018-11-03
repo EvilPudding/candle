@@ -520,7 +520,6 @@ void c_editmode_enter_context(c_editmode_t *self)
 		c_node_t *nc = c_node(&self->selected);
 		if(nc)
 		{
-			printf("unpacking %ld\n", self->selected);
 			c_node_pack(nc, 1);
 			self->context = self->selected;
 			c_editmode_select(self, entity_null);
@@ -908,7 +907,11 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 	c_name_t *name = c_name(&ent);
 	int res;
 	char buffer[64];
-	sprintf(buffer, "ENT_%ld", ent);
+#ifdef WIN32
+	sprintf(buffer, "ENT_%I64u", ent);
+#else
+	sprintf(buffer, "ENT_%lu", ent);
+#endif
 	char *title = buffer;
 	if(name)
 	{
@@ -996,7 +999,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 				{
 					if(ct_get(ct, &ent)) continue;
 
-					uint dist = levenshtein(ct->name, self->ct_search);
+					uint32_t dist = levenshtein(ct->name, self->ct_search);
 					insert_ct(self, ct->id, dist);
 				});
 					

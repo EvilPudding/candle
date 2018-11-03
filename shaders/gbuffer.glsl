@@ -1,8 +1,8 @@
+#include "common.glsl"
 
 layout (location = 0) out vec4 AlbedoColor;
 layout (location = 1) out vec4 NMR; // normal_roughness_metalness
 
-#include "common.glsl"
 
 void main()
 {

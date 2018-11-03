@@ -34,13 +34,14 @@ void c_light_init(c_light_t *self)
 	self->shadow_size = 512;
 	self->radius = 5.0f;
 	self->visible = 1;
+	self->shadow_cooldown = 4;
 
 	self->ambient_group = ref("ambient");
 	self->light_group = ref("light");
+	self->visible_group = ref("visible");
 
 	if(!g_light)
 	{
-
 		g_light = mesh_new();
 		mesh_lock(g_light);
 		mesh_ico(g_light, -0.5f);
@@ -48,10 +49,6 @@ void c_light_init(c_light_t *self)
 		mesh_subdivide(g_light, 1);
 		mesh_spherize(g_light, 1.0f);
 		mesh_unlock(g_light);
-
-		/* g_light = entity_new(c_node_new(), c_model_new(mesh, NULL, 0, 0)); */
-		/* c_node(&g_light)->ghost = 1; */
-
 	}
 	self->id = g_lights_num++;
 
@@ -88,6 +85,11 @@ static void c_light_create_renderer(c_light_t *self)
 	self->renderer = renderer;
 }
 
+void c_light_set_shadow_cooldown(c_light_t *self, uint32_t cooldown)
+{
+	self->shadow_cooldown = cooldown;
+}
+
 void c_light_set_groups(c_light_t *self, uint32_t visible_group,
 		uint32_t ambient_group, uint32_t light_group)
 {
@@ -101,10 +103,15 @@ void c_light_set_groups(c_light_t *self, uint32_t visible_group,
 	self->ambient_group = ambient_group;
 	self->light_group = light_group;
 	self->modified = 1;
+
 }
 
 void c_light_visible(c_light_t *self, uint32_t visible)
 {
+	if(!self->visible && visible)
+	{
+		self->frames_passed = -1;
+	}
 	self->visible = visible;
 	drawable_set_mesh(&self->draw, visible ? g_light : NULL);
 }
@@ -129,13 +136,26 @@ static int c_light_pre_draw(c_light_t *self)
 	}
 	else
 	{
+		self->frames_passed++;
+		if(self->frames_passed >= self->shadow_cooldown)
+		{
+			self->frames_passed = 0;
+		}
+		else
+		{
+			return CONTINUE;
+		}
+
+		if(!self->renderer)
+		{
+			c_light_create_renderer(self);
+		}
 		drawable_set_group(&self->draw, self->light_group);
 		drawable_set_vs(&self->draw, g_model_vs);
 		if(self->visible)
 		{
 			drawable_set_mesh(&self->draw, g_light);
 		}
-
 		c_node_t *node = c_node(self);
 		c_node_update_model(node);
 		vec3_t pos = c_node_local_to_global(node, vec3(0, 0, 0));
@@ -144,15 +164,9 @@ static int c_light_pre_draw(c_light_t *self)
 
 		drawable_set_transform(&self->draw, model);
 
-		if(self->renderer)
-		{
-			renderer_set_model(self->renderer, 0, &node->model);
-		}
+		renderer_set_model(self->renderer, 0, &node->model);
 	}
-	if(self->radius > 0 && !self->renderer)
-	{
-		c_light_create_renderer(self);
-	}
+	self->modified = 0;
 	return CONTINUE;
 }
 
@@ -198,7 +212,7 @@ int c_light_menu(c_light_t *self, void *ctx)
 int c_light_draw(c_light_t *self)
 {
 	if(self->visible && self->renderer && self->radius > 0 &&
-			self->visible_group)
+			self->visible_group && self->frames_passed <= 0)
 	{
 		renderer_draw(self->renderer);
 	}

@@ -196,12 +196,25 @@ void renderer_add_tex(renderer_t *self, const char *name,
 	strncpy(buffer->name, name, sizeof(buffer->name));
 }
 
+static void update_ubo(renderer_t *self, int32_t camid)
+{
+	// TODO this should be gl thread only
+	if(!self->ubos[camid])
+	{
+		glGenBuffers(1, &self->ubos[camid]); glerr();
+		glBindBuffer(GL_UNIFORM_BUFFER, self->ubos[camid]); glerr();
+		glBufferData(GL_UNIFORM_BUFFER, sizeof(self->glvars[camid]),
+				&self->glvars[camid], GL_STATIC_DRAW); glerr();
+	}
+	void *p = glMapNamedBuffer(self->ubos[camid], GL_WRITE_ONLY);
+	memcpy(p, &self->glvars[camid], sizeof(self->glvars[camid]));
+	glUnmapNamedBuffer(self->ubos[camid]); glerr();
+}
+
 void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model)
 {
+	/* if(self->frame == self->update_frame) return; */
 	vec3_t pos = mat4_mul_vec4(*model, vec4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
-	self->glvars[camid].pos = pos;
-	self->glvars[camid].model = *model;
-	self->glvars[camid].inv_model = mat4_invert(*model);
 
 	if(self->output && self->output->target == GL_TEXTURE_CUBE_MAP)
 	{
@@ -221,8 +234,19 @@ void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model)
 			var->inv_model = mat4_look_at(pos, vec3_add(pos, p1[i]), up[i]);
 			var->model = mat4_invert(var->inv_model);
 			var->pos = pos;
+			update_ubo(self, i);
 		}
 	}
+	else
+	{
+		self->glvars[camid].pos = pos;
+		self->glvars[camid].model = *model;
+		self->glvars[camid].inv_model = mat4_invert(*model);
+
+		update_ubo(self, camid);
+	}
+
+	self->update_frame = self->frame;
 }
 
 void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
@@ -610,13 +634,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 		uint32_t f;
 		for(f = 0; f < 6; f++)
 		{
-			{
-				glBindBuffer(GL_UNIFORM_BUFFER, self->ubo); glerr();
-				void *p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-				memcpy(p, &self->glvars[f], sizeof(self->glvars[f]));
-				glUnmapBuffer(GL_UNIFORM_BUFFER); glerr();
-			}
-
+			glBindBufferBase(GL_UNIFORM_BUFFER, 19, self->ubos[f]); glerr();
 			texture_target(pass->output, depth, f);
 
 			if(pass->clear) glClear(pass->clear);
@@ -626,15 +644,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 	}
 	else
 	{
-		if(pass->camid != self->camera_bound)
-		{
-			glBindBuffer(GL_UNIFORM_BUFFER, self->ubo); glerr();
-			void *p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-			memcpy(p, &self->glvars[pass->camid],
-					sizeof(self->glvars[pass->camid]));
-			glUnmapBuffer(GL_UNIFORM_BUFFER); glerr();
-			self->camera_bound = pass->camid;
-		}
+		glBindBufferBase(GL_UNIFORM_BUFFER, 19, self->ubos[pass->camid]); glerr();
 		texture_target(pass->output, depth, pass->framebuffer_id);
 
 		if(pass->clear) glClear(pass->clear);
@@ -788,7 +798,7 @@ static int renderer_pass(renderer_t *self, unsigned int hash)
 	return -1;
 }
 
-void renderer_toggle_pass(renderer_t *self, uint hash, int active)
+void renderer_toggle_pass(renderer_t *self, uint32_t hash, int active)
 {
 	int i = renderer_pass(self, hash);
 	if(i >= 0)
@@ -924,6 +934,20 @@ void renderer_add_pass(
 void renderer_destroy(renderer_t *self)
 {
 	uint32_t i;
+	for(i = 0; i < self->passes_size; i++)
+	{
+		if(self->passes[i].binds)
+		{
+			free(self->passes[i].binds);
+		}
+	}
+	for(i = 0; i < 6; i++)
+	{
+		if(self->ubos[i])
+		{
+			glDeleteBuffers(1, &self->ubos[i]);
+		}
+	}
 	for(i = 0; i < self->outputs_num; i++)
 	{
 		pass_output_t *output = &self->outputs[i];
@@ -941,41 +965,23 @@ void renderer_clear_shaders(renderer_t *self, shader_t *shader)
 	self->passes_size = 0;
 }
 
-void renderer_update_ubo(renderer_t *self)
-{
-	if(!self->ubo)
-	{
-		glGenBuffers(1, &self->ubo); glerr();
-		glBindBuffer(GL_UNIFORM_BUFFER, self->ubo); glerr();
-		glBufferData(GL_UNIFORM_BUFFER, sizeof(self->glvars[0]), &self->glvars[0],
-				GL_DYNAMIC_DRAW); glerr();
-		glBindBufferBase(GL_UNIFORM_BUFFER, 19, self->ubo); glerr();
-	}
-}
-
 int renderer_draw(renderer_t *self)
 {
+	self->frame++;
+
 	glerr();
-	uint i;
+	uint32_t i;
 
 	if(!self->width || !self->height) return CONTINUE;
 
 	if(!self->output) renderer_default_pipeline(self);
 
-	self->frame++;
-
 	if(!self->ready) renderer_update_screen_texture(self);
-
-	renderer_update_ubo(self);
-
-	glBindBufferBase(GL_UNIFORM_BUFFER, 19, self->ubo);
 
 	for(i = 0; i < self->passes_size; i++)
 	{
 		renderer_draw_pass(self, &self->passes[i]);
 	}
-	/* TODO ubo binding should only happen when camera changes */
-	self->camera_bound = -1;
 
 	c_render_device_rebind(c_render_device(&SYS), NULL, NULL);
 

@@ -18,6 +18,7 @@ typedef struct
 	int window;
 	int auto_exposure;
 	int modified;
+	int auto_transform;
 } c_camera_t;
 
 DEF_CASTER("camera", c_camera, c_camera_t)

@@ -241,6 +241,7 @@ static mesh_t *tool_cube_edit(mesh_t *mesh, struct conf_cube *conf)
 
 struct int_int {int a, b;};
 
+#ifdef LUA_H
 static float interpret_scale(mesh_t *self, float x,
 		struct int_int *interpreters)
 {
@@ -264,12 +265,14 @@ static float interpret_offset(mesh_t *self, float x,
 	if (msg) exit(1);
 	return (float)y;
 }
+#endif
 
 
 static mesh_t *tool_extrude_edit(
 		mesh_t *last, struct conf_extrude *new,
 		mesh_t *state, struct conf_extrude *old)
 {
+	#ifdef LUA_H
 
 	c_lua_t *lua = c_lua(&SYS);
 	char *msg = NULL;
@@ -350,6 +353,7 @@ static mesh_t *tool_extrude_edit(
 		mesh_triangulate(state);
 	}
 	mesh_unlock(state);
+	#endif
 
 	return state;
 }
@@ -418,8 +422,7 @@ void c_model_init_drawables(c_model_t *self)
 c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow, int visible)
 {
 	c_model_t *self = component_new("model");
-	int sys = c_entity(self) == SYS;
-	if(sys)
+	if(c_entity(self) == SYS)
 	{
 		self->super.ghost = 1;
 		c_spacial(self)->super.ghost = 1;
@@ -599,6 +602,10 @@ void c_model_update_mat(c_model_t *self)
 		{
 			drawable_remove_group(&self->draw, self->transparent_group);
 			drawable_add_group(&self->draw, self->visible_group);
+		}
+		if(self->selectable_group)
+		{
+			drawable_add_group(&self->draw, self->selectable_group);
 		}
 	}
 

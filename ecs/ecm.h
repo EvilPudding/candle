@@ -68,16 +68,16 @@ typedef void(*c_reg_cb)(void);
 
 typedef struct
 {
-	uint signal;
+	uint32_t signal;
 	signal_cb cb;
 	int32_t flags;
-	uint target;
+	uint32_t target;
 	int32_t priority;
 } listener_t;
 
 typedef struct
 {
-	uint ct;
+	uint32_t ct;
 	int32_t is_interaction;
 } dep_t;
 
@@ -86,7 +86,7 @@ typedef struct
 struct comp_page
 {
 	char *components;
-	uint components_size;
+	uint32_t components_size;
 };
 
 KHASH_MAP_INIT_INT(c, c_t*)
@@ -98,15 +98,15 @@ typedef struct ct_t
 	init_cb init;
 	destroy_cb destroy;
 
-	uint id;
-	uint size;
+	uint32_t id;
+	uint32_t size;
 
 	khash_t(c) *cs;
 	/* struct comp_page *pages; */
-	/* uint pages_size; */
+	/* uint32_t pages_size; */
 
 	dep_t *depends;
-	uint depends_size;
+	uint32_t depends_size;
 
 	int32_t is_interaction;
 
@@ -114,7 +114,7 @@ typedef struct ct_t
 
 typedef struct
 {
-	uint size;
+	uint32_t size;
 
 	vector_t *listener_types;
 	vector_t *listener_comps;
@@ -133,15 +133,15 @@ typedef struct
 typedef struct ecm_t
 {
 	entity_info_t *entities_info;
-	uint entities_info_size;
-	uint entity_uid_counter;
+	uint32_t entities_info_size;
+	uint32_t entity_uid_counter;
 
 	khash_t(ct) *cts;
 	khash_t(c) *cs;
 
 	khash_t(sig) *signals;
 
-	uint global;
+	uint32_t global;
 
 	int32_t regs_size;
 	c_reg_cb *regs;
@@ -153,8 +153,8 @@ typedef struct ecm_t
 typedef struct c_t
 {
 	entity_t entity;
-	uint comp_type;
-	uint ghost;
+	uint32_t comp_type;
+	uint32_t ghost;
 } c_t;
 
 #define c_entity(c) (((c_t*)c)->entity)
@@ -162,23 +162,23 @@ typedef struct c_t
 #define _type(a, b) __builtin_types_compatible_p(typeof(a), b)
 #define _if(c, a, b) __builtin_choose_expr(c, a, b)
 
-/* static inline c_t *ct_get_at(ct_t *self, uint page, uint i) */
+/* static inline c_t *ct_get_at(ct_t *self, uint32_t page, uint32_t i) */
 /* { */
 	/* return (c_t*)&(self->pages[page].components[i * self->size]); */
 /* } */
 
-signal_t *ecm_get_signal(uint signal);
-void _signal_init(uint id, uint size);
+signal_t *ecm_get_signal(uint32_t signal);
+void _signal_init(uint32_t id, uint32_t size);
 #define signal_init(id, size) \
 	(_signal_init(id, size))
 
-void _ct_listener(ct_t *self, int32_t flags, uint signal, signal_cb cb);
+void _ct_listener(ct_t *self, int32_t flags, uint32_t signal, signal_cb cb);
 #define ct_listener(self, flags, signal, cb) \
 	(_ct_listener(self, flags, signal, (signal_cb)cb))
 
-listener_t *ct_get_listener(ct_t *self, uint signal);
+listener_t *ct_get_listener(ct_t *self, uint32_t signal);
 
-/* void ct_register_callback(ct_t *self, uint callback, void *cb); */
+/* void ct_register_callback(ct_t *self, uint32_t callback, void *cb); */
 
 c_t *ct_add(ct_t *self, entity_t entity);
 
@@ -191,19 +191,19 @@ void ecm_clean(int32_t force);
 void ecm_destroy_all(void);
 
 void ecm_add_entity(entity_t *entity);
-/* uint ecm_register_system(ecm_t *self, void *system); */
+/* uint32_t ecm_register_system(ecm_t *self, void *system); */
 
 #define ct_new(name, size, init, destroy, depend_size, ...) \
 	_ct_new(name, ref(name), size, (init_cb)init, (destroy_cb)destroy, \
 			depend_size, ##__VA_ARGS__)
-ct_t *_ct_new(const char *name, uint hash, uint size, init_cb init,
+ct_t *_ct_new(const char *name, uint32_t hash, uint32_t size, init_cb init,
 		destroy_cb destroy, int32_t depend_size, ...);
 
-void ct_add_dependency(ct_t *dep, uint target);
-void ct_add_interaction(ct_t *dep, uint target);
+void ct_add_dependency(ct_t *dep, uint32_t target);
+void ct_add_interaction(ct_t *dep, uint32_t target);
 
 
-static inline ct_t *ecm_get(uint comp_type)
+static inline ct_t *ecm_get(uint32_t comp_type)
 {
 	khiter_t k = kh_get(ct, g_ecm->cts, comp_type);
 	if(k == kh_end(g_ecm->cts)) return NULL;
@@ -213,7 +213,7 @@ static inline ct_t *ecm_get(uint comp_type)
 
 #define component_new_from_ref(comp_type) _component_new(comp_type)
 #define component_new(comp_type) _component_new(ref(comp_type))
-void *_component_new(uint comp_type);
+void *_component_new(uint32_t comp_type);
 
 static inline uint32_t entity_exists(entity_t self)
 {
@@ -270,7 +270,7 @@ static inline vec2_t entity_to_vec2(entity_t self)
 	return vec2((float)v.x / 255.0f, (float)v.y / 255.0f);
 }
 
-#define SYS ((entity_t){0x0000000100000001})
+#define SYS ((entity_t){0x0000000100000001ul})
 
 /* builtin signals */
 

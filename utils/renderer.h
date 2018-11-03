@@ -68,23 +68,23 @@ typedef struct
 	union
 	{
 		struct {
-			uint u_brightness;
-			uint u_tex[16];
+			uint32_t u_brightness;
+			uint32_t u_tex[16];
 		} buffer;
 		struct {
-			uint u;
+			uint32_t u;
 		} number;
 		struct {
-			uint u;
+			uint32_t u;
 		} vec2;
 		struct {
-			uint u;
+			uint32_t u;
 		} vec3;
 		struct {
-			uint u;
+			uint32_t u;
 		} vec4;
 		struct {
-			uint u;
+			uint32_t u;
 		} integer;
 	};
 } shader_bind_t;
@@ -160,6 +160,7 @@ struct gl_camera
 typedef struct c_renderer_t
 {
 	int frame;
+	int update_frame;
 	float resolution;
 	int width, height;
 	float near, far;
@@ -182,10 +183,9 @@ typedef struct c_renderer_t
 	// GL PROPS
 	int depth_inverted;
 
-	int32_t camera_bound;
 	int32_t camera_count;
-	unsigned int ubo;
 	struct gl_camera glvars[6];
+	uint32_t ubos[6];
 } renderer_t;
 
 renderer_t *renderer_new(float resolution);
@@ -212,7 +212,7 @@ void renderer_add_pass(
 void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 		int from_mip, int to_mip);
 
-void renderer_toggle_pass(renderer_t *self, uint hash, int active);
+void renderer_toggle_pass(renderer_t *self, uint32_t hash, int active);
 
 entity_t renderer_get_camera(renderer_t *self);
 

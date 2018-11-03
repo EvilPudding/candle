@@ -67,7 +67,7 @@ struct edit_tool
 	size_t size;
 	void *defaults;
 	char name[32];
-	uint ref;
+	uint32_t ref;
 	int require_sys;
 };
 extern struct edit_tool g_edit_tools[];
@@ -132,7 +132,6 @@ typedef struct
 } c_model_t;
 
 DEF_CASTER("model", c_model, c_model_t)
-extern int g_update_id;
 extern vs_t *g_model_vs;
 
 void c_model_edit(c_model_t *self, mesh_edit_t type, geom_t target);

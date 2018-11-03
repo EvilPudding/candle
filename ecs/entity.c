@@ -109,7 +109,7 @@ int listener_signal_same(listener_t *self, entity_t ent, void *data, void *outpu
 	return CONTINUE;
 }
 
-int component_signal(c_t *comp, ct_t *ct, uint signal, void *data, void *output)
+int component_signal(c_t *comp, ct_t *ct, uint32_t signal, void *data, void *output)
 {
 	listener_t *listener = ct_get_listener(ct, signal);
 	if(listener)
@@ -119,7 +119,7 @@ int component_signal(c_t *comp, ct_t *ct, uint signal, void *data, void *output)
 	return CONTINUE;
 }
 
-int entity_signal_same(entity_t self, uint signal, void *data, void *output)
+int entity_signal_same(entity_t self, uint32_t signal, void *data, void *output)
 {
 	int i;
 	signal_t *sig = ecm_get_signal(signal);
@@ -132,7 +132,7 @@ int entity_signal_same(entity_t self, uint signal, void *data, void *output)
 	return CONTINUE;
 }
 
-int entity_signal(entity_t self, uint signal, void *data, void *output)
+int entity_signal(entity_t self, uint32_t signal, void *data, void *output)
 {
 	int i;
 	signal_t *sig = ecm_get_signal(signal);

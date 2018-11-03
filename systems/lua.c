@@ -1,3 +1,5 @@
+#if __has_include (<lua.h>)
+#if 0
 #include "lua.h"
 
 #include <stdlib.h>
@@ -94,3 +96,6 @@ REG()
 {
 	ct_new("lua", sizeof(c_lua_t), NULL, NULL, 0);
 }
+
+#endif
+#endif

@@ -1,9 +1,7 @@
-#line 1
+#ifndef UNIFORMS
 #extension GL_ARB_explicit_uniform_location : require
 #extension GL_ARB_texture_query_levels : enable
 #extension GL_ARB_bindless_texture : enable
-#extension GL_EXT_shader_texture_lod: enable
-#extension GL_OES_standard_derivatives : enable
 
 struct camera_t
 {
@@ -68,4 +66,6 @@ layout(location = 24) uniform bool has_normals;
 #define light(prop) (scene.lights[matid].prop)
 #define camera(prop) (renderer.camera.prop)
 
+#endif
 // vim: set ft=c:
+

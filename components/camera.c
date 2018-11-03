@@ -1,6 +1,7 @@
 #include "camera.h"
 #include <systems/window.h>
 #include <systems/editmode.h>
+#include <components/name.h>
 #include "spacial.h"
 #include "node.h"
 #include <utils/nk.h>
@@ -21,6 +22,7 @@ c_camera_t *c_camera_new(float fov, float near, float far,
 	self->exposure = 0.25f;
 	self->active = active;
 	self->window = window;
+	self->auto_transform = 1;
 
 	if(renderer)
 	{
@@ -148,7 +150,7 @@ void c_camera_assign(c_camera_t *self)
 
 int c_camera_pre_draw(c_camera_t *self)
 {
-	if(self->modified && self->renderer)
+	if(self->auto_transform && self->modified && self->renderer)
 	{
 		c_node_t *node = c_node(self);
 		c_node_update_model(node);

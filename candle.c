@@ -167,6 +167,12 @@ static void candle_handle_events(void)
 	}
 }
 
+static int skip = 0;
+void candle_skip_frame(int frames)
+{
+	skip += frames;
+}
+
 static int render_loop(void)
 {
 	g_candle->loader = loader_new();
@@ -192,13 +198,18 @@ static int render_loop(void)
 		{
 			/* candle_handle_events(self); */
 			/* printf("\t%ld\n", self->render_id); */
-			glerr();
 			entity_signal(entity_null, sig("world_draw"), NULL, NULL);
-			glerr();
 
 			ecm_clean(0);
 
-			SDL_GL_SwapWindow(c_window(&SYS)->window);
+			if(!skip)
+			{
+				SDL_GL_SwapWindow(c_window(&SYS)->window);
+			}
+			else
+			{
+				skip--;
+			}
 
 			glerr();
 			fps++;
@@ -218,6 +229,8 @@ static int render_loop(void)
 		/* SDL_Delay(1); */
 	}
 
+	/* TODO, cleanup on exit */
+	exit(0);
 	ecm_clean(1);
 	loader_update(g_candle->loader);
 
@@ -274,7 +287,7 @@ void candle_wait(void)
 void candle_reg_cmd(const char *key, cmd_cb cb)
 {
 	int ret;
-	uint hash = ref(key);
+	uint32_t hash = ref(key);
 	khiter_t k = kh_put(cmd, g_candle->cmds, hash, &ret);
 	cmd_t *cmd = &kh_value(g_candle->cmds, k);
 
@@ -305,7 +318,7 @@ entity_t candle_run_command(entity_t root, const char *command)
 		argv[argc++] = strdup(p);
 	}
 
-	uint hash = ref(argv[0]);
+	uint32_t hash = ref(argv[0]);
 	khiter_t k = kh_get(cmd, g_candle->cmds, hash);
 	if(k != kh_end(g_candle->cmds))
 	{

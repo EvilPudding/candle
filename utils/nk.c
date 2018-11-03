@@ -1,3 +1,4 @@
+#include <string.h>
 #include <utils/glutil.h>
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO

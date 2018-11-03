@@ -28,7 +28,7 @@ typedef struct vil_t
 
 typedef union
 {
-	struct { unsigned char depth; unsigned char _[7]; };
+	struct { uint8_t depth; uint8_t _[7]; };
 	uint64_t val;
 } slot_t;
 
@@ -36,7 +36,7 @@ vitype_t *vil_add_type(vil_t *ctx, const char *name, vitype_gui_cb
 		builtin_gui, int builtin_size);
 void vicall_link(vicall_t *root, slot_t in_slot, slot_t out_slot,
 		int field);
-vitype_t *vil_get_type(vil_t *ctx, uint ref);
+vitype_t *vil_get_type(vil_t *ctx, uint32_t ref);
 
 
 const char *vicall_name(const vicall_t *call);

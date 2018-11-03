@@ -9,6 +9,7 @@
 #include <stdarg.h>
 
 static const char default_vs[] = 
+	"#include \"uniforms.glsl\"\n"
 #ifdef MESH4
 	"layout (location = 0) in vec4 P;\n"
 #else
@@ -41,7 +42,6 @@ static const char default_vs[] =
 	"\n"
 	"out mat4 model;\n"
 	"out mat3 TM;\n"
-	"#include \"uniforms.glsl\"\n"
 	"\n"
 	"void main()\n"
 	"{\n"
@@ -188,7 +188,7 @@ int vs_new_loader(vs_t *self)
 		checkShaderError(self->gprogram, self->name, self->gcode);
 	}
 	self->ready = 1;
-	/* printf("vs ready %s\n", self->name); */
+	/* printf("vs ready %s\n", self->code); */
 
 	return 1;
 }

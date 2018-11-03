@@ -1019,7 +1019,12 @@ static inline vec4_t quat_rotate(vec3_t axis, n_t angle)
 {
 	vec4_t r;
 	n_t s, c;
+	#ifdef WIN32
+	s = sin(angle * 0.5f);
+	c = cos(angle * 0.5f);
+	#else
 	sincosf(angle * 0.5f, &s, &c);
+	#endif
 
 	r.xyz = vec3_scale(axis, s);
 	r.w = c;
@@ -1032,9 +1037,18 @@ static inline vec4_t quat_from_euler(n_t yaw, n_t pitch, n_t roll)
 	yaw *= 0.5f;
 	pitch *= 0.5f;
 	roll *= 0.5f;
+	#ifdef WIN32
 	sincosf(yaw, &yaw_sin, &yaw_cos);
 	sincosf(pitch, &pitch_sin, &pitch_cos);
 	sincosf(roll, &roll_sin, &roll_cos);
+	#else
+	yaw_sin = sinf(yaw);
+	yaw_cos = cosf(yaw);
+	pitch_sin = sinf(pitch);
+	pitch_cos = cosf(pitch);
+	roll_sin = sinf(roll);
+	roll_cos = cosf(roll);
+	#endif
 	return vec4(
 			roll_cos * pitch_sin * yaw_cos + roll_sin * pitch_cos * yaw_sin,
 			roll_cos * pitch_cos * yaw_sin - roll_sin * pitch_sin * yaw_cos,
