@@ -113,7 +113,7 @@ int vs_new_loader(vs_t *self)
 	checkShaderError(self->program, "vertex shader!",
 			self->name, self->code);
 	self->ready = 1;
-	/* printf("vs ready %s\n", self->name); */
+	/* printf("vs ready %s\n", self->code); */
 
 	return 1;
 }
@@ -131,6 +131,7 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 	self->modifier_num = num_modifiers + 2;
 
 	const char modifier[] = 
+			"#include \"uniforms.glsl\"\n"
 #ifdef MESH4
 			"layout (location = 0) in vec4 P;\n"
 #else
@@ -163,7 +164,6 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 			"\n"
 			"out mat4 model;\n"
 			"out mat3 TM;\n"
-			"#include \"uniforms.glsl\"\n"
 			"\n"
 			"void main()\n"
 			"{\n"

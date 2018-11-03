@@ -21,7 +21,7 @@ extern SDL_Window *mainWindow;
 
 static void init_context_b(c_window_t *self)
 {
-	mainWindow = self->window = SDL_CreateWindow("Candle",
+	mainWindow = self->window = SDL_CreateWindow("Cool Butts",
 			SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 			self->width, self->height,
 			SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE

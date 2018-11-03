@@ -156,7 +156,6 @@ static int c_light_pre_draw(c_light_t *self)
 		{
 			drawable_set_mesh(&self->draw, g_light);
 		}
-
 		c_node_t *node = c_node(self);
 		c_node_update_model(node);
 		vec3_t pos = c_node_local_to_global(node, vec3(0, 0, 0));
@@ -167,6 +166,7 @@ static int c_light_pre_draw(c_light_t *self)
 
 		renderer_set_model(self->renderer, 0, &node->model);
 	}
+	self->modified = 0;
 	return CONTINUE;
 }
 
