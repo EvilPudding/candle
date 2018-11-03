@@ -1,3 +1,4 @@
+#ifndef UNIFORMS
 #extension GL_ARB_explicit_uniform_location : require
 #extension GL_ARB_texture_query_levels : enable
 #extension GL_ARB_bindless_texture : enable
@@ -65,4 +66,6 @@ layout(location = 24) uniform bool has_normals;
 #define light(prop) (scene.lights[matid].prop)
 #define camera(prop) (renderer.camera.prop)
 
+#endif
 // vim: set ft=c:
+

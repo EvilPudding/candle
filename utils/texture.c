@@ -809,11 +809,6 @@ int32_t texture_2D_resize(texture_t *self, int32_t width, int32_t height)
 		/* self->framebuffer_ready = 0; */
 	}
 
-	if(self->mipmaped)
-	{
-		glGenerateMipmap(self->target); glerr();
-	}
-
 	glActiveTexture(GL_TEXTURE0);
 
 	return 1;

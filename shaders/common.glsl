@@ -1,8 +1,9 @@
 #ifndef FRAG_COMMON
 #define FRAG_COMMON
+#include "uniforms.glsl"
+
 #line 3
 
-#include "uniforms.glsl"
 
 #define _CAT(a, b) a ## b
 #define CAT(a, b) _CAT(a,b)
@@ -495,8 +496,6 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
 				reflect_color.xyz * specularColor, fade), 1.0f);
 }
 
-#endif
-
 /* * * * * * * * * * * * * * * * * * * * * PBR * * * * * * * * * * * * * * * * * * * * */
 //     FROM https://github.com/KhronosGroup/glTF-WebGL-PBR
 
@@ -719,6 +718,8 @@ vec4 pbr(vec4 base_color, vec2 metallic_roughness,
 /* 		PCF_Filter( uv, zReceiver, filterRadiusUV ); */ 
 /* } */
 
+
+#endif
 
 
 // vim: set ft=c:

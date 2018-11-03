@@ -1,6 +1,6 @@
+#include "common.frag"
 
 layout (location = 0) out vec4 FragColor;
-#include "common.frag"
 
 void main()
 {

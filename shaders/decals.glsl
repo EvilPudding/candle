@@ -1,8 +1,8 @@
+#include "common.glsl"
 
 layout (location = 0) out vec4 AlbedoColor;
 layout (location = 1) out vec4 NRM; // normal_roughness_metalness
 
-#include "common.glsl"
 #line 8
 
 BUFFER {

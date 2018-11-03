@@ -1,7 +1,7 @@
+#include "common.glsl"
 
 layout (location = 0) out vec4 FragColor;
 
-#include "common.glsl"
 #line 6
 
 BUFFER {

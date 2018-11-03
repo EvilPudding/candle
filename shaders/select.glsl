@@ -1,8 +1,8 @@
+#include "common.glsl"
 
 layout (location = 0) out vec2 ID;
 layout (location = 1) out vec2 GeomID;
 
-#include "common.glsl"
 
 void main()
 {
