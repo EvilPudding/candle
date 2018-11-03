@@ -113,7 +113,7 @@ int vs_new_loader(vs_t *self)
 	checkShaderError(self->program, "vertex shader!",
 			self->name, self->code);
 	self->ready = 1;
-	/* printf("vs ready %s\n", self->code); */
+	printf("vs ready %s\n", self->code);
 
 	return 1;
 }

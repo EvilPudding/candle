@@ -1,9 +1,6 @@
-#line 1
 #extension GL_ARB_explicit_uniform_location : require
 #extension GL_ARB_texture_query_levels : enable
 #extension GL_ARB_bindless_texture : enable
-#extension GL_EXT_shader_texture_lod: enable
-#extension GL_OES_standard_derivatives : enable
 
 struct camera_t
 {
