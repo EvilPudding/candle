@@ -368,6 +368,16 @@ void renderer_default_pipeline(renderer_t *self)
 			{NONE}
 		}
 	);
+	
+	/* FIELD PASS */
+	/* renderer_add_pass(self, "field_pass", "marching", ref("field"), 0, */
+	/* 		gbuffer, gbuffer, 0, */
+	/* 	(bind_t[]){ */
+	/* 		{NUM, "iso_level", .buffer = 0.5}, */
+	/* 		{NONE} */
+	/* 	} */
+	/* ); */
+
 
 	renderer_add_pass(self, "selectable", "select", ref("selectable"),
 			0, selectable, selectable, 0,
