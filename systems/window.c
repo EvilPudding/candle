@@ -125,10 +125,32 @@ void c_window_handle_resize(c_window_t *self, const SDL_Event event)
 		&(window_resize_data){.width = self->width, .height = self->height}, NULL);
 }
 
+#ifdef DEBUG
+void c_window_debug(GLenum source,
+            GLenum type,
+            GLuint id,
+            GLenum severity,
+            GLsizei length,
+            const GLchar *message,
+            c_window_t *self)
+{
+	if( severity == GL_DEBUG_SEVERITY_LOW ||
+		severity == GL_DEBUG_SEVERITY_MEDIUM ||
+		severity == GL_DEBUG_SEVERITY_HIGH)
+	{
+		printf("OpenGL debug: %.*s\n", length, message);
+	}
+}
+#endif
+
 int c_window_created(c_window_t *self)
 {
 	init_context_b(self);
 
+#ifdef DEBUG
+	glEnable(GL_DEBUG_OUTPUT);
+	glDebugMessageCallback((void*)c_window_debug, self);
+#endif
 	if(!g_quad_vs)
 	{
 		g_quad_vs = vs_new("quad", 1, vertex_modifier_new(

@@ -10,7 +10,7 @@ void main()
 	if(dif.a < 0.7f) discard;
 
 	float dist = length(vertex_position);
-    FragColor = vec4(0, 0, 0, dist);
+    FragColor = vec4(0.0f, 0.0f, 0.0f, dist);
 }  
 
 // vim: set ft=c:
