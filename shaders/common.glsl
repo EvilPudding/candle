@@ -94,27 +94,10 @@ vec3 decode_normal(vec2 enc)
 
 /* ------------------- */
 
-vec4 get_emissive()
-{
-	return resolveProperty(mat(emissive), texcoord);
-}
-
 float get_metalness()
 {
 	return resolveProperty(mat(metalness), texcoord).r;
 }
-
-float get_roughness()
-{
-	return resolveProperty(mat(roughness), texcoord).r;
-}
-
-
-vec4 get_transparency()
-{
-	return resolveProperty(mat(transparency), texcoord);
-}
-
 
 vec3 get_position(sampler2D depth)
 {
