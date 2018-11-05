@@ -1,4 +1,5 @@
 #ifndef UNIFORMS
+#define UNIFORMS
 #extension GL_ARB_explicit_uniform_location : require
 #extension GL_ARB_texture_query_levels : enable
 #extension GL_ARB_bindless_texture : enable

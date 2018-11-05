@@ -8,8 +8,57 @@
 #include <string.h>
 #include <stdarg.h>
 
-static void checkShaderError(GLuint shader, const char *errorMessage,
-		const char *name, const char *code);
+static const char default_vs[] = 
+	"#include \"uniforms.glsl\"\n"
+#ifdef MESH4
+	"layout (location = 0) in vec4 P;\n"
+#else
+	"layout (location = 0) in vec3 P;\n"
+#endif
+	"layout (location = 1) in vec3 N;\n"
+	"layout (location = 2) in vec2 UV;\n"
+	"layout (location = 3) in vec3 TG;\n"
+	"layout (location = 4) in vec2 ID;\n"
+	"layout (location = 5) in vec3 COL;\n"
+	"layout (location = 6) in uvec4 BID;\n"
+	"layout (location = 7) in vec4 WEI;\n"
+
+	"layout (location = 8) in mat4 M;\n"
+	"layout (location = 12) in uvec4 PROPS;\n"
+	/* PROPS.x = material PROPS.y = NOTHING PROPS.zw = id */
+#ifdef MESH4
+	"layout (location = 13) in float ANG4;\n"
+#endif
+
+	"out flat uvec2 id;\n"
+	"out flat uint matid;\n"
+	"out vec2 object_id;\n"
+	"out vec2 poly_id;\n"
+	"out vec3 poly_color;\n"
+	"out flat vec3 obj_pos;\n"
+	"out vec3 vertex_position;\n"
+	"\n"
+	"out vec2 texcoord;\n"
+	"\n"
+	"out mat4 model;\n"
+	"out mat3 TM;\n"
+	"\n"
+	"void main()\n"
+	"{\n"
+	"	vec4 pos = vec4(P.xyz, 1.0f);\n"
+	"	obj_pos = (M * vec4(0, 0, 0, 1)).xyz;\n"
+	"	model = M;\n"
+	"	poly_color = COL;\n"
+	"	matid = PROPS.x;\n"
+	"	poly_id = ID;\n"
+	"	id = PROPS.zw;\n"
+	"	texcoord = UV;\n";
+static const char default_vs_end[] = 
+	"\n\tgl_Position = pos; }";
+
+static const char default_gs[] = "";
+
+static void checkShaderError(GLuint shader, const char *name, const char *code);
 static char *string_preprocess(const char *src, int len, int defines);
 
 struct source
@@ -46,6 +95,7 @@ void shaders_blur_glsl_reg(void);
 void shaders_kawase_glsl_reg(void);
 void shaders_downsample_glsl_reg(void);
 void shaders_border_glsl_reg(void);
+void shaders_marching_glsl_reg(void);
 
 void shaders_phong_glsl_reg(void);
 void shaders_ssao_glsl_reg(void);
@@ -70,6 +120,7 @@ void shaders_reg()
 	shaders_editmode_glsl_reg();
 	shaders_highlight_glsl_reg();
 	shaders_phong_glsl_reg();
+	shaders_marching_glsl_reg();
 	shaders_quad_glsl_reg();
 	shaders_select_glsl_reg();
 	shaders_sprite_glsl_reg();
@@ -82,36 +133,60 @@ void shaders_reg()
 vertex_modifier_t vertex_modifier_new(const char *code)
 {
 	vertex_modifier_t self;
+	self.type = 0;
 	self.code = strdup(code);
 	return self;
 }
 
+vertex_modifier_t geometry_modifier_new(const char *code)
+{
+	vertex_modifier_t self;
+	self.type = 0;
+	self.code = strdup(code);
+	return self;
+}
+
+
 int vs_new_loader(vs_t *self)
 {
 	int i;
-	int size = 0;
+	int vcode_size = 0;
+	int gcode_size = 0;
 
-	for(i = 0; i < self->modifier_num; i++)
+	for(i = 0; i < self->vmodifier_num; i++)
 	{
-		size += strlen(self->modifiers[i].code) + 1;
+		vcode_size += strlen(self->vmodifiers[i].code) + 1;
 	}
 
-	self->code = malloc(size);
-	self->code[0] = '\0';
-
-	for(i = 0; i < self->modifier_num; i++)
+	for(i = 0; i < self->gmodifier_num; i++)
 	{
-		strcat(self->code, self->modifiers[i].code);
+		gcode_size += strlen(self->gmodifiers[i].code) + 1;
 	}
 
-	self->program = glCreateShader(GL_VERTEX_SHADER); glerr();
-
-	glShaderSource(self->program, 1, (const GLchar**)&self->code, NULL);
-	glerr();
-	glCompileShader(self->program); glerr();
-
-	checkShaderError(self->program, "vertex shader!",
-			self->name, self->code);
+	if(vcode_size)
+	{
+		self->vcode = malloc(vcode_size); self->vcode[0] = '\0';
+		for(i = 0; i < self->vmodifier_num; i++)
+		{
+			strcat(self->vcode, self->vmodifiers[i].code);
+		}
+		self->vprogram = glCreateShader(GL_VERTEX_SHADER); glerr();
+		glShaderSource(self->vprogram, 1, (const GLchar**)&self->vcode, NULL);
+		glCompileShader(self->vprogram); glerr();
+		checkShaderError(self->vprogram, self->name, self->vcode);
+	}
+	if(gcode_size)
+	{
+		self->gcode = malloc(gcode_size); self->gcode[0] = '\0';
+		for(i = 0; i < self->gmodifier_num; i++)
+		{
+			strcat(self->gcode, self->gmodifiers[i].code);
+		}
+		self->gprogram = glCreateShader(GL_GEOMETRY_SHADER); glerr();
+		glShaderSource(self->gprogram, 1, (const GLchar**)&self->gcode, NULL);
+		glCompileShader(self->gprogram); glerr();
+		checkShaderError(self->gprogram, self->name, self->gcode);
+	}
 	self->ready = 1;
 	/* printf("vs ready %s\n", self->code); */
 
@@ -128,65 +203,36 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 	self->ready = 0;
 	va_list va;
 
-	self->modifier_num = num_modifiers + 2;
+	self->vmodifier_num = 0;
+	self->gmodifier_num = 0;
 
-	const char modifier[] = 
-			"#include \"uniforms.glsl\"\n"
-#ifdef MESH4
-			"layout (location = 0) in vec4 P;\n"
-#else
-			"layout (location = 0) in vec3 P;\n"
-#endif
-			"layout (location = 1) in vec3 N;\n"
-			"layout (location = 2) in vec2 UV;\n"
-			"layout (location = 3) in vec3 TG;\n"
-			"layout (location = 4) in vec2 ID;\n"
-			"layout (location = 5) in vec3 COL;\n"
-			"layout (location = 6) in uvec4 BID;\n"
-			"layout (location = 7) in vec4 WEI;\n"
-
-			"layout (location = 8) in mat4 M;\n"
-			"layout (location = 12) in uvec4 PROPS;\n"
-			/* PROPS.x = material PROPS.y = NOTHING PROPS.zw = id */
-#ifdef MESH4
-			"layout (location = 13) in float ANG4;\n"
-#endif
-
-			"out flat uvec2 id;\n"
-			"out flat uint matid;\n"
-			"out vec2 object_id;\n"
-			"out vec2 poly_id;\n"
-			"out vec3 poly_color;\n"
-			"out flat vec3 obj_pos;\n"
-			"out vec3 vertex_position;\n"
-			"\n"
-			"out vec2 texcoord;\n"
-			"\n"
-			"out mat4 model;\n"
-			"out mat3 TM;\n"
-			"\n"
-			"void main()\n"
-			"{\n"
-			"	vec4 pos = vec4(P.xyz, 1.0f);\n"
-			"	obj_pos = (M * vec4(0, 0, 0, 1)).xyz;\n"
-			"	model = M;\n"
-			"	poly_color = COL;\n"
-			"	matid = PROPS.x;\n"
-			"	poly_id = ID;\n"
-			"	id = PROPS.zw;\n"
-			"	texcoord = UV;\n";
-
-	self->modifiers[0] = vertex_modifier_new(string_preprocess(modifier, sizeof(modifier), 1));
+	self->vmodifiers[self->vmodifier_num++] = vertex_modifier_new(
+			string_preprocess(default_vs, sizeof(default_vs), 1));
 
 	va_start(va, num_modifiers);
 	for(i = 0; i < num_modifiers; i++)
 	{
 		vertex_modifier_t vst = va_arg(va, vertex_modifier_t);
-		self->modifiers[i + 1] = vst;
+		if(vst.type == 1)
+		{
+			// Skip over the first geometry modifier
+			if(self->gmodifier_num == 0) self->gmodifier_num = 1;
+
+			self->gmodifiers[self->gmodifier_num++] = vst;
+		}
+		else
+		{
+			self->vmodifiers[self->vmodifier_num++] = vst;
+		}
 	}
 	va_end(va);
 
-	self->modifiers[i + 1] = vertex_modifier_new( "\n\tgl_Position = pos; }");
+	if(self->gmodifier_num > 0)
+	{
+		self->gmodifiers[0] = geometry_modifier_new(default_gs);
+	}
+
+	self->vmodifiers[self->vmodifier_num++] = vertex_modifier_new(default_vs_end);
 
 	loader_push_wait(g_candle->loader, (loader_cb)vs_new_loader, self, NULL);
 
@@ -339,7 +385,7 @@ static char *shader_preprocess(struct source source, int defines)
 	return string_preprocess(source.src, source.len, defines);
 }
 
-static void checkShaderError(GLuint shader, const char *errorMessage,
+static void checkShaderError(GLuint shader,
 		const char *name, const char *code)
 {
 	GLint success = 0;
@@ -360,23 +406,35 @@ static void checkShaderError(GLuint shader, const char *errorMessage,
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
 	if (success != GL_TRUE)
 	{ 
-		printf("%s -> %s\n", name, errorMessage);
+		printf("%s\n", name);
 		exit(1);
 	}
 }
 
 static int shader_new_loader(shader_t *self)
 {
+	uint32_t fprogram = self->fs->program;
+	uint32_t vprogram = g_vs[self->index].vprogram;
+	uint32_t gprogram = g_vs[self->index].gprogram;
+
 	self->program = glCreateProgram(); glerr();
 
-	glAttachShader(self->program, self->fs->program); glerr();
+	glAttachShader(self->program, vprogram); glerr();
+	glAttachShader(self->program, fprogram); glerr();
 
-	glAttachShader(self->program, g_vs[self->index].program); glerr();
+	if(gprogram) // not all programs need a geometry shader
+	{
+		glAttachShader(self->program, g_vs[self->index].gprogram); glerr();
+	}
 
 	glLinkProgram(self->program); glerr();
 
+	int isLinked = 0;
+	glGetProgramiv(self->program, GL_LINK_STATUS, &isLinked);
+
 	self->ready = 1;
-	/* printf("shader ready f:%s v:%s\n", self->fs->filename, g_vs[self->index].name); */
+	printf("shader %d ready f:%s v:%s %d\n", self->program, self->fs->filename,
+			g_vs[self->index].name, isLinked);
 	return 1;
 }
 
@@ -397,8 +455,7 @@ static int fs_new_loader(fs_t *self)
 	glerr();
 	glCompileShader(self->program); glerr();
 
-	checkShaderError(self->program, "fragment shader!",
-			self->filename, self->code);
+	checkShaderError(self->program, self->filename, self->code);
 	self->ready = 1;
 	/* printf("fs ready %s\n", buffer); */
 
@@ -481,9 +538,16 @@ void fs_destroy(fs_t *self)
 }
 void shader_destroy(shader_t *self)
 {
-	glDetachShader(self->program, self->fs->program); glerr();
-	glDetachShader(self->program, g_vs[self->index].program); glerr();
-	/* glDeleteShader(self->vs->program); glerr(); */
+	uint32_t fprogram = self->fs->program;
+	uint32_t vprogram = g_vs[self->index].vprogram;
+	uint32_t gprogram = g_vs[self->index].gprogram;
+
+	glDetachShader(self->program, fprogram); glerr();
+	glDetachShader(self->program, vprogram); glerr();
+	if(gprogram)
+	{
+		glDetachShader(self->program, gprogram); glerr();
+	}
 
 	glDeleteProgram(self->program); glerr();
 
