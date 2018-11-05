@@ -426,6 +426,9 @@ static int shader_new_loader(shader_t *self)
 	}
 
 	glLinkProgram(self->program); glerr();
+
+	int isLinked = 1;
+#ifdef DEBUG
 	glValidateProgram(self->program);
 	/* checkShaderError(self->program, self->fs->filename, NULL); */
 
@@ -439,9 +442,8 @@ static int shader_new_loader(shader_t *self)
 		printf("Log found for '%s':\n%s", self->fs->filename, log_string);
 	}
 
-
-	int isLinked = 0;
 	glGetProgramiv(self->program, GL_LINK_STATUS, &isLinked);
+#endif
 	self->ready = 1;
 	printf("shader %d ready f:%s v:%s %d\n", self->program, self->fs->filename,
 			g_vs[self->index].name, isLinked);

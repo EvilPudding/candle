@@ -204,7 +204,7 @@ static void update_ubo(renderer_t *self, int32_t camid)
 		glGenBuffers(1, &self->ubos[camid]); glerr();
 		glBindBuffer(GL_UNIFORM_BUFFER, self->ubos[camid]); glerr();
 		glBufferData(GL_UNIFORM_BUFFER, sizeof(self->glvars[camid]),
-				&self->glvars[camid], GL_STATIC_DRAW); glerr();
+				&self->glvars[camid], GL_DYNAMIC_DRAW); glerr();
 	}
 	void *p = glMapNamedBuffer(self->ubos[camid], GL_WRITE_ONLY);
 	memcpy(p, &self->glvars[camid], sizeof(self->glvars[camid]));

@@ -82,7 +82,7 @@ void c_render_device_update_ubo(c_render_device_t *self)
 		glGenBuffers(1, &self->ubo); glerr();
 		glBindBuffer(GL_UNIFORM_BUFFER, self->ubo); glerr();
 		glBufferData(GL_UNIFORM_BUFFER, sizeof(self->scene), &self->scene,
-				GL_DYNAMIC_DRAW); glerr();
+				GL_STATIC_DRAW); glerr();
 		glBindBufferBase(GL_UNIFORM_BUFFER, 20, self->ubo); glerr();
 	}
 	/* else if(self->scene_changes) */
