@@ -397,10 +397,6 @@ static void checkShaderError(GLuint shader,
 		GLchar log_string[bufflen + 1];
 		glGetShaderInfoLog(shader, bufflen, 0, log_string);
 		printf("Log found for '%s':\n%s", name, log_string);
-		if(!name)
-		{
-			puts(code);
-		}
 	}
 
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
@@ -429,6 +425,18 @@ static int shader_new_loader(shader_t *self)
 
 	glLinkProgram(self->program); glerr();
 	glValidateProgram(self->program);
+	/* checkShaderError(self->program, self->fs->filename, NULL); */
+
+	GLint bufflen;
+
+	glGetProgramiv(self->program, GL_INFO_LOG_LENGTH, &bufflen);
+	if (bufflen > 1)
+	{
+		GLchar log_string[bufflen + 1];
+		glGetProgramInfoLog(self->program, bufflen, 0, log_string);
+		printf("Log found for '%s':\n%s", self->fs->filename, log_string);
+	}
+
 
 	int isLinked = 0;
 	glGetProgramiv(self->program, GL_LINK_STATUS, &isLinked);
