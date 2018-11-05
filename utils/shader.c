@@ -428,10 +428,10 @@ static int shader_new_loader(shader_t *self)
 	}
 
 	glLinkProgram(self->program); glerr();
+	glValidateProgram(self->program);
 
 	int isLinked = 0;
 	glGetProgramiv(self->program, GL_LINK_STATUS, &isLinked);
-
 	self->ready = 1;
 	printf("shader %d ready f:%s v:%s %d\n", self->program, self->fs->filename,
 			g_vs[self->index].name, isLinked);
