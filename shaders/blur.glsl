@@ -21,7 +21,7 @@ void main()
 	{
 		for(int i = 1; i < 6; ++i)
 		{
-			ivec2 off = ivec2(i, 0.0f);
+			ivec2 off = ivec2(i, 0.0);
 			c += texelFetch(buf.color, pp + off, 0).rgb * weight[i];
 			c += texelFetch(buf.color, pp - off, 0).rgb * weight[i];
 		}
@@ -30,12 +30,12 @@ void main()
 	{
 		for(int i = 1; i < 6; ++i)
 		{
-			ivec2 off = ivec2(0.0f, * i);
+			ivec2 off = ivec2(0.0, * i);
 			c += texelFetch(buf.color, pp + off, 0).rgb * weight[i];
 			c += texelFetch(buf.color, pp - off, 0).rgb * weight[i];
 		}
 	}
-	FragColor = vec4(c, 0.4f);
+	FragColor = vec4(c, 0.4);
 }
 
 // vim: set ft=c:

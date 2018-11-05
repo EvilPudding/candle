@@ -54,7 +54,9 @@ static const char default_vs[] =
 	"	id = PROPS.zw;\n"
 	"	texcoord = UV;\n";
 static const char default_vs_end[] = 
-	"\n\tgl_Position = pos; }";
+	"\n"
+	"	gl_Position = pos;\n"
+	"	}\n";
 
 static const char default_gs[] = "";
 

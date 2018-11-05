@@ -5,7 +5,7 @@ layout (location = 0) out vec4 FragColor;
 void main()
 {
 	vec4 dif = resolveProperty(albedo, texcoord);
-	if(dif.a == 0.0f) discard;
+	if(dif.a == 0.0) discard;
 
 	FragColor = dif;
 }

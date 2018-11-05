@@ -7,9 +7,9 @@ layout (location = 1) out vec2 GeomID;
 void main()
 {
 	vec4 dif  = resolveProperty(mat(albedo), texcoord);
-	if(dif.a == 0.0f) discard;
+	if(dif.a == 0.0) discard;
 
-	ID = vec2(float(id.x) / 255.0f, float(id.y) / 255.0f);
+	ID = vec2(float(id.x) / 255.0, float(id.y) / 255.0);
 
 	GeomID = poly_id;
 }

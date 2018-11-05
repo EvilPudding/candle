@@ -31,14 +31,14 @@ vec3 fetch(ivec2 coord)
 void main()
 {
 	ivec2 tc = ivec2(gl_FragCoord.xy);
-	vec3 c = vec3(0.0f);
+	vec3 c = vec3(0.0);
 
 	c += fetch(tc + ivec2(distance, distance));
 	c += fetch(tc + ivec2(-distance - 1, -distance - 1));
 	c += fetch(tc + ivec2(distance, -distance - 1));
 	c += fetch(tc + ivec2(-distance - 1, distance));
 
-	FragColor = vec4(c / 16.0f, 1.0f);
+	FragColor = vec4(c / 16.0, 1.0);
 }
 
 // vim: set ft=c:

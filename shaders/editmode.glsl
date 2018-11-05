@@ -19,7 +19,7 @@ uniform float tool_fade;
 vec3 real_pos(float depth, vec2 coord)
 {
     float z = depth * 2.0 - 1.0;
-	coord = (coord * 2.0f) - 1.0;
+	coord = (coord * 2.0) - 1.0;
 
     vec4 clipSpacePosition = vec4(coord, z, 1.0);
     vec4 viewSpacePosition = inverse(camera(projection)) * clipSpacePosition;
@@ -39,16 +39,16 @@ float range(float v, float min, float max)
 }
 void main()
 {
-	float intensity = 0.0f;
+	float intensity = 0.0;
 	vec2 p = pixel_pos();
 
-	float dist = -(camera(view) * vec4(selected_pos, 1.0f)).z;
+	float dist = -(camera(view) * vec4(selected_pos, 1.0)).z;
 	dist = unlinearize(dist);
 
 	vec3 proj_pixel = real_pos(dist, p);
 
 	float d = length(proj_pixel - selected_pos);
-	d = 1.0f - abs((d-start_radius)/0.4f);
+	d = 1.0 - abs((d-start_radius)/0.4);
 	d = clamp(d, 0, 1);
 	intensity += pow(d, 1);
 
@@ -56,7 +56,7 @@ void main()
 	/* FragColor = vec4(proj_mouse - proj_pixel, 1);return; */
 
 	float dist_to_mouse = length(proj_mouse - proj_pixel);
-	float md = clamp((0.4 - dist_to_mouse)/0.4 - 0.1, 0.0f, 1.0f);
+	float md = clamp((0.4 - dist_to_mouse)/0.4 - 0.1, 0.0, 1.0);
 	intensity += pow(md, 2);
 	intensity -= max(dist_to_mouse - (1 - tool_fade) * start_radius * 2.1, 0) * tool_fade;
 
@@ -69,7 +69,7 @@ void main()
 	if(rad > 0.3) color = vec3(0.1, 0.1, 0.4);
 	else color = vec3(0.2, 0.2, 0.7);
 
-	FragColor = vec4(color * intensity, 1.0f);
+	FragColor = vec4(color * intensity, 1.0);
 }
 
 // vim: set ft=c:

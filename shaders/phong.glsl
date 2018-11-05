@@ -17,7 +17,7 @@ void main()
 	if(dif.a == 0) discard;
 
 	vec3 c_pos = get_position(gbuffer.depth);
-	vec3 w_pos = (camera(model) * vec4(c_pos, 1.0f)).xyz;
+	vec3 w_pos = (camera(model) * vec4(c_pos, 1.0)).xyz;
 
 	/* vec3 c_pos2 = get_position2(gbuffer); */
 
@@ -26,10 +26,10 @@ void main()
 
 	float dist_to_eye = length(c_pos);
 
-	vec3 color = vec3(0.0f);
+	vec3 color = vec3(0.0);
 	/* FragColor = vec4(texcoord - gl_FragCoord.xy / screen_size, 0, 1); return; */
 
-	if(light(radius) < 0.0f)
+	if(light(radius) < 0.0)
 	{
 		color = light(color.rgb) * light(color.a) * dif.xyz;
 	}
@@ -37,22 +37,22 @@ void main()
 	{
 		/* if(dist_to_eye > length(vertex_position)) discard; */
 
-		vec3 c_light = (camera(view) * vec4(obj_pos, 1.0f)).xyz;
+		vec3 c_light = (camera(view) * vec4(obj_pos, 1.0)).xyz;
 
 		vec3 c_light_dir = c_light - c_pos;
 		vec3 w_light_dir = obj_pos - w_pos;
-		/* FragColor = vec4(w_light_dir / 5.0f, 1.0f); return; */
+		/* FragColor = vec4(w_light_dir / 5.0, 1.0); return; */
 
 		float point_to_light = length(c_light_dir);
-		/* FragColor = vec4(texture(shadow_map, -vec).rgb, 1.0f); return; */
+		/* FragColor = vec4(texture(shadow_map, -vec).rgb, 1.0); return; */
 
 		/* FragColor = vec4(vec3(nor) * 0.5 + 0.5, 1.0); return; */
 
 		float depth = textureLod(gbuffer.depth, pixel_pos(), 0).r;
-		/* FragColor = vec4(w_light_dir, 1.0f); return; */
+		/* FragColor = vec4(w_light_dir, 1.0); return; */
 		float sd = get_shadow(w_light_dir, point_to_light, dist_to_eye, depth);
-		/* FragColor = vec4(vec3(texture(light(shadow_map), vec3(c_pos)).a) / 10.0f, 1.0f); return; */
-		/* FragColor = vec4(vec3(lookup_single(-w_light_dir)) / 10.0f, 1.0f); return; */
+		/* FragColor = vec4(vec3(texture(light(shadow_map), vec3(c_pos)).a) / 10.0, 1.0); return; */
+		/* FragColor = vec4(vec3(lookup_single(-w_light_dir)) / 10.0, 1.0); return; */
 		/* sd = 0; */
 
 
@@ -62,11 +62,11 @@ void main()
 			vec3 lcolor = light(color.rgb) * light(color.a);
 
 			float l = point_to_light / light(radius);
-			/* float attenuation = clamp(1.0f - pow(l, 0.3), 0.0f, 1.0f); */
-			/* float attenuation = 1.0f/(1.0f+1.3f*pow(l * 3.0f, 2)); */
-			/* attenuation *= clamp(1.0f - l, 0.0f, 1.0f); */
-			float attenuation = ((3.0f - l*3.0f) / (1.0f+1.3f*(pow(l*3.0f-0.1f, 2))))/3.0f;
-			attenuation = clamp(attenuation, 0.0f, 1.0f);
+			/* float attenuation = clamp(1.0 - pow(l, 0.3), 0.0, 1.0); */
+			/* float attenuation = 1.0/(1.0+1.3*pow(l * 3.0, 2)); */
+			/* attenuation *= clamp(1.0 - l, 0.0, 1.0); */
+			float attenuation = ((3.0 - l*3.0) / (1.0+1.3*(pow(l*3.0-0.1, 2))))/3.0;
+			attenuation = clamp(attenuation, 0.0, 1.0);
 
 			vec4 color_lit = pbr(dif, normal_metalic_roughness.ba,
 					light(color) * attenuation, c_light_dir, c_pos, c_nor);

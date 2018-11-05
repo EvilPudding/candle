@@ -54,19 +54,19 @@ void main()
 
 	float overp = filtered(c2, over_poly_id);
 
-	const vec3 over_poly_color = vec3(0.1f, 0.01f, 0.4f);
+	const vec3 over_poly_color = vec3(0.1, 0.01, 0.4);
 	const vec3 over_color = vec3(0.08);
 
 	if(is_equal(c, zero))
 	{
-		FragColor = vec4(vec3(0.5), 1.0f);
+	FragColor = vec4(vec3(0.5), 1.0);
 		return;
 	}
 
-	vec3 final = vec3(1.0f);
-	/* if(sel_id.x > 0.0f || sel_id.y > 0.0f) */
+	vec3 final = vec3(1.0);
+	/* if(sel_id.x > 0.0 || sel_id.y > 0.0) */
 	/* { */
-	/* 	final -= sel_color * (1.0f - selected); */
+	/* 	final -= sel_color * (1.0 - selected); */
 	/* } */
 	if(is_equal(sel_id, c))
 	{
@@ -80,8 +80,8 @@ void main()
 		final += over_color * over;
 	}
 
-	FragColor = vec4(final, 1.0f);
-	/* FragColor = vec4(c * 30, 0.0f, 1.0f); */
+	FragColor = vec4(final, 1.0);
+	/* FragColor = vec4(c * 30, 0.0, 1.0); */
 }
 
 // vim: set ft=c:

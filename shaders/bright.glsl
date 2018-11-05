@@ -10,7 +10,7 @@ BUFFER {
 
 void main()
 {
-	float brightPassThreshold = 1.0f;
+	float brightPassThreshold = 1.0;
 
 	vec3 luminanceVector = vec3(0.2125, 0.7154, 0.0721);
 	vec3 c = textureLod(buf.color, texcoord, 0).rgb;
@@ -19,7 +19,7 @@ void main()
     luminance = max(0.0, luminance - brightPassThreshold);
     c *= sign(luminance);
 
-    FragColor = vec4(c, 1.0f);
+    FragColor = vec4(c, 1.0);
 }
 
 // vim: set ft=c:

@@ -430,17 +430,16 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_kawase(self, refr, tmp, 1, 2);
 	renderer_add_kawase(self, refr, tmp, 2, 3);
 
+	renderer_add_pass(self, "transp_1", "gbuffer", ref("transparent"),
+			0, gbuffer, gbuffer, 0, (bind_t[]){ {NONE} });
+
 	renderer_add_pass(self, "transp", "transparency", ref("transparent"),
-			DEPTH_EQUAL, light, gbuffer, 0,
+			DEPTH_LOCK | DEPTH_EQUAL, light, gbuffer, 0,
 		(bind_t[]){
-			{TEX, "gbuffer", .buffer = gbuffer},
 			{TEX, "refr", .buffer = refr},
 			{NONE}
 		}
 	);
-
-	renderer_add_pass(self, "transp_1", "gbuffer", ref("transparent"),
-			GL_EQUAL, gbuffer, gbuffer, 0, (bind_t[]){ {NONE} });
 
 	renderer_add_pass(self, "ssao_pass", "ssao", ref("quad"), MANUAL_MIP,
 			ssao, NULL, 0,

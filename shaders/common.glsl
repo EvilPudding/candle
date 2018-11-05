@@ -48,7 +48,7 @@ vec4 resolveProperty(property_t prop, vec2 coords)
 		coords *= prop.scale;
 		return mix(
 			prop.color,
-			texture2D(prop.texture, vec2(coords.x, 1.0f-coords.y)),
+			texture2D(prop.texture, vec2(coords.x, 1.0-coords.y)),
 			/* textureLod(prop.texture, prop.scale * coords, 3), */
 			prop.blend
 		);
@@ -77,18 +77,18 @@ float lookup(vec3 coord)
 
 vec2 encode_normal(vec3 n)
 {
-    float p = sqrt(n.z * 8.0f + 8.0f);
-    return vec2(n.xy/p + 0.5f);
+    float p = sqrt(n.z * 8.0 + 8.0);
+    return vec2(n.xy/p + 0.5);
 }
 
 vec3 decode_normal(vec2 enc)
 {
-    vec2 fenc = enc * 4.0f - 2.0f;
+    vec2 fenc = enc * 4.0 - 2.0;
     float f = dot(fenc,fenc);
-    float g = sqrt(1.0f - f / 4.0f);
+    float g = sqrt(1.0 - f / 4.0);
     vec3 n;
     n.xy = fenc * g;
-    n.z = 1.0f - f / 2.0f;
+    n.z = 1.0 - f / 2.0;
     return n;
 }
 
@@ -125,7 +125,7 @@ vec3 get_normal(vec2 tc)
 {
 	if(has_tex == 1)
 	{
-		vec3 texcolor = resolveProperty(mat(normal), tc).rgb * 2.0f - 1.0f;
+		vec3 texcolor = resolveProperty(mat(normal), tc).rgb * 2.0 - 1.0;
 		return normalize(TM * texcolor);
 
 	}
@@ -135,7 +135,7 @@ vec3 get_normal()
 {
 	if(has_tex == 1)
 	{
-		vec3 texcolor = resolveProperty(mat(normal), texcoord).rgb * 2.0f - 1.0f;
+		vec3 texcolor = resolveProperty(mat(normal), texcoord).rgb * 2.0 - 1.0;
 		return normalize(TM * texcolor);
 
 	}
@@ -185,11 +185,11 @@ float shadow_at_dist_no_tan(vec3 vec, float i)
 
 float linearize(float depth)
 {
-    return 2.0 * 0.1f * 100.0f / (100.0f + 0.1f - (2.0 * depth - 1.0) * (100.0f - 0.1f));
+    return 2.0 * 0.1 * 100.0 / (100.0 + 0.1 - (2.0 * depth - 1.0) * (100.0 - 0.1));
 }
 float unlinearize(float depth)
 {
-	return 100.0f * (1.0f - (0.1f / depth)) / (100.0f - 0.1f);
+	return 100.0 * (1.0 - (0.1 / depth)) / (100.0 - 0.1);
 }
 
 float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)
@@ -222,7 +222,7 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)
 			return (count / iters);
 		}
 	}
-	return 0.0f;
+	return 0.0;
 }
 
 float doAmbientOcclusion(sampler2D depth, vec2 tcoord, vec2 uv, vec3 p, vec3 cnorm)
@@ -231,7 +231,7 @@ float doAmbientOcclusion(sampler2D depth, vec2 tcoord, vec2 uv, vec3 p, vec3 cno
     vec3 diff = get_position(depth, tcoord + uv) - p;
     vec3 v = normalize(diff);
 	float dist = length(diff);
-	/* if(dist > 0.7) return 0.0f; */
+	/* if(dist > 0.7) return 0.0; */
 
     float d = dist * scale;
     return max(0.0, dot(cnorm, v) - bias) * (1.0 / (1.0 + d)) * intensity;
@@ -255,8 +255,8 @@ float ambientOcclusion(sampler2D depth, vec3 p, vec3 n, float dist_to_eye)
 {
 	vec2 rnd = normalize(vec2(rand(p.xy), rand(n.xy)));
 
-	float ao = 0.0f;
-	float rad = 0.4f / dist_to_eye;
+	float ao = 0.0;
+	float rad = 0.4 / dist_to_eye;
 
 	/* vec2 vec[8]; */ 
 	/* vec2 vec[4]; */ 
@@ -283,15 +283,15 @@ float ambientOcclusion(sampler2D depth, vec3 p, vec3 n, float dist_to_eye)
 		ao += doAmbientOcclusion(depth, texcoord, coord2, p, n);
 	}
 	ao /= float(iterations);
-	ao = 1.0f - ao * 0.1;
-	return clamp(ao, 0.0f, 1.0f); 
+	ao = 1.0 - ao * 0.1;
+	return clamp(ao, 0.0, 1.0); 
 }
 
 
 // Consts should help improve performance
 const float maxSteps = 20;
 const float searchDist = 20;
-const float searchDistInv = 1.0f / searchDist;
+const float searchDistInv = 1.0 / searchDist;
 
 vec3 get_proj_coord(sampler2D depthmap, vec3 hitCoord)
 	// z = hitCoord.z - depth
@@ -311,43 +311,43 @@ vec3 BinarySearch(sampler2D depthmap, vec3 dir, inout vec3 hitCoord)
     {
 		pc = get_proj_coord(depthmap, hitCoord);
 		if(pc.x > 1.0 || pc.y > 1.0 || pc.x < 0.0 || pc.y < 0.0) break;
-		if(abs(pc.z) <= 0.01f)
+		if(abs(pc.z) <= 0.01)
 		{
-			return vec3(pc.xy, 1.0f);
+			return vec3(pc.xy, 1.0);
 		}
  
         dir *= 0.5;
         hitCoord -= dir;    
     }
  
-    return vec3(pc.xy, 1.0f);
+    return vec3(pc.xy, 1.0);
 }
 
 vec3 RayCast(sampler2D depth, vec3 dir, inout vec3 hitCoord)
 {
-    dir *= 0.1f;  
+    dir *= 0.1;  
 
     for(int i = 0; i < 64; ++i) {
         hitCoord               += dir; 
-		dir *= 1.1f;
+		dir *= 1.1;
 
 		vec3 pc = get_proj_coord(depth, hitCoord);
 		if(pc.x > 1.0 || pc.y > 1.0 || pc.x < 0.0 || pc.y < 0.0) break;
 
-		if(pc.z < -2.0f) break;
-		if(pc.z < 0.0f)
+		if(pc.z < -2.0) break;
+		if(pc.z < 0.0)
 		{
-			return vec3(pc.xy, 1.0f);
+			return vec3(pc.xy, 1.0);
 			/* return BinarySearch(dir, hitCoord); */
 		}
     }
 
-    return vec3(0.0f);
+    return vec3(0.0);
 }
 
 float roughnessToSpecularPower(float r)
 {
-  return (2.0f / (pow(r, 4.0f)) - 2.0f);
+  return (2.0 / (pow(r, 4.0)) - 2.0);
 }
 
 #define CNST_MAX_SPECULAR_EXP 64
@@ -357,18 +357,18 @@ float specularPowerToConeAngle(float specularPower)
     // based on phong distribution model
     if(specularPower >= exp2(CNST_MAX_SPECULAR_EXP))
     {
-        return 0.0f;
+        return 0.0;
     }
-    const float xi = 0.244f;
-    float exponent = 1.0f / (specularPower + 1.0f);
+    const float xi = 0.244;
+    float exponent = 1.0 / (specularPower + 1.0);
     return acos(pow(xi, exponent));
 }
 
 float isoscelesTriangleInRadius(float a, float h)
 {
     float a2 = a * a;
-    float fh2 = 4.0f * h * h;
-    return (a * (sqrt(a2 + fh2) - a)) / (4.0f * h);
+    float fh2 = 4.0 * h * h;
+    return (a * (sqrt(a2 + fh2) - a)) / (4.0 * h);
 }
 
 vec3 fresnelSchlick(vec3 F0, float cosTheta)
@@ -376,7 +376,7 @@ vec3 fresnelSchlick(vec3 F0, float cosTheta)
 	return F0 + (vec3(1.0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
-#define saturate(val) (clamp(val, 0.0f, 1.0f))
+#define saturate(val) (clamp(val, 0.0, 1.0))
 
 vec4 coneSampleWeightedColor(sampler2D screen, vec2 samplePos,
 		float mipChannel, float gloss)
@@ -401,11 +401,11 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
 
 	if(perceptualRoughness > 0.95) return vec4(0.0);
 
-    float gloss = 1.0f - perceptualRoughness;
+    float gloss = 1.0 - perceptualRoughness;
     float specularPower = roughnessToSpecularPower(perceptualRoughness);
 
-	vec3 w_pos = (camera(model) * vec4(pos, 1.0f)).xyz;
-	vec3 w_nor = (camera(model) * vec4(nor, 0.0f)).xyz;
+	vec3 w_pos = (camera(model) * vec4(pos, 1.0)).xyz;
+	vec3 w_nor = (camera(model) * vec4(nor, 0.0)).xyz;
 	vec3 c_pos = camera(pos) - w_pos;
 	vec3 eye_dir = normalize(-c_pos);
 
@@ -421,10 +421,10 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
 	/* vec2 dCoords = abs((vec2(0.5, 0.5) - texcoord.xy) * 2 ); */
 	float screenEdgefactor = (clamp(1.0 - (pow(dCoords.x, 4) + pow(dCoords.y, 4)), 0.0, 1.0));
 
-	vec3 fallback_color = vec3(0.0f);
+	vec3 fallback_color = vec3(0.0);
 	/* vec3 fallback_color = texture(ambient_map, reflect(eye_dir, nor)).rgb / (mipChannel+1); */
 
-    float coneTheta = specularPowerToConeAngle(specularPower) * 0.5f;
+    float coneTheta = specularPowerToConeAngle(specularPower) * 0.5;
 
     // P1 = pos, P2 = raySS, adjacent length = ||P2 - P1||
     vec2 deltaP = coords.xy - texcoord;
@@ -432,34 +432,34 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
     vec2 adjacentUnit = normalize(deltaP);
 
 	int numMips = textureQueryLevels(screen);
-    vec4 reflect_color = vec4(0.0f);
-    float remainingAlpha = 1.0f;
-    float maxMipLevel = 3.0f;
+    vec4 reflect_color = vec4(0.0);
+    float remainingAlpha = 1.0;
+    float maxMipLevel = 3.0;
     float glossMult = gloss;
 
     // cone-tracing using an isosceles triangle to approximate a cone in screen space
     for(int i = 0; i < 14; ++i)
     {
-        float oppositeLength = 2.0f * tan(coneTheta) * adjacentLength;
+        float oppositeLength = 2.0 * tan(coneTheta) * adjacentLength;
         float incircleSize = isoscelesTriangleInRadius(oppositeLength, adjacentLength);
         vec2 samplePos = texcoord + adjacentUnit * (adjacentLength - incircleSize);
-		float mipChannel = clamp(log2(incircleSize), 0.0f, maxMipLevel);
+		float mipChannel = clamp(log2(incircleSize), 0.0, maxMipLevel);
 
         vec4 newColor = coneSampleWeightedColor(screen, samplePos, mipChannel, glossMult);
 
         remainingAlpha -= newColor.a;
-        if(remainingAlpha < 0.0f)
+        if(remainingAlpha < 0.0)
         {
-            newColor.rgb *= (1.0f - abs(remainingAlpha));
+            newColor.rgb *= (1.0 - abs(remainingAlpha));
         }
         reflect_color += newColor;
 
-        if(reflect_color.a >= 1.0f)
+        if(reflect_color.a >= 1.0)
         {
             break;
         }
 
-        adjacentLength = adjacentLength - (incircleSize * 2.0f);
+        adjacentLength = adjacentLength - (incircleSize * 2.0);
         glossMult *= gloss;
     }
 	vec3 f0 = vec3(0.04);
@@ -471,12 +471,12 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
     float NdotL = clamp(dot(w_nor, -eye_dir), 0.001, 1.0);
 
     specularColor = fresnelSchlick(vec3(reflectance), NdotL) * CNST_1DIVPI;
-    /* float fadeOnRoughness = saturate(gloss * 4.0f); */
+    /* float fadeOnRoughness = saturate(gloss * 4.0); */
     float fadeOnRoughness = 1;
-	float fade = screenEdgefactor * fadeOnRoughness * (1.0f - saturate(remainingAlpha));
+	float fade = screenEdgefactor * fadeOnRoughness * (1.0 - saturate(remainingAlpha));
 
 	return vec4(mix(fallback_color,
-				reflect_color.xyz * specularColor, fade), 1.0f);
+				reflect_color.xyz * specularColor, fade), 1.0);
 }
 
 /* * * * * * * * * * * * * * * * * * * * * PBR * * * * * * * * * * * * * * * * * * * * */
@@ -671,7 +671,7 @@ vec4 pbr(vec4 base_color, vec2 metallic_roughness,
 /* 		uv, float zReceiver, */ 
 /* 		float filterRadiusUV ) */ 
 /* { */ 
-/* 	float sum = 0.0f; */ 
+/* 	float sum = 0.0; */ 
 /* 	for ( int i = 0; i < PCF_NUM_SAMPLES; ++i ) */ 
 /* 	{ */ 
 /* 		vec2 offset = poissonDisk[i] * filterRadiusUV; */ 
@@ -692,7 +692,7 @@ vec4 pbr(vec4 base_color, vec2 metallic_roughness,
 /* 	if( numBlockers < 1 ) */   
 /* 		//There are no occluders so early out (this saves filtering) */ 
 /* 		return */
-/* 			1.0f; */ 
+/* 			1.0; */ 
 /* 	// STEP 2: penumbra size */ 
 /* 	float penumbraRatio = PenumbraSize(zReceiver, avgBlockerDepth); */     
 /* 	float filterRadiusUV = penumbraRatio * LIGHT_SIZE_UV * NEAR_PLANE / coords.z; */ 

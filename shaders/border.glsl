@@ -47,9 +47,9 @@ float is_selected(ivec2 coord)
 	float selected = filtered(t, sel_id);
 	if(is_equal(sel_id, t))
 	{
-		return 1.0f;
+		return 1.0;
 	}
-	return 0.0f;
+	return 0.0;
 }
 
 void main()
@@ -58,10 +58,10 @@ void main()
 
 	float selected = is_selected(tc);
 
-	const vec3 sel_color = vec3(0.8f, 0.7f, 0.2f);
+	const vec3 sel_color = vec3(0.8, 0.7, 0.2);
 
 	float w;
-	if(sel_id.x > 0.0f || sel_id.y > 0.0f)
+	if(sel_id.x > 0.0 || sel_id.y > 0.0)
 	{
 		if(horizontal)
 		{
@@ -86,7 +86,7 @@ void main()
 					min_d = min(texelFetch(sbuffer.depth, tc - off, 0).r, min_d);
 				}
 			}
-			FragColor = vec4(sel_percent, min_d, 0.0f, 0.0f);
+			FragColor = vec4(sel_percent, min_d, 0.0, 0.0);
 		}
 		else if(selected < 0.5)
 		{

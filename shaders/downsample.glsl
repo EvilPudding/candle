@@ -21,7 +21,7 @@ void main()
 	for(iv.x = 0; iv.x < 2; iv.x++)
 		for(iv.y = 0; iv.y < 2; iv.y++)
 			tex += texelFetch(buf.color, ivec2(pp) + iv, level);
-	tex /= 4.0f;
+	tex /= 4.0;
 	/* if(tex.a == 0) discard; */
 
 	FragColor = tex;

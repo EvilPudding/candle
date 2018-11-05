@@ -527,18 +527,18 @@ static void draw_conf_remove_instance(draw_conf_t *self, int32_t id)
 		return;
 	}
 	SDL_SemWait(self->semaphore);
-	int32_t i = --self->inst_num;
-	/* if(self->comps[id]->grp == ref("light")) */
-		/* printf("removing	%d\n", self->inst_num); */
+	int32_t last = --self->inst_num;
 
-	if(self->inst_num && id != i)
+	self->comps[id]->conf = NULL;
+
+	if(self->inst_num && id != last)
 	{
-		self->inst[id] = self->inst[i];
-		self->props[id] = self->props[i];
+		self->inst[id] = self->inst[last];
+		self->props[id] = self->props[last];
 #ifdef MESH4
-		self->angle4[id] = self->angle4[i];
+		self->angle4[id] = self->angle4[last];
 #endif
-		self->comps[id] = self->comps[i];
+		self->comps[id] = self->comps[last];
 
 		self->comps[id]->instance_id = id;
 
@@ -635,7 +635,6 @@ void drawable_model_changed(drawable_t *self)
 			if(grp->conf)
 			{
 				draw_conf_remove_instance(grp->conf, grp->instance_id);
-				grp->conf = NULL;
 			}
 
 			if(conf)

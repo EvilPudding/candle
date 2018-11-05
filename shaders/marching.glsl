@@ -5,14 +5,14 @@ uniform sampler3D field;
 uniform isampler2D triTableTex;
 uniform float iso_level;
 const vec3 vertDecals[8] = (vec3)(
-	vec3(0.0f, 0.0f, 0.0f),
-	vec3(1.0f, 0.0f, 0.0f),
-	vec3(1.0f, 1.0f, 0.0f),
-	vec3(0.0f, 1.0f, 0.0f),
-	vec3(0.0f, 0.0f, 1.0f),
-	vec3(1.0f, 0.0f, 1.0f),
-	vec3(1.0f, 1.0f, 1.0f),
-	vec3(0.0f, 1.0f, 1.0f)
+	vec3(0.0, 0.0, 0.0),
+	vec3(1.0, 0.0, 0.0),
+	vec3(1.0, 1.0, 0.0),
+	vec3(0.0, 1.0, 0.0),
+	vec3(0.0, 0.0, 1.0),
+	vec3(1.0, 0.0, 1.0),
+	vec3(1.0, 1.0, 1.0),
+	vec3(0.0, 1.0, 1.0)
 );
 
 vec3 cubePos(int i)
@@ -22,7 +22,7 @@ vec3 cubePos(int i)
 
 float cubeVal(vec3 p)
 {
-	return texture3D(field, (p+1.0f)/2.0f).a;
+	return texture3D(field, (p+1.0)/2.0).a;
 }
 int triTableValue(int i, int j)
 {
