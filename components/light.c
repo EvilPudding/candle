@@ -108,12 +108,14 @@ void c_light_set_groups(c_light_t *self, uint32_t visible_group,
 
 void c_light_visible(c_light_t *self, uint32_t visible)
 {
+	drawable_set_mesh(&self->draw, visible ? g_light : NULL);
 	if(!self->visible && visible)
 	{
 		self->frames_passed = -1;
+		world_changed();
+		drawable_model_changed(&self->draw);
 	}
 	self->visible = visible;
-	drawable_set_mesh(&self->draw, visible ? g_light : NULL);
 }
 
 static int c_light_position_changed(c_light_t *self)
