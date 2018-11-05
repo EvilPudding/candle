@@ -429,7 +429,7 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	renderer_add_pass(self, "transp_1", "gbuffer", ref("transparent"),
-			DEPTH_EQUAL, gbuffer, gbuffer, 0, (bind_t[]){ {NONE} });
+			0, gbuffer, gbuffer, 0, (bind_t[]){ {NONE} });
 
 	renderer_add_pass(self, "ssao_pass", "ssao", ref("quad"), MANUAL_MIP,
 			ssao, NULL, 0,
