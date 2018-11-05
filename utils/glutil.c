@@ -11,6 +11,7 @@ void _check_gl_error(const char *file, int line)
 	static int count = 0;
 	char message[512];
 	GLenum err = glGetError();
+	int got_error = 0;
 	while(err!=GL_NO_ERROR)
 	{
 		char *error = NULL;
@@ -33,12 +34,17 @@ void _check_gl_error(const char *file, int line)
 			printf("%s\n", message);
 			strncpy(last_error, message, sizeof(last_error));
 		}
-		/* exit(1); */
 
 		err=glGetError();
+		got_error = 1;
+	}
+	if(got_error)
+	{
+		exit(1);
 	}
 	if(SDL_ThreadID() != g_candle->render_id)
 	{
+		printf("glerr called in non render thread\n");
 		exit(1);
 	}
 }
