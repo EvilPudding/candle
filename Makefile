@@ -19,7 +19,7 @@ CFLAGS = $(shell sdl2-config --cflags) -DUSE_VAO -Wall -I. -Wuninitialized \
 
 CFLAGS_REL = $(CFLAGS) -O3
 
-CFLAGS_DEB = $(CFLAGS) -g3
+CFLAGS_DEB = $(CFLAGS) -g3 -DDEBUG
 
 ##############################################################################
 
