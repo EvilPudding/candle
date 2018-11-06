@@ -90,7 +90,7 @@ static void c_light_create_renderer(c_light_t *self)
 			CULL_DISABLE, output, output, 0,
 			(bind_t[]){
 				{CLEAR_DEPTH, .number = 1.0f},
-				{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 100.0f)},
+				{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, self->radius)},
 				{NONE}
 			}
 	);
@@ -186,6 +186,8 @@ static int c_light_pre_draw(c_light_t *self)
 		drawable_set_transform(&self->draw, model);
 
 		renderer_set_model(self->renderer, 0, &node->model);
+		/* renderer_pass(self->renderer, ref("depth"))->clear_color = */
+			/* vec4(0, 0, 0, self->radius); */
 	}
 	self->modified = 0;
 	return CONTINUE;

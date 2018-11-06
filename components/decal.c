@@ -30,7 +30,8 @@ c_decal_t *c_decal_new(mat_t *mat, int visible)
 			c_model_new(g_decal_mesh, mat, 0, visible));
 
 	c_model_t *mc = c_model(self);
-	drawable_set_group(&mc->draw, ref("decals"));
+	c_model_set_groups(mc, ref("decals"), 0, ref("transparent_decals"),
+			ref("selectable"));
 
 	return self;
 }

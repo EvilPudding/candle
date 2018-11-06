@@ -614,7 +614,7 @@ void c_model_update_mat(c_model_t *self)
 		{
 			drawable_add_group(&self->draw, self->selectable_group);
 		}
-		if(self->shadow_group)
+		if(self->shadow_group && self->cast_shadow)
 		{
 			drawable_add_group(&self->draw, self->shadow_group);
 		}

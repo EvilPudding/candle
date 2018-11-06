@@ -43,15 +43,15 @@ static void c_skin_init(c_skin_t *self)
 			"		mat4 MODIFIER;\n"
 			"		float wei = WEI[0] + WEI[1] + WEI[2] + WEI[3];\n"
 			"		if(wei > 0) {\n"
-			"			mat4 transform = bones[BID[0]] * WEI[0];\n"
-			"			transform += bones[BID[1]] * WEI[1];\n"
-			"			transform += bones[BID[2]] * WEI[2];\n"
-			"			transform += bones[BID[3]] * WEI[3];\n"
+			"			mat4 transform = bones.transforms[BID[0]] * WEI[0];\n"
+			"			transform += bones.transforms[BID[1]] * WEI[1];\n"
+			"			transform += bones.transforms[BID[2]] * WEI[2];\n"
+			"			transform += bones.transforms[BID[3]] * WEI[3];\n"
 			"			MODIFIER = transform;\n"
 			"		} else\n"
 			"		MODIFIER = M;\n"
 
-			"		MODIFIER = camera.view * MODIFIER;\n"
+			"		MODIFIER = camera(view) * MODIFIER;\n"
 
 			"		vec3 vertex_normal    = normalize(MODIFIER * vec4( N, 0.0f)).xyz;\n"
 			"		vec3 vertex_tangent   = normalize(MODIFIER * vec4(TG, 0.0f)).xyz;\n"
@@ -66,7 +66,8 @@ static void c_skin_init(c_skin_t *self)
 		));
 	}
 	c_model_t *mc = c_model(self);
-	drawable_set_vs(&mc->draw, g_skin_vs);
+	drawable_set_vs(&mc->draw, model_vs());
+	/* drawable_set_vs(&mc->draw, g_skin_vs); */
 }
 
 c_skin_t *c_skin_new()

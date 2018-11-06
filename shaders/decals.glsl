@@ -24,7 +24,6 @@ void main()
 	if(diff.y > 0.5) discard;
 	if(diff.z > 0.5) discard;
 	vec2 tc = m_pos.xy - 0.5;
-	tc.y = 1.0 - tc.y;
 
 	vec3 vnorm = resolveProperty(mat(normal), tc).rgb * 2.0 - 1.0;
 	/* vnorm = vec3(0.0, 0.0, 1.0); */

@@ -21,7 +21,6 @@ struct frame_script
 	float t;
 };
 
-extern int g_update_id;
 
 
 c_timeline_t *c_timeline_new()
@@ -201,7 +200,6 @@ static int c_timeline_update(c_timeline_t *self, float *dt)
 {
 	if(self->playing)
 	{
-		g_update_id++;
 		self->global_time += *dt;
 		self->t = fmod(self->global_time * self->ticks_per_sec, self->duration);
 		c_spacial_t *sc = c_spacial(self);

@@ -877,7 +877,7 @@ static int32_t texture_cubemap_loader(texture_t *self)
 		for(i = 0; i < 6; i++)
 		{
 			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
-					GL_DEPTH_COMPONENT32, self->width, self->height, 0,
+					GL_DEPTH_COMPONENT16, self->width, self->height, 0,
 					GL_DEPTH_COMPONENT, GL_FLOAT, NULL); glerr();
 		}
 	}

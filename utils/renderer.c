@@ -21,8 +21,6 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass);
 
 static int renderer_update_screen_texture(renderer_t *self);
 
-static int renderer_pass(renderer_t *self, unsigned int hash);
-
 static void bind_pass(pass_t *pass, shader_t *shader);
 
 static int pass_bind_buffer(pass_t *pass, bind_t *bind, shader_t *shader)
@@ -397,7 +395,6 @@ void renderer_default_pipeline(renderer_t *self)
 			{NONE}
 		}
 	);
-
 
 	renderer_add_pass(self, "ambient_light_pass", "phong", ref("ambient"),
 			ADD, light, NULL, 0,
@@ -797,24 +794,24 @@ int renderer_component_menu(renderer_t *self, void *ctx)
 
 
 
-static int renderer_pass(renderer_t *self, unsigned int hash)
+pass_t *renderer_pass(renderer_t *self, unsigned int hash)
 {
 	int i;
-	if(!hash) return -1;
+	if(!hash) return NULL;
 	for(i = 0; i < self->passes_size; i++)
 	{
 		pass_t *pass = &self->passes[i];
-		if(pass->hash == hash) return i;
+		if(pass->hash == hash) return pass;
 	}
-	return -1;
+	return NULL;
 }
 
 void renderer_toggle_pass(renderer_t *self, uint32_t hash, int active)
 {
-	int i = renderer_pass(self, hash);
-	if(i >= 0)
+	pass_t *pass = renderer_pass(self, hash);
+	if(pass)
 	{
-		self->passes[i].active = active;
+		pass->active = active;
 	}
 }
 
@@ -834,7 +831,7 @@ void renderer_add_pass(
 	snprintf(buffer, sizeof(buffer), name, self->passes_size);
 	unsigned int hash = ref(buffer);
 	/* TODO add pass replacement */
-	int i = -1;// renderer_pass(self, hash);
+	int i = -1;
 	if(i == -1)
 	{
 		i = self->passes_size++;

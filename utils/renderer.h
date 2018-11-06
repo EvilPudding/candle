@@ -225,6 +225,7 @@ unsigned int renderer_geom_at_pixel(renderer_t *self, int x, int y,
 void renderer_invert_depth(renderer_t *self, int inverted);
 int renderer_resize(renderer_t *self, int width, int height);
 
+pass_t *renderer_pass(renderer_t *self, unsigned int hash);
 void renderer_default_pipeline(renderer_t *self);
 void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model);
 void renderer_update_projection(renderer_t *self);

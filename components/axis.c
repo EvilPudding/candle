@@ -99,7 +99,7 @@ int c_axis_mouse_move(c_axis_t *self, mouse_move_data *event)
 		if(target)
 		{
 			entity_t parent = c_node(&target)->parent;
-			float amount = -event->sy * 0.04;
+			float amount = -event->sy * 0.01;
 
 			c_spacial_t *sc = c_spacial(&target);
 
