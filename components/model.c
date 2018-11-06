@@ -396,6 +396,7 @@ static void c_model_init(c_model_t *self)
 	}
 
 	self->visible_group = ref("visible");
+	self->shadow_group = ref("shadow");
 	self->transparent_group = ref("transparent");
 	self->selectable_group = ref("selectable");
 	self->visible = 1;
@@ -613,21 +614,27 @@ void c_model_update_mat(c_model_t *self)
 		{
 			drawable_add_group(&self->draw, self->selectable_group);
 		}
+		if(self->shadow_group)
+		{
+			drawable_add_group(&self->draw, self->shadow_group);
+		}
 	}
 
 	drawable_set_mat(&self->draw, self->mat ? self->mat->id : 0);
 }
 
-void c_model_set_groups(c_model_t *self, uint32_t visible, uint32_t transp,
-		uint32_t selectable)
+void c_model_set_groups(c_model_t *self, uint32_t visible, uint32_t shadow,
+		uint32_t transp, uint32_t selectable)
 {
 	drawable_remove_group(&self->draw, self->selectable_group);
 	drawable_remove_group(&self->draw, self->transparent_group);
 	drawable_remove_group(&self->draw, self->visible_group);
+	drawable_remove_group(&self->draw, self->shadow_group);
 
 	self->visible_group = visible;
 	self->transparent_group = transp;
 	self->selectable_group = selectable;
+	self->shadow_group = shadow;
 
 	c_model_update_mat(self);
 }
@@ -653,11 +660,11 @@ void c_model_set_cast_shadow(c_model_t *self, int cast_shadow)
 	self->cast_shadow = cast_shadow;
 	if(!self->cast_shadow)
 	{
-		drawable_remove_group(&self->draw, ref("shadow"));
+		drawable_remove_group(&self->draw, self->shadow_group);
 	}
 	else
 	{
-		drawable_add_group(&self->draw, ref("shadow"));
+		drawable_add_group(&self->draw, self->shadow_group);
 	}
 
 }
