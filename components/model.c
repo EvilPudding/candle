@@ -14,10 +14,39 @@ static int c_model_position_changed(c_model_t *self);
 static int paint_3d(mesh_t *mesh, vertex_t *vert);
 static int paint_2d(mesh_t *mesh, vertex_t *vert);
 int c_model_menu(c_model_t *self, void *ctx);
-vs_t *g_model_vs = NULL;
+static vs_t *g_model_vs;
 
 struct edit_tool g_edit_tools[32];
 int g_edit_tools_count = 0;
+
+vs_t *model_vs()
+{
+	if(!g_model_vs)
+	{
+		g_model_vs = vs_new("model", 1, vertex_modifier_new(
+			"	{\n"
+			"#ifdef MESH4\n"
+			"		float Y = cos(ANG4);\n"
+			"		float W = sin(ANG4);\n"
+			"		pos = vec4(vec3(P.x, P.y * Y + P.w * W, P.z), 1.0);\n"
+			"#endif\n"
+
+			"		mat4 MV    = camera(view) * M;\n"
+			"		vec3 vertex_normal    = normalize(MV * vec4( N, 0.0f)).xyz;\n"
+			"		vec3 vertex_tangent   = normalize(MV * vec4(TG, 0.0f)).xyz;\n"
+			"		vec3 vertex_bitangent = cross(vertex_tangent, vertex_normal);\n"
+			"		pos   = (MV * pos);\n"
+			"		vertex_position = pos.xyz;\n"
+
+			"		TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
+
+			"		pos = camera(projection) * pos;\n"
+			"	}\n"
+		));
+	}
+
+	return g_model_vs;
+}
 
 static int tool_circle_gui(void *ctx, struct conf_circle *conf)
 {
@@ -373,29 +402,6 @@ static void c_model_init(c_model_t *self)
 	/* self->layers = malloc(sizeof(*self->layers) * 16); */
 	self->history = vector_new(sizeof(mesh_history_t), FIXED_ORDER, NULL, NULL);
 
-	if(!g_model_vs)
-	{
-		g_model_vs = vs_new("model", 1, vertex_modifier_new(
-			"	{\n"
-			"#ifdef MESH4\n"
-			"		float Y = cos(ANG4);\n"
-			"		float W = sin(ANG4);\n"
-			"		pos = vec4(vec3(P.x, P.y * Y + P.w * W, P.z), 1.0);\n"
-			"#endif\n"
-
-			"		mat4 MV    = camera(view) * M;\n"
-			"		vec3 vertex_normal    = normalize(MV * vec4( N, 0.0f)).xyz;\n"
-			"		vec3 vertex_tangent   = normalize(MV * vec4(TG, 0.0f)).xyz;\n"
-			"		vec3 vertex_bitangent = cross(vertex_tangent, vertex_normal);\n"
-			"		pos   = (MV * pos);\n"
-			"		vertex_position = pos.xyz;\n"
-
-			"		TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
-
-			"		pos = camera(projection) * pos;\n"
-			"	}\n"
-		));
-	}
 }
 
 /* void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset) */
@@ -416,7 +422,7 @@ void c_model_init_drawables(c_model_t *self)
 	drawable_init(&self->draw, self->visible_group, NULL);
 	drawable_add_group(&self->draw, ref("selectable"));
 	drawable_set_entity(&self->draw, c_entity(self));
-	drawable_set_vs(&self->draw, g_model_vs);
+	drawable_set_vs(&self->draw, model_vs());
 }
 
 c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow, int visible)
@@ -644,7 +650,8 @@ void c_model_set_cast_shadow(c_model_t *self, int cast_shadow)
 {
 	if(self->cast_shadow == cast_shadow) return;
 
-	if(self->cast_shadow)
+	self->cast_shadow = cast_shadow;
+	if(!self->cast_shadow)
 	{
 		drawable_remove_group(&self->draw, ref("shadow"));
 	}
@@ -729,7 +736,7 @@ int c_model_menu(c_model_t *self, void *ctx)
 	new_value = nk_check_label(ctx, "Cast shadow", self->cast_shadow);
 	if(new_value != self->cast_shadow)
 	{
-		self->cast_shadow = new_value;
+		c_model_set_cast_shadow(self, new_value);
 		changes = 1;
 	}
 
@@ -770,6 +777,15 @@ int c_model_menu(c_model_t *self, void *ctx)
 		if(new_value != mesh->wireframe)
 		{
 			mesh->wireframe = new_value;
+			changes = 1;
+		}
+
+		new_value = nk_check_label(ctx, "Receive Shadows",
+				mesh->receive_shadows);
+
+		if(new_value != mesh->receive_shadows)
+		{
+			mesh->receive_shadows = new_value;
 			changes = 1;
 		}
 

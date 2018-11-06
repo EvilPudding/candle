@@ -50,7 +50,11 @@ void main()
 
 		float depth = textureLod(gbuffer.depth, pixel_pos(), 0).r;
 		/* FragColor = vec4(w_light_dir, 1.0); return; */
-		float sd = get_shadow(w_light_dir, point_to_light, dist_to_eye, depth);
+		float sd = 0.0f;
+		if(dif.a >= 1.0)
+		{
+			sd = get_shadow(w_light_dir, point_to_light, dist_to_eye, depth);
+		}
 		/* FragColor = vec4(vec3(texture(light(shadow_map), vec3(c_pos)).a) / 10.0, 1.0); return; */
 		/* FragColor = vec4(vec3(lookup_single(-w_light_dir)) / 10.0, 1.0); return; */
 		/* sd = 0; */

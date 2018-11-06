@@ -946,6 +946,7 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	}
 
 	glUniform1ui(23, mesh->has_texcoords);
+	glUniform1ui(25, mesh->receive_shadows);
 
 	glBindVertexArray(self->vao); glerr();
 

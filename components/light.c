@@ -8,14 +8,18 @@
 #include <systems/window.h>
 #include <stdlib.h>
 #include <systems/render_device.h>
+#include <components/sprite.h>
+#include <utils/bulb.h>
 
 static mesh_t *g_light;
 extern vs_t *g_quad_vs;
 extern mesh_t *g_quad_mesh;
 /* entity_t g_light = entity_null; */
 static int g_lights_num;
+static mat_t *g_light_widget;
 
 static int c_light_position_changed(c_light_t *self);
+static int c_light_editmode_toggle(c_light_t *self);
 
 c_light_t *c_light_new(float radius, vec4_t color, uint32_t shadow_size)
 {
@@ -38,7 +42,7 @@ void c_light_init(c_light_t *self)
 
 	self->ambient_group = ref("ambient");
 	self->light_group = ref("light");
-	self->visible_group = ref("visible");
+	self->visible_group = ref("shadow");
 
 	if(!g_light)
 	{
@@ -49,16 +53,29 @@ void c_light_init(c_light_t *self)
 		mesh_subdivide(g_light, 1);
 		mesh_spherize(g_light, 1.0f);
 		mesh_unlock(g_light);
+
+		g_light_widget = mat_new("light_widget");
+		g_light_widget->albedo.texture = texture_from_memory(bulb_png, bulb_png_len);
+		g_light_widget->albedo.blend = 1.0f;
+		g_light_widget->emissive.color = vec4(1.0);
 	}
 	self->id = g_lights_num++;
 
+	drawable_init(&self->widget, ref("transparent"), NULL);
+	drawable_add_group(&self->widget, ref("selectable"));
+	drawable_set_vs(&self->widget, sprite_vs());
+	drawable_set_mat(&self->widget, g_light_widget->id);
+	drawable_set_entity(&self->widget, c_entity(self));
+	drawable_set_xray(&self->widget, 1);
+
 	drawable_init(&self->draw, self->light_group, NULL);
-	drawable_set_vs(&self->draw, g_model_vs);
+	drawable_set_vs(&self->draw, model_vs());
 	drawable_set_mesh(&self->draw, g_light);
 	drawable_set_mat(&self->draw, self->id);
 	drawable_set_entity(&self->draw, c_entity(self));
 
 	c_light_position_changed(self);
+	c_light_editmode_toggle(self);
 
 	world_changed();
 }
@@ -73,7 +90,7 @@ static void c_light_create_renderer(c_light_t *self)
 			CULL_DISABLE, output, output, 0,
 			(bind_t[]){
 				{CLEAR_DEPTH, .number = 1.0f},
-				{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+				{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 100.0f)},
 				{NONE}
 			}
 	);
@@ -120,6 +137,9 @@ void c_light_visible(c_light_t *self, uint32_t visible)
 
 static int c_light_position_changed(c_light_t *self)
 {
+	c_node_t *node = c_node(self);
+	c_node_update_model(node);
+	drawable_set_transform(&self->widget, node->model);
 	self->modified = 1;
 	return CONTINUE;
 }
@@ -153,13 +173,12 @@ static int c_light_pre_draw(c_light_t *self)
 			c_light_create_renderer(self);
 		}
 		drawable_set_group(&self->draw, self->light_group);
-		drawable_set_vs(&self->draw, g_model_vs);
+		drawable_set_vs(&self->draw, model_vs());
 		if(self->visible)
 		{
 			drawable_set_mesh(&self->draw, g_light);
 		}
 		c_node_t *node = c_node(self);
-		c_node_update_model(node);
 		vec3_t pos = c_node_local_to_global(node, vec3(0, 0, 0));
 		mat4_t model = mat4_translate(pos);
 		model = mat4_scale_aniso(model, vec3(self->radius * 1.15f));
@@ -211,7 +230,7 @@ int c_light_menu(c_light_t *self, void *ctx)
 	return CONTINUE;
 }
 
-int c_light_draw(c_light_t *self)
+static int c_light_draw(c_light_t *self)
 {
 	if(self->visible && self->renderer && self->radius > 0 &&
 			self->visible_group && self->frames_passed <= 0)
@@ -221,7 +240,7 @@ int c_light_draw(c_light_t *self)
 	return CONTINUE;
 }
 
-void c_light_destroy(c_light_t *self)
+static void c_light_destroy(c_light_t *self)
 {
 	drawable_set_mesh(&self->draw, NULL);
 	if(self->renderer)
@@ -230,11 +249,28 @@ void c_light_destroy(c_light_t *self)
 	}
 }
 
+static int c_light_editmode_toggle(c_light_t *self)
+{
+	c_editmode_t *edit = c_editmode(&SYS);
+	if(!edit) return CONTINUE;
+
+	if(edit->control)
+	{
+		drawable_set_mesh(&self->widget, sprite_mesh());
+	}
+	else
+	{
+		drawable_set_mesh(&self->widget, NULL);
+	}
+	return CONTINUE;
+}
+
 REG()
 {
 	ct_t *ct = ct_new("light", sizeof(c_light_t), c_light_init,
 			c_light_destroy, 1, ref("node"));
 
+	ct_listener(ct, WORLD, sig("editmode_toggle"), c_light_editmode_toggle);
 	ct_listener(ct, WORLD, sig("component_menu"), c_light_menu);
 	ct_listener(ct, WORLD | 30, sig("world_draw"), c_light_draw);
 	ct_listener(ct, WORLD, sig("world_pre_draw"), c_light_pre_draw);

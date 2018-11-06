@@ -60,6 +60,7 @@ layout(std140, binding = 21) uniform bones_t
 layout(location = 22) uniform vec2 screen_size;
 layout(location = 23) uniform uint has_tex;
 layout(location = 24) uniform bool has_normals;
+layout(location = 25) uniform uint receive_shadows;
 
 /* layout(location = 25) uniform camera_t camera; */
 

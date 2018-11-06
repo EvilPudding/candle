@@ -10,6 +10,7 @@ typedef struct
 	int pressing;
 	int type;
 	mesh_t *dir_mesh;
+	int visible;
 } c_axis_t;
 
 DEF_CASTER("axis", c_axis, c_axis_t)

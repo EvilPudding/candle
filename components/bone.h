@@ -8,8 +8,8 @@
 typedef struct
 {
 	c_t super; /* extends c_t */
-	drawable_t *draw;
-	drawable_t *joint;
+	drawable_t draw;
+	drawable_t joint;
 } c_bone_t;
 
 DEF_CASTER("bone", c_bone, c_bone_t)

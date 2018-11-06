@@ -8,20 +8,28 @@
 #include <systems/editmode.h>
 #include <candle.h>
 
-vs_t *g_sprite_vs;
+static vs_t *g_sprite_vs;
 
 static int c_sprite_position_changed(c_sprite_t *self);
-mesh_t *g_sprite_mesh;
+static mesh_t *g_sprite_mesh;
 
 void world_changed(void);
 
-vs_t *sprite_vs()
+mesh_t *sprite_mesh()
 {
 	if(!g_sprite_mesh)
 	{
 		g_sprite_mesh = mesh_new();
 		mesh_quad(g_sprite_mesh);
 		g_sprite_mesh->cull = 0;
+	}
+	return g_sprite_mesh;
+}
+
+vs_t *sprite_vs()
+{
+	if(!g_sprite_vs)
+	{
 		g_sprite_vs = vs_new("sprite", 1, vertex_modifier_new(
 			"	{\n"
 			"		mat4 MV = camera(view) * M;\n"

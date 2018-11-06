@@ -144,6 +144,7 @@ mesh_t *mesh_new()
 {
 	mesh_t *self = calloc(1, sizeof *self);
 
+	self->receive_shadows = 1;
 	self->cull = 0x2; // CULL_BACK
 	self->smooth_angle = 0.2f;
 	self->transformation = mat4();

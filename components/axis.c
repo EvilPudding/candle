@@ -146,6 +146,24 @@ int c_axis_mouse_move(c_axis_t *self, mouse_move_data *event)
 	return CONTINUE;
 }
 
+static int c_axis_editmode_toggle(c_axis_t *self)
+{
+	c_editmode_t *edit = c_editmode(&SYS);
+	if(!edit) return CONTINUE;
+
+	c_model_t *mc = c_model(self);
+	if(edit->control)
+	{
+		c_model_set_visible(mc, self->visible);
+	}
+	else
+	{
+		self->visible = mc->visible;
+		c_model_set_visible(mc, 0);
+	}
+	return CONTINUE;
+}
+
 int c_axis_created(c_axis_t *self)
 {
 	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL, NULL);
@@ -156,6 +174,8 @@ REG()
 {
 	ct_t *ct = ct_new("axis", sizeof(c_axis_t),
 			c_axis_init, NULL, 1, ref("node"));
+
+	ct_listener(ct, WORLD, sig("editmode_toggle"), c_axis_editmode_toggle);
 
 	ct_listener(ct, ENTITY, sig("entity_created"), c_axis_created);
 

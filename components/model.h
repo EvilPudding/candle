@@ -132,7 +132,7 @@ typedef struct
 } c_model_t;
 
 DEF_CASTER("model", c_model, c_model_t)
-extern vs_t *g_model_vs;
+vs_t *model_vs(void);
 
 void c_model_edit(c_model_t *self, mesh_edit_t type, geom_t target);
 /* void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset); */

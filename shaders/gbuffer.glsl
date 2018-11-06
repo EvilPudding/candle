@@ -12,6 +12,7 @@ void main()
 	dif.rgb += poly_color;
 	/* dif.rgb = TM[2] / 2.0 + 0.5; */
 	AlbedoColor = dif;
+	AlbedoColor.a = receive_shadows > 0 ? 1.0 : 0.5;
 
 	if(has_normals)
 	{

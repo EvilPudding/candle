@@ -654,6 +654,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 	}
 	else
 	{
+
 		glBindBufferBase(GL_UNIFORM_BUFFER, 19, self->ubos[pass->camid]); glerr();
 		texture_target(pass->output, depth, pass->framebuffer_id);
 

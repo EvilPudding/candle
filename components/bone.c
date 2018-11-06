@@ -43,6 +43,12 @@ static void c_bone_init(c_bone_t *self)
 		c_model(&g_end)->xray = 1;
 		c_node(&g_end)->ghost = 1;
 	}
+
+	drawable_init(&self->draw, ref("transparent"), NULL);
+	drawable_init(&self->joint, ref("transparent"), NULL);
+	drawable_set_vs(&self->draw, model_vs());
+	drawable_set_vs(&self->joint, model_vs());
+
 }
 
 c_bone_t *c_bone_new()
