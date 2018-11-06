@@ -428,9 +428,6 @@ static inline type##3_t type##3_rotate(const type##3_t v, const type##3_t a, \
 	MAFS_DEFINE_VEC_PRINT(n_t, type, format, 4) \
 	MAFS_DEFINE_SPECIFIC(n_t, type, sqrt, pow)
 
-/* MAFS_DEFINE_STRUCTS(unsigned int, uvec) */
-/* MAFS_DEFINE_CONSTRUCTOR(unsigned int, uvec) */
-
 #ifndef __OPENCL_C_VERSION__
 MAFS_DEFINE_TYPE(uint32_t, uvec, "%u", sqrtf, powf, floorf, roundf)
 #endif
@@ -1214,6 +1211,9 @@ static inline vec2_t int_to_vec2(int id)
 #define _vec2(v) (float)v.x, (float)v.y
 #define _vec3(v) (float)v.x, (float)v.y, (float)v.z
 #define _vec4(v) (float)v.x, (float)v.y, (float)v.z, (float)v.w
+#define _uvec2(v) (uint32_t)v.x, (uint32_t)v.y
+#define _uvec3(v) (uint32_t)v.x, (uint32_t)v.y, (uint32_t)v.z
+#define _uvec4(v) (uint32_t)v.x, (uint32_t)v.y, (uint32_t)v.z, (uint32_t)v.w
 #define _d2(v) (double)v.x, (double)v.y
 #define _d3(v) (double)v.x, (double)v.y, (double)v.z
 #define _d4(v) (double)v.x, (double)v.y, (double)v.z, (double)v.w
@@ -1253,9 +1253,48 @@ static inline vec2_t int_to_vec2(int id)
 #define __vec4_4(a, b, c, d)  \
 			vec4_n_n_n_n(a, b, c, d)
 
+
+#define __uvec2_1(a)  \
+			_if(_type(a, uvec2_t), \
+				a, \
+				uvec2_n(a) \
+			)
+#define __uvec2_2(a, b)  \
+			uvec2_n_n(a, b)
+
+
+#define __uvec3_1(a)  \
+			_if(_type(a, uvec3_t), \
+				a, \
+				uvec3_n(a) \
+			)
+#define __uvec3_2(a, b)  \
+			_if(_type(a, uvec2_t), \
+				uvec3v2f(a, b), \
+				uvec3fv2(a, b) \
+			)
+#define __uvec3_3(a, b, c)  \
+			uvec3_n_n_n(a, b, c)
+
+#define __uvec4_1(a)  \
+			_if(_type(a, uvec4_t), \
+				a, \
+				uvec4_n(a) \
+			)
+#define __uvec4_2(a, b)  \
+			_if(_type(a, uvec3_t), \
+				uvec4v3f(a, b), \
+				uvec4fv3(a, b) \
+			)
+#define __uvec4_4(a, b, c, d)  \
+			uvec4_n_n_n_n(a, b, c, d)
+
 #define vec2(...) CAT2(__vec2_, MAFS_ARGNUM(__VA_ARGS__))(__VA_ARGS__)
 #define vec3(...) CAT2(__vec3_, MAFS_ARGNUM(__VA_ARGS__))(__VA_ARGS__)
 #define vec4(...) CAT2(__vec4_, MAFS_ARGNUM(__VA_ARGS__))(__VA_ARGS__)
+#define uvec2(...) CAT2(__uvec2_, MAFS_ARGNUM(__VA_ARGS__))(__VA_ARGS__)
+#define uvec3(...) CAT2(__uvec3_, MAFS_ARGNUM(__VA_ARGS__))(__VA_ARGS__)
+#define uvec4(...) CAT2(__uvec4_, MAFS_ARGNUM(__VA_ARGS__))(__VA_ARGS__)
 
 #define xy(vec) vec.xy
 #define xz(vec) vec2(vec.x, vec.z)

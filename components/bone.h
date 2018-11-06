@@ -10,10 +10,12 @@ typedef struct
 	c_t super; /* extends c_t */
 	drawable_t draw;
 	drawable_t joint;
+	entity_t skin;
+	mat4_t offset;
 } c_bone_t;
 
 DEF_CASTER("bone", c_bone, c_bone_t)
 
-c_bone_t *c_bone_new(void);
+c_bone_t *c_bone_new(entity_t skin, mat4_t offset);
 
 #endif /* !BONE_H */

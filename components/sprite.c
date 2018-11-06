@@ -133,6 +133,7 @@ static int c_sprite_position_changed(c_sprite_t *self)
 	c_node_t *node = c_node(self);
 	c_node_update_model(node);
 	drawable_set_transform(&self->draw, node->model);
+	drawable_set_entity(&self->draw, node->unpack_inheritance);
 
 	return CONTINUE;
 }

@@ -52,10 +52,10 @@ layout(std140, binding = 20) uniform scene_t
 	vec4 test_color;
 } scene;
 
-layout(std140, binding = 21) uniform bones_t
+layout(std140, binding = 21) uniform skin_t
 {
-	mat4 transforms[30];
-} bones;
+	mat4 bones[30];
+} skin;
 
 layout(location = 22) uniform vec2 screen_size;
 layout(location = 23) uniform uint has_tex;

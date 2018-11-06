@@ -66,6 +66,10 @@ typedef struct vertex_t
 	vec4_t color;
 	int half;
 	int tmp;
+
+	/* Skin */
+	vec4_t  wei;
+	uvec4_t bid;
 } vertex_t;
 
 #define v_half(v, m) (m_edge(m, v->half))
@@ -163,18 +167,6 @@ typedef struct
 #endif
 } mesh_selection_t;
 
-typedef struct skin_t
-{
-	int bones_num;
-	uint64_t bones[30];
-	mat4_t off[30];
-
-	vec4_t  *wei;
-	uvec4_t *bid;
-	int vert_alloc;
-
-} skin_t;
-
 typedef struct mesh_t
 {
 	vector_t *faces;
@@ -208,8 +200,6 @@ typedef struct mesh_t
 	void *semaphore;
 	uint64_t owner_thread;
 
-	skin_t *skin;
-
 	/* DISPAY PROPERTIES */
 	int wireframe;
 	int cull;
@@ -217,6 +207,8 @@ typedef struct mesh_t
 	float smooth_angle;
 	int receive_shadows;
 	int ref_num;
+
+	int has_skin;
 } mesh_t;
 
 typedef enum

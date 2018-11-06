@@ -67,7 +67,7 @@ void varray_vert_prealloc(varray_t *self, int32_t size)
 	self->tex = realloc(self->tex, self->vert_alloc * sizeof(*self->tex));
 	self->tan = realloc(self->tan, self->vert_alloc * sizeof(*self->tan));
 	self->col = realloc(self->col, self->vert_alloc * sizeof(*self->col));
-	if(self->mesh->skin)
+	if(self->mesh->has_skin)
 	{
 		self->wei = realloc(self->wei, self->vert_alloc * sizeof(*self->wei));
 		self->bid = realloc(self->bid, self->vert_alloc * sizeof(*self->bid));
@@ -229,6 +229,15 @@ void drawable_set_group(drawable_t *self, uint32_t group)
 	drawable_model_changed(self);
 }
 
+void drawable_set_skin(drawable_t *self, skin_t *skin)
+{
+	if(skin != self->skin)
+	{
+		self->skin = skin;
+		drawable_model_changed(self);
+	}
+}
+
 void drawable_set_mesh(drawable_t *self, mesh_t *mesh)
 {
 	if(mesh != self->mesh)
@@ -311,7 +320,11 @@ void drawable_set_transform(drawable_t *self, mat4_t transform)
 
 void drawable_set_entity(drawable_t *self, entity_t entity)
 {
-	self->entity = entity;
+	if(self->entity != entity)
+	{
+		self->entity = entity;
+		drawable_model_changed(self);
+	}
 }
 
 static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
@@ -365,7 +378,7 @@ static int32_t varray_add_vert(
 	self->col[i] = c;
 	self->id[i] = int_to_vec2(id);
 
-	if(self->mesh->skin)
+	if(self->mesh->has_skin)
 	{
 		self->bid[i] = bid;
 		self->wei[i] = wei;
@@ -437,15 +450,8 @@ void varray_face_to_gl(varray_t *self, face_t *f, int32_t id)
 		edge_t *hedge = f_edge(f, i, mesh);
 		vertex_t *V = e_vert(hedge, mesh);
 
-		vec4_t  wei = vec4(0,0,0,0);
-		uvec4_t bid = uvec4(0,0,0,0);
-		if(self->mesh->skin)
-		{
-			wei = self->mesh->skin->wei[hedge->v];
-			bid = self->mesh->skin->bid[hedge->v];
-		}
 		v[i] = varray_add_vert(self, V->pos, hedge->n,
-				hedge->t, hedge->tg, V->color.xyz, id, wei, bid);
+				hedge->t, hedge->tg, V->color.xyz, id, V->wei, V->bid);
 	}
 	if(f->e_size == 4)
 	{
@@ -579,6 +585,7 @@ draw_conf_t *drawable_get_conf(drawable_t *self, uint32_t gid)
 	draw_conf_t *result;
 	struct conf_vars conf = {
 		.mesh = self->mesh,
+		.skin = self->skin,
 		.xray = self->xray,
 		.vs = self->vs
 	};
@@ -783,7 +790,7 @@ static void varray_update_buffers(varray_t *self)
 		/* COLOR BUFFER */
 		create_buffer(&vbo[5], self->col, 3, self->vert_num, 0);
 
-		if(self->mesh->skin)
+		if(self->mesh->has_skin)
 		{
 			/* BONEID BUFFER */
 			create_buffer(&vbo[6], self->bid, 4, self->vert_num, 0);
@@ -824,7 +831,7 @@ static void varray_update_buffers(varray_t *self)
 		/* COLOR BUFFER */
 		update_buffer(&vbo[5], self->col, 3, self->vert_num, 0); glerr();
 
-		if(self->mesh->skin)
+		if(self->mesh->has_skin)
 		{
 			/* BONEID BUFFER */
 			update_buffer(&vbo[6], self->bid, 4, self->vert_num, 0); glerr();
@@ -883,7 +890,7 @@ static void varray_bind(varray_t *self)
 	/* COLOR BUFFER */
 	bind_buffer(&vbo[5], 5, GL_FLOAT, 3, 0);
 
-	if(self->mesh->skin)
+	if(self->mesh->has_skin)
 	{
 		/* BONEID BUFFER */
 		bind_buffer(&vbo[6], 6, GL_UNSIGNED_INT, 4, 0);
@@ -916,6 +923,24 @@ static void draw_conf_update_vao(draw_conf_t *self)
 	glBindVertexArray(0); glerr();
 }
 
+
+static void draw_conf_update_skin(draw_conf_t *self)
+{
+	skin_t *skin = self->vars.skin;
+	if(!self->skin)
+	{
+		glGenBuffers(1, &self->skin); glerr();
+		glBindBuffer(GL_UNIFORM_BUFFER, self->skin); glerr();
+		glBufferData(GL_UNIFORM_BUFFER, sizeof(skin->transforms),
+				&skin->transforms[0], GL_DYNAMIC_DRAW); glerr();
+	}
+	if(self->last_skin_update == skin->update_id) return;
+	self->last_skin_update = skin->update_id;
+	void *p = glMapNamedBuffer(self->skin, GL_WRITE_ONLY);
+	memcpy(p, &skin->transforms[0], skin->bones_num * sizeof(mat4_t));
+	glUnmapNamedBuffer(self->skin); glerr();
+}
+
 int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 {
 	if(!self || !self->inst_num) return 0;
@@ -931,6 +956,13 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	draw_conf_update_inst(self, instance_id);
 
 	draw_conf_update_vao(self);
+
+	if(self->vars.skin)
+	{
+		draw_conf_update_skin(self);
+
+		glBindBufferBase(GL_UNIFORM_BUFFER, 21, self->skin); glerr();
+	}
 
 	vs_bind(self->vars.vs);
 

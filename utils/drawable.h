@@ -4,6 +4,9 @@
 #include <utils/khash.h>
 #include <utils/shader.h>
 
+/* TODO maybe skin_t should not be defined on a component header */
+#include <components/skin.h>
+
 typedef struct drawable_t drawable_t;
 
 typedef struct
@@ -38,9 +41,15 @@ typedef struct
 	mesh_t *mesh;
 } varray_t;
 
+typedef struct
+{
+	mat4_t bones[30];
+} gl_skin_t;
+
 struct conf_vars
 {
 	mesh_t *mesh;
+	skin_t *skin;
 	vs_t *vs;
 	int xray;
 	int padding;
@@ -74,12 +83,14 @@ typedef struct draw_conf_t
 
 	GLuint vao;
 	GLuint vbo[24];
+	GLuint skin;
 
 	struct conf_vars vars;
 	void *semaphore;
 	int32_t trans_updates;
 	int32_t props_updates;
 	int32_t last_update_frame;
+	uint32_t last_skin_update;
 } draw_conf_t;
 
 typedef struct drawable_t
@@ -87,6 +98,7 @@ typedef struct drawable_t
 	/* int groups_num; */
 
 	mesh_t *mesh;
+	skin_t *skin;
 	int32_t xray;
 	int32_t mat;
 	mat4_t transform;
@@ -114,6 +126,7 @@ void drawable_add_group(drawable_t *self, uint32_t group);
 void drawable_remove_group(drawable_t *self, uint32_t group);
 void drawable_set_group(drawable_t *self, uint32_t group);
 void drawable_set_mesh(drawable_t *self, mesh_t *mesh);
+void drawable_set_skin(drawable_t *self, skin_t *skin);
 void drawable_set_mat(drawable_t *self, int32_t mat);
 void drawable_set_vs(drawable_t *self, vs_t *vs);
 void drawable_set_xray(drawable_t *self, int32_t xray);

@@ -188,7 +188,8 @@ static void vert_init(vertex_t *self)
 	self->color = vec4(0.0f);
 	self->tmp = -1;
 	self->half = -1;
-
+	self->wei = vec4(0.0f);
+	self->bid = uvec4(0);
 }
 
 
