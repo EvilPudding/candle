@@ -109,6 +109,7 @@ Anyone is welcome to contribute, there are many features missing:
 
 ## Screenshots
 ![Screenshot](https://i.imgur.com/E2Qxp4Q.png)
+![Screenshot](https://i.imgur.com/9BInObF.jpg)
 ![Screenshot](https://i.imgur.com/X8JEI8x.png)
 ![Screenshot](https://i.imgur.com/UfvwsHN.png)
 ![Screenshot](https://i.imgur.com/jF5aFB7.png)
