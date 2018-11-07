@@ -520,9 +520,9 @@ void c_editmode_enter_context(c_editmode_t *self)
 		c_node_t *nc = c_node(&self->selected);
 		if(nc)
 		{
-			c_node_pack(nc, 1);
 			self->context = self->selected;
 			c_editmode_select(self, entity_null);
+			c_node_pack(nc, 1);
 		}
 	}
 }

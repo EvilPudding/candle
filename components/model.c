@@ -849,7 +849,14 @@ static int c_model_position_changed(c_model_t *self)
 	c_node_t *node = c_node(self);
 	c_node_update_model(node);
 
-	drawable_set_entity(&self->draw, node->unpack_inheritance);
+	if(node->unpack_inheritance)
+	{
+		drawable_set_entity(&self->draw, node->unpack_inheritance);
+	}
+	else
+	{
+		drawable_set_entity(&self->draw, c_entity(self));
+	}
 	/* mat4_t model = node->model; */
 	/* if(self->scale_dist > 0.0f) */
 	/* { */
