@@ -91,6 +91,7 @@ Features that aren't requirements for all projects, are split into plugins, the 
  * [openal.candle](https://github.com/EvilPudding/openal.candle) for sounds
  * [bullet.candle](https://github.com/EvilPudding/bullet.candle) for physics
  * [filepicker.candle](https://github.com/EvilPudding/filepicker.candle) for a file picker dialog
+ * [steam.candle](https://github.com/EvilPudding/steam.candle) for steam integration (currently only fetches nickname and profile picture)
 
 Each plugin may require specific dependencies, and are added to a project through the use of *git submodules*, for example:
 
