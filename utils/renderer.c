@@ -516,6 +516,7 @@ void renderer_update_projection(renderer_t *self)
 		self->glvars[f].inv_projection = self->glvars[0].inv_projection;
 		self->glvars[f].pos = self->glvars[0].pos;
 	}
+	update_ubo(self, 0);
 }
 
 vec3_t renderer_real_pos(renderer_t *self, float depth, vec2_t coord)
