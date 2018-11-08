@@ -645,13 +645,17 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 					candle_grab_mouse(c_entity(self), 1);
 					self->backup_renderer = c_window(self)->renderer;
 					if(!self->activated) { c_editmode_activate(self); }
-					c_window(self)->renderer = c_camera(&self->camera)->renderer;
+					c_camera_t *cam = c_camera(&self->camera);
+					cam->active = 1;
+					c_window(self)->renderer = cam->renderer;
 					self->control = 1;
 				}
 				else
 				{
 					candle_release_mouse(c_entity(self), 0);
 					self->over = entity_null;
+					c_camera_t *cam = c_camera(&self->camera);
+					cam->active = 0;
 					c_window(self)->renderer = self->backup_renderer;
 					self->control = 0;
 				}
