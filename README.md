@@ -52,7 +52,7 @@ c_spacial_set_pos(sc, vec3(0, 1, 0)); /* move the cube upwards */
 c_spacial_rotate_Y(sc, M_PI); /* rotate the cube around the Y axis by ~3.1415 radians */
 ```
 
-If I wish to make the a light source, I can add to the entity a ```c_light``` component by:
+If I wish to make cube the a light source, I can add to the entity a ```c_light``` component by:
 
 ```c
 entity_add_component(cube, c_light_new(30.0f, vec4(1.0, 0.0, 0.0, 1.0), 512));
