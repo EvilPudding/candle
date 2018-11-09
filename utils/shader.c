@@ -40,7 +40,7 @@ static const char default_vs[] =
 	"\n"
 	"out vec2 texcoord;\n"
 	"\n"
-	"out mat4 model;\n"
+	"out flat mat4 model;\n"
 	"out mat3 TM;\n"
 	"\n"
 	"void main()\n"
@@ -95,6 +95,7 @@ void shaders_sprite_glsl_reg(void);
 void shaders_ssr_glsl_reg(void);
 void shaders_blur_glsl_reg(void);
 void shaders_kawase_glsl_reg(void);
+void shaders_motion_glsl_reg(void);
 void shaders_downsample_glsl_reg(void);
 void shaders_upsample_glsl_reg(void);
 void shaders_border_glsl_reg(void);
@@ -112,6 +113,7 @@ void shaders_reg()
 	shaders_ambient_glsl_reg();
 	shaders_blur_glsl_reg();
 	shaders_kawase_glsl_reg();
+	shaders_motion_glsl_reg();
 	shaders_downsample_glsl_reg();
 	shaders_upsample_glsl_reg();
 	shaders_border_glsl_reg();

@@ -196,6 +196,8 @@ void renderer_add_tex(renderer_t *self, const char *name,
 
 static void update_ubo(renderer_t *self, int32_t camid)
 {
+	if(!self->ubo_changed[camid]) return;
+	self->ubo_changed[camid] = 0;
 	// TODO this should be gl thread only
 	if(!self->ubos[camid])
 	{
@@ -211,7 +213,6 @@ static void update_ubo(renderer_t *self, int32_t camid)
 
 void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model)
 {
-	/* if(self->frame == self->update_frame) return; */
 	vec3_t pos = mat4_mul_vec4(*model, vec4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
 
 	if(self->output && self->output->target == GL_TEXTURE_CUBE_MAP)
@@ -232,19 +233,18 @@ void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model)
 			var->inv_model = mat4_look_at(pos, vec3_add(pos, p1[i]), up[i]);
 			var->model = mat4_invert(var->inv_model);
 			var->pos = pos;
-			update_ubo(self, i);
+			self->ubo_changed[i] = 1;
 		}
 	}
 	else
 	{
+		self->glvars[camid].previous_view = self->glvars[camid].inv_model;
 		self->glvars[camid].pos = pos;
 		self->glvars[camid].model = *model;
 		self->glvars[camid].inv_model = mat4_invert(*model);
+		self->ubo_changed[camid] = 1;
 
-		update_ubo(self, camid);
 	}
-
-	self->update_frame = self->frame;
 }
 
 void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
@@ -508,6 +508,7 @@ void renderer_update_projection(renderer_t *self)
 			self->near, self->far
 	);
 	self->glvars[0].inv_projection = mat4_invert(self->glvars[0].projection); 
+	self->ubo_changed[0] = 1;
 
 	uint32_t f;
 	for(f = 1; f < 6; f++)
@@ -515,8 +516,8 @@ void renderer_update_projection(renderer_t *self)
 		self->glvars[f].projection = self->glvars[0].projection;
 		self->glvars[f].inv_projection = self->glvars[0].inv_projection;
 		self->glvars[f].pos = self->glvars[0].pos;
+		self->ubo_changed[f] = 1;
 	}
-	update_ubo(self, 0);
 }
 
 vec3_t renderer_real_pos(renderer_t *self, float depth, vec2_t coord)
@@ -642,6 +643,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 		uint32_t f;
 		for(f = 0; f < 6; f++)
 		{
+			update_ubo(self, f);
 			glBindBufferBase(GL_UNIFORM_BUFFER, 19, self->ubos[f]); glerr();
 			texture_target(pass->output, depth, f);
 
@@ -652,13 +654,13 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 	}
 	else
 	{
-
 		glBindBufferBase(GL_UNIFORM_BUFFER, 19, self->ubos[pass->camid]); glerr();
 		texture_target(pass->output, depth, pass->framebuffer_id);
 
 		if(pass->clear) glClear(pass->clear);
 
 		draw_group(pass->draw_signal);
+
 	}
 
 	glDisable(GL_DEPTH_TEST);
@@ -716,8 +718,14 @@ void renderer_set_resolution(renderer_t *self, float resolution)
 
 renderer_t *renderer_new(float resolution)
 {
+	uint32_t f;
 	renderer_t *self = calloc(1, sizeof(*self));
 
+	for(f = 0; f < 6; f++)
+	{
+		self->glvars[f].projection = self->glvars[f].inv_projection =
+			self->glvars[f].previous_view = self->glvars[f].model = mat4();
+	}
 	self->near = 0.1f;
 	self->far = 100.0f;
 
@@ -986,6 +994,10 @@ int renderer_draw(renderer_t *self)
 	if(!self->output) renderer_default_pipeline(self);
 
 	if(!self->ready) renderer_update_screen_texture(self);
+	for(i = 0; i < self->camera_count; i++)
+	{
+		update_ubo(self, i);
+	}
 
 	for(i = 0; i < self->passes_size; i++)
 	{

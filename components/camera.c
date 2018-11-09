@@ -155,7 +155,7 @@ int c_camera_pre_draw(c_camera_t *self)
 		c_node_t *node = c_node(self);
 		c_node_update_model(node);
 		renderer_set_model(self->renderer, self->camid, &node->model);
-		self->modified = 0;
+		/* self->modified = 0; */
 	}
 	return CONTINUE;
 }

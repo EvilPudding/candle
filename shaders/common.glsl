@@ -27,7 +27,7 @@ in vec3 vertex_position;
 
 in vec2 texcoord;
 
-in mat4 model;
+in flat mat4 model;
 in mat3 TM;
 
 in flat uint matid;

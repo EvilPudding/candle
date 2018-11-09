@@ -6,8 +6,9 @@
 
 struct camera_t
 {
-	mat4 view;
+	mat4 previous_view;
 	mat4 model;
+	mat4 view;
 	mat4 projection;
 	mat4 inv_projection;
 	vec3 pos;

@@ -274,7 +274,7 @@ REG()
 
 	ct_listener(ct, WORLD, sig("editmode_toggle"), c_light_editmode_toggle);
 	ct_listener(ct, WORLD, sig("component_menu"), c_light_menu);
-	ct_listener(ct, WORLD | 30, sig("world_draw"), c_light_draw);
+	ct_listener(ct, WORLD | 51, sig("world_draw"), c_light_draw);
 	ct_listener(ct, WORLD, sig("world_pre_draw"), c_light_pre_draw);
 	ct_listener(ct, ENTITY, sig("node_changed"), c_light_position_changed);
 }

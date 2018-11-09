@@ -149,8 +149,9 @@ typedef struct pass_t
 
 struct gl_camera
 {
-	mat4_t inv_model;
+	mat4_t previous_view;
 	mat4_t model;
+	mat4_t inv_model;
 	mat4_t projection;
 	mat4_t inv_projection;
 	vec3_t pos;
@@ -174,7 +175,7 @@ typedef struct c_renderer_t
 	int outputs_num;
 
 	int passes_size;
-	pass_t passes[32];
+	pass_t passes[64];
 	texture_t *output;
 	texture_t *fallback_depth;
 
@@ -186,6 +187,8 @@ typedef struct c_renderer_t
 	int32_t camera_count;
 	struct gl_camera glvars[6];
 	uint32_t ubos[6];
+	uint32_t ubo_changed[6];
+	int moved[6];
 } renderer_t;
 
 renderer_t *renderer_new(float resolution);
