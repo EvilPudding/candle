@@ -244,6 +244,11 @@ void candle_register()
 	signal_init(sig("event_handle"), sizeof(void*));
 	signal_init(sig("events_end"), sizeof(void*));
 	signal_init(sig("events_begin"), sizeof(void*));
+	signal_init(sig("load"), sizeof(void*));
+	signal_init(sig("expr_load"), sizeof(void*));
+	signal_init(sig("expr_eval"), sizeof(void*));
+	signal_init(sig("expr_var"), sizeof(void*));
+	signal_init(sig("expr_del"), sizeof(void*));
 }
 
 static int ticker_loop(void)

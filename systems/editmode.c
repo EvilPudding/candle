@@ -653,7 +653,7 @@ int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 			entity_t result = renderer_entity_at_pixel(renderer,
 					event->x, event->y, NULL);
 
-			if(self->mode == EDIT_OBJECT)
+			if(self->pressing && self->mode == EDIT_OBJECT)
 			{
 				c_editmode_select(self, result);
 			}
