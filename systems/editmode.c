@@ -124,8 +124,8 @@ void c_editmode_coords(c_editmode_t *self)
 		c_spacial_rotate_X(c_spacial(&self->RZ), M_PI / 2.0f);
 
 #ifdef MESH4
-		W = entity_new(c_name_new("W"), c_axis_new(0, vec4(0.0f, 0.0f, 0.0f, 1.0f)));
-		c_node_add(c_node(&arrows), 1, W);
+		self->W = entity_new(c_name_new("W"), c_axis_new(0, vec4(0.0f, 0.0f, 0.0f, 1.0f)));
+		c_node_add(c_node(&self->arrows), 1, self->W);
 #endif
 		mat_t *mat = mat_new("aux");
 		mat->emissive.color = vec4(0.1f, 0.8f, 1.0f, 0.8f);
@@ -477,8 +477,8 @@ int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 			mesh_lock(aux);
 			mesh_clear(aux);
 
-			int aux_vert0 = mesh_add_vert(aux, self->tool_start);
-			int aux_vert1 = mesh_add_vert(aux, self->mouse_position);
+			int aux_vert0 = mesh_add_vert(aux, VEC3(_vec3(self->tool_start)));
+			int aux_vert1 = mesh_add_vert(aux, VEC3(_vec3(self->mouse_position)));
 			int aux_edge0 = mesh_add_edge_s(aux, aux_vert0, -1);
 			mesh_add_edge_s(aux, aux_vert1, aux_edge0);
 
@@ -510,7 +510,7 @@ int c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 			}
 			mesh_lock(mc->mesh);
 			int new_vert = mesh_add_vert(mc->mesh,
-					self->mouse_position);
+					VEC3(_vec3(self->mouse_position)));
 
 			int new_edge = mesh_add_edge_s(mc->mesh, new_vert, self->last_edge);
 
@@ -694,7 +694,7 @@ static void c_editmode_update_axis(c_editmode_t *self)
 		c_model_set_visible(c_model(&self->Y), sel && self->tool == TRANSLATE);
 		c_model_set_visible(c_model(&self->Z), sel && self->tool == TRANSLATE);
 #ifdef MESH4
-		c_model_set_visible(c_model(&W), sel && self->tool == 0);
+		c_model_set_visible(c_model(&self->W), sel && self->tool == TRANSLATE);
 #endif
 		if(!sel)
 		{
