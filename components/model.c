@@ -643,7 +643,7 @@ void c_model_set_mat(c_model_t *self, mat_t *mat)
 {
 	if(!mat)
 	{
-		mat = g_mats[rand()%g_mats_num];
+		mat = g_mats[0];
 	}
 	if(self->mat != mat)
 	{

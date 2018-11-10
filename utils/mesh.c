@@ -2734,3 +2734,45 @@ void meshes_reg()
 	sauces_loader(ref("obj"), mesh_loader);
 	sauces_loader(ref("ply"), mesh_loader);
 }
+
+/* http://paulbourke.net/papers/triangulate/ */
+
+void mesh_triangulate_poly(mesh_t *self)
+{
+	khash_t(id) *selected_edges = kh_clone(id,
+			self->selections[SEL_EDITING].edges);
+	khiter_t k;
+
+	int *bounds = malloc(sizeof(int) * kh_size(selected_edges));
+	int num_bounds = 0;
+
+	while(kh_size(selected_edges))
+	{
+		int first_edge = -1;
+
+		for(k = kh_begin(selected_edges); k != kh_end(selected_edges); ++k)
+		{
+			if(!kh_exist(selected_edges, k)) continue;
+			first_edge = kh_key(selected_edges, k);
+			break;
+		}
+		if(first_edge == -1) break;
+
+		bounds[num_bounds++] = first_edge;
+
+		/* remove connected edges from hash table */
+		int e = first_edge;
+		do
+		{
+			khiter_t k2 = kh_get(id, selected_edges, e);
+			if(kh_exist(selected_edges, k2)) kh_del(id, selected_edges, k2);
+			e = m_edge(self, e)->next;
+		}
+		while(e != first_edge && e != -1);
+		
+	}
+	printf("%d\n", num_bounds);
+
+	free(bounds);
+	kh_destroy(id, selected_edges);
+}

@@ -412,6 +412,7 @@ void candle_init(void)
 
 	ecm_init();
 
+	mat_new("default_material");
 	entity_new();
 
 	g_candle->cmds = kh_init(cmd);
