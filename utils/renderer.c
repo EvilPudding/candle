@@ -252,7 +252,7 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 {
 	renderer_add_pass(self, "kawase_p",
 			to_mip == from_mip ? "copy" : "downsample",
-			ref("quad"), MANUAL_MIP, t2, NULL, to_mip,
+			ref("quad"), 0, t2, NULL, to_mip,
 		(bind_t[]){
 			{TEX, "buf", .buffer = t1},
 			{INT, "level", .integer = from_mip},
@@ -260,7 +260,7 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 		}
 	);
 
-	renderer_add_pass(self, "kawase_0", "kawase", ref("quad"), MANUAL_MIP,
+	renderer_add_pass(self, "kawase_0", "kawase", ref("quad"), 0,
 			t1, NULL, to_mip,
 		(bind_t[]){
 			{TEX, "buf", .buffer = t2},
@@ -270,7 +270,7 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 		}
 	);
 
-	renderer_add_pass(self, "kawase_1", "kawase", ref("quad"), MANUAL_MIP,
+	renderer_add_pass(self, "kawase_1", "kawase", ref("quad"), 0,
 			t2, NULL, to_mip,
 		(bind_t[]){
 			{TEX, "buf", .buffer = t1},
@@ -280,7 +280,7 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 		}
 	);
 
-	renderer_add_pass(self, "kawase_2", "kawase", ref("quad"), MANUAL_MIP,
+	renderer_add_pass(self, "kawase_2", "kawase", ref("quad"), 0,
 			t1, NULL, to_mip,
 		(bind_t[]){
 			{TEX, "buf", .buffer = t2},
@@ -290,7 +290,7 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 		}
 	);
 
-/* 	renderer_add_pass(self, "kawase_3", "kawase", ref("quad"), MANUAL_MIP, */
+/* 	renderer_add_pass(self, "kawase_3", "kawase", ref("quad"), 0, */
 /* 			t2, NULL, to_mip, */
 /* 		(bind_t[]){ */
 /* 			{TEX, "buf", .buffer = t1}, */
@@ -300,7 +300,7 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 /* 		} */
 /* 	); */
 
-/* 	renderer_add_pass(self, "kawase_4", "kawase", ref("quad"), MANUAL_MIP, */
+/* 	renderer_add_pass(self, "kawase_4", "kawase", ref("quad"), 0, */
 /* 			t1, NULL, to_mip, */
 /* 		(bind_t[]){ */
 /* 			{TEX, "buf", .buffer = t2}, */
@@ -334,7 +334,6 @@ void renderer_default_pipeline(renderer_t *self)
 	texture_t *final =		texture_new_2D(0, 0, TEX_INTERPOLATE,
 		buffer_new("color",	1, 4)
 	);
-	final->track_brightness = 1;
 	/* texture_t *bloom =		texture_new_2D(0, 0, TEX_INTERPOLATE, */
 		/* buffer_new("color",	1, 4) */
 	/* ); */
@@ -414,7 +413,7 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 
-	renderer_add_pass(self, "refraction", "copy", ref("quad"), MANUAL_MIP,
+	renderer_add_pass(self, "refraction", "copy", ref("quad"), 0,
 			refr, NULL, 0,
 		(bind_t[]){
 			{TEX, "buf", .buffer = light},
@@ -438,7 +437,7 @@ void renderer_default_pipeline(renderer_t *self)
 		}
 	);
 
-	renderer_add_pass(self, "ssao_pass", "ssao", ref("quad"), MANUAL_MIP,
+	renderer_add_pass(self, "ssao_pass", "ssao", ref("quad"), 0,
 			ssao, NULL, 0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
@@ -449,7 +448,8 @@ void renderer_default_pipeline(renderer_t *self)
 
 
 	/* renderer_tex(self, ref(light))->mipmaped = 1; */
-	renderer_add_pass(self, "final", "ssr", ref("quad"), 0, final, NULL, 0,
+	renderer_add_pass(self, "final", "ssr", ref("quad"), 0, final,
+			NULL, 0,
 		(bind_t[]){
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{TEX, "gbuffer", .buffer = gbuffer},
@@ -667,14 +667,22 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 
 	glDisable(GL_BLEND);
 
+	int gen_mip = 0;
 	if(pass->auto_mip && pass->output->mipmaped)
 	{
 		texture_bind(pass->output, 0);
 		glGenerateMipmap(pass->output->target); glerr();
-		if(pass->output->track_brightness && self->frame % 20 == 0)
+		gen_mip = 1;
+	}
+
+	if(pass->track_brightness && self->frame % 20 == 0)
+	{
+		if(!gen_mip)
 		{
-			texture_update_brightness(pass->output);
+			texture_bind(pass->output, 0);
+			glGenerateMipmap(pass->output->target); glerr();
 		}
+		texture_update_brightness(pass->output);
 	}
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
@@ -853,7 +861,8 @@ void renderer_add_pass(
 	pass_t *pass = &self->passes[i];
 	pass->hash = hash;
 	pass->framebuffer_id = framebuffer;
-	pass->auto_mip = !(flags & MANUAL_MIP);
+	pass->auto_mip = !!(flags & GEN_MIP);
+	pass->track_brightness = !!(flags & TRACK_BRIGHT);
 
 	if(shader_name)
 	{

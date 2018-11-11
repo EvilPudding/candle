@@ -230,7 +230,7 @@ void c_editmode_activate(c_editmode_t *self)
 		);
 		c_spacial_t *sc = c_spacial(&self->camera);
 		c_spacial_lock(sc);
-		c_spacial_set_pos(sc, vec3(4, 1.5, 0));
+		c_spacial_set_pos(sc, vec3(6, 6, 6));
 		c_spacial_rotate_Y(sc, M_PI / 2);
 		/* c_spacial_rotate_X(sc, -M_PI * 0.05); */
 		c_spacial_unlock(sc);
@@ -611,60 +611,59 @@ static void c_editmode_update_axis(c_editmode_t *self)
 
 int c_editmode_key_up(c_editmode_t *self, char *key)
 {
+	if(*key == '`')
+	{
+		if(!self->control)
+		{
+			candle_grab_mouse(c_entity(self), 1);
+			self->backup_renderer = c_window(self)->renderer;
+			if(!self->activated) { c_editmode_activate(self); }
+			c_camera_t *cam = c_camera(&self->camera);
+			cam->active = 1;
+			c_window(self)->renderer = cam->renderer;
+			self->control = 1;
+		}
+		else
+		{
+			candle_release_mouse(c_entity(self), 0);
+			self->over = entity_null;
+			c_camera_t *cam = c_camera(&self->camera);
+			cam->active = 0;
+			c_window(self)->renderer = self->backup_renderer;
+			self->control = 0;
+		}
+		entity_signal(entity_null, sig("editmode_toggle"), NULL, NULL);
+	}
+	else if(!self->control)
+	{
+		return CONTINUE;
+	}
+
 	switch(*key)
 	{
 		case 'c':
-			if(self->control)
+			if(entity_exists(self->selected) && self->mode == EDIT_OBJECT)
 			{
-				if(entity_exists(self->selected) && self->mode == EDIT_OBJECT)
+				self->mode = EDIT_FACE; 
+				c_model_t *cm = c_model(&self->selected);
+				if(cm && cm->mesh)
 				{
-					self->mode = EDIT_FACE; 
-					c_model_t *cm = c_model(&self->selected);
-					if(cm && cm->mesh)
-					{
-						mesh_t *mesh = cm->mesh;
-						mesh_lock(mesh);
-						/* c_model_add_layer(cm, g_sel_mat, SEL_EDITING, 0.8); */
-						mesh_modified(mesh);
-						mesh_unlock(mesh);
-					}
+					mesh_t *mesh = cm->mesh;
+					mesh_lock(mesh);
+					/* c_model_add_layer(cm, g_sel_mat, SEL_EDITING, 0.8); */
+					mesh_modified(mesh);
+					mesh_unlock(mesh);
 				}
-				else
-				{
-					self->mode = EDIT_OBJECT; 
-				}
+			}
+			else
+			{
+				self->mode = EDIT_OBJECT; 
 			}
 			break;
 		case 't': self->tool = 0; c_editmode_update_axis(self); break;
 		case 'r': self->tool = 1; c_editmode_update_axis(self); break;
 		case 's': self->tool = 2; c_editmode_update_axis(self); break;
-		case '`':
-			{
-				if(!self->control)
-				{
-					candle_grab_mouse(c_entity(self), 1);
-					self->backup_renderer = c_window(self)->renderer;
-					if(!self->activated) { c_editmode_activate(self); }
-					c_camera_t *cam = c_camera(&self->camera);
-					cam->active = 1;
-					c_window(self)->renderer = cam->renderer;
-					self->control = 1;
-				}
-				else
-				{
-					candle_release_mouse(c_entity(self), 0);
-					self->over = entity_null;
-					c_camera_t *cam = c_camera(&self->camera);
-					cam->active = 0;
-					c_window(self)->renderer = self->backup_renderer;
-					self->control = 0;
-				}
-				entity_signal(entity_null, sig("editmode_toggle"), NULL, NULL);
-				break;
-			}
-		case 127:
-			c_editmode_selected_delete(self);
-			break;
+		case 127: c_editmode_selected_delete(self); break;
 		case 27:
 			self->menu_x = -1;
 			if(entity_exists(self->selected))
@@ -676,11 +675,9 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 				c_editmode_leave_context(self);
 			}
 			break;
-		case '\r':
-			c_editmode_enter_context(self);
-			break;
+		case '\r': c_editmode_enter_context(self); break;
 	}
-	return CONTINUE;
+	return STOP;
 }
 
 static void c_editmode_selected_delete(c_editmode_t *self)
@@ -1133,9 +1130,9 @@ REG()
 	signal_init(sig("editmode_toggle"), sizeof(void*));
 	signal_init(sig("pick_file"), sizeof(void*));
 
-	ct_listener(ct, WORLD, sig("key_up"), c_editmode_key_up);
+	ct_listener(ct, WORLD | 10, sig("key_up"), c_editmode_key_up);
 
-	ct_listener(ct, WORLD, sig("key_down"), c_editmode_key_down);
+	ct_listener(ct, WORLD | 10, sig("key_down"), c_editmode_key_down);
 
 	ct_listener(ct, WORLD, sig("mouse_move"), c_editmode_mouse_move);
 

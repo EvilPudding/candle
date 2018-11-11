@@ -29,7 +29,8 @@ enum pass_options
 	CULL_DISABLE	= 1 << 8,
 	ADD				= 1 << 9,
 	MUL				= 1 << 10,
-	MANUAL_MIP		= 1 << 11
+	GEN_MIP			= 1 << 11,
+	TRACK_BRIGHT	= 1 << 12
 };
 
 enum bind_type
@@ -142,6 +143,7 @@ typedef struct pass_t
 	vec4_t clear_color;
 	float clear_depth;
 	int32_t auto_mip;
+	int32_t track_brightness;
 
 	int32_t active;
 	int32_t camid;
