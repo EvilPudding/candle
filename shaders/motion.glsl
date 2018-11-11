@@ -34,8 +34,6 @@ void main()
 		color += textureLod(buf.color, p, 0).rgb;
 	}
 	FragColor = vec4(color / num_samples, 1.0);
-	/* FragColor = vec4(textureLod(buf.color, pp, 0).rgb, 1.0); */
-	/* FragColor = vec4(pp, 0.0, 1.0); */
 }
 
 // vim: set ft=c:

@@ -28,11 +28,16 @@ typedef struct
 	int menu_x;
 	int menu_y;
 
-	vec3_t drag_diff;
+	/* TOOL VARIABLES */
 	vec4_t start_prop;
-	vec2_t start_screen;
+	vec3_t drag_diff;
 	float start_radius;
+	vec3_t start_obj_pos;
+	int last_edge;
+	vec2_t start_screen;
 	float tool_fade;
+	int translate_mode;
+	float radius;
 
 	vec3_t mouse_screen_pos;
 
@@ -43,6 +48,7 @@ typedef struct
 	entity_t context;
 	int selected_poly;
 	int over_poly;
+	vec3_t tool_start;
 
 	entity_t open_entities[16];
 	int open_entities_count;
@@ -70,6 +76,8 @@ typedef struct
 
 	renderer_t *backup_renderer;
 	entity_t camera;
+	entity_t auxiliar;
+	entity_t arrows, X, Y, Z, W, RX, RY, RZ, SX, SY, SZ;
 } c_editmode_t;
 
 DEF_CASTER("editmode", c_editmode, c_editmode_t)

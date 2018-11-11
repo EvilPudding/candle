@@ -6,7 +6,6 @@
 #include <utils/drawable.h>
 #include <candle.h>
 #include <systems/editmode.h>
-#include <systems/lua.h>
 
 static mat_t *g_missing_mat = NULL;
 
@@ -270,89 +269,71 @@ static mesh_t *tool_cube_edit(mesh_t *mesh, struct conf_cube *conf)
 
 struct int_int {int a, b;};
 
-#ifdef LUA_H
 static float interpret_scale(mesh_t *self, float x,
 		struct int_int *interpreters)
 {
-	c_lua_t *lua = c_lua(&SYS);
+	float y = NAN;
 
-	c_lua_setvar(lua, "x", x);
-	char *msg = NULL;
-	double y = c_lua_eval(lua, interpreters->a, &msg);
-	if (msg) exit(1);
-	return (float)y;
+	emit(ref("expr_var"), &((struct set_var){"x", x}), NULL);
+	emit(ref("expr_eval"), &interpreters->a, &y);
+
+	if (isnan(y)) return 0.0f;
+
+	return y;
 }
 
-static float interpret_offset(mesh_t *self, float x,
+static float interpret_offset(mesh_t *self, float r,
 		struct int_int *interpreters)
 {
-	c_lua_t *lua = c_lua(&SYS);
+	float y = NAN;
 
-	c_lua_setvar(lua, "r", x);
-	char *msg = NULL;
-	double y = c_lua_eval(lua, interpreters->b, &msg);
-	if (msg) exit(1);
-	return (float)y;
+	emit(ref("expr_var"), &((struct set_var){"r", r}), NULL);
+	emit(ref("expr_eval"), &interpreters->b, &y);
+
+	if (isnan(y)) return 0.0f;
+
+	return y;
 }
-#endif
 
 
 static mesh_t *tool_extrude_edit(
 		mesh_t *last, struct conf_extrude *new,
 		mesh_t *state, struct conf_extrude *old)
 {
-	#ifdef LUA_H
 
-	c_lua_t *lua = c_lua(&SYS);
-	char *msg = NULL;
-	if(lua)
+	emit(ref("expr_var"), &((struct set_var){"r", 0}), NULL);
+	emit(ref("expr_var"), &((struct set_var){"x", 0}), NULL);
+	if(strcmp(new->scale_e, old->scale_e))
 	{
-		c_lua_setvar(lua, "r", 0);
-		c_lua_setvar(lua, "x", 0);
-		if(strcmp(new->scale_e, old->scale_e))
-		{
-			if(old->scale_f) c_lua_unref(lua, old->scale_f);
+		if(old->scale_f) emit(ref("expr_del"), &old->scale_f, NULL);
 
-			new->scale_f = c_lua_loadexpr(lua, new->scale_e, &msg);
-			if(msg)
-			{
-				puts(msg);
-				free(msg);
-				new->scale_f = 0;
-				return state;
-			}
-			c_lua_eval(lua, new->scale_f, &msg);
-			if (msg)
-			{
-				puts(msg);
-				free(msg);
-				new->scale_f = 0;
-				return state;
-			}
+		emit(ref("expr_load"), new->scale_e, &new->scale_f);
+		if(new->scale_f == 0) return state;
+
+		float result = NAN;
+		emit(ref("expr_eval"), &new->scale_f, &result);
+		if(isnan(result))
+		{
+			new->scale_f = 0;
+			return state;
 		}
-		if(strcmp(new->offset_e, old->offset_e))
+	}
+	if(strcmp(new->offset_e, old->offset_e))
+	{
+		if(old->offset_f) emit(ref("expr_del"), &old->offset_f, NULL);
+
+		emit(ref("expr_load"), new->offset_e, &new->offset_f);
+		if(new->offset_f == -1) return state;
+
+		float result = NAN;
+		emit(ref("expr_eval"), &new->offset_f, &result);
+		if(isnan(result))
 		{
-			if(old->offset_f) c_lua_unref(lua, old->offset_f);
-
-			new->offset_f = c_lua_loadexpr(lua, new->offset_e, &msg);
-
-			if(msg)
-			{
-				free(msg);
-				new->offset_f = 0;
-				return state;
-			}
-			c_lua_eval(lua, new->offset_f, &msg);
-			if(msg)
-			{
-				free(msg);
-				new->offset_f = 0;
-				return state;
-			}
+			new->offset_f = 0;
+			return state;
 		}
 	}
 	state = mesh_clone(last);
-
 	struct int_int args = {new->scale_f, new->offset_f};
 
 	mesh_lock(state);
@@ -382,7 +363,6 @@ static mesh_t *tool_extrude_edit(
 		mesh_triangulate(state);
 	}
 	mesh_unlock(state);
-	#endif
 
 	return state;
 }
@@ -643,7 +623,7 @@ void c_model_set_mat(c_model_t *self, mat_t *mat)
 {
 	if(!mat)
 	{
-		mat = g_mats[rand()%g_mats_num];
+		mat = g_mats[0];
 	}
 	if(self->mat != mat)
 	{

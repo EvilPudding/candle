@@ -982,7 +982,7 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 
 	glBindVertexArray(self->vao); glerr();
 
-	glLineWidth(2);
+	glLineWidth(3);
 
 	glPolygonMode(GL_FRONT_AND_BACK, mesh->wireframe ? GL_LINE : GL_FILL);
 

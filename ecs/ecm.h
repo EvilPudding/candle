@@ -11,9 +11,6 @@
 #include "utils/khash.h"
 #include "utils/macros.h"
 
-#define _GNU_SOURCE
-#include <search.h>
-
 typedef struct ecm_t ecm_t;
 
 typedef struct c_t c_t;
@@ -26,6 +23,11 @@ typedef void(*c_reg_cb)(void);
 /* TODO: find appropriate place */
 /* typedef int32_t(*before_draw_cb)(c_t *self); */
 
+struct set_var
+{
+	char ident[64];
+	float value;
+};
 
 #define IDENT_NULL UINT_MAX
 #define DEF_CASTER(ct, cn, nc_t) \
@@ -271,6 +273,11 @@ static inline vec2_t entity_to_vec2(entity_t self)
 }
 
 #define SYS ((entity_t){0x0000000100000001ul})
+
+static inline int emit(uint32_t sig, void *input, void *output)
+{
+	return entity_signal(entity_null, sig, input, output);
+}
 
 /* builtin signals */
 

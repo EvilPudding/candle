@@ -16,7 +16,7 @@ void main()
 	/* FragColor = vec4(texcoord, 0, 1); */
 	/* return; */
 	vec4 tex;
-	tex = texture(buf.color, pixel_pos(), level);
+	tex = textureLod(buf.color, pixel_pos(), level);
 	/* if(tex.a == 0) discard; */
 	tex.a = alpha;
 

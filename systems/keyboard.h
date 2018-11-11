@@ -8,7 +8,6 @@ typedef struct c_keyboard_t
 	c_t super;
 	int shift;
 	int ctrl;
-	/* currently, keyboard has no options */
 } c_keyboard_t;
 
 DEF_CASTER("keyboard", c_keyboard, c_keyboard_t)
