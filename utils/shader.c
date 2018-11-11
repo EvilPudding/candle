@@ -10,6 +10,7 @@
 
 static const char default_vs[] = 
 	"#include \"uniforms.glsl\"\n"
+	"#line 2\n"
 #ifdef MESH4
 	"layout (location = 0) in vec4 P;\n"
 #else
@@ -30,17 +31,17 @@ static const char default_vs[] =
 	"layout (location = 13) in float ANG4;\n"
 #endif
 
-	"out flat uvec2 id;\n"
-	"out flat uint matid;\n"
-	"out vec2 object_id;\n"
-	"out vec2 poly_id;\n"
+	"flat out uvec2 id;\n"
+	"flat out uint matid;\n"
+	"flat out vec2 object_id;\n"
+	"flat out vec2 poly_id;\n"
+	"flat out vec3 obj_pos;\n"
+	"flat out mat4 model;\n"
 	"out vec3 poly_color;\n"
-	"out flat vec3 obj_pos;\n"
 	"out vec3 vertex_position;\n"
 	"\n"
 	"out vec2 texcoord;\n"
 	"\n"
-	"out flat mat4 model;\n"
 	"out mat3 TM;\n"
 	"\n"
 	"void main()\n"
@@ -312,7 +313,8 @@ static char *string_preprocess(const char *src, int len, int defines)
 {
 	size_t lsize = len;
 
-	char defs[][64] = { "#version 420\n"
+	/* char defs[][64] = { "#version 420\n" */
+	char defs[][64] = { "#version 330\n"
 #ifdef MESH4
 		, "#define MESH4\n"
 #endif

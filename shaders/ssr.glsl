@@ -49,7 +49,7 @@ void main()
 	final = final * pow(2.0, camera(exposure));
 	float dist = length(get_position(gbuffer.depth));
 
-	final.b += (clamp(dist - 5, 0, 1)) / 70;
+	final.b += (clamp(dist - 5.0, 0.0, 1.0)) / 70.0;
 
 	FragColor = vec4(final, 1.0);
 }

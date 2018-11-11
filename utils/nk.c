@@ -495,7 +495,7 @@ nk_can_device_create(void)
         "void main(){\n"
 		"	vec2 uv = Frag_UV;\n"
 		"	if(Scale.y < 0.0f) uv.y = 1.0f - uv.y;\n"
-        "   Out_Color = Frag_Color * textureLod(Texture, uv, 3);\n"
+        "   Out_Color = Frag_Color * textureLod(Texture, uv, 3.0);\n"
         "}\n";
 
     struct nk_can_device *dev = &can.ogl;

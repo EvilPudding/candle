@@ -1,6 +1,6 @@
 
 #include "common.glsl"
-#line 4
+#line 2
 
 layout (location = 0) out vec4 FragColor;
 
@@ -14,7 +14,7 @@ void main()
 {
 	ivec2 fc = ivec2(gl_FragCoord.xy);
 	vec4 dif = texelFetch(gbuffer.albedo, fc, 0);
-	if(dif.a == 0) discard;
+	if(dif.a == 0.0) discard;
 
 	vec3 c_pos = get_position(gbuffer.depth);
 	vec3 w_pos = (camera(model) * vec4(c_pos, 1.0)).xyz;
@@ -48,7 +48,7 @@ void main()
 
 		/* FragColor = vec4(vec3(nor) * 0.5 + 0.5, 1.0); return; */
 
-		float depth = textureLod(gbuffer.depth, pixel_pos(), 0).r;
+		float depth = textureLod(gbuffer.depth, pixel_pos(), 0.0).r;
 		/* FragColor = vec4(w_light_dir, 1.0); return; */
 		float sd = 0.0f;
 		if(dif.a >= 1.0)
@@ -69,7 +69,7 @@ void main()
 			/* float attenuation = clamp(1.0 - pow(l, 0.3), 0.0, 1.0); */
 			/* float attenuation = 1.0/(1.0+1.3*pow(l * 3.0, 2)); */
 			/* attenuation *= clamp(1.0 - l, 0.0, 1.0); */
-			float attenuation = ((3.0 - l*3.0) / (1.0+1.3*(pow(l*3.0-0.1, 2))))/3.0;
+			float attenuation = ((3.0 - l*3.0) / (1.0+1.3*(pow(l*3.0-0.1, 2.0))))/3.0;
 			attenuation = clamp(attenuation, 0.0, 1.0);
 
 			vec4 color_lit = pbr(dif, normal_metalic_roughness.ba,

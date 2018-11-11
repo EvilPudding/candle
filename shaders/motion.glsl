@@ -27,13 +27,13 @@ void main()
 	pp = (pp + 1.0) / 2.0;
 	vec2 velocity = (p - pp) / float(num_samples);
 
-	vec3 color = textureLod(buf.color, p, 0).rgb;
+	vec3 color = textureLod(buf.color, p, 0.0).rgb;
 	for(int i = 1; i < num_samples; ++i)
 	{
 		p += velocity;
-		color += textureLod(buf.color, p, 0).rgb;
+		color += textureLod(buf.color, p, 0.0).rgb;
 	}
-	FragColor = vec4(color / num_samples, 1.0);
+	FragColor = vec4(color / float(num_samples), 1.0);
 }
 
 // vim: set ft=c:

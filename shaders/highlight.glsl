@@ -47,8 +47,8 @@ void main()
 	vec2 c;
 	vec2 c2;
 
-	c = textureLod(sbuffer.id, pixel_pos(), 0).rg;
-	c2 = textureLod(sbuffer.geomid, pixel_pos(), 0).rg;
+	c = textureLod(sbuffer.id, pixel_pos(), 0.0).rg;
+	c2 = textureLod(sbuffer.geomid, pixel_pos(), 0.0).rg;
 
 	float over = filtered(c, over_id);
 

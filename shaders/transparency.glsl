@@ -44,7 +44,7 @@ void main()
 	}
 	else
 	{
-		final = textureLod(refr.color, pp, 0).rgb;
+		final = textureLod(refr.color, pp, 0.0).rgb;
 	}
 	if(emit.a > 0.0)
 	{

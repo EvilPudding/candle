@@ -3,6 +3,10 @@
 #extension GL_ARB_explicit_uniform_location : require
 #extension GL_ARB_texture_query_levels : enable
 #extension GL_ARB_bindless_texture : enable
+#extension GL_EXT_bindless_texture : enable
+#extension GL_EXT_shader_io_blocks : enable
+#extension GL_ARB_shading_language_420pack : enable
+precision mediump float;
 
 struct camera_t
 {
@@ -59,9 +63,9 @@ layout(std140, binding = 21) uniform skin_t
 } skin;
 
 layout(location = 22) uniform vec2 screen_size;
-layout(location = 23) uniform uint has_tex;
+layout(location = 23) uniform bool has_tex;
 layout(location = 24) uniform bool has_normals;
-layout(location = 25) uniform uint receive_shadows;
+layout(location = 25) uniform bool receive_shadows;
 
 /* layout(location = 25) uniform camera_t camera; */
 

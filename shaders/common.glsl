@@ -1,8 +1,7 @@
 #ifndef FRAG_COMMON
 #define FRAG_COMMON
 #include "uniforms.glsl"
-
-#line 3
+#line 5
 
 
 #define _CAT(a, b) a ## b
@@ -20,18 +19,17 @@ const float c_MinRoughness = 0.04;
 /* uniform sampler3D perlin_map; */
 
 
-in vec2 poly_id;
+flat in vec3 obj_pos;
+flat in uvec2 id;
+flat in mat4 model;
+flat in uint matid;
+flat in vec2 poly_id;
+
 in vec3 poly_color;
-in flat vec3 obj_pos;
 in vec3 vertex_position;
-
 in vec2 texcoord;
-
-in flat mat4 model;
 in mat3 TM;
 
-in flat uint matid;
-in flat uvec2 id;
 
 vec2 pixel_pos()
 {
@@ -48,8 +46,8 @@ vec4 resolveProperty(property_t prop, vec2 coords)
 		coords *= prop.scale;
 		return mix(
 			prop.color,
-			texture2D(prop.texture, vec2(coords.x, 1.0-coords.y)),
-			/* textureLod(prop.texture, prop.scale * coords, 3), */
+			texture(prop.texture, vec2(coords.x, 1.0-coords.y)),
+			/* textureLod(prop.texture, prop.scale * coords, 3.0), */
 			prop.blend
 		);
 	}
@@ -102,7 +100,7 @@ float get_metalness()
 vec3 get_position(sampler2D depth)
 {
 	vec2 pos = pixel_pos();
-	vec3 raw_pos = vec3(pos, textureLod(depth, pos, 0).r);
+	vec3 raw_pos = vec3(pos, textureLod(depth, pos, 0.0).r);
 	vec4 clip_pos = vec4(raw_pos * 2.0 - 1.0, 1.0);
 	vec4 view_pos = camera(inv_projection) * clip_pos;
 	return view_pos.xyz / view_pos.w;
@@ -110,7 +108,7 @@ vec3 get_position(sampler2D depth)
 
 vec3 get_position(sampler2D depth, vec2 pos)
 {
-	vec3 raw_pos = vec3(pos, textureLod(depth, pos, 0).r);
+	vec3 raw_pos = vec3(pos, textureLod(depth, pos, 0.0).r);
 	vec4 clip_pos = vec4(raw_pos * 2.0 - 1.0, 1.0);
 	vec4 view_pos = camera(inv_projection) * clip_pos;
 	return view_pos.xyz / view_pos.w;
@@ -123,7 +121,7 @@ vec3 get_normal(sampler2D buffer)
 }
 vec3 get_normal(vec2 tc)
 {
-	if(has_tex == 1)
+	if(has_tex)
 	{
 		vec3 texcolor = resolveProperty(mat(normal), tc).rgb * 2.0 - 1.0;
 		return normalize(TM * texcolor);
@@ -133,7 +131,7 @@ vec3 get_normal(vec2 tc)
 }
 vec3 get_normal()
 {
-	if(has_tex == 1)
+	if(has_tex)
 	{
 		vec3 texcolor = resolveProperty(mat(normal), texcoord).rgb * 2.0 - 1.0;
 		return normalize(TM * texcolor);
@@ -180,7 +178,7 @@ float shadow_at_dist_no_tan(vec3 vec, float i)
 	if(lookup(-vec - z) > 0.5) return 1.0;
 
 
-	return 0;
+	return 0.0;
 }
 
 float linearize(float depth)
@@ -201,15 +199,15 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)
 	{
 
 		/* sd = 0.5; */
-		float shadow_len = min(0.8 * (point_to_light / ocluder_to_light - 1), 10);
+		float shadow_len = min(0.8 * (point_to_light / ocluder_to_light - 1.0), 10.0);
 		float p = 0.01 * linearize(depth);
 		if(shadow_len > 0.001)
 		{
 			float i;
 
-			float count = 1;
+			float count = 1.0;
 			float inc = p;
-			float iters = 1 + min(round(shadow_len / inc), 20);
+			float iters = 1.0 + min(round(shadow_len / inc), 20.0);
 			inc = shadow_len / iters;
 
 			for (i = inc; count < iters; i += inc)
@@ -218,7 +216,7 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)
 
 				count++;
 			}
-			if(count == 1) return 0;
+			if(count == 1.0) return 0.0;
 			return (count / iters);
 		}
 	}
@@ -227,7 +225,7 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)
 
 float doAmbientOcclusion(sampler2D depth, vec2 tcoord, vec2 uv, vec3 p, vec3 cnorm)
 {
-    float scale = 1.2, bias = 0.01, intensity = 5; 
+    float scale = 1.2, bias = 0.01, intensity = 5.0; 
     vec3 diff = get_position(depth, tcoord + uv) - p;
     vec3 v = normalize(diff);
 	float dist = length(diff);
@@ -289,8 +287,7 @@ float ambientOcclusion(sampler2D depth, vec3 p, vec3 n, float dist_to_eye)
 
 
 // Consts should help improve performance
-const float maxSteps = 20;
-const float searchDist = 20;
+const float searchDist = 20.0;
 const float searchDistInv = 1.0 / searchDist;
 
 vec3 get_proj_coord(sampler2D depthmap, vec3 hitCoord)
@@ -350,7 +347,8 @@ float roughnessToSpecularPower(float r)
   return (2.0 / (pow(r, 4.0)) - 2.0);
 }
 
-#define CNST_MAX_SPECULAR_EXP 64
+#define CNST_1DIVPI 0.31830988618
+#define CNST_MAX_SPECULAR_EXP 64.0
 
 float specularPowerToConeAngle(float specularPower)
 {
@@ -385,8 +383,6 @@ vec4 coneSampleWeightedColor(sampler2D screen, vec2 samplePos,
     return vec4(sampleColor * gloss, gloss);
 }
 
-#define CNST_1DIVPI 0.31830988618
-#define CNST_MAX_SPECULAR_EXP 64
 vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
 		vec2 metallic_roughness, vec3 nor)
 {
@@ -417,9 +413,10 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
 
 	vec3 coords = RayCast(depth, reflected, hitPos);
 
-	vec2 dCoords = abs(vec2(0.5, 0.5) - coords.xy) * 2;
+	vec2 dCoords = abs(vec2(0.5, 0.5) - coords.xy) * 2.0;
 	/* vec2 dCoords = abs((vec2(0.5, 0.5) - texcoord.xy) * 2 ); */
-	float screenEdgefactor = (clamp(1.0 - (pow(dCoords.x, 4) + pow(dCoords.y, 4)), 0.0, 1.0));
+	float screenEdgefactor = (clamp(1.0 -
+				(pow(dCoords.x, 4.0) + pow(dCoords.y, 4.0)), 0.0, 1.0));
 
 	vec3 fallback_color = vec3(0.0);
 	/* vec3 fallback_color = texture(ambient_map, reflect(eye_dir, nor)).rgb / (mipChannel+1); */
@@ -472,7 +469,7 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
 
     specularColor = fresnelSchlick(vec3(reflectance), NdotL) * CNST_1DIVPI;
     /* float fadeOnRoughness = saturate(gloss * 4.0); */
-    float fadeOnRoughness = 1;
+    float fadeOnRoughness = 1.0;
 	float fade = screenEdgefactor * fadeOnRoughness * (1.0 - saturate(remainingAlpha));
 
 	return vec4(mix(fallback_color,
@@ -602,12 +599,12 @@ vec4 pbr(vec4 base_color, vec2 metallic_roughness,
 
     // Apply optional PBR terms for additional (optional) shading
 /* #ifdef HAS_OCCLUSIONMAP */
-    /* float ao = texture2D(u_OcclusionSampler, v_UV).r; */
+    /* float ao = texture(u_OcclusionSampler, v_UV).r; */
     /* color = mix(color, color * ao, u_OcclusionStrength); */
 /* #endif */
 
 /* #ifdef HAS_EMISSIVEMAP */
-    /* vec3 emissive = SRGBtoLINEAR(texture2D(u_EmissiveSampler, v_UV)).rgb * u_EmissiveFactor; */
+    /* vec3 emissive = SRGBtoLINEAR(texture(u_EmissiveSampler, v_UV)).rgb * u_EmissiveFactor; */
     /* color += emissive; */
 /* #endif */
 

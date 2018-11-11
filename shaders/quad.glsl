@@ -7,7 +7,7 @@ uniform sampler2D tex;
 
 void main()
 {
-	FragColor = textureLod(tex, texcoord, 0);
+	FragColor = textureLod(tex, texcoord, 0.0);
 }  
 
 // vim: set ft=c:

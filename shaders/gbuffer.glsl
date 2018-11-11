@@ -12,7 +12,7 @@ void main()
 	dif.rgb += poly_color;
 	/* dif.rgb = TM[2] / 2.0 + 0.5; */
 	AlbedoColor = dif;
-	AlbedoColor.a = receive_shadows > 0 ? 1.0 : 0.5;
+	AlbedoColor.a = receive_shadows ? 1.0 : 0.5;
 
 	if(has_normals)
 	{
@@ -20,7 +20,7 @@ void main()
 	}
 	else
 	{
-		NMR.rg = encode_normal(vec3(0, 1, 0));
+		NMR.rg = encode_normal(vec3(0.0, 1.0, 0.0));
 	}
 
 	NMR.b = resolveProperty(mat(metalness), texcoord).r;
