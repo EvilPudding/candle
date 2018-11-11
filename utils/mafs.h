@@ -1053,6 +1053,46 @@ static inline vec4_t quat_from_euler(n_t yaw, n_t pitch, n_t roll)
 			roll_cos * pitch_cos * yaw_cos + roll_sin * pitch_sin * yaw_sin);
 }
 
+static inline vec4_t quat_clerp(vec4_t start, vec4_t end, float factor)
+{
+	float cosom = start.x * end.x + start.y * end.y + start.z * end.z +
+		start.w * end.w;
+
+	if( cosom < 0.0)
+	{
+		cosom = -cosom;
+		end.x = -end.x;
+		end.y = -end.y;
+		end.z = -end.z;
+		end.w = -end.w;
+	}
+	float sclp, sclq;
+	if( (1.0 - cosom) > 0.0001)
+	{
+		// Standard case (slerp)
+		float omega, sinom;
+		omega = acosf(cosom);
+		sinom = sinf( omega);
+		sclp  = sinf( (1.0 - factor) * omega) / sinom;
+		sclq  = sinf( factor * omega) / sinom;
+	}
+	else
+	{
+		// Very close, do linear interp (because it's faster)
+		sclp = 1.0 - factor;
+		sclq = factor;
+	}
+
+	return vec4(
+			sclp * start.x + sclq * end.x,
+			sclp * start.y + sclq * end.y,
+			sclp * start.z + sclq * end.z,
+			sclp * start.w + sclq * end.w
+	);
+
+}
+
+
 static inline mat4_t mat4_mul_quat(mat4_t M, vec4_t q)
 {
 /*  XXX: The way this is written only works for othogonal matrices. */

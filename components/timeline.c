@@ -84,45 +84,6 @@ static int c_timeline_find(c_timeline_t *self, vector_t *vec)
 	return 0;
 }
 
-vec4_t clerp(vec4_t start, vec4_t end, float factor)
-{
-	float cosom = start.x * end.x + start.y * end.y + start.z * end.z +
-		start.w * end.w;
-
-	if( cosom < 0.0)
-	{
-		cosom = -cosom;
-		end.x = -end.x;
-		end.y = -end.y;
-		end.z = -end.z;
-		end.w = -end.w;
-	}
-	float sclp, sclq;
-	if( (1.0 - cosom) > 0.0001)
-	{
-		// Standard case (slerp)
-		float omega, sinom;
-		omega = acosf(cosom);
-		sinom = sinf( omega);
-		sclp  = sinf( (1.0 - factor) * omega) / sinom;
-		sclq  = sinf( factor * omega) / sinom;
-	}
-	else
-	{
-		// Very close, do linear interp (because it's faster)
-		sclp = 1.0 - factor;
-		sclq = factor;
-	}
-
-	return vec4(
-			sclp * start.x + sclq * end.x,
-			sclp * start.y + sclq * end.y,
-			sclp * start.z + sclq * end.z,
-			sclp * start.w + sclq * end.w
-	);
-
-}
-
 static void c_timeline_update_rot(c_timeline_t *self)
 {
 	c_spacial_t *sc = c_spacial(self);
@@ -144,7 +105,7 @@ static void c_timeline_update_rot(c_timeline_t *self)
 
 	float factor = (self->t - start->t) / (end->t - start->t);
 
-	sc->rot_quat = clerp(start->quat, end->quat, factor);
+	sc->rot_quat = quat_clerp(start->quat, end->quat, factor);
 	sc->modified = 1;
 	/* c_spacial_set_rot */ 
 }
