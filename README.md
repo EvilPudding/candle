@@ -95,7 +95,7 @@ Features that aren't requirements for all projects, are split into plugins, the 
 
 Each plugin may require specific dependencies, and are added to a project through the use of *git submodules*, for example:
 
-```git clone --recursive https://github.com/EvilPudding/assimp.candle```
+```git submodule clone --recursive https://github.com/EvilPudding/assimp.candle```
 
 The *Makefile* for the project will compile and link the plugin automatically.
 
