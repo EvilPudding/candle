@@ -113,7 +113,6 @@ void c_spacial_rotate_X(c_spacial_t *self, float angle)
 	c_spacial_lock(self);
 
 	vec4_t rot = quat_rotate(c_spacial_forward(self), angle);
-	rot = vec4_norm(rot);
 
 	self->rot_quat = quat_mul(rot, self->rot_quat);
 
@@ -129,7 +128,6 @@ void c_spacial_rotate_Z(c_spacial_t *self, float angle)
 	c_spacial_lock(self);
 
 	vec4_t rot = quat_rotate(c_spacial_sideways(self), angle);
-	rot = vec4_norm(rot);
 
 	self->rot_quat = quat_mul(rot, self->rot_quat);
 
@@ -146,7 +144,6 @@ void c_spacial_rotate_Y(c_spacial_t *self, float angle)
 
 
 	vec4_t rot = quat_rotate(c_spacial_upwards(self), angle);
-	rot = vec4_norm(rot);
 
 	self->rot_quat = quat_mul(rot, self->rot_quat);
 	self->rot.y += angle;
@@ -318,7 +315,7 @@ void c_spacial_update_model_matrix(c_spacial_t *self)
 {
 	self->model_matrix = mat4_translate(self->pos);
 
-	mat4_t rot_matrix = quat_to_mat4(self->rot_quat);
+	mat4_t rot_matrix = quat_to_mat4(vec4_norm(self->rot_quat));
 	self->model_matrix = mat4_mul(self->model_matrix, rot_matrix);
 
 	self->model_matrix = mat4_scale_aniso(self->model_matrix, self->scale);

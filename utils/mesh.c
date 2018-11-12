@@ -2495,60 +2495,60 @@ mesh_t *mesh_lathe(mesh_t *mesh, float angle, int segments,
 	return self;
 }
 
-void mesh_cuboid(mesh_t *self, float tex_scale, vec3_t p1, vec3_t p2)
+void mesh_cuboid(mesh_t *self, float tex_scale, vec3_t p2, vec3_t p1)
 		/* float x1, float y1, float z1, */
 		/* float x2, float y2, float z2) */
 {
 	vec3_t s = vec3_scale(vec3_sub(p2, p1), 4);
+	self->has_texcoords = 0;
 
 	mesh_lock(self);
-	vec3_t n = vec3(0,-1,0);
-	mesh_add_regular_quad(self,
-			VEC3(_vec3(p1)),      n, vec2(0,  0),
-			VEC3(p2.x,p1.y,p1.z), n, vec2(s.x, 0),
-			VEC3(p2.x,p1.y,p2.z), n, vec2(s.x, s.z),
-			VEC3(p1.x,p1.y,p2.z), n, vec2(0,  s.z)
-	);
+	int v[8] = {
+		/* 0 */ mesh_add_vert(self, VEC3(p1.x, p1.y, p1.z)),
+		/* 1 */ mesh_add_vert(self, VEC3(p2.x, p1.y, p1.z)),
+		/* 2 */ mesh_add_vert(self, VEC3(p2.x, p2.y, p1.z)),
+		/* 3 */ mesh_add_vert(self, VEC3(p1.x, p2.y, p1.z)),
+		/* 4 */ mesh_add_vert(self, VEC3(p1.x, p1.y, p2.z)),
+		/* 5 */ mesh_add_vert(self, VEC3(p2.x, p1.y, p2.z)),
+		/* 6 */ mesh_add_vert(self, VEC3(p2.x, p2.y, p2.z)),
+		/* 7 */ mesh_add_vert(self, VEC3(p1.x, p2.y, p2.z))
+	};
 
-	n = vec3(0,1,0);
-	mesh_add_regular_quad(self,
-			VEC3(p1.x,p2.y,p2.z), n, vec2( 0,s.z),
-			VEC3(_vec3(p2)),	  n, vec2(s.x,s.z),
-			VEC3(p2.x,p2.y,p1.z), n, vec2(s.x, 0),
-			VEC3(p1.x,p2.y,p1.z), n, vec2( 0, 0)
-	);
+	mesh_add_quad(self,
+			v[0], Z3, vec2(p1.x, p1.y),
+			v[1], Z3, vec2(p2.x, p1.y),
+			v[2], Z3, vec2(p2.x, p2.y),
+			v[3], Z3, vec2(p1.x, p2.y));
 
-	n = vec3(0.0, 0.0, -1.0);
-	mesh_add_regular_quad(self,
-			VEC3(p1.x,p2.y,p1.z), n, vec2(s.x,0),
-			VEC3(p2.x,p2.y,p1.z), n, vec2(0,0),
-			VEC3(p2.x,p1.y,p1.z), n, vec2(0, s.y),
-			VEC3(_vec3(p1)),	  n, vec2(s.x, s.y)
-	);
+	mesh_add_quad(self,
+			v[5], Z3, vec2(p2.x, p1.y),
+			v[4], Z3, vec2(p1.x, p1.y),
+			v[7], Z3, vec2(p1.x, p2.y),
+			v[6], Z3, vec2(p2.x, p2.y));
 
-	n = vec3(0.0, 0.0, 1.0);
-	mesh_add_regular_quad(self,
-			VEC3(p1.x,p1.y,p2.z), n, vec2(s.x, s.y),
-			VEC3(p2.x,p1.y,p2.z), n, vec2(0, s.y),
-			VEC3(_vec3(p2)),	  n, vec2(0,0),
-			VEC3(p1.x,p2.y,p2.z), n, vec2(s.x,0)
-	);
+	mesh_add_quad(self,
+			v[6], Z3, vec2(p2.y, p2.z),
+			v[2], Z3, vec2(p2.y, p1.z),
+			v[1], Z3, vec2(p1.y, p1.z),
+			v[5], Z3, vec2(p1.y, p2.z));
 
-	n = vec3(-1.0, 0.0, 0.0);
-	mesh_add_regular_quad(self,
-			VEC3(p1.x,p1.y,p2.z), n, vec2( 0,s.z),
-			VEC3(p1.x,p2.y,p2.z), n, vec2(s.y,s.z),
-			VEC3(p1.x,p2.y,p1.z), n, vec2(s.y, 0),
-			VEC3(_vec3(p1)),	  n, vec2( 0, 0)
-	);
+	mesh_add_quad(self,
+			v[3], Z3, vec2(p2.y, p1.z),
+			v[7], Z3, vec2(p2.y, p2.z),
+			v[4], Z3, vec2(p1.y, p2.z),
+			v[0], Z3, vec2(p1.y, p1.z));
 
-	n = vec3(1.0, 0.0, 0.0);
-	mesh_add_regular_quad(self,
-			VEC3(p2.x,p1.y,p1.z), n, vec2( 0, 0),
-			VEC3(p2.x,p2.y,p1.z), n, vec2(s.y, 0),
-			VEC3(_vec3(p2)),	  n, vec2(s.y,s.z),
-			VEC3(p2.x,p1.y,p2.z), n, vec2( 0,s.z)
-	);
+	mesh_add_quad(self,
+			v[7], Z3, vec2(p1.x, p2.z),
+			v[3], Z3, vec2(p1.x, p1.z),
+			v[2], Z3, vec2(p2.x, p1.z),
+			v[6], Z3, vec2(p2.x, p2.z));
+
+	mesh_add_quad(self,
+			v[5], Z3, vec2(p2.x, p2.z),
+			v[1], Z3, vec2(p2.x, p1.z),
+			v[0], Z3, vec2(p1.x, p1.z),
+			v[4], Z3, vec2(p1.x, p2.z));
 
 	/* mesh_translate_uv(self, 0.5, 0.5); */
 	mesh_scale_uv(self, tex_scale);
@@ -2559,6 +2559,7 @@ void mesh_cuboid(mesh_t *self, float tex_scale, vec3_t p1, vec3_t p2)
 
 void mesh_cube(mesh_t *self, float size, float tex_scale)
 {
+	mesh_lock(self);
 	size /= 2;
 	int v[8] = {
 		mesh_add_vert(self, VEC3(size, size, size)),
@@ -2577,6 +2578,7 @@ void mesh_cube(mesh_t *self, float size, float tex_scale)
 	mesh_add_quad(self, v[3], Z3, Z2, v[7], Z3, Z2, v[4], Z3, Z2, v[0], Z3, Z2);
 	mesh_add_quad(self, v[7], Z3, Z2, v[3], Z3, Z2, v[2], Z3, Z2, v[6], Z3, Z2);
 	mesh_add_quad(self, v[5], Z3, Z2, v[1], Z3, Z2, v[0], Z3, Z2, v[4], Z3, Z2);
+	mesh_unlock(self);
 }
 
 void mesh_wait(mesh_t *self)
