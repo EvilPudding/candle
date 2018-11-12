@@ -494,29 +494,6 @@ int c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 	if(event->button == SDL_BUTTON_LEFT)
 	{
 		self->tool_start = self->mouse_position;
-		if(self->tool == POLYPEN)
-		{
-			if(!entity_exists(self->selected) || self->selected == SYS)
-			{
-				c_editmode_select(self, entity_new());
-			}
-			c_model_t *mc = c_model(&self->selected);
-			if(!mc)
-			{
-				entity_add_component(self->selected,
-						c_model_new(mesh_new(), NULL, 1, 1));
-				mc = c_model(&self->selected);
-				mc->mesh->has_texcoords = 0;
-			}
-			mesh_lock(mc->mesh);
-			int new_vert = mesh_add_vert(mc->mesh,
-					VEC3(_vec3(self->mouse_position)));
-
-			int new_edge = mesh_add_edge_s(mc->mesh, new_vert, self->last_edge);
-
-			self->last_edge = new_edge;
-			mesh_unlock(mc->mesh);
-		}
 		self->pressing = 1;
 	}
 	if(self->dragging)
@@ -650,14 +627,39 @@ int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 		}
 		else if(event->button == SDL_BUTTON_LEFT)
 		{
-			entity_t result = renderer_entity_at_pixel(renderer,
-					event->x, event->y, NULL);
-
-			if(self->pressing && self->mode == EDIT_OBJECT)
+			if(self->tool == POLYPEN)
 			{
+				if(!entity_exists(self->selected) || self->selected == SYS)
+				{
+					c_editmode_select(self, entity_new());
+				}
+				c_model_t *mc = c_model(&self->selected);
+				if(!mc)
+				{
+					entity_add_component(self->selected,
+							c_model_new(mesh_new(), NULL, 1, 1));
+					mc = c_model(&self->selected);
+					mc->mesh->has_texcoords = 0;
+				}
+				mesh_lock(mc->mesh);
+				int new_vert = mesh_add_vert(mc->mesh,
+						VEC3(_vec3(self->mouse_position)));
+
+				int new_edge = mesh_add_edge_s(mc->mesh, new_vert,
+						self->last_edge);
+				mesh_select(mc->mesh, SEL_EDITING, MESH_EDGE, new_edge);
+
+				self->last_edge = new_edge;
+				mesh_unlock(mc->mesh);
+			}
+			else if(self->pressing && self->mode == EDIT_OBJECT)
+			{
+				entity_t result = renderer_entity_at_pixel(renderer,
+						event->x, event->y, NULL);
+
 				c_editmode_select(self, result);
 			}
-			else// if(result == self->selected)
+			else
 			{
 				entity_t result = renderer_geom_at_pixel(renderer, event->x,
 							event->y, &self->mouse_screen_pos.z);
