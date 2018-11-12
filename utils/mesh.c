@@ -2499,9 +2499,6 @@ void mesh_cuboid(mesh_t *self, float tex_scale, vec3_t p2, vec3_t p1)
 		/* float x1, float y1, float z1, */
 		/* float x2, float y2, float z2) */
 {
-	vec3_t s = vec3_scale(vec3_sub(p2, p1), 4);
-	self->has_texcoords = 0;
-
 	mesh_lock(self);
 	int v[8] = {
 		/* 0 */ mesh_add_vert(self, VEC3(p1.x, p1.y, p1.z)),
