@@ -223,7 +223,7 @@ void c_node_update_model(c_node_t *self)
 			vec3_t pos = mat4_mul_vec4(parent_node->model, vec4(_vec3(sc->pos), 1.0f)).xyz;
 
 			mat4_t model = mat4_translate(pos);
-			model = mat4_mul(model, quat_to_mat4(parent_node->rot));
+			model = mat4_mul(model, quat_to_mat4(vec4_norm(parent_node->rot)));
 
 			self->model = mat4_mul(model, quat_to_mat4(vec4_norm(sc->rot_quat)));
 		}
