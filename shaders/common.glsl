@@ -435,7 +435,7 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
     float glossMult = gloss;
 
     // cone-tracing using an isosceles triangle to approximate a cone in screen space
-    for(int i = 0; i < 14; ++i)
+    for(int i = 0; i < 1; ++i)
     {
         float oppositeLength = 2.0 * tan(coneTheta) * adjacentLength;
         float incircleSize = isoscelesTriangleInRadius(oppositeLength, adjacentLength);
