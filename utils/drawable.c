@@ -291,6 +291,7 @@ void drawable_set_mat(drawable_t *self, int32_t id)
 	{
 		self->mat = id;
 		drawable_model_changed(self);
+
 	}
 }
 

@@ -553,7 +553,9 @@ int vitype_gui(vitype_t *type, void *nk)
 	vicall_t *dragging = NULL;
 	vil_t *ctx = type->ctx;
 
-	if (nk_begin(nk, type->name, nk_rect(0, 0, 800, 600),
+	struct nk_style *s = &(((struct nk_context *)nk)->style);
+
+	if (nk_can_begin_titled(nk, type->name, type->name, nk_rect(0, 0, 800, 600),
 				NK_WINDOW_BORDER |
 				NK_WINDOW_NO_SCROLLBAR |
 				NK_WINDOW_MOVABLE |
@@ -574,6 +576,9 @@ int vitype_gui(vitype_t *type, void *nk)
 				nk_layout_space_push(nk, nk_rect(it->bounds.x - scrolling.x,
 							it->bounds.y - scrolling.y, it->bounds.w, 35 + it->bounds.h));
 
+				nk_style_push_color(nk, &s->window.background, nk_rgba(0,0,0,255));
+				nk_style_push_style_item(nk, &s->window.fixed_background,
+						nk_style_item_color(nk_rgba(0,0,0,255)));
 				/* execute call window */
 				if (nk_group_begin(nk, it->name,
 							NK_WINDOW_NO_SCROLLBAR|
@@ -583,6 +588,7 @@ int vitype_gui(vitype_t *type, void *nk)
 					/* always have last selected call on top */
 
 					call = nk_window_get_panel(nk);
+					if(!call) continue;
 					struct nk_rect bd = call->bounds;
 					struct nk_rect header = nk_rect(bd.x, bd.y - 29, bd.w, 29);
 					bd.y -= 29;
@@ -639,6 +645,8 @@ int vitype_gui(vitype_t *type, void *nk)
 						}
 					}
 					nk_group_end(nk);
+					nk_style_pop_color(nk);
+					nk_style_pop_style_item(nk);
 				}
 				{
 					/* call connector and linking */
@@ -738,7 +746,7 @@ int vitype_gui(vitype_t *type, void *nk)
 					if(t->name[0] == '_') continue;
 					if(nk_contextual_item_label(nk, t->name, NK_TEXT_CENTERED))
 					{
-						vitype_add(type, t, "anon", vec2(in->mouse.pos.x -
+						vitype_add(type, t, t->name, vec2(in->mouse.pos.x -
 									scrolling.x, in->mouse.pos.y -
 									scrolling.y), 0);
 					}

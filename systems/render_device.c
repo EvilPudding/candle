@@ -70,7 +70,7 @@ int c_render_device_update(c_render_device_t *self)
 		c_render_device_update_materials(self);
 		c_render_device_update_lights(self);
 		self->scene.test_color = vec4(0, 1, 0, 1);
-		self->updates = 2;
+		self->updates = 0x2;
 	}
 	return CONTINUE;
 }
