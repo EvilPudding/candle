@@ -121,23 +121,27 @@ vec3 get_normal(sampler2D buffer)
 }
 vec3 get_normal(vec2 tc)
 {
+	vec3 norm;
 	if(has_tex)
 	{
 		vec3 texcolor = resolveProperty(mat(normal), tc).rgb * 2.0 - 1.0;
-		return normalize(TM * texcolor);
+		norm = TM * texcolor;
 
 	}
-	return normalize(TM[2]);
+	else
+	{
+		norm = TM[2];
+	}
+	if(!gl_FrontFacing)
+	{
+		norm = -norm;
+	}
+
+	return normalize(norm);
 }
 vec3 get_normal()
 {
-	if(has_tex)
-	{
-		vec3 texcolor = resolveProperty(mat(normal), texcoord).rgb * 2.0 - 1.0;
-		return normalize(TM * texcolor);
-
-	}
-	return normalize(TM[2]);
+	return get_normal(texcoord);
 }
 
 float rand(vec2 co)

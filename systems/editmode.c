@@ -737,8 +737,21 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 		return CONTINUE;
 	}
 
+	if(!entity_exists(self->selected) || self->selected == SYS)
+	{
+		return CONTINUE;
+	}
 	switch(*key)
 	{
+		case 't': self->tool = TRANSLATE; c_editmode_update_axis(self); break;
+		case 'r': self->tool = ROTATE; c_editmode_update_axis(self); break;
+		case 's': self->tool = SCALE; c_editmode_update_axis(self); break;
+		case 127: c_editmode_selected_delete(self); break;
+		case 'p':
+				  self->tool = POLYPEN;
+				  c_editmode_update_axis(self);
+				  self->last_edge = -1;
+				  break;
 		case 'c':
 			if(entity_exists(self->selected) && self->mode == EDIT_OBJECT)
 			{
@@ -758,27 +771,9 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 				self->mode = EDIT_OBJECT; 
 			}
 			break;
-		case 't': self->tool = TRANSLATE; c_editmode_update_axis(self); break;
-		case 'r': self->tool = ROTATE; c_editmode_update_axis(self); break;
-		case 's': self->tool = SCALE; c_editmode_update_axis(self); break;
-		case 127: c_editmode_selected_delete(self); break;
-		case 'p':
-				  self->tool = POLYPEN;
-				  c_editmode_update_axis(self);
-				  self->last_edge = -1;
-				  break;
-		case 27:
-			self->menu_x = -1;
-			if(entity_exists(self->selected))
-			{
-				c_editmode_select(self, entity_null);
-			}
-			else
-			{
-				c_editmode_leave_context(self);
-			}
-			break;
 		case '\r': c_editmode_enter_context(self); break;
+		case 27: c_editmode_select(self, SYS); break;
+		default: return CONTINUE;
 	}
 	return STOP;
 }
