@@ -900,7 +900,7 @@ static inline vec3_t quat_mul_vec3(vec4_t q, vec3_t v)
 t = 2 * cross(q.xyz, v)
 v' = v + q.w * t + cross(q.xyz, t)
  */
-	vec3_t t = vec3_scale(vec3_cross(q.xyz, v), 2);
+	vec3_t t = vec3_scale(vec3_cross(q.xyz, v), 2.0f);
 
 	return vec3_add(vec3_add(v, vec3_scale(t, q.w)), vec3_cross(q.xyz, t));
 }
@@ -1007,10 +1007,10 @@ static inline vec3_t quat_to_euler(vec4_t q)
 /* } */
 static inline vec4_t quat_mul(vec4_t p, vec4_t q)
 {
-	return vec4(p.w * q.x + p.x * q.w + p.y * q.z - p.z * q.y,
+	return vec4_norm(vec4(p.w * q.x + p.x * q.w + p.y * q.z - p.z * q.y,
 			p.w * q.y + p.y * q.w + p.z * q.x - p.x * q.z,
 			p.w * q.z + p.z * q.w + p.x * q.y - p.y * q.x,
-			p.w * q.w - p.x * q.x - p.y * q.y - p.z * q.z);
+			p.w * q.w - p.x * q.x - p.y * q.y - p.z * q.z));
 }
 static inline vec4_t quat_rotate(vec3_t axis, n_t angle)
 {
