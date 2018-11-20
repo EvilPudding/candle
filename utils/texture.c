@@ -9,6 +9,8 @@ void world_changed(void);
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_ASSERT(x)
 #include <utils/stb_image.h>
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <utils/stb_image_write.h>
 
 static int32_t texture_cubemap_frame_buffer(texture_t *self);
 static int32_t texture_2D_frame_buffer(texture_t *self);
@@ -80,6 +82,30 @@ void texture_update_gl(texture_t *self)
 {
 	loader_push(g_candle->loader, (loader_cb)texture_update_gl_loader, self,
 			NULL);
+}
+
+int32_t texture_save(texture_t *self, int id, const char *filename)
+{
+
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, self->frame_buffer[0]); glerr();
+
+	glReadBuffer(GL_COLOR_ATTACHMENT0 + id);
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+	uint32_t dims = self->bufs[id].dims;
+	uint8_t *data = malloc(self->width * self->height * dims);
+	stbi_flip_vertically_on_write(1);
+
+	glReadPixels(0, 0, self->width, self->height, self->bufs[id].format,
+			GL_UNSIGNED_BYTE, data);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+
+	int32_t res = stbi_write_png(filename, self->width, self->height, dims,
+			data, 0);
+	free(data);
+	return res;
 }
 
 uint32_t texture_get_pixel(texture_t *self, int32_t buffer, int32_t x, int32_t y,

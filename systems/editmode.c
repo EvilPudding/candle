@@ -806,7 +806,7 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 
 	res = nk_can_begin_titled(self->nk, buffer, title,
 			nk_rect(self->spawn_pos.x, self->spawn_pos.y, tex->width + 30,
-				tex->height + 130),
+				tex->height + 130 + 35),
 			NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
 			NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE);
 	if (res)
@@ -822,10 +822,21 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 		tex->prev_id = nk_combo(self->nk, bufs, tex->bufs_size,
 				tex->prev_id, 25, nk_vec2(200, 200));
 
-
-
 		nk_value_int(self->nk, "glid: ", tex->bufs[tex->prev_id].id);
 		nk_value_int(self->nk, "dims: ", tex->bufs[tex->prev_id].dims);
+		if (nk_button_label(self->nk, "save"))
+		{
+			printf("Saving texture.\n");
+			int32_t res = texture_save(tex, tex->prev_id, "test.png");
+			if(res)
+			{
+				printf("Texture saved.\n");
+			}
+			else
+			{
+				printf("Texture failed to save.\n");
+			}
+		}
 		struct nk_image im = nk_image_id(tex->bufs[tex->prev_id].id);
 		/* im.handle.ptr = 1; */
 		struct nk_command_buffer *canvas = nk_window_get_canvas(self->nk);
@@ -833,7 +844,7 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 		total_space.w = tex->width;
 		total_space.h = tex->height;
 
-		total_space.y += 85;
+		total_space.y += 85 + 35;
 		/* total_space.h -= 85; */
 		nk_draw_image_ext(canvas, total_space, &im, nk_rgba(255, 255, 255, 255), 1);
 	}
