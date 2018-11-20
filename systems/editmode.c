@@ -827,14 +827,20 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 		if (nk_button_label(self->nk, "save"))
 		{
 			printf("Saving texture.\n");
-			int32_t res = texture_save(tex, tex->prev_id, "test.png");
-			if(res)
+			char *file = NULL;
+			emit(ref("pick_file_save"), "png", &file);
+			if(file)
 			{
-				printf("Texture saved.\n");
-			}
-			else
-			{
-				printf("Texture failed to save.\n");
+				int32_t res = texture_save(tex, tex->prev_id, file);
+				if(res)
+				{
+					printf("Texture saved.\n");
+				}
+				else
+				{
+					printf("Texture failed to save.\n");
+				}
+				free(file);
 			}
 		}
 		struct nk_image im = nk_image_id(tex->bufs[tex->prev_id].id);
@@ -1229,6 +1235,20 @@ int c_editmode_event(c_editmode_t *self, SDL_Event *event)
 	return CONTINUE;
 }
 
+int c_editmode_pick_load(c_editmode_t *self, const char *filter, char **output)
+{
+	/* TODO: prompt for a path in nuklear */
+	*output = strdup("unnamed");
+	return STOP;
+}
+
+int c_editmode_pick_save(c_editmode_t *self, const char *filter, char **output)
+{
+	/* TODO: prompt for a path in nuklear */
+	*output = strdup("unnamed");
+	return STOP;
+}
+
 REG()
 {
 	ct_t *ct = ct_new("editmode", sizeof(c_editmode_t), c_editmode_init,
@@ -1237,11 +1257,15 @@ REG()
 	signal_init(sig("component_menu"), sizeof(struct nk_context*));
 	signal_init(sig("component_tool"), sizeof(void*));
 	signal_init(sig("editmode_toggle"), sizeof(void*));
-	signal_init(sig("pick_file"), sizeof(void*));
+	signal_init(sig("pick_file_save"), sizeof(void*));
+	signal_init(sig("pick_file_load"), sizeof(void*));
 
 	ct_listener(ct, WORLD | 10, sig("key_up"), c_editmode_key_up);
 
 	ct_listener(ct, WORLD | 10, sig("key_down"), c_editmode_key_down);
+
+	ct_listener(ct, WORLD, sig("pick_file_save"), c_editmode_pick_save);
+	ct_listener(ct, WORLD, sig("pick_file_load"), c_editmode_pick_load);
 
 	ct_listener(ct, WORLD, sig("mouse_move"), c_editmode_mouse_move);
 

@@ -86,18 +86,20 @@ void texture_update_gl(texture_t *self)
 
 int32_t texture_save(texture_t *self, int id, const char *filename)
 {
+	glFlush();
+	glFinish();
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, self->frame_buffer[0]); glerr();
 
-	glReadBuffer(GL_COLOR_ATTACHMENT0 + id);
-
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	if(self->depth_buffer) id--;
 
 	uint32_t dims = self->bufs[id].dims;
 	uint8_t *data = malloc(self->width * self->height * dims);
 	stbi_flip_vertically_on_write(1);
 
+	glReadBuffer(GL_COLOR_ATTACHMENT0 + id);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glReadPixels(0, 0, self->width, self->height, self->bufs[id].format,
 			GL_UNSIGNED_BYTE, data);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
