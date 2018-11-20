@@ -15,6 +15,7 @@ void world_changed(void);
 static int32_t texture_cubemap_frame_buffer(texture_t *self);
 static int32_t texture_2D_frame_buffer(texture_t *self);
 
+/* texture_t *fallback_depth; */
 int32_t g_tex_num = 0;
 
 GLenum attachments[16] = {
@@ -86,6 +87,11 @@ void texture_update_gl(texture_t *self)
 
 int32_t texture_save(texture_t *self, int id, const char *filename)
 {
+	if(!self->framebuffer_ready)
+	{
+		printf("Cannot save framebufferless texture (why would you want to?)\n");
+		return 0;
+	}
 	glFlush();
 	glFinish();
 
@@ -103,6 +109,7 @@ int32_t texture_save(texture_t *self, int id, const char *filename)
 	glReadPixels(0, 0, self->width, self->height, self->bufs[id].format,
 			GL_UNSIGNED_BYTE, data);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+	glerr();
 
 	int32_t res = stbi_write_png(filename, self->width, self->height, dims,
 			data, 0);
@@ -717,9 +724,20 @@ int32_t texture_target_sub(texture_t *self, int32_t width, int32_t height,
 		}
 	}
 
+	/* if(!depth) */
+	/* { */
+	/* 	if(!fallback_depth) */
+	/* 	{ */
+	/* 		fallback_depth = texture_new_2D(1, 1, 0, 0, */
+	/* 			buffer_new("depth",	1, -1) */
+	/* 		); */
+	/* 	} */
+	/* 	depth = fallback_depth; */
+	/* } */
+
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, self->frame_buffer[fb]); glerr();
 
-	if(self->last_depth != depth && self->target == GL_TEXTURE_2D)
+	if(depth && self->last_depth != depth && self->target == GL_TEXTURE_2D)
 	{
 		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
 				self->target, depth->bufs[0].id, 0);
