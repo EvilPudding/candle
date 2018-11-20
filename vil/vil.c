@@ -76,6 +76,9 @@ static slot_t g_call_unlink;
 static slot_t g_call_link;
 static struct nk_vec2 scrolling;
 
+static int get_call_output_y(vicall_t *root, int *field,
+		vicall_t *call, float *y,
+		slot_t parent_slot, slot_t search);
 
 void label_gui(vicall_t *call, void *ctx) 
 {
@@ -152,7 +155,7 @@ static vicall_t *get_call(vitype_t *type, int id)
 	return NULL;
 }
 
-vitype_t *vil_get_type(vil_t *ctx, uint32_t ref)
+vitype_t *vil_get(vil_t *ctx, uint32_t ref)
 {
 	khiter_t k = kh_get(vitype, ctx->types, ref);
 	if(k == kh_end(ctx->types))
@@ -322,6 +325,7 @@ static float call_outputs(vicall_t *root, int *field,
 		{
 			struct nk_vec2 l0 = nk_vec2(circle.x + 3, circle.y + 3);
 			struct nk_vec2 l1 = in->mouse.pos;
+
 			nk_stroke_curve(canvas, l0.x, l0.y, l0.x + 50.0f, l0.y,
 					l1.x - 50.0f, l1.y, l1.x, l1.y, 1.0f, nk_rgb(100, 100, 100));
 		}
@@ -338,12 +342,15 @@ static float call_outputs(vicall_t *root, int *field,
 	return y;
 }
 
-static int get_call_output_y(vicall_t *root, vicall_t *call, float *y,
+static int get_call_output_y(vicall_t *root, int *field,
+		vicall_t *call, float *y,
 		slot_t parent_slot, slot_t search)
 {
 	vicall_t *it;
 	slot_t slot = parent_slot;
 	slot._[slot.depth++] = call->id;
+
+	int call_field = (*field)++;
 
 	float h = 29.0f;
 	if(slot.val == search.val)
@@ -351,12 +358,17 @@ static int get_call_output_y(vicall_t *root, vicall_t *call, float *y,
 		*y += h / 2.0f;
 		return 1;
 	}
+	struct vil_ret *arg = &root->output_args[call_field];
+	if(arg->link.depth) /* is linked */
+	{
+		*y += h;
+	}
 
 	for (it =  call->type->begin; it; it = it->next)
 	{
 		if(it->is_output)
 		{
-			if(get_call_output_y(root, it, y, slot, search))
+			if(get_call_output_y(root, field, it, y, slot, search))
 			{
 				return 1;
 			}
@@ -400,15 +412,16 @@ static int get_call_input_y(vicall_t *root, int *field,
 	return 0;
 }
 
-struct nk_vec2 get_output_position(vitype_t *type, slot_t search)
+static struct nk_vec2 get_output_position(vitype_t *type, slot_t search)
 {
+	int field = 0;
 	vicall_t *call = get_call(type, search._[0]);
 	float y = call->bounds.y + 33;
-	get_call_output_y(call, call, &y, (slot_t){0}, search);
+	get_call_output_y(call, &field, call, &y, (slot_t){0}, search);
 	return nk_vec2(call->bounds.x + call->bounds.w, y);
 }
 
-struct nk_vec2 get_input_position(vitype_t *type, slot_t search)
+static struct nk_vec2 get_input_position(vitype_t *type, slot_t search)
 {
 	int field = 0;
 	vicall_t *call = get_call(type, search._[0]);
@@ -430,7 +443,9 @@ static void call_inputs(vicall_t *root, int *field,
 	struct vil_arg *arg = &root->input_args[call_field];
 
 	int is_linking = linking.depth && linking._[0] != root->id;
-	int linking_allowed = is_linking && linking_type == call->type->id;
+	int linking_allowed = is_linking && linking_type == call->type->id
+		&& !root->is_input;
+
 	int is_linked = arg->link.depth;
 
 	float call_h = arg->height;
@@ -491,7 +506,8 @@ static float call_gui(vicall_t *root, int *field,
 	int call_field = (*field)++;
 	char **data = (char**)&root->input_args[call_field].data;
 
-	if(root->input_args[call_field].link.depth) /* input is linked */
+	if(root->input_args[call_field].link.depth || root->is_input)
+		/* input is linked */
 	{
 		label_gui(call, nk);
 		struct nk_rect rect = nk_layout_widget_bounds(nk);
@@ -576,9 +592,18 @@ int vitype_gui(vitype_t *type, void *nk)
 				nk_layout_space_push(nk, nk_rect(it->bounds.x - scrolling.x,
 							it->bounds.y - scrolling.y, it->bounds.w, 35 + it->bounds.h));
 
-				nk_style_push_color(nk, &s->window.background, nk_rgba(0,0,0,255));
-				nk_style_push_style_item(nk, &s->window.fixed_background,
-						nk_style_item_color(nk_rgba(0,0,0,255)));
+				if(!it->is_input)
+				{
+					nk_style_push_color(nk, &s->window.background, nk_rgba(0,0,0,255));
+					nk_style_push_style_item(nk, &s->window.fixed_background,
+							nk_style_item_color(nk_rgba(0,0,0,255)));
+				}
+				else
+				{
+					nk_style_push_color(nk, &s->window.background, nk_rgba(0,0,0,0));
+					nk_style_push_style_item(nk, &s->window.fixed_background,
+							nk_style_item_color(nk_rgba(0,0,0,0)));
+				}
 				/* execute call window */
 				if (nk_group_begin(nk, it->name,
 							NK_WINDOW_NO_SCROLLBAR|

@@ -11,7 +11,6 @@
 
 #include <components/node.h>
 #include <components/name.h>
-#include <components/vimat.h> // TODO REMOVE THIS
 
 #ifndef WIN32
 #include <unistd.h>
@@ -414,6 +413,7 @@ __attribute__((constructor (CONSTR_BEFORE_REG)))
 void candle_init(void)
 {
 	g_candle = calloc(1, sizeof *g_candle);
+	materials_init_vil();
 
 	ecm_init();
 
@@ -466,5 +466,5 @@ void candle_init2(void)
 
 static __attribute__((__used__)) void prevent_linker_removal(void)
 {
-	c_vimat_new();
+	/* c_vimat_new(); */
 }

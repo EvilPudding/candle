@@ -245,6 +245,7 @@ static int c_light_draw(c_light_t *self)
 static void c_light_destroy(c_light_t *self)
 {
 	drawable_set_mesh(&self->draw, NULL);
+	drawable_set_mesh(&self->widget, NULL);
 	if(self->renderer)
 	{
 		renderer_destroy(self->renderer);

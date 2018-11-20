@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "material.h"
+#include <vil/vil.h>
 #include "file.h"
 #include "shader.h"
 #include <candle.h>
@@ -11,12 +12,15 @@
 
 int g_mats_num;
 mat_t *g_mats[255];
+static vil_t g_mat_ctx;
+
 
 mat_t *mat_new(const char *name)
 {
 	mat_t *self = calloc(1, sizeof *self);
 	mat_set_normal(self, (prop_t){.color=vec4(0.5, 0.5, 1.0, 0.0)});
 	self->albedo.color = vec4(0.5, 0.5, 0.5, 1.0);
+	self->vil = vil_get(&g_mat_ctx, ref("material"));
 
 	self->albedo.scale = 1;
 	self->roughness.scale = 1;
@@ -187,8 +191,33 @@ void mat_set_albedo(mat_t *self, prop_t albedo)
 	world_changed();
 }
 
+static void color_gui(vicall_t *call, struct nk_colorf *color, void *ctx) 
+{
+	nk_layout_row_dynamic(ctx, 29, 1);
+	if (nk_combo_begin_color(ctx, nk_rgb_cf(*color), nk_vec2(200,400))) {
+		nk_layout_row_dynamic(ctx, 120, 1);
+		*color = nk_color_picker(ctx, *color, NK_RGBA);
+
+		nk_combo_end(ctx);
+	}
+}
+
+static void number_gui(vicall_t *call, float *num, void *ctx) 
+{
+	/* if(*num < 29) *num = 29; */
+	/* nk_layout_row_begin(ctx, NK_DYNAMIC, *num, 2); */
+	nk_layout_row_begin(ctx, NK_DYNAMIC, 29, 2);
+	nk_layout_row_push(ctx, 0.20);
+	nk_label(ctx, vicall_name(call), NK_TEXT_LEFT);
+	nk_layout_row_push(ctx, 0.80);
+	*num = nk_propertyf(ctx, "#", 0, *num, 1, 0.01, 0.01);
+	nk_layout_row_end(ctx);
+	/* nk_slider_int(ctx, 29, num, 200, 1); */
+}
+
 int mat_prop_menu(mat_t *self, const char *name, prop_t *prop, void *ctx)
 {
+
 	int changes = 0;
 	uint32_t id = murmur_hash(&prop, 8, 0);
 	if(nk_tree_push_id(ctx, NK_TREE_NODE, name, NK_MINIMIZED, id))
@@ -262,6 +291,11 @@ int mat_menu(mat_t *self, void *ctx)
 	changes |= mat_prop_menu(self, "metalness", &self->metalness, ctx); 
 	changes |= mat_prop_menu(self, "transparency", &self->transparency, ctx); 
 	changes |= mat_prop_menu(self, "emissive", &self->emissive, ctx); 
+	if(nk_button_label(ctx, "vil"))
+	{
+		c_editmode(&SYS)->open_vil = self->vil;
+	}
+	/* return CONTINUE; */
 	return changes;
 }
 
@@ -288,4 +322,51 @@ void materials_reg()
 {
 	sauces_loader(ref("mat"), mat_loader);
 	sauces_register("_default.mat", NULL, mat_new("_default.mat"));
+
+}
+
+void materials_init_vil()
+{
+	vicall_t *r, *g, *b, *a;
+	vil_t *ctx = &g_mat_ctx;
+
+	vil_context_init(ctx);
+
+	vitype_t *mat = vil_add_type(ctx, "material",
+			NULL, sizeof(uint32_t));
+
+	vitype_t *tnum = vil_add_type(ctx, "number",
+			(vitype_gui_cb)number_gui, sizeof(float));
+
+	vitype_t *v2 = vil_add_type(ctx, "vec2", NULL, sizeof(vec2_t));
+		vitype_add(v2, tnum, "x", vec2(40, 10), V_ALL);
+		vitype_add(v2, tnum, "y", vec2(40, 260), V_ALL);
+
+	vitype_t *v3 = vil_add_type(ctx, "vec3", NULL, sizeof(vec3_t));
+		vitype_add(v3, tnum, "x", vec2(40, 10), V_ALL);
+		vitype_add(v3, tnum, "y", vec2(40, 260), V_ALL);
+		vitype_add(v3, tnum, "z", vec2(40, 360), V_ALL);
+
+
+	vitype_t *tcol = vil_add_type(ctx, "_color_picker",
+			(vitype_gui_cb)color_gui, sizeof(vec4_t));
+
+	vitype_t *rgba = vil_add_type(ctx, "rgba", NULL, sizeof(vec4_t));
+		vitype_add(rgba, tcol, "color", vec2(100, 10), V_ALL);
+		r = vitype_add(rgba, tnum, "r", vec2(100, 10), V_ALL);
+		g = vitype_add(rgba, tnum, "g", vec2(200, 10), V_ALL);
+		b = vitype_add(rgba, tnum, "b", vec2(300, 10), V_ALL);
+		a = vitype_add(rgba, tnum, "a", vec2(300, 10), V_ALL);
+		vicall_color(r, vec4(1, 0, 0, 1));
+		vicall_color(g, vec4(0, 1, 0, 1));
+		vicall_color(b, vec4(0, 0, 1, 1));
+		vicall_color(a, vec4(1, 1, 1, 1));
+
+	float y = 0.0f;
+	float inc = 100.0f;
+
+	vitype_add(mat, v2, "uv-space", vec2(0, y += inc), V_IN);
+	vitype_add(mat, v2, "screen-space", vec2(0, y += inc), V_IN);
+	vitype_add(mat, v3, "world-space", vec2(0, y += inc), V_IN);
+	vitype_add(mat, v3, "view-space", vec2(0, y += inc), V_IN);
 }

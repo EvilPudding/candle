@@ -1,6 +1,7 @@
 #ifndef MATERIAL_H
 #define MATERIAL_H
 
+#include <vil/vil.h>
 #include "texture.h"
 #include "mafs.h"
 
@@ -27,6 +28,7 @@ typedef struct
 	prop_t emissive;
 
 	int id;
+	struct vitype_t *vil;
 } mat_t;
 
 extern char g_mats_path[256];
@@ -40,6 +42,7 @@ void mat_set_albedo(mat_t *self, prop_t albedo);
 void mat_destroy(mat_t *self);
 int mat_menu(mat_t *self, void *ctx);
 
+void materials_init_vil(void);
 void materials_reg(void);
 
 extern int g_mats_num;
