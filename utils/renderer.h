@@ -179,7 +179,6 @@ typedef struct c_renderer_t
 	int passes_size;
 	pass_t passes[64];
 	texture_t *output;
-	texture_t *fallback_depth;
 
 	int ready;
 

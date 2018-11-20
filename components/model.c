@@ -826,17 +826,6 @@ int c_model_menu(c_model_t *self, void *ctx)
 
 static int c_model_position_changed(c_model_t *self)
 {
-	c_node_t *node = c_node(self);
-	c_node_update_model(node);
-
-	if(node->unpack_inheritance)
-	{
-		drawable_set_entity(&self->draw, node->unpack_inheritance);
-	}
-	else
-	{
-		drawable_set_entity(&self->draw, c_entity(self));
-	}
 	/* mat4_t model = node->model; */
 	/* if(self->scale_dist > 0.0f) */
 	/* { */
@@ -844,14 +833,35 @@ static int c_model_position_changed(c_model_t *self)
 	/* 	float dist = vec3_dist(pos, c_renderer(&SYS)->bound_camera_pos); */
 	/* 	mat4_t model = mat4_scale_aniso(model, vec3(dist * self->scale_dist)); */
 	/* } */
-	drawable_set_transform(&self->draw, node->model);
-
-#ifdef MESH4
-	drawable_set_angle4(&self->draw, node->angle4);
-#endif
-
+	self->modified = 1;
 	return CONTINUE;
 }
+
+static int c_model_pre_draw(c_model_t *self)
+{
+	if(self->modified)
+	{
+		self->modified = 0;
+		c_node_t *node = c_node(self);
+		c_node_update_model(node);
+
+		if(node->unpack_inheritance)
+		{
+			drawable_set_entity(&self->draw, node->unpack_inheritance);
+		}
+		else
+		{
+			drawable_set_entity(&self->draw, c_entity(self));
+		}
+		drawable_set_transform(&self->draw, node->model);
+
+#ifdef MESH4
+		drawable_set_angle4(&self->draw, node->angle4);
+#endif
+	}
+	return CONTINUE;
+}
+
 
 void add_tool(char *name, tool_gui_cb gui, tool_edit_cb edit, size_t size,
 		void *defaults, int require_sys)
@@ -896,6 +906,7 @@ REG()
 
 	ct_listener(ct, WORLD, sig("component_menu"), c_model_menu);
 	ct_listener(ct, WORLD, sig("component_tool"), c_model_tool);
+	ct_listener(ct, WORLD, sig("world_pre_draw"), c_model_pre_draw);
 
 	ct_listener(ct, ENTITY, sig("node_changed"), c_model_position_changed);
 

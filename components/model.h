@@ -130,6 +130,7 @@ typedef struct
 
 	drawable_t draw;
 	/* drawable_t select; */
+	int modified;
 } c_model_t;
 
 DEF_CASTER("model", c_model, c_model_t)

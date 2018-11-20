@@ -121,23 +121,27 @@ vec3 get_normal(sampler2D buffer)
 }
 vec3 get_normal(vec2 tc)
 {
+	vec3 norm;
 	if(has_tex)
 	{
 		vec3 texcolor = resolveProperty(mat(normal), tc).rgb * 2.0 - 1.0;
-		return normalize(TM * texcolor);
+		norm = TM * texcolor;
 
 	}
-	return normalize(TM[2]);
+	else
+	{
+		norm = TM[2];
+	}
+	if(!gl_FrontFacing)
+	{
+		norm = -norm;
+	}
+
+	return normalize(norm);
 }
 vec3 get_normal()
 {
-	if(has_tex)
-	{
-		vec3 texcolor = resolveProperty(mat(normal), texcoord).rgb * 2.0 - 1.0;
-		return normalize(TM * texcolor);
-
-	}
-	return normalize(TM[2]);
+	return get_normal(texcoord);
 }
 
 float rand(vec2 co)
@@ -435,7 +439,7 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
     float glossMult = gloss;
 
     // cone-tracing using an isosceles triangle to approximate a cone in screen space
-    for(int i = 0; i < 14; ++i)
+    for(int i = 0; i < 1; ++i)
     {
         float oppositeLength = 2.0 * tan(coneTheta) * adjacentLength;
         float incircleSize = isoscelesTriangleInRadius(oppositeLength, adjacentLength);

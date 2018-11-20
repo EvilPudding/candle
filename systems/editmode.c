@@ -737,8 +737,21 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 		return CONTINUE;
 	}
 
+	if(!entity_exists(self->selected) || self->selected == SYS)
+	{
+		return CONTINUE;
+	}
 	switch(*key)
 	{
+		case 't': self->tool = TRANSLATE; c_editmode_update_axis(self); break;
+		case 'r': self->tool = ROTATE; c_editmode_update_axis(self); break;
+		case 's': self->tool = SCALE; c_editmode_update_axis(self); break;
+		case 127: c_editmode_selected_delete(self); break;
+		case 'p':
+				  self->tool = POLYPEN;
+				  c_editmode_update_axis(self);
+				  self->last_edge = -1;
+				  break;
 		case 'c':
 			if(entity_exists(self->selected) && self->mode == EDIT_OBJECT)
 			{
@@ -758,27 +771,9 @@ int c_editmode_key_up(c_editmode_t *self, char *key)
 				self->mode = EDIT_OBJECT; 
 			}
 			break;
-		case 't': self->tool = TRANSLATE; c_editmode_update_axis(self); break;
-		case 'r': self->tool = ROTATE; c_editmode_update_axis(self); break;
-		case 's': self->tool = SCALE; c_editmode_update_axis(self); break;
-		case 127: c_editmode_selected_delete(self); break;
-		case 'p':
-				  self->tool = POLYPEN;
-				  c_editmode_update_axis(self);
-				  self->last_edge = -1;
-				  break;
-		case 27:
-			self->menu_x = -1;
-			if(entity_exists(self->selected))
-			{
-				c_editmode_select(self, entity_null);
-			}
-			else
-			{
-				c_editmode_leave_context(self);
-			}
-			break;
 		case '\r': c_editmode_enter_context(self); break;
+		case 27: c_editmode_select(self, SYS); break;
+		default: return CONTINUE;
 	}
 	return STOP;
 }
@@ -811,7 +806,7 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 
 	res = nk_can_begin_titled(self->nk, buffer, title,
 			nk_rect(self->spawn_pos.x, self->spawn_pos.y, tex->width + 30,
-				tex->height + 130),
+				tex->height + 130 + 35),
 			NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
 			NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE);
 	if (res)
@@ -827,10 +822,27 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 		tex->prev_id = nk_combo(self->nk, bufs, tex->bufs_size,
 				tex->prev_id, 25, nk_vec2(200, 200));
 
-
-
 		nk_value_int(self->nk, "glid: ", tex->bufs[tex->prev_id].id);
 		nk_value_int(self->nk, "dims: ", tex->bufs[tex->prev_id].dims);
+		if (nk_button_label(self->nk, "save"))
+		{
+			printf("Saving texture.\n");
+			char *file = NULL;
+			emit(ref("pick_file_save"), "png", &file);
+			if(file)
+			{
+				int32_t res = texture_save(tex, tex->prev_id, file);
+				if(res)
+				{
+					printf("Texture saved.\n");
+				}
+				else
+				{
+					printf("Texture failed to save.\n");
+				}
+				free(file);
+			}
+		}
 		struct nk_image im = nk_image_id(tex->bufs[tex->prev_id].id);
 		/* im.handle.ptr = 1; */
 		struct nk_command_buffer *canvas = nk_window_get_canvas(self->nk);
@@ -838,7 +850,7 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 		total_space.w = tex->width;
 		total_space.h = tex->height;
 
-		total_space.y += 85;
+		total_space.y += 85 + 35;
 		/* total_space.h -= 85; */
 		nk_draw_image_ext(canvas, total_space, &im, nk_rgba(255, 255, 255, 255), 1);
 	}
@@ -1223,6 +1235,20 @@ int c_editmode_event(c_editmode_t *self, SDL_Event *event)
 	return CONTINUE;
 }
 
+int c_editmode_pick_load(c_editmode_t *self, const char *filter, char **output)
+{
+	/* TODO: prompt for a path in nuklear */
+	*output = strdup("unnamed");
+	return STOP;
+}
+
+int c_editmode_pick_save(c_editmode_t *self, const char *filter, char **output)
+{
+	/* TODO: prompt for a path in nuklear */
+	*output = strdup("unnamed");
+	return STOP;
+}
+
 REG()
 {
 	ct_t *ct = ct_new("editmode", sizeof(c_editmode_t), c_editmode_init,
@@ -1231,11 +1257,15 @@ REG()
 	signal_init(sig("component_menu"), sizeof(struct nk_context*));
 	signal_init(sig("component_tool"), sizeof(void*));
 	signal_init(sig("editmode_toggle"), sizeof(void*));
-	signal_init(sig("pick_file"), sizeof(void*));
+	signal_init(sig("pick_file_save"), sizeof(void*));
+	signal_init(sig("pick_file_load"), sizeof(void*));
 
 	ct_listener(ct, WORLD | 10, sig("key_up"), c_editmode_key_up);
 
 	ct_listener(ct, WORLD | 10, sig("key_down"), c_editmode_key_down);
+
+	ct_listener(ct, WORLD, sig("pick_file_save"), c_editmode_pick_save);
+	ct_listener(ct, WORLD, sig("pick_file_load"), c_editmode_pick_load);
 
 	ct_listener(ct, WORLD, sig("mouse_move"), c_editmode_mouse_move);
 
