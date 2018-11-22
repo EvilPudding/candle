@@ -630,8 +630,6 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 
 	glDepthMask(pass->depth_update); glerr();
 
-	texture_t *depth = pass->depth ? pass->depth : self->fallback_depth;
-
 	if(pass->clear)
 	{
 		glClearColor(_vec4(pass->clear_color));
@@ -645,7 +643,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 		{
 			update_ubo(self, f);
 			glBindBufferBase(GL_UNIFORM_BUFFER, 19, self->ubos[f]); glerr();
-			texture_target(pass->output, depth, f);
+			texture_target(pass->output, pass->depth, f);
 
 			if(pass->clear) glClear(pass->clear);
 
@@ -655,7 +653,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 	else
 	{
 		glBindBufferBase(GL_UNIFORM_BUFFER, 19, self->ubos[pass->camid]); glerr();
-		texture_target(pass->output, depth, pass->framebuffer_id);
+		texture_target(pass->output, pass->depth, pass->framebuffer_id);
 
 		if(pass->clear) glClear(pass->clear);
 
@@ -736,11 +734,6 @@ renderer_t *renderer_new(float resolution)
 	}
 	self->near = 0.1f;
 	self->far = 100.0f;
-
-	self->fallback_depth =	texture_new_2D(1, 1, 0, 0,
-		buffer_new("depth",	1, -1)
-	);
-	renderer_add_tex(self, "fallback_depth", 1.0f, self->fallback_depth);
 
 	self->resolution = resolution;
 
@@ -870,8 +863,7 @@ void renderer_add_pass(
 	}
 	pass->clear = 0;
 
-	pass->depth_update = !(flags & DEPTH_LOCK);
-	pass->depth = NULL;
+	pass->depth_update = !(flags & DEPTH_LOCK) && depth;
 
 	pass->output = output;
 	pass->depth = depth;

@@ -54,6 +54,7 @@ texture_t *texture_from_file(const char *filename);
 texture_t *texture_from_memory(void *buffer, int32_t len);
 int32_t texture_load(texture_t *self, const char *filename);
 int32_t texture_load_from_memory(texture_t *self, void *buffer, int32_t len);
+int32_t texture_save(texture_t *self, int id, const char *filename);
 texture_t *texture_from_buffer(void *buffer, int32_t width, int32_t height,
 		int32_t Bpp);
 #define TEX_MIPMAP			(1 << 0x01)

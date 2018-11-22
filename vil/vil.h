@@ -3,6 +3,7 @@
 
 #include <ecs/ecm.h>
 #include <utils/mafs.h>
+#include <utils/khash.h>
 
 typedef struct vitype_t vitype_t;
 typedef struct vicall_t vicall_t;
@@ -19,6 +20,7 @@ enum {
 } vicall_flags;
 
 KHASH_MAP_INIT_INT(vitype, vitype_t *)
+
 typedef struct vil_t
 {
 	khash_t(vitype) *types;
@@ -35,7 +37,7 @@ typedef union
 void vil_context_init(vil_t *self);
 vitype_t *vil_add_type(vil_t *ctx, const char *name,
 		vitype_gui_cb builtin_gui, int builtin_size);
-vitype_t *vil_get_type(vil_t *ctx, uint32_t ref);
+vitype_t *vil_get(vil_t *ctx, uint32_t ref);
 
 void vicall_link(vicall_t *root, slot_t in_slot, slot_t out_slot,
 		int field);
