@@ -223,54 +223,12 @@ int c_window_draw(c_window_t *self)
 	return CONTINUE;
 }
 
-int c_window_mouse_press(c_window_t *self, mouse_button_data *event)
-{
-	float depth;
-	entity_t ent = renderer_entity_at_pixel(self->renderer, event->x, event->y, &depth);
-	unsigned int geom = renderer_geom_at_pixel(self->renderer, event->x, event->y, &depth);
-
-	if(ent)
-	{
-		model_button_data ev = {
-			.x = event->x, .y = event->y, .direction = event->direction,
-			.depth = depth, .geom = geom, .button = event->button
-		};
-		return entity_signal_same(ent, ref("model_press"), &ev, NULL);
-	}
-	return CONTINUE;
-}
-
-int c_window_mouse_release(c_window_t *self, mouse_button_data *event)
-{
-
-	float depth;
-	entity_t ent = renderer_entity_at_pixel(self->renderer, event->x, event->y,
-			&depth);
-	unsigned int geom = renderer_geom_at_pixel(self->renderer, event->x,
-			event->y, &depth);
-
-	if(ent)
-	{
-		model_button_data ev = {
-			.x = event->x, .y = event->y, .direction = event->direction,
-			.depth = depth, .geom = geom, .button = event->button
-		};
-		return entity_signal_same(ent, ref("model_release"), &ev, NULL);
-	}
-	return CONTINUE;
-}
-
 REG()
 {
 	ct_t *ct = ct_new("window", sizeof(c_window_t), c_window_init, NULL, 0);
 
 	ct_listener(ct, ENTITY, sig("entity_created"), c_window_created);
 	ct_listener(ct, WORLD | 10, sig("world_draw"), c_window_draw);
-	ct_listener(ct, WORLD | 100, ref("mouse_press"), c_window_mouse_press);
-	ct_listener(ct, WORLD | 100, ref("mouse_release"), c_window_mouse_release);
 
-
-	signal_init(ref("model_press"), 0);
-	signal_init(ref("model_release"), 0);
 	signal_init(sig("window_resize"), sizeof(window_resize_data));
 }

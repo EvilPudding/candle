@@ -69,6 +69,11 @@ int c_editlook_mouse_release(c_editlook_t *self, mouse_button_data *event)
 		}
 		self->pressed_r = 0;
 		self->panning = 0;
+		if(self->dragging)
+		{
+			self->dragging = 0;
+			return STOP;
+		}
 	}
 	return CONTINUE;
 }
@@ -86,8 +91,9 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 	c_camera_t *cam = c_camera(self);
 	if(!cam) return CONTINUE;
 
-	fake_x += event->sx;
-	fake_y += event->sy;
+	self->dragging = 1;
+	fake_x -= event->sx;
+	fake_y -= event->sy;
 	if(c_keyboard(&SYS)->shift)
 	{
 		float px = fake_x / window->width;
@@ -103,18 +109,16 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 
 		vec3_t old_pos = sc->pos;
 
-		vec3_t pos = c_camera_real_pos(cam, edit->mouse_screen_pos.z, vec2(px, py));
+		vec3_t new_mpos = c_camera_real_pos(cam, edit->mouse_screen_pos.z, vec2(px, py));
 
-		vec3_t new_pos = vec3_add(self->pan_diff, pos);
+		vec3_t new_pos = vec3_add(self->pan_diff, new_mpos);
 		c_spacial_set_pos(sc, new_pos);
 
-		vec3_t diff = vec3_sub(sc->pos, old_pos);
-
+		vec3_t diff = vec3_sub(new_pos, old_pos);
 		self->pan_diff = vec3_sub(self->pan_diff, diff);
 
-
-		new_pos = vec3_add(self->pan_diff, edit->mouse_position);
-		c_spacial_set_pos(sc, new_pos);
+		/* new_pos = vec3_add(self->pan_diff, edit->mouse_position); */
+		/* c_spacial_set_pos(sc, new_pos); */
 
 		return STOP;
 	}
@@ -169,9 +173,9 @@ REG()
 
 	ct_listener(ct, WORLD, sig("window_resize"), c_editlook_window_resize);
 
-	ct_listener(ct, WORLD, sig("mouse_press"), c_editlook_mouse_press);
+	ct_listener(ct, WORLD | 10, sig("mouse_press"), c_editlook_mouse_press);
 
-	ct_listener(ct, WORLD, sig("mouse_release"), c_editlook_mouse_release);
+	ct_listener(ct, WORLD | 10, sig("mouse_release"), c_editlook_mouse_release);
 
 }
 

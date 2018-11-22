@@ -60,12 +60,12 @@ int handle_event(SDL_Event event)
 		case SDL_MOUSEBUTTONUP:
 			bdata = (mouse_button_data){event.button.x, event.button.y, 0,
 				event.button.button};
-			if(entity_exists(g_candle->mouse_owners[0]))
-			{
-				entity_signal_same(g_candle->mouse_owners[0], sig("mouse_release"),
-						&bdata, NULL);
-			}
-			else
+			/* if(entity_exists(g_candle->mouse_owners[0])) */
+			/* { */
+				/* entity_signal_same(g_candle->mouse_owners[0], sig("mouse_release"), */
+						/* &bdata, NULL); */
+			/* } */
+			/* else */
 			{
 				entity_signal(entity_null, sig("mouse_release"), &bdata, NULL);
 			}
@@ -73,12 +73,12 @@ int handle_event(SDL_Event event)
 		case SDL_MOUSEBUTTONDOWN:
 			bdata = (mouse_button_data){event.button.x, event.button.y, 0,
 				event.button.button};
-			if(entity_exists(g_candle->mouse_owners[0]))
-			{
-				entity_signal(g_candle->mouse_owners[0], sig("mouse_press"),
-						&bdata, NULL);
-			}
-			else
+			/* if(entity_exists(g_candle->mouse_owners[0])) */
+			/* { */
+				/* entity_signal_same(g_candle->mouse_owners[0], sig("mouse_press"), */
+						/* &bdata, NULL); */
+			/* } */
+			/* else */
 			{
 				entity_signal(entity_null, sig("mouse_press"), &bdata, NULL);
 			}
@@ -256,7 +256,8 @@ static int ticker_loop(void)
 	do
 	{
 		int current = SDL_GetTicks();
-		float dt = (current - g_candle->last_update) / 1000.0;
+		float dt = 16.0f / 1000.0f;
+		/* float dt = (current - g_candle->last_update) / 1000.0; */
 		entity_signal(entity_null, sig("world_update"), &dt, NULL);
 		ecm_clean(0);
 		g_candle->last_update = current;

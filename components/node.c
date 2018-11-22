@@ -194,10 +194,11 @@ void c_node_update_model(c_node_t *self)
 
 	entity_t parent = self->parent;
 	c_spacial_t *sc = c_spacial(self);
+	if(!sc) return;
 
-	if(entity_exists(self->parent))
+	c_node_t *parent_node = entity_exists(self->parent) ? c_node(&parent) : NULL;
+	if(parent_node)
 	{
-		c_node_t *parent_node = c_node(&parent);
 
 		c_node_update_model(parent_node);
 		self->ghost_inheritance = self->ghost || parent_node->ghost_inheritance;

@@ -220,7 +220,7 @@ void c_spacial_set_model(c_spacial_t *self, mat4_t m)
 	m._[2]._[2] /= self->scale.z;
 	m._[3]._[2] = 0;
 
-	self->rot_quat = mat4_to_quat(m);
+	self->rot_quat = vec4_norm(mat4_to_quat(m));
 	self->rot = quat_to_euler(self->rot_quat);
 
 	/* self->model_matrix = m; */

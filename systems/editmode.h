@@ -6,22 +6,77 @@
 #include <utils/renderer.h>
 #include <utils/nk.h>
 
-/* struct tool_event */
-/* { */
-/* 	void *ctx; */
-/* 	entity_t selected; */
-/* }; */
+struct edit_scale
+{
+	int dragging;
+	vec3_t start_scale;
 
-typedef struct
+	float start_radius;
+	entity_t arrows, X, Y, Z;
+};
+
+struct edit_rotate
+{
+	int dragging;
+	vec4_t start_quat;
+
+	vec3_t obj_pos;
+	vec2_t start_screen;
+	vec2_t p;
+	float start_radius;
+	float tool_fade;
+	entity_t arrows, X, Y, Z;
+};
+
+struct edit_translate
+{
+	int dragging;
+	vec3_t start_pos;
+
+	vec3_t drag_diff;
+	float start_radius;
+	vec2_t start_screen;
+	int mode;
+	entity_t arrows, X, Y, Z;
+#ifdef MESH4
+	entity_t W;
+#endif
+};
+
+struct edit_poly
+{
+	int last_edge;
+};
+
+typedef struct c_editmode_t c_editmode_t;
+
+struct mouse_tool
+{
+	char key;
+	char name[64];
+	int (*update)(void *usrptr, float dt, c_editmode_t *ec);
+	int (*init)(void *usrptr, c_editmode_t *ec);
+	int (*end)(void *usrptr, c_editmode_t *ec);
+	int (*mmove)(void *usrptr, vec3_t p, c_editmode_t *ec);
+	int (*mpress)(void *usrptr, vec3_t p, int button, c_editmode_t *ec);
+	int (*mrelease)(void *usrptr, vec3_t p, int button, c_editmode_t *ec);
+	int (*mdrag)(void *usrptr, vec3_t p, int button, c_editmode_t *ec);
+	void *usrptr;
+};
+
+typedef struct c_editmode_t
 {
 	c_t super; /* extends c_t */
 
 	int control;
 	int visible;
 	int dragging;
-	int pressing;
+	int pressing_l;
+	int pressing_r;
 	int activated;
 	int tool;
+	struct mouse_tool tools[16];
+	int tools_num;
 	/* int outside; */
 
 	vec3_t mouse_position;
@@ -29,15 +84,6 @@ typedef struct
 	int menu_y;
 
 	/* TOOL VARIABLES */
-	vec4_t start_prop;
-	vec3_t drag_diff;
-	float start_radius;
-	vec3_t start_obj_pos;
-	int last_edge;
-	vec2_t start_screen;
-	float tool_fade;
-	int translate_mode;
-	float radius;
 
 	vec3_t mouse_screen_pos;
 
@@ -48,7 +94,6 @@ typedef struct
 	entity_t context;
 	int selected_poly;
 	int over_poly;
-	vec3_t tool_start;
 
 	entity_t open_entities[16];
 	int open_entities_count;

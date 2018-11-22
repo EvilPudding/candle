@@ -12,6 +12,7 @@ void main()
 	ID = vec2(float(id.x) / 255.0, float(id.y) / 255.0);
 
 	GeomID = poly_id;
+	/* GeomID = gl_PrimitiveID; */
 }
 
 // vim: set ft=c:

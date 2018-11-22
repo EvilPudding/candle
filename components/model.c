@@ -843,6 +843,7 @@ static int c_model_pre_draw(c_model_t *self)
 	{
 		self->modified = 0;
 		c_node_t *node = c_node(self);
+		if(!node) return CONTINUE;
 		c_node_update_model(node);
 
 		if(node->unpack_inheritance)

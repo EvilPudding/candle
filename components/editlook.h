@@ -9,7 +9,7 @@ typedef struct
 	float win_min_side;
 	float sensitivity;
 	int pressed_r;
-	int controlling;
+	int dragging;
 	int panning;
 	vec3_t pan_diff;
 } c_editlook_t;
