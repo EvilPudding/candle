@@ -1,6 +1,6 @@
 #include "node.h"
 #include "name.h"
-#include "spacial.h"
+#include "spatial.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -95,7 +95,7 @@ void c_node_unparent(c_node_t *self, int inherit_transform)
 			self->cached = 0;
 			c_node_update_model(self);
 
-			c_spacial_set_model(c_spacial(self), self->model);
+			c_spatial_set_model(c_spatial(self), self->model);
 			self->inherit_scale = prev_inheritance;
 		}
 		c_node_remove(parent, c_entity(self));
@@ -179,12 +179,12 @@ REG()
 {
 	/* TODO destroyer */
 	ct_t *ct = ct_new("node", sizeof(c_node_t),
-			c_node_init, c_node_destroy, 1, ref("spacial"));
+			c_node_init, c_node_destroy, 1, ref("spatial"));
 
 	signal_init(sig("node_changed"), 0);
 
 	ct_listener(ct, ENTITY, sig("entity_created"), c_node_created);
-	ct_listener(ct, ENTITY, sig("spacial_changed"), c_node_changed);
+	ct_listener(ct, ENTITY, sig("spatial_changed"), c_node_changed);
 }
 
 void c_node_update_model(c_node_t *self)
@@ -193,7 +193,7 @@ void c_node_update_model(c_node_t *self)
 	self->cached = 1;
 
 	entity_t parent = self->parent;
-	c_spacial_t *sc = c_spacial(self);
+	c_spatial_t *sc = c_spatial(self);
 	if(!sc) return;
 
 	c_node_t *parent_node = entity_exists(self->parent) ? c_node(&parent) : NULL;

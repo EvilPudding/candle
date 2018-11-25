@@ -44,12 +44,12 @@ entity_t cube = entity_new(c_model_new(mesh, material, 0, 1));
 
 All components in *Candle* use ```c_``` prefix.
 
-As seen above, the entity requires a ```c_model``` component to specify which mesh and material to use. The ```c_model``` component depends on ```c_spacial``` component, which is used to determine an object's position, scale and rotation.
+As seen above, the entity requires a ```c_model``` component to specify which mesh and material to use. The ```c_model``` component depends on ```c_spatial``` component, which is used to determine an object's position, scale and rotation.
 If I wish to change the cube's position, I can simply:
 ```c
-c_spacial_t *sc = c_spacial(&cube); /* fetch the spacial component from the cube */
-c_spacial_set_pos(sc, vec3(0, 1, 0)); /* move the cube upwards */
-c_spacial_rotate_Y(sc, M_PI); /* rotate the cube around the Y axis by ~3.1415 radians */
+c_spatial_t *sc = c_spatial(&cube); /* fetch the spatial component from the cube */
+c_spatial_set_pos(sc, vec3(0, 1, 0)); /* move the cube upwards */
+c_spatial_rotate_Y(sc, M_PI); /* rotate the cube around the Y axis by ~3.1415 radians */
 ```
 
 If I wish to make cube the a light source, I can add to the entity a ```c_light``` component by:

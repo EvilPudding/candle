@@ -3,7 +3,7 @@
 
 #include <utils/glutil.h>
 #include <ecs/ecm.h>
-#include <components/spacial.h>
+#include <components/spatial.h>
 
 typedef struct
 {

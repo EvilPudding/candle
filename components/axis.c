@@ -2,7 +2,7 @@
 #include <utils/drawable.h>
 #include "model.h"
 #include "node.h"
-#include "spacial.h"
+#include "spatial.h"
 #include "light.h"
 #include <utils/nk.h>
 #include <utils/shader.h>
@@ -101,7 +101,7 @@ int c_axis_mouse_move(c_axis_t *self, mouse_move_data *event)
 			entity_t parent = c_node(&target)->parent;
 			float amount = -event->sy * 0.01;
 
-			c_spacial_t *sc = c_spacial(&target);
+			c_spatial_t *sc = c_spatial(&target);
 
 			vec3_t dir = self->dir;
 			if(parent)
@@ -119,26 +119,26 @@ int c_axis_mouse_move(c_axis_t *self, mouse_move_data *event)
 
 			if(self->type == 0)
 			{
-				c_spacial_set_pos(sc, vec3_add(dir, sc->pos));
+				c_spatial_set_pos(sc, vec3_add(dir, sc->pos));
 			}
 			else if(self->type == 1)
 			{
 				if(self->dir.x > 0.0f)
 				{
-					c_spacial_rotate_X(sc, amount);
+					c_spatial_rotate_X(sc, amount);
 				}
 				else if(self->dir.y > 0.0f)
 				{
-					c_spacial_rotate_Y(sc, amount);
+					c_spatial_rotate_Y(sc, amount);
 				}
 				else if(self->dir.z > 0.0f)
 				{
-					c_spacial_rotate_Z(sc, amount);
+					c_spatial_rotate_Z(sc, amount);
 				}
 			}
 			else if(self->type == 2)
 			{
-				c_spacial_set_scale(sc, vec3_add(vec3_scale(self->dir, amount), sc->scale));
+				c_spatial_set_scale(sc, vec3_add(vec3_scale(self->dir, amount), sc->scale));
 			}
 		}
 	}

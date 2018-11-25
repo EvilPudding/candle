@@ -20,34 +20,34 @@ typedef struct
 #ifdef MESH4
 	float angle4;
 #endif
-} c_spacial_t;
+} c_spatial_t;
 
-DEF_CASTER("spacial", c_spacial, c_spacial_t)
+DEF_CASTER("spatial", c_spatial, c_spatial_t)
 
-c_spacial_t *c_spacial_new(void);
-void c_spacial_init(c_spacial_t *self);
-vec3_t c_spacial_up(c_spacial_t *self);
+c_spatial_t *c_spatial_new(void);
+void c_spatial_init(c_spatial_t *self);
+vec3_t c_spatial_up(c_spatial_t *self);
 
-void c_spacial_lock(c_spacial_t *self);
-void c_spacial_unlock(c_spacial_t *self);
+void c_spatial_lock(c_spatial_t *self);
+void c_spatial_unlock(c_spatial_t *self);
 
-void c_spacial_scale(c_spacial_t *self, vec3_t scale);
-void c_spacial_look_at(c_spacial_t *self, vec3_t center, vec3_t up);
-void c_spacial_set_pos(c_spacial_t *self, vec3_t pos);
-void c_spacial_set_model(c_spacial_t *self, mat4_t model);
-void c_spacial_set_rot(c_spacial_t *self, float x, float y, float z, float angle);
-void c_spacial_set_scale(c_spacial_t *self, vec3_t scale);
-void c_spacial_update_model_matrix(c_spacial_t *self);
-void c_spacial_assign(c_spacial_t *self, c_spacial_t *other);
+void c_spatial_scale(c_spatial_t *self, vec3_t scale);
+void c_spatial_look_at(c_spatial_t *self, vec3_t center, vec3_t up);
+void c_spatial_set_pos(c_spatial_t *self, vec3_t pos);
+void c_spatial_set_model(c_spatial_t *self, mat4_t model);
+void c_spatial_set_rot(c_spatial_t *self, float x, float y, float z, float angle);
+void c_spatial_set_scale(c_spatial_t *self, vec3_t scale);
+void c_spatial_update_model_matrix(c_spatial_t *self);
+void c_spatial_assign(c_spatial_t *self, c_spatial_t *other);
 
-void c_spacial_rotate_X(c_spacial_t *self, float angle);
-void c_spacial_rotate_Y(c_spacial_t *self, float angle);
-void c_spacial_rotate_Z(c_spacial_t *self, float angle);
+void c_spatial_rotate_X(c_spatial_t *self, float angle);
+void c_spatial_rotate_Y(c_spatial_t *self, float angle);
+void c_spatial_rotate_Z(c_spatial_t *self, float angle);
 
-vec3_t c_spacial_forward(c_spacial_t *self);
-vec3_t c_spacial_sideways(c_spacial_t *self);
-vec3_t c_spacial_upwards(c_spacial_t *self);
+vec3_t c_spatial_forward(c_spatial_t *self);
+vec3_t c_spatial_sideways(c_spatial_t *self);
+vec3_t c_spatial_upwards(c_spatial_t *self);
 
-void c_spacial_rotate_axis(c_spacial_t *self, vec3_t axis, float angle);
+void c_spatial_rotate_axis(c_spatial_t *self, vec3_t axis, float angle);
 
 #endif /* !SPACIAL_H */

@@ -1,7 +1,6 @@
 #include "renderer.h"
 #include <components/camera.h>
 #include <components/model.h>
-#include <components/spacial.h>
 #include <components/light.h>
 #include <components/ambient.h>
 #include <components/node.h>

@@ -1,7 +1,7 @@
 #include "bone.h"
 #include "skin.h"
 #include <candle.h>
-#include <components/spacial.h>
+#include <components/spatial.h>
 #include <components/node.h>
 #include <components/model.h>
 #include <utils/drawable.h>
@@ -73,7 +73,7 @@ static int c_bone_position_changed(c_bone_t *self)
 	c_node_update_model(par);
 	c_node_update_model(n);
 
-	vec3_t p = c_spacial(self)->pos;
+	vec3_t p = c_spatial(self)->pos;
 	float len = vec3_len(p);
 
 	mat4_t model = mat4_look_at(p, vec3(0.0f), vec3(0.0f, 1.0f, 0.0f));

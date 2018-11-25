@@ -1,5 +1,5 @@
 #include "decal.h"
-#include "spacial.h"
+#include "spatial.h"
 #include "candle.h"
 #include <utils/drawable.h>
 #include <components/model.h>

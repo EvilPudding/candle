@@ -2,7 +2,6 @@
 #include <systems/window.h>
 #include <systems/editmode.h>
 #include <components/name.h>
-#include "spacial.h"
 #include "node.h"
 #include <utils/nk.h>
 #include <candle.h>

@@ -1,6 +1,6 @@
 #include "freemove.h"
 #include <candle.h>
-#include <components/spacial.h>
+#include <components/spatial.h>
 #include <systems/keyboard.h>
 #include <math.h>
 
@@ -21,11 +21,11 @@ c_freemove_t *c_freemove_new(entity_t orientation, int plane_movement, entity_t 
 
 static int c_freemove_update(c_freemove_t *self, float *dt)
 {
-	/* vec3_t rot = c_spacial(self->orientation)->rot; */
+	/* vec3_t rot = c_spatial(self->orientation)->rot; */
 	vec3_t *vel = &self->vel;
 	float accel = 30 * (*dt);
 
-	c_spacial_t *sc = c_spacial(self);
+	c_spatial_t *sc = c_spatial(self);
 
 	vec3_t front;
 	vec3_t sideways;
@@ -64,9 +64,9 @@ static int c_freemove_update(c_freemove_t *self, float *dt)
 		*vel = vec3_add(*vel, front);
 	}
 
-	c_spacial_set_pos(sc, vec3_add(sc->pos, *vel));
+	c_spatial_set_pos(sc, vec3_add(sc->pos, *vel));
 
-	entity_signal(self->super.entity, sig("spacial_changed"), &self->super.entity, NULL);
+	entity_signal(self->super.entity, sig("spatial_changed"), &self->super.entity, NULL);
 
 	return CONTINUE;
 }

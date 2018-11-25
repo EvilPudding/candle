@@ -1,6 +1,6 @@
 #include "sprite.h"
 #include "node.h"
-#include "spacial.h"
+#include "spatial.h"
 #include "light.h"
 #include <utils/drawable.h>
 #include <utils/nk.h>

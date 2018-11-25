@@ -1,7 +1,7 @@
 #include "timeline.h"
 #include <candle.h>
 #include <systems/keyboard.h>
-#include <components/spacial.h>
+#include <components/spatial.h>
 #include <math.h>
 
 struct frame_vec
@@ -86,7 +86,7 @@ static int c_timeline_find(c_timeline_t *self, vector_t *vec)
 
 static void c_timeline_update_rot(c_timeline_t *self)
 {
-	c_spacial_t *sc = c_spacial(self);
+	c_spatial_t *sc = c_spatial(self);
 	struct frame_quat *start = NULL;
 	struct frame_quat *end = NULL;
 	int keys_num = vector_count(self->keys_rot);
@@ -107,13 +107,13 @@ static void c_timeline_update_rot(c_timeline_t *self)
 
 	sc->rot_quat = quat_clerp(start->quat, end->quat, factor);
 	sc->modified = 1;
-	/* c_spacial_set_rot */ 
+	/* c_spatial_set_rot */ 
 }
 
 
 static void c_timeline_update_scale(c_timeline_t *self)
 {
-	c_spacial_t *sc = c_spacial(self);
+	c_spatial_t *sc = c_spatial(self);
 	struct frame_vec *start = NULL;
 	struct frame_vec *end = NULL;
 	int keys_num = vector_count(self->keys_scale);
@@ -122,7 +122,7 @@ static void c_timeline_update_scale(c_timeline_t *self)
 	if(keys_num == 1)
 	{
 		start = vector_get(self->keys_scale, 0);
-		c_spacial_set_scale(sc, start->vec);
+		c_spatial_set_scale(sc, start->vec);
 		return;
 	}
 	int start_key = c_timeline_find(self, self->keys_scale);
@@ -131,12 +131,12 @@ static void c_timeline_update_scale(c_timeline_t *self)
 
 	float factor = (self->t - start->t) / (end->t - start->t);
 
-	c_spacial_set_scale(sc, vec3_mix(start->vec, end->vec, factor));
+	c_spatial_set_scale(sc, vec3_mix(start->vec, end->vec, factor));
 }
 
 static void c_timeline_update_pos(c_timeline_t *self)
 {
-	c_spacial_t *sc = c_spacial(self);
+	c_spatial_t *sc = c_spatial(self);
 	struct frame_vec *start = NULL;
 	struct frame_vec *end = NULL;
 	int keys_num = vector_count(self->keys_pos);
@@ -145,7 +145,7 @@ static void c_timeline_update_pos(c_timeline_t *self)
 	if(keys_num == 1)
 	{
 		start = vector_get(self->keys_pos, 0);
-		c_spacial_set_pos(sc, start->vec);
+		c_spatial_set_pos(sc, start->vec);
 		return;
 	}
 	int start_key = c_timeline_find(self, self->keys_pos);
@@ -154,7 +154,7 @@ static void c_timeline_update_pos(c_timeline_t *self)
 
 	float factor = (self->t - start->t) / (end->t - start->t);
 
-	c_spacial_set_pos(sc, vec3_mix(start->vec, end->vec, factor));
+	c_spatial_set_pos(sc, vec3_mix(start->vec, end->vec, factor));
 }
 
 static int c_timeline_update(c_timeline_t *self, float *dt)
@@ -163,13 +163,13 @@ static int c_timeline_update(c_timeline_t *self, float *dt)
 	{
 		self->global_time += *dt;
 		self->t = fmod(self->global_time * self->ticks_per_sec, self->duration);
-		c_spacial_t *sc = c_spacial(self);
-		c_spacial_lock(sc);
+		c_spatial_t *sc = c_spatial(self);
+		c_spatial_lock(sc);
 		c_timeline_update_scale(self);
 		c_timeline_update_pos(self);
 		c_timeline_update_rot(self);
 		/* c_timeline_update_scripts(self); */
-		c_spacial_unlock(sc);
+		c_spatial_unlock(sc);
 	}
 	return CONTINUE;
 }

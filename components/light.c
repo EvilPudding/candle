@@ -1,6 +1,6 @@
 #include "light.h"
 #include "node.h"
-#include "spacial.h"
+#include "spatial.h"
 #include "model.h"
 #include <utils/drawable.h>
 #include <candle.h>

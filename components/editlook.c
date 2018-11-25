@@ -2,7 +2,7 @@
 #include <candle.h>
 #include <systems/window.h>
 #include <systems/editmode.h>
-#include <components/spacial.h>
+#include <components/spatial.h>
 #include <components/camera.h>
 /* #include <components/camera.h> */
 #include <systems/mouse.h>
@@ -37,11 +37,11 @@ int c_editlook_mouse_wheel(c_editlook_t *self, mouse_button_data *event)
 	c_editmode_t *edit = c_editmode(&SYS);
 	if(!edit->control) return CONTINUE;
 
-	c_spacial_t *sc = c_spacial(self);
+	c_spatial_t *sc = c_spatial(self);
 
 	float inc = 1.0f - (event->y * 0.1f);
 
-	c_spacial_set_pos(sc, vec3_mix(edit->mouse_position, sc->pos, inc));
+	c_spatial_set_pos(sc, vec3_mix(edit->mouse_position, sc->pos, inc));
 
 	return CONTINUE;
 }
@@ -87,7 +87,7 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 
 	candle_grab_mouse(c_entity(self), 0);
 
-	c_spacial_t *sc = c_spacial(self);
+	c_spatial_t *sc = c_spatial(self);
 	c_camera_t *cam = c_camera(self);
 	if(!cam) return CONTINUE;
 
@@ -112,13 +112,13 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 		vec3_t new_mpos = c_camera_real_pos(cam, edit->mouse_screen_pos.z, vec2(px, py));
 
 		vec3_t new_pos = vec3_add(self->pan_diff, new_mpos);
-		c_spacial_set_pos(sc, new_pos);
+		c_spatial_set_pos(sc, new_pos);
 
 		vec3_t diff = vec3_sub(new_pos, old_pos);
 		self->pan_diff = vec3_sub(self->pan_diff, diff);
 
 		/* new_pos = vec3_add(self->pan_diff, edit->mouse_position); */
-		/* c_spacial_set_pos(sc, new_pos); */
+		/* c_spatial_set_pos(sc, new_pos); */
 
 		return STOP;
 	}
@@ -145,19 +145,19 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 
 	float oldx = sc->rot.x;
 
-	c_spacial_rotate_X(sc, -oldx);
-	c_spacial_rotate_Y(sc, inc_y);
+	c_spatial_rotate_X(sc, -oldx);
+	c_spatial_rotate_Y(sc, inc_y);
 
-	c_spacial_lock(sc);
-	sc->pos = vec3_add(pivot, vec3_rotate(diff, c_spacial_upwards(sc), cosy, siny));
+	c_spatial_lock(sc);
+	sc->pos = vec3_add(pivot, vec3_rotate(diff, c_spatial_upwards(sc), cosy, siny));
 
 	diff = vec3_sub(sc->pos, pivot);
 
-	c_spacial_set_pos(sc, vec3_add(pivot,
-				vec3_rotate(diff, c_spacial_forward(sc), cosx, sinx)));
+	c_spatial_set_pos(sc, vec3_add(pivot,
+				vec3_rotate(diff, c_spatial_forward(sc), cosx, sinx)));
 
-	c_spacial_rotate_X(sc, oldx + inc_x);
-	c_spacial_unlock(sc);
+	c_spatial_rotate_X(sc, oldx + inc_x);
+	c_spatial_unlock(sc);
 
 	return STOP;
 }
@@ -165,7 +165,7 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 REG()
 {
 	ct_t *ct = ct_new("editLook", sizeof(c_editlook_t),
-			c_editlook_init, NULL, 1, ref("spacial"));
+			c_editlook_init, NULL, 1, ref("spatial"));
 
 	ct_listener(ct, WORLD, sig("mouse_wheel"), c_editlook_mouse_wheel);
 

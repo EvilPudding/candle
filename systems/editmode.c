@@ -107,8 +107,8 @@ int rotate_init(struct edit_rotate *self, c_editmode_t *ec)
 		self->Z = entity_new(c_axis_new(1, VEC3(0.0f, 0.0f, 1.0f)));
 		self->Y = entity_new(c_axis_new(1, VEC3(0.0f, 1.0f, 0.0f)));
 
-		c_spacial_rotate_Z(c_spacial(&self->X), -M_PI / 2.0f);
-		c_spacial_rotate_X(c_spacial(&self->Z), M_PI / 2.0f);
+		c_spatial_rotate_Z(c_spatial(&self->X), -M_PI / 2.0f);
+		c_spatial_rotate_X(c_spatial(&self->Z), M_PI / 2.0f);
 
 		c_node_add(c_node(&self->arrows), 3, self->X, self->Y, self->Z);
 
@@ -205,7 +205,7 @@ int scale_drag(struct edit_scale *self, vec3_t p, int button, c_editmode_t *ec)
 {
 	if(button != SDL_BUTTON_LEFT) return CONTINUE;
 	c_camera_t *cam = c_camera(&ec->camera);
-	c_spacial_t *sc = c_spacial(&ec->selected);
+	c_spatial_t *sc = c_spatial(&ec->selected);
 	c_node_t *ns = c_node(sc);
 
 	vec3_t obj_pos = c_node_local_to_global(ns, Z3);
@@ -224,7 +224,7 @@ int scale_drag(struct edit_scale *self, vec3_t p, int button, c_editmode_t *ec)
 	}
 
 
-	c_spacial_set_scale(sc, vec3_scale(self->start_scale,
+	c_spatial_set_scale(sc, vec3_scale(self->start_scale,
 				radius / self->start_radius));
 	return STOP;
 }
@@ -265,7 +265,7 @@ int translate_release(struct edit_translate *self, vec3_t p, int button)
 int translate_drag(struct edit_translate *self, vec3_t p, int button, c_editmode_t *ec)
 {
 	if(button != SDL_BUTTON_LEFT) return CONTINUE;
-	c_spacial_t *sc = c_spacial(&ec->selected);
+	c_spatial_t *sc = c_spatial(&ec->selected);
 	c_node_t *ns = c_node(sc);
 	c_node_t *parent = entity_exists(ns->parent) ? c_node(&ns->parent) : NULL;
 	c_camera_t *cam = c_camera(&ec->camera);
@@ -298,13 +298,13 @@ int translate_drag(struct edit_translate *self, vec3_t p, int button, c_editmode
 		}
 
 		pos = vec3_add(self->drag_diff, pos);
-		c_spacial_set_pos(sc, pos);
+		c_spatial_set_pos(sc, pos);
 	}
 	else
 	{
 		c_node_t *nc = c_node(cam);
 		vec3_t cam_pos = c_node_local_to_global(nc, Z3);
-		c_spacial_set_pos(sc, vec3_mix(obj_pos, cam_pos,
+		c_spatial_set_pos(sc, vec3_mix(obj_pos, cam_pos,
 					(self->start_screen.y - p.y) * 10.0f));
 	}
 
@@ -315,7 +315,7 @@ int rotate_drag(struct edit_rotate *self, vec3_t p, int button, c_editmode_t *ec
 {
 	if(button != SDL_BUTTON_LEFT) return CONTINUE;
 
-	c_spacial_t *sc = c_spacial(&ec->selected);
+	c_spatial_t *sc = c_spatial(&ec->selected);
 	c_node_t *ns = c_node(sc);
 	c_node_t *parent = entity_exists(ns->parent) ? c_node(&ns->parent) : NULL;
 	c_camera_t *cam = c_camera(&ec->camera);
@@ -339,7 +339,7 @@ int rotate_drag(struct edit_rotate *self, vec3_t p, int button, c_editmode_t *ec
 		renderer_toggle_pass(cam->renderer, ref("tool"), 1);
 	}
 
-	c_spacial_lock(sc);
+	c_spatial_lock(sc);
 
 	vec2_t sp = c_camera_screen_pos(cam, self->obj_pos).xy;
 	vec2_t dif = vec2_sub(p.xy, sp);
@@ -374,7 +374,7 @@ int rotate_drag(struct edit_rotate *self, vec3_t p, int button, c_editmode_t *ec
 	sc->rot_quat = rot;
 	sc->update_id++;
 	sc->modified = 1;
-	c_spacial_unlock(sc);
+	c_spatial_unlock(sc);
 	return STOP;
 }
 
@@ -538,12 +538,12 @@ void c_editmode_activate(c_editmode_t *self)
 			c_name_new("Edit Camera"), c_editlook_new(), c_node_new(),
 			c_camera_new(70, 0.1, 100.0, 0, 1, 1, editmode_renderer_new(self))
 		);
-		c_spacial_t *sc = c_spacial(&self->camera);
-		c_spacial_lock(sc);
-		c_spacial_set_pos(sc, vec3(6, 6, 6));
-		c_spacial_rotate_Y(sc, M_PI / 2);
-		/* c_spacial_rotate_X(sc, -M_PI * 0.05); */
-		c_spacial_unlock(sc);
+		c_spatial_t *sc = c_spatial(&self->camera);
+		c_spatial_lock(sc);
+		c_spatial_set_pos(sc, vec3(6, 6, 6));
+		c_spatial_rotate_Y(sc, M_PI / 2);
+		/* c_spatial_rotate_X(sc, -M_PI * 0.05); */
+		c_spatial_unlock(sc);
 	}
 
 	c_camera_assign(c_camera(&self->camera));
@@ -769,6 +769,7 @@ void c_editmode_enter_context(c_editmode_t *self)
 
 void c_editmode_select(c_editmode_t *self, entity_t select)
 {
+	if(!entity_exists(select)) select = SYS;
 	self->selected = select;
 	struct mouse_tool *tool = self->tool > -1 ? &self->tools[self->tool] : NULL;
 

@@ -1,6 +1,6 @@
 #include "model.h"
 #include "node.h"
-#include "spacial.h"
+#include "spatial.h"
 #include "light.h"
 #include <utils/nk.h>
 #include <utils/drawable.h>
@@ -412,7 +412,7 @@ c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow, int visible)
 	if(c_entity(self) == SYS)
 	{
 		self->super.ghost = 1;
-		c_spacial(self)->super.ghost = 1;
+		c_spatial(self)->super.ghost = 1;
 	}
 
 	c_model_init_drawables(self);

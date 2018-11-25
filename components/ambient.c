@@ -1,5 +1,5 @@
 #include "ambient.h"
-#include "spacial.h"
+#include "spatial.h"
 #include "candle.h"
 #include <stdlib.h>
 
@@ -28,7 +28,7 @@ void c_ambient_destroy(c_ambient_t *self)
 REG()
 {
 	/* ct_t *ct = */ ct_new("ambient", sizeof(c_ambient_t),
-			c_ambient_init, NULL, 1, ref("spacial"));
+			c_ambient_init, NULL, 1, ref("spatial"));
 }
 
 

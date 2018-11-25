@@ -1,7 +1,7 @@
 #include "skin.h"
 #include "bone.h"
 #include <candle.h>
-#include <components/spacial.h>
+#include <components/spatial.h>
 #include <components/node.h>
 #include <components/model.h>
 #include <utils/drawable.h>

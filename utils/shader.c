@@ -1,7 +1,6 @@
 #include "shader.h"
 #include <candle.h>
 #include "components/light.h"
-#include "components/spacial.h"
 #include "components/node.h"
 #include <stdio.h>
 #include <stdlib.h>

@@ -1,6 +1,6 @@
 #include "attach.h"
 #include <candle.h>
-#include <components/spacial.h>
+#include <components/spatial.h>
 #include <components/node.h>
 #include <math.h>
 
@@ -23,15 +23,15 @@ static int c_attach_update(c_attach_t *self, float *dt)
 {
 	if(!self->target) return CONTINUE;
 
-	/* TODO: this should only be called when spacial_changed of target */
+	/* TODO: this should only be called when spatial_changed of target */
 
 	c_node_t *nc = c_node(&self->target);
 
 	c_node_update_model(nc);
 
-	c_spacial_set_model(c_spacial(self), nc->model);
+	c_spatial_set_model(c_spatial(self), nc->model);
 
-	/* entity_signal(c_entity(self), sig("spacial_changed"), &c_entity(self)); */
+	/* entity_signal(c_entity(self), sig("spatial_changed"), &c_entity(self)); */
 
 	return CONTINUE;
 }
