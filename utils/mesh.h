@@ -40,7 +40,7 @@ typedef struct vec3_t(*support_cb)(mesh_t *self, const vec3_t dir);
 
 typedef float(*modifier_cb)(mesh_t *mesh, float percent, void *usrptr);
 
-typedef int(*iter_cb)(mesh_t *mesh, void *selection);
+typedef int(*iter_cb)(mesh_t *mesh, void *selection, void *usrptr);
 
 #define EXP(e) e
 #define vecN_(eq) CAT2(vecN, _##eq)
@@ -64,6 +64,7 @@ typedef struct vertex_t
 {
 	vecN_t pos;
 	vec4_t color;
+	/* vec3_t normal; */
 	int half;
 	int tmp;
 
@@ -295,7 +296,7 @@ void mesh_select(mesh_t *self, int selection, geom_t geom, int id);
 void mesh_unselect(mesh_t *self, int selection, geom_t geom, int id);
 void mesh_paint(mesh_t *self, vec4_t color);
 void mesh_weld(mesh_t *self, geom_t geom);
-void mesh_for_each_selected(mesh_t *self, geom_t geom, iter_cb cb);
+void mesh_for_each_selected(mesh_t *self, geom_t geom, iter_cb cb, void *usrptr);
 
 void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 		float scale, modifier_cb scale_cb, modifier_cb offset_cb,

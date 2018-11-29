@@ -68,7 +68,8 @@ typedef struct c_render_device_t
 	shader_t *shader;
 	unsigned int ubo;
 	struct gl_scene scene;
-	int updates;
+	int updates_ram;
+	int updates_ubo;
 	int frame;
 } c_render_device_t;
 

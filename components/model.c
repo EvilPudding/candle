@@ -123,13 +123,32 @@ static int tool_extrude_gui(void *ctx, struct conf_extrude *conf)
 
 	return 0;
 }
+static int tool_deform_gui(void *ctx, struct conf_deform *conf)
+{
+	nk_layout_row_dynamic(ctx, 25, 1);
+
+	conf->normal = nk_check_label(ctx, "normal", conf->normal);
+	if(!conf->normal)
+	{
+		nk_property_float(ctx, "#x:", -10000, &conf->direction.x, 10000, 0.1, 0.05);
+		nk_property_float(ctx, "#y:", -10000, &conf->direction.y, 10000, 0.1, 0.05);
+		nk_property_float(ctx, "#z:", -10000, &conf->direction.z, 10000, 0.1, 0.05);
+#ifdef MESH4
+		nk_property_float(ctx, "#w:", -10000, &conf->direction.w, 10000, 0.1, 0.05);
+#endif
+	}
+	nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD,
+			conf->deform_e, sizeof(conf->deform_e), nk_filter_ascii);
+
+	return 0;
+}
 
 static mesh_t *tool_circle_edit(mesh_t *state, struct conf_circle *conf)
 {
 	state = mesh_clone(state);
 	mesh_circle(state, conf->radius, conf->segments, VEC3(0.0, 1.0, 0.0));
 	mesh_select(state, SEL_EDITING, MESH_EDGE, -1);
-	mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_2d);
+	mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_2d, NULL);
 	return state;
 }
 
@@ -183,7 +202,7 @@ static mesh_t *tool_icosphere_edit(
 		mesh_subdivide(state, new->subdivisions - old->subdivisions);
 		mesh_spherize(state, 1);
 		mesh_select(state, SEL_EDITING, MESH_FACE, -1);
-		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_3d);
+		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_3d, NULL);
 		mesh_unlock(state);
 	}
 	else
@@ -199,7 +218,7 @@ static mesh_t *tool_icosphere_edit(
 		}
 		mesh_spherize(state, 1);
 		mesh_select(state, SEL_EDITING, MESH_FACE, -1);
-		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_3d);
+		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_3d, NULL);
 		mesh_unlock(state);
 	}
 	return state;
@@ -262,7 +281,7 @@ static mesh_t *tool_cube_edit(mesh_t *mesh, struct conf_cube *conf)
 	mesh_select(mesh, SEL_EDITING, MESH_EDGE, -1);
 	mesh->has_texcoords = 0;
 
-	mesh_for_each_selected(mesh, MESH_VERT, (iter_cb)paint_3d);
+	mesh_for_each_selected(mesh, MESH_VERT, (iter_cb)paint_3d, NULL);
 	mesh_unlock(mesh);
 	return mesh;
 }
@@ -277,7 +296,7 @@ static float interpret_scale(mesh_t *self, float x,
 	emit(ref("expr_var"), &((struct set_var){"x", x}), NULL);
 	emit(ref("expr_eval"), &interpreters->a, &y);
 
-	if (isnan(y)) return 0.0f;
+	if(isnan(y)) return 0.0f;
 
 	return y;
 }
@@ -358,11 +377,72 @@ static mesh_t *tool_extrude_edit(
 		mesh_extrude_edges(state, new->steps, new->offset, new->scale,
 				new->scale_f ? (modifier_cb)interpret_scale : NULL,
 				new->offset_f ? (modifier_cb)interpret_offset : NULL, &args);
-		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_2d);
+		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_2d, NULL);
 		mesh_remove_lone_edges(state);
 		mesh_triangulate(state);
 	}
 	mesh_unlock(state);
+
+	return state;
+}
+
+static int deform(mesh_t *mesh, vertex_t *vert, struct conf_deform *conf)
+{
+	float result = NAN;
+	vecN_t direction = /*conf->normal ? vert->n :*/ conf->direction;
+
+	emit(ref("expr_var"), &((struct set_var){"x", vert->pos.x}), NULL);
+	emit(ref("expr_var"), &((struct set_var){"y", vert->pos.y}), NULL);
+	emit(ref("expr_var"), &((struct set_var){"z", vert->pos.z}), NULL);
+#ifdef MESH4
+	emit(ref("expr_var"), &((struct set_var){"w", vert->pos.w}), NULL);
+#endif
+	emit(ref("expr_eval"), &conf->deform_s, &result);
+
+	if(isnan(result)) return 1;
+
+	vert->pos = vecN_(add)(vert->pos, vecN_(scale)(direction, result));
+
+	return 1;
+}
+
+static mesh_t *tool_deform_edit(
+		mesh_t *last, struct conf_deform *new,
+		mesh_t *state, struct conf_deform *old)
+{
+
+	emit(ref("expr_var"), &((struct set_var){"x", 0}), NULL);
+	emit(ref("expr_var"), &((struct set_var){"y", 0}), NULL);
+	emit(ref("expr_var"), &((struct set_var){"z", 0}), NULL);
+#ifdef MESH4
+	emit(ref("expr_var"), &((struct set_var){"w", 0}), NULL);
+#endif
+	if(strcmp(new->deform_e, old->deform_e))
+	{
+		if(old->deform_s) emit(ref("expr_del"), &old->deform_s, NULL);
+
+		emit(ref("expr_load"), new->deform_e, &new->deform_s);
+		if(new->deform_s == 0) return state;
+
+		float result = NAN;
+		emit(ref("expr_eval"), &new->deform_s, &result);
+		if(isnan(result))
+		{
+			new->deform_s = 0;
+			return state;
+		}
+	}
+	state = mesh_clone(last);
+
+	if(new->deform_s)
+	{
+		mesh_select(state, SEL_EDITING, MESH_ANY, -1);
+		mesh_lock(state);
+
+		mesh_for_each_selected(state, MESH_VERT, (iter_cb)deform, new);
+
+		mesh_unlock(state);
+	}
 
 	return state;
 }
@@ -459,7 +539,11 @@ void c_model_propagate_edit(c_model_t *self, int cmd_id)
 	}
 
 	/* int update_id = -1; */
-	mesh_t *last = NULL;
+	if(self->base_mesh == self->mesh)
+	{
+		self->base_mesh = mesh_clone(self->base_mesh);
+	}
+	mesh_t *last = self->base_mesh;
 	if(cmd_id > 0)
 	{
 		mesh_history_t *prev = vector_get(self->history, cmd_id - 1);
@@ -662,6 +746,7 @@ void c_model_set_mesh(c_model_t *self, mesh_t *mesh)
 	{
 		mesh_t *old_mesh = self->mesh;
 		self->mesh = mesh;
+		self->base_mesh = mesh;
 
 		if(self->visible)
 		{
@@ -945,4 +1030,8 @@ REG()
 	add_tool("subdivide", (tool_gui_cb)tool_subdivide_gui,
 		(tool_edit_cb)tool_subdivide_edit, sizeof(struct conf_subdivide),
 		&(struct conf_subdivide){1}, 0);
+
+	add_tool("deform", (tool_gui_cb)tool_deform_gui,
+		(tool_edit_cb)tool_deform_edit, sizeof(struct conf_deform),
+		&(struct conf_deform){0, VEC3(0, 1, 0), "1"}, 0);
 }

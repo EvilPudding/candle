@@ -64,12 +64,12 @@ void c_render_device_update_materials(c_render_device_t *self)
 
 int c_render_device_update(c_render_device_t *self)
 {
-	if(self->updates & 0x1)
+	if(self->updates_ram)
 	{
 		c_render_device_update_materials(self);
 		c_render_device_update_lights(self);
 		self->scene.test_color = vec4(0, 1, 0, 1);
-		self->updates = 0x2;
+		SDL_AtomicSet((SDL_atomic_t*)&self->updates_ubo, 1);
 	}
 	return CONTINUE;
 }
@@ -99,6 +99,8 @@ void c_render_device_update_ubo(c_render_device_t *self)
 		/* } */
 		glUnmapBuffer(GL_UNIFORM_BUFFER); glerr();
 		/* self->scene_changes = 0; */
+		/* self->updates &= ~0x2; */
+		SDL_AtomicSet((SDL_atomic_t*)&self->updates_ubo, 0);
 	}
 }
 
@@ -161,7 +163,7 @@ static int c_render_device_created(c_render_device_t *self)
 c_render_device_t *c_render_device_new()
 {
 	c_render_device_t *self = component_new("render_device");
-	self->updates = 0x1;
+	SDL_AtomicSet((SDL_atomic_t*)&self->updates_ram, 1);
 
 	return self;
 }
@@ -169,15 +171,14 @@ c_render_device_t *c_render_device_new()
 void world_changed()
 {
 	c_render_device_t *rd = c_render_device(&SYS);
-	if(rd) rd->updates |= 0x1;
+	if(rd) SDL_AtomicSet((SDL_atomic_t*)&rd->updates_ram, 1);
 }
 
 int c_render_device_draw(c_render_device_t *self)
 {
-	if(self->updates & 0x2)
+	if(self->updates_ubo)
 	{
 		c_render_device_update_ubo(self);
-		self->updates &= ~0x2;
 	}
 	self->frame++;
 	entity_signal(entity_null, sig("world_pre_draw"), NULL, NULL);

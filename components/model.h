@@ -16,6 +16,14 @@ struct conf_circle
 	float radius;
 	int segments;
 };
+struct conf_deform
+{
+	int normal;
+	vecN_t direction;
+
+	char deform_e[255];
+	int deform_s;
+};
 struct conf_spherize
 {
 	float scale;
@@ -93,7 +101,8 @@ typedef enum
 	MESH_ICOSPHERE,
 	MESH_EXTRUDE,
 	MESH_SPHERIZE,
-	MESH_SUBDIVIDE
+	MESH_SUBDIVIDE,
+	MESH_DEFORM
 } mesh_edit_t;
 
 typedef struct
@@ -112,6 +121,7 @@ typedef struct
 	vector_t *history;
 	int history_count;
 	mesh_t *mesh;
+	mesh_t *base_mesh;
 
 	/* mat_layer_t *layers; */
 	mat_t *mat;

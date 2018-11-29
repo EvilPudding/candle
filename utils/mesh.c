@@ -342,10 +342,10 @@ void mesh_update_smooth_normals(mesh_t *self, float smooth_max)
 				smooth_normal = vec3_add(smooth_normal, edge->n);
 				smooth_tangent = vec3_add(smooth_tangent, edge->tg);
 			}
-			else
-			{
-				edge->tmp &= ~2;
-			}
+			/* else */
+			/* { */
+			/* 	edge->tmp &= ~2; */
+			/* } */
 
 			pair = e_pair(edge, self);
 			if(!pair) break;
@@ -808,7 +808,7 @@ void mesh_weld(mesh_t *self, geom_t geom)
 	}
 }
 
-void mesh_for_each_selected(mesh_t *self, geom_t geom, iter_cb cb)
+void mesh_for_each_selected(mesh_t *self, geom_t geom, iter_cb cb, void *usrptr)
 {
 	if(geom == MESH_FACE)
 	{
@@ -821,7 +821,7 @@ void mesh_for_each_selected(mesh_t *self, geom_t geom, iter_cb cb)
 			int f_id = kh_key(selected_faces, k);
 
 			face_t *face = m_face(self, f_id); if(!face) continue;
-			if(!cb(self, face)) break;
+			if(!cb(self, face, usrptr)) break;
 		}
 	}
 	else
@@ -837,11 +837,11 @@ void mesh_for_each_selected(mesh_t *self, geom_t geom, iter_cb cb)
 			int res;
 			if(geom == MESH_EDGE)
 			{
-				res = cb(self, e);
+				res = cb(self, e, usrptr);
 			}
 			else
 			{
-				res = cb(self, e_vert(e, self));
+				res = cb(self, e_vert(e, self), usrptr);
 			}
 			if(res == 0) break;
 		}

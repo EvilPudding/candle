@@ -76,8 +76,8 @@ void c_light_init(c_light_t *self)
 
 	c_light_position_changed(self);
 	c_light_editmode_toggle(self);
-
 	world_changed();
+
 }
 
 static void c_light_create_renderer(c_light_t *self)
@@ -129,7 +129,6 @@ void c_light_visible(c_light_t *self, uint32_t visible)
 	if(!self->visible && visible)
 	{
 		self->frames_passed = -1;
-		world_changed();
 		drawable_model_changed(&self->draw);
 	}
 	self->visible = visible;
