@@ -147,7 +147,7 @@ static mesh_t *tool_circle_edit(mesh_t *state, struct conf_circle *conf)
 {
 	state = mesh_clone(state);
 	mesh_circle(state, conf->radius, conf->segments, VEC3(0.0, 1.0, 0.0));
-	mesh_select(state, SEL_EDITING, MESH_EDGE, -1);
+	mesh_select(state, SEL_EDITING, MESH_VERT, -1);
 	mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_2d, NULL);
 	return state;
 }
@@ -278,7 +278,7 @@ static mesh_t *tool_cube_edit(mesh_t *mesh, struct conf_cube *conf)
 	mesh = mesh_clone(mesh);
 	mesh_lock(mesh);
 	mesh_cube(mesh, conf->size, 1);
-	mesh_select(mesh, SEL_EDITING, MESH_EDGE, -1);
+	mesh_select(mesh, SEL_EDITING, MESH_VERT, -1);
 	mesh->has_texcoords = 0;
 
 	mesh_for_each_selected(mesh, MESH_VERT, (iter_cb)paint_3d, NULL);
@@ -399,6 +399,10 @@ static int deform(mesh_t *mesh, vertex_t *vert, struct conf_deform *conf)
 #endif
 	emit(ref("expr_eval"), &conf->deform_s, &result);
 
+	if(vert->pos.y > 0.0f)
+	{
+		vecN_(print)(vert->pos);
+	}
 	if(isnan(result)) return 1;
 
 	vert->pos = vecN_(add)(vert->pos, vecN_(scale)(direction, result));
@@ -436,7 +440,7 @@ static mesh_t *tool_deform_edit(
 
 	if(new->deform_s)
 	{
-		mesh_select(state, SEL_EDITING, MESH_ANY, -1);
+		mesh_select(state, SEL_EDITING, MESH_VERT, -1);
 		mesh_lock(state);
 
 		mesh_for_each_selected(state, MESH_VERT, (iter_cb)deform, new);

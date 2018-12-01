@@ -695,6 +695,18 @@ void mesh_unselect(mesh_t *self, int selection, geom_t geom, int id)
 			kh_clear(id, sel->edges);
 		}
 	}
+	else if(geom == MESH_ANY || geom == MESH_VERT) 
+	{
+		if(id >= 0) /* UNSELECT SINGLE EDGE */
+		{
+			khiter_t ek = kh_get(id, sel->verts, id);
+			if(ek != kh_end(sel->verts)) kh_del(id, sel->verts, ek);
+		}
+		else /* UNSELECT ALL EDGES */
+		{
+			kh_clear(id, sel->verts);
+		}
+	}
 }
 
 void mesh_select(mesh_t *self, int selection, geom_t geom, int id)
@@ -755,6 +767,26 @@ void mesh_select(mesh_t *self, int selection, geom_t geom, int id)
 				/* vector_add(sel->edges, &id); */
 				khiter_t k = kh_put(id, sel->edges, id, &ret);
 				kh_value(sel->edges, k) = 1;
+			}
+		}
+	}
+	else if(geom == MESH_ANY || geom == MESH_VERT) 
+	{
+		if(id >= 0) /* SELECT SINGLE VERT */
+		{
+			vertex_t *vert = m_vert(self, id); if(!vert) return;
+			/* vector_add(sel->verts, &id); */
+			khiter_t k = kh_put(id, sel->verts, id, &ret);
+			kh_value(sel->verts, k) = 1;
+		}
+		else /* SELECT ALL VERTS */
+		{
+			for(id = 0; id < vector_count(self->verts); id++)
+			{
+				vertex_t *vert = m_vert(self, id); if(!vert) return;
+				/* vector_add(sel->verts, &id); */
+				khiter_t k = kh_put(id, sel->verts, id, &ret);
+				kh_value(sel->verts, k) = 1;
 			}
 		}
 	}
@@ -824,7 +856,7 @@ void mesh_for_each_selected(mesh_t *self, geom_t geom, iter_cb cb, void *usrptr)
 			if(!cb(self, face, usrptr)) break;
 		}
 	}
-	else
+	else if(geom == MESH_EDGE)
 	{
 		khash_t(id) *selected_edges = self->selections[SEL_EDITING].edges;
 		khiter_t k;
@@ -835,15 +867,29 @@ void mesh_for_each_selected(mesh_t *self, geom_t geom, iter_cb cb, void *usrptr)
 			int e_id = kh_key(selected_edges, k);
 			edge_t *e = m_edge(self, e_id); if(!e) continue;
 			int res;
-			if(geom == MESH_EDGE)
-			{
+			/* if(geom == MESH_EDGE) */
+			/* { */
 				res = cb(self, e, usrptr);
-			}
-			else
-			{
-				res = cb(self, e_vert(e, self), usrptr);
-			}
+			/* } */
+			/* else */
+			/* { */
+				/* res = cb(self, e_vert(e, self), usrptr); */
+			/* } */
 			if(res == 0) break;
+		}
+	}
+	else if(geom == MESH_VERT)
+	{
+		khash_t(id) *selected_verts = self->selections[SEL_EDITING].verts;
+		khiter_t k;
+
+		for(k = kh_begin(selected_verts); k != kh_end(selected_verts); ++k)
+		{
+			if(!kh_exist(selected_verts, k)) continue;
+			int v_id = kh_key(selected_verts, k);
+
+			vertex_t *vert = m_vert(self, v_id); if(!vert) continue;
+			if(!cb(self, vert, usrptr)) break;
 		}
 	}
 }
