@@ -236,7 +236,7 @@ float doAmbientOcclusion(sampler2D depth, vec2 tcoord, vec2 uv, vec3 p, vec3 cno
 	/* if(dist > 0.7) return 0.0; */
 
     float d = dist * scale;
-    return max(0.0, dot(cnorm, v) - bias) * (1.0 / (1.0 + d)) * intensity;
+    return max(0.0, (dot(cnorm, v) - bias) * (1.0 / (1.0 + d)) * intensity);
 }
 
 vec3 ppp[] = vec3[](
