@@ -8,7 +8,7 @@
 
 struct edit_scale
 {
-	int dragging;
+	int32_t dragging;
 	vec3_t start_scale;
 
 	float start_radius;
@@ -17,7 +17,7 @@ struct edit_scale
 
 struct edit_rotate
 {
-	int dragging;
+	int32_t dragging;
 	vec4_t start_quat;
 
 	vec3_t obj_pos;
@@ -30,13 +30,13 @@ struct edit_rotate
 
 struct edit_translate
 {
-	int dragging;
+	int32_t dragging;
 	vec3_t start_pos;
 
 	vec3_t drag_diff;
 	float start_radius;
 	vec2_t start_screen;
-	int mode;
+	int32_t mode;
 	entity_t arrows, X, Y, Z;
 #ifdef MESH4
 	entity_t W;
@@ -45,7 +45,7 @@ struct edit_translate
 
 struct edit_poly
 {
-	int last_edge;
+	int32_t last_edge;
 };
 
 typedef struct c_editmode_t c_editmode_t;
@@ -54,34 +54,35 @@ struct mouse_tool
 {
 	char key;
 	char name[64];
-	int (*update)(void *usrptr, float dt, c_editmode_t *ec);
-	int (*init)(void *usrptr, c_editmode_t *ec);
-	int (*end)(void *usrptr, c_editmode_t *ec);
-	int (*mmove)(void *usrptr, vec3_t p, c_editmode_t *ec);
-	int (*mpress)(void *usrptr, vec3_t p, int button, c_editmode_t *ec);
-	int (*mrelease)(void *usrptr, vec3_t p, int button, c_editmode_t *ec);
-	int (*mdrag)(void *usrptr, vec3_t p, int button, c_editmode_t *ec);
+	int32_t (*update)(void *usrptr, float dt, c_editmode_t *ec);
+	int32_t (*init)(void *usrptr, c_editmode_t *ec);
+	int32_t (*end)(void *usrptr, c_editmode_t *ec);
+	int32_t (*mmove)(void *usrptr, vec3_t p, c_editmode_t *ec);
+	int32_t (*mpress)(void *usrptr, vec3_t p, int32_t button, c_editmode_t *ec);
+	int32_t (*mrelease)(void *usrptr, vec3_t p, int32_t button, c_editmode_t *ec);
+	int32_t (*mdrag)(void *usrptr, vec3_t p, int32_t button, c_editmode_t *ec);
 	void *usrptr;
+	uint32_t require_component;
 };
 
 typedef struct c_editmode_t
 {
 	c_t super; /* extends c_t */
 
-	int control;
-	int visible;
-	int dragging;
-	int pressing_l;
-	int pressing_r;
-	int activated;
-	int tool;
+	int32_t control;
+	int32_t visible;
+	int32_t dragging;
+	int32_t pressing_l;
+	int32_t pressing_r;
+	int32_t activated;
+	int32_t tool;
 	struct mouse_tool tools[16];
-	int tools_num;
-	/* int outside; */
+	int32_t tools_num;
+	/* int32_t outside; */
 
 	vec3_t mouse_position;
-	int menu_x;
-	int menu_y;
+	int32_t menu_x;
+	int32_t menu_y;
 
 	/* TOOL VARIABLES */
 
@@ -92,14 +93,14 @@ typedef struct c_editmode_t
 	entity_t selected;
 	entity_t over;
 	entity_t context;
-	int selected_poly;
-	int over_poly;
+	int32_t selected_poly;
+	int32_t over_poly;
 
 	entity_t open_entities[16];
-	int open_entities_count;
+	int32_t open_entities_count;
 
 	texture_t *open_textures[16];
-	int open_textures_count;
+	int32_t open_textures_count;
 
 	void *open_vil;
 
@@ -111,10 +112,10 @@ typedef struct c_editmode_t
 	} mode;
 
 	struct {
-		int ct;
-		int distance;
+		int32_t ct;
+		int32_t distance;
 	} ct_list[10];
-	int ct_list_size;
+	int32_t ct_list_size;
 	char ct_search_bak[32];
 	char ct_search[32];
 	char shell[512];
@@ -133,5 +134,9 @@ void c_editmode_register(void);
 void c_editmode_update_mouse(c_editmode_t *self, float x, float y);
 void c_editmode_open_texture(c_editmode_t *self, texture_t *tex);
 void c_editmode_select(c_editmode_t *self, entity_t select);
+void c_editmode_add_tool(c_editmode_t *self, char key, const char *name,
+                         void *init, void *mmove, void *mdrag, void *mpress,
+                         void *mrelease, void *update, void *end, void *usrptr,
+                         uint32_t require_component);
 
 #endif /* !EDITMODE_H */
