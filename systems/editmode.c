@@ -632,7 +632,7 @@ int32_t c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 			if(tool->mmove)
 			{
 				int32_t res = tool->mmove(tool->usrptr,
-						self->mouse_screen_pos, self);
+						self->mouse_position, self);
 				if(c_keyboard(self)->shift)
 				{
 					c_editmode_update_mouse(self, event->x, event->y);
@@ -702,7 +702,6 @@ int32_t c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 	{
 		self->pressing_r = 1;
 	}
-
 
 	if(self->tool > -1 && entity_exists(self->selected) && self->selected != SYS)
 	{
