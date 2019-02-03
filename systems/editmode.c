@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <utils/renderer.h>
 
-static int c_editmode_activate_loader(c_editmode_t *self);
+static int32_t c_editmode_activate_loader(c_editmode_t *self);
 static void c_editmode_open_entity(c_editmode_t *self, entity_t ent);
 static void c_editmode_selected_delete(c_editmode_t *self);
 
@@ -28,7 +28,7 @@ static void c_editmode_selected_delete(c_editmode_t *self);
 
 mat_t *g_sel_mat = NULL;
 
-int translate_init(struct edit_translate *self, c_editmode_t *ec)
+int32_t translate_init(struct edit_translate *self, c_editmode_t *ec)
 {
 	self->dragging = 0;
 
@@ -61,7 +61,7 @@ int translate_init(struct edit_translate *self, c_editmode_t *ec)
 	return CONTINUE;
 }
 
-int translate_end(struct edit_translate *self)
+int32_t translate_end(struct edit_translate *self)
 {
 	self->dragging = 0;
 	c_model_set_visible(c_model(&self->X), 0);
@@ -93,7 +93,7 @@ vec3_t bind_obj_pos(struct edit_rotate *self)
 
 
 
-int rotate_init(struct edit_rotate *self, c_editmode_t *ec)
+int32_t rotate_init(struct edit_rotate *self, c_editmode_t *ec)
 {
 	self->dragging = 0;
 
@@ -145,7 +145,7 @@ int rotate_init(struct edit_rotate *self, c_editmode_t *ec)
 		/* c_node(&self->auxiliar)->ghost = 1; */
 		/* c_model_set_xray(c_model(&self->auxiliar), 1); */
 
-int rotate_update(struct edit_rotate *self, float dt)
+int32_t rotate_update(struct edit_rotate *self, float dt)
 {
 	if(self->tool_fade > 0.0f)
 	{
@@ -155,7 +155,7 @@ int rotate_update(struct edit_rotate *self, float dt)
 	return CONTINUE;
 }
 
-int rotate_end(struct edit_rotate *self)
+int32_t rotate_end(struct edit_rotate *self)
 {
 	self->dragging = 0;
 
@@ -166,7 +166,7 @@ int rotate_end(struct edit_rotate *self)
 	return CONTINUE;
 }
 
-int scale_init(struct edit_scale *self, c_editmode_t *ec)
+int32_t scale_init(struct edit_scale *self, c_editmode_t *ec)
 {
 	self->dragging = 0;
 
@@ -191,7 +191,7 @@ int scale_init(struct edit_scale *self, c_editmode_t *ec)
 	return CONTINUE;
 }
 
-int scale_end(struct edit_scale *self)
+int32_t scale_end(struct edit_scale *self)
 {
 	self->dragging = 0;
 	c_model_set_visible(c_model(&self->X), 0);
@@ -201,7 +201,7 @@ int scale_end(struct edit_scale *self)
 	return CONTINUE;
 }
 
-int scale_drag(struct edit_scale *self, vec3_t p, int button, c_editmode_t *ec)
+int32_t scale_drag(struct edit_scale *self, vec3_t p, int32_t button, c_editmode_t *ec)
 {
 	if(button != SDL_BUTTON_LEFT) return CONTINUE;
 	c_camera_t *cam = c_camera(&ec->camera);
@@ -229,7 +229,7 @@ int scale_drag(struct edit_scale *self, vec3_t p, int button, c_editmode_t *ec)
 	return STOP;
 }
 
-int rotate_release(struct edit_rotate *self, vec3_t p, int button,
+int32_t rotate_release(struct edit_rotate *self, vec3_t p, int32_t button,
 		c_editmode_t *ec)
 {
 	if(self->dragging && button == SDL_BUTTON_LEFT)
@@ -242,7 +242,7 @@ int rotate_release(struct edit_rotate *self, vec3_t p, int button,
 	return CONTINUE;
 }
 
-int scale_release(struct edit_scale *self, vec3_t p, int button)
+int32_t scale_release(struct edit_scale *self, vec3_t p, int32_t button)
 {
 	if(self->dragging && button == SDL_BUTTON_LEFT)
 	{
@@ -252,7 +252,7 @@ int scale_release(struct edit_scale *self, vec3_t p, int button)
 	return CONTINUE;
 }
 
-int translate_release(struct edit_translate *self, vec3_t p, int button)
+int32_t translate_release(struct edit_translate *self, vec3_t p, int32_t button)
 {
 	if(self->dragging && button == SDL_BUTTON_LEFT)
 	{
@@ -262,7 +262,7 @@ int translate_release(struct edit_translate *self, vec3_t p, int button)
 	return CONTINUE;
 }
 
-int translate_drag(struct edit_translate *self, vec3_t p, int button, c_editmode_t *ec)
+int32_t translate_drag(struct edit_translate *self, vec3_t p, int32_t button, c_editmode_t *ec)
 {
 	if(button != SDL_BUTTON_LEFT) return CONTINUE;
 	c_spatial_t *sc = c_spatial(&ec->selected);
@@ -311,7 +311,7 @@ int translate_drag(struct edit_translate *self, vec3_t p, int button, c_editmode
 	return STOP;
 }
 
-int rotate_drag(struct edit_rotate *self, vec3_t p, int button, c_editmode_t *ec)
+int32_t rotate_drag(struct edit_rotate *self, vec3_t p, int32_t button, c_editmode_t *ec)
 {
 	if(button != SDL_BUTTON_LEFT) return CONTINUE;
 
@@ -379,10 +379,26 @@ int rotate_drag(struct edit_rotate *self, vec3_t p, int button, c_editmode_t *ec
 }
 
 void c_editmode_add_tool(c_editmode_t *self, char key, const char *name,
-		void *init, void *mmove, void *mdrag, void *mpress, void *mrelease,
-		void *update, void *end, void *usrptr)
+                         void *init, void *mmove, void *mdrag, void *mpress,
+                         void *mrelease, void *update, void *end, void *usrptr,
+                         uint32_t require_component)
 {
-	struct mouse_tool *tool = &self->tools[self->tools_num++];
+	uint32_t i;
+	struct mouse_tool *tool = NULL;
+	for(i = 0; i < self->tools_num; i++)
+	{
+		struct mouse_tool *t = &self->tools[i];
+		if(t->key == key)
+		{
+			tool = t;
+			break;
+		}
+	}
+
+	if (!tool)
+	{
+		tool = &self->tools[self->tools_num++];
+	}
 
 	tool->key = key;
 	tool->init = init;
@@ -393,6 +409,7 @@ void c_editmode_add_tool(c_editmode_t *self, char key, const char *name,
 	tool->update = update;
 	tool->end = end;
 	tool->usrptr = usrptr;
+	tool->require_component = require_component;
 }
 
 
@@ -406,15 +423,15 @@ void c_editmode_init(c_editmode_t *self)
 
 	c_editmode_add_tool(self, 't', "translate", translate_init, NULL,
 			translate_drag, NULL, translate_release, NULL, translate_end,
-			calloc(1, sizeof(struct edit_translate)));
+			calloc(1, sizeof(struct edit_translate)), ref("spacial"));
 
 	c_editmode_add_tool(self, 'r', "rotate", rotate_init, NULL,
 			rotate_drag, NULL, rotate_release, rotate_update, rotate_end,
-			calloc(1, sizeof(struct edit_rotate)));
+			calloc(1, sizeof(struct edit_rotate)), ref("spacial"));
 
 	c_editmode_add_tool(self, 's', "scale", scale_init, NULL,
 			scale_drag, NULL, scale_release, NULL, scale_end,
-			calloc(1, sizeof(struct edit_scale)));
+			calloc(1, sizeof(struct edit_scale)), ref("spacial"));
 
 	if(!g_sel_mat)
 	{
@@ -426,7 +443,7 @@ void c_editmode_init(c_editmode_t *self)
 	}
 }
 
-int c_editmode_bind_mode(c_editmode_t *self)
+int32_t c_editmode_bind_mode(c_editmode_t *self)
 {
 	return self->mode;
 }
@@ -553,7 +570,7 @@ void c_editmode_activate(c_editmode_t *self)
 
 }
 
-static int c_editmode_activate_loader(c_editmode_t *self)
+static int32_t c_editmode_activate_loader(c_editmode_t *self)
 {
 	self->nk = nk_can_init(c_window(self)->window); 
 	struct nk_font_atlas *atlas; 
@@ -597,7 +614,7 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 	}
 }
 
-int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
+int32_t c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 {
 	if(!entity_exists(self->camera)) return CONTINUE;
 
@@ -615,7 +632,7 @@ int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 			if(tool->mmove)
 			{
 				int32_t res = tool->mmove(tool->usrptr,
-						self->mouse_screen_pos, self);
+						self->mouse_position, self);
 				if(c_keyboard(self)->shift)
 				{
 					c_editmode_update_mouse(self, event->x, event->y);
@@ -647,9 +664,9 @@ int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 		/* 	mesh_lock(aux); */
 		/* 	mesh_clear(aux); */
 
-		/* 	int aux_vert0 = mesh_add_vert(aux, VEC3(_vec3(self->tool_start))); */
-		/* 	int aux_vert1 = mesh_add_vert(aux, VEC3(_vec3(self->mouse_position))); */
-		/* 	int aux_edge0 = mesh_add_edge_s(aux, aux_vert0, -1); */
+		/* 	int32_t aux_vert0 = mesh_add_vert(aux, VEC3(_vec3(self->tool_start))); */
+		/* 	int32_t aux_vert1 = mesh_add_vert(aux, VEC3(_vec3(self->mouse_position))); */
+		/* 	int32_t aux_edge0 = mesh_add_edge_s(aux, aux_vert0, -1); */
 		/* 	mesh_add_edge_s(aux, aux_vert1, aux_edge0); */
 
 		/* 	mesh_unlock(aux); */
@@ -658,14 +675,14 @@ int c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 	return CONTINUE;
 }
 
-int c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
+int32_t c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 {
 	if(!entity_exists(self->camera)) return CONTINUE;
 	renderer_t *renderer = c_camera(&self->camera)->renderer;
 
 	float depth;
 	entity_t ent = renderer_entity_at_pixel(renderer, event->x, event->y, &depth);
-	unsigned int geom = renderer_geom_at_pixel(renderer, event->x, event->y, &depth);
+	uint32_t geom = renderer_geom_at_pixel(renderer, event->x, event->y, &depth);
 
 	if(ent)
 	{
@@ -673,7 +690,7 @@ int c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 			.x = event->x, .y = event->y, .direction = event->direction,
 			.depth = depth, .geom = geom, .button = event->button
 		};
-		int res = entity_signal_same(ent, ref("model_press"), &ev, NULL);
+		int32_t res = entity_signal_same(ent, ref("model_press"), &ev, NULL);
 		if(res == STOP) return CONTINUE;
 	}
 
@@ -685,7 +702,6 @@ int c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 	{
 		self->pressing_r = 1;
 	}
-
 
 	if(self->tool > -1 && entity_exists(self->selected) && self->selected != SYS)
 	{
@@ -703,7 +719,7 @@ int c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 void c_editmode_open_texture(c_editmode_t *self, texture_t *tex)
 {
 	if(!tex) return;
-	int i;
+	int32_t i;
 	for(i = 0; i < self->open_textures_count; i++)
 	{
 		if(self->open_textures[i] == tex) return;
@@ -717,7 +733,7 @@ void c_editmode_open_texture(c_editmode_t *self, texture_t *tex)
 void c_editmode_open_entity(c_editmode_t *self, entity_t ent)
 {
 	if(!ent) return;
-	int i;
+	int32_t i;
 	self->open_entities_count = 0;
 
 	for(i = 0; i < self->open_entities_count; i++)
@@ -786,12 +802,12 @@ void c_editmode_select(c_editmode_t *self, entity_t select)
 
 }
 
-int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
+int32_t c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 {
 	if(!entity_exists(self->camera)) return CONTINUE;
 	renderer_t *renderer = c_camera(&self->camera)->renderer;
 
-	int was_dragging = self->dragging;
+	int32_t was_dragging = self->dragging;
 	if(event->button == SDL_BUTTON_LEFT)
 	{
 		self->dragging = 0;
@@ -806,14 +822,14 @@ int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 			&depth);
 	if(ent)
 	{
-		unsigned int geom = renderer_geom_at_pixel(renderer, event->x,
+		uint32_t geom = renderer_geom_at_pixel(renderer, event->x,
 				event->y, &depth);
 
 		model_button_data ev = {
 			.x = event->x, .y = event->y, .direction = event->direction,
 			.depth = depth, .geom = geom, .button = event->button
 		};
-		int res = entity_signal_same(ent, ref("model_release"), &ev, NULL);
+		int32_t res = entity_signal_same(ent, ref("model_release"), &ev, NULL);
 		if(res == STOP) return CONTINUE;
 	}
 
@@ -850,10 +866,10 @@ int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 		/* 		mc->mesh->has_texcoords = 0; */
 		/* 	} */
 		/* 	mesh_lock(mc->mesh); */
-		/* 	int new_vert = mesh_add_vert(mc->mesh, */
+		/* 	int32_t new_vert = mesh_add_vert(mc->mesh, */
 		/* 			VEC3(_vec3(self->mouse_position))); */
 
-		/* 	int new_edge = mesh_add_edge_s(mc->mesh, new_vert, */
+		/* 	int32_t new_edge = mesh_add_edge_s(mc->mesh, new_vert, */
 		/* 			self->last_edge); */
 		/* 	mesh_select(mc->mesh, SEL_EDITING, MESH_EDGE, new_edge); */
 
@@ -884,7 +900,7 @@ int c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 	return CONTINUE;
 }
 
-int c_editmode_key_up(c_editmode_t *self, char *key)
+int32_t c_editmode_key_up(c_editmode_t *self, char *key)
 {
 	uint32_t i;
 	if(*key == '`')
@@ -978,7 +994,7 @@ static void c_editmode_selected_delete(c_editmode_t *self)
 	entity_destroy(prev);
 }
 
-int c_editmode_key_down(c_editmode_t *self, char *key)
+int32_t c_editmode_key_down(c_editmode_t *self, char *key)
 {
 	/* switch(*key) */
 	/* { */
@@ -986,9 +1002,9 @@ int c_editmode_key_down(c_editmode_t *self, char *key)
 	return CONTINUE;
 }
 
-int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
+int32_t c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 {
-	int res;
+	int32_t res;
 	char buffer[64];
 	sprintf(buffer, "TEX_%u", tex->bufs[0].id);
 	char *title = buffer;
@@ -1005,7 +1021,7 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 	if (res)
 	{
 		const char *bufs[16];
-		int i;
+		int32_t i;
 		for(i = 0; i < tex->bufs_size; i++)
 		{
 			bufs[i] = tex->bufs[i].name;
@@ -1052,15 +1068,15 @@ int c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 }
 
 /* From https://github.com/wooorm/levenshtein.c */
-unsigned int levenshtein(const char *a, const char *b) {
-  unsigned int length = strlen(a);
-  unsigned int bLength = strlen(b);
-  unsigned int *cache = calloc(length, sizeof(unsigned int));
-  unsigned int index = 0;
-  unsigned int bIndex = 0;
-  unsigned int distance;
-  unsigned int bDistance;
-  unsigned int result;
+uint32_t levenshtein(const char *a, const char *b) {
+  uint32_t length = strlen(a);
+  uint32_t bLength = strlen(b);
+  uint32_t *cache = calloc(length, sizeof(uint32_t));
+  uint32_t index = 0;
+  uint32_t bIndex = 0;
+  uint32_t distance;
+  uint32_t bDistance;
+  uint32_t result;
   char code;
 
   /* Shortcut optimizations / degenerate cases. */
@@ -1107,9 +1123,9 @@ unsigned int levenshtein(const char *a, const char *b) {
   return result;
 }
 
-static void insert_ct(c_editmode_t *self, int ct, int dist)
+static void insert_ct(c_editmode_t *self, int32_t ct, int32_t dist)
 {
-	int i;
+	int32_t i;
 	for(i = 0; i < self->ct_list_size && i < 9; i++)
 	{
 		if(self->ct_list[i].distance > dist)
@@ -1153,14 +1169,14 @@ void c_editmode_shell(c_editmode_t *self)
 	}
 }
 
-int c_editmode_component_menu(c_editmode_t *self, void *ctx)
+int32_t c_editmode_component_menu(c_editmode_t *self, void *ctx)
 {
 	return CONTINUE;
 }
 
-int c_editmode_commands(c_editmode_t *self)
+int32_t c_editmode_commands(c_editmode_t *self)
 {
-	int res = nk_begin(self->nk, "tools",
+	int32_t res = nk_begin(self->nk, "tools",
 			nk_rect(self->menu_x, self->menu_y, 2, 2),
 			NK_WINDOW_NO_SCROLLBAR | NK_WINDOW_BACKGROUND);
 	if (res)
@@ -1170,7 +1186,7 @@ int c_editmode_commands(c_editmode_t *self)
 		{
 			c_editmode_shell(self);
 
-			int close = 0;
+			int32_t close = 0;
 			if(entity_exists(self->selected))
 			{
 				if(nk_button_label(self->nk, "delete"))
@@ -1212,10 +1228,10 @@ int c_editmode_commands(c_editmode_t *self)
 	return res;
 }
 
-int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
+int32_t c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 {
 	c_name_t *name = c_name(&ent);
-	int res;
+	int32_t res;
 	char buffer[64];
 #ifdef WIN32
 	sprintf(buffer, "ENT_%I64u", ent);
@@ -1262,7 +1278,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 		/* nk_draw_image_ext(canvas, total_space, &im, nk_rgba(255, 255, 255, 255), 1); */
 
 		/* c_editmode_shell(self); */
-		int i;
+		int32_t i;
 
 		signal_t *sig = ecm_get_signal(sig("component_menu"));
 
@@ -1293,7 +1309,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 				entity_destroy(ent);
 			}
 
-			int active = nk_edit_string_zero_terminated(self->nk, NK_EDIT_FIELD
+			int32_t active = nk_edit_string_zero_terminated(self->nk, NK_EDIT_FIELD
 					| NK_EDIT_SIG_ENTER, self->ct_search,
 					sizeof(self->ct_search), nk_filter_ascii) &
 				NK_EDIT_COMMITED;
@@ -1343,7 +1359,7 @@ int c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 }
 
 
-int c_editmode_update(c_editmode_t *self, float *dt)
+int32_t c_editmode_update(c_editmode_t *self, float *dt)
 {
 	if(self->tool > -1)
 	{
@@ -1356,7 +1372,7 @@ int c_editmode_update(c_editmode_t *self, float *dt)
 	return CONTINUE;
 }
 
-int c_editmode_draw(c_editmode_t *self)
+int32_t c_editmode_draw(c_editmode_t *self)
 {
 
 	if(self->nk && (self->visible || self->control))
@@ -1365,7 +1381,7 @@ int c_editmode_draw(c_editmode_t *self)
 		{
 			c_editmode_commands(self);
 		}
-		int e;
+		int32_t e;
 		if(self->open_vil)
 		{
 			vitype_gui(self->open_vil, self->nk);
@@ -1400,19 +1416,19 @@ int c_editmode_draw(c_editmode_t *self)
 	return CONTINUE;
 }
 
-int c_editmode_events_begin(c_editmode_t *self)
+int32_t c_editmode_events_begin(c_editmode_t *self)
 {
 	if(self->nk) nk_input_begin(self->nk);
 	return CONTINUE;
 }
 
-int c_editmode_events_end(c_editmode_t *self)
+int32_t c_editmode_events_end(c_editmode_t *self)
 {
 	if(self->nk) nk_input_end(self->nk);
 	return CONTINUE;
 }
 
-int c_editmode_event(c_editmode_t *self, SDL_Event *event)
+int32_t c_editmode_event(c_editmode_t *self, SDL_Event *event)
 {
 	if(self->nk && !self->dragging)
 	{
@@ -1431,14 +1447,14 @@ int c_editmode_event(c_editmode_t *self, SDL_Event *event)
 	return CONTINUE;
 }
 
-int c_editmode_pick_load(c_editmode_t *self, const char *filter, char **output)
+int32_t c_editmode_pick_load(c_editmode_t *self, const char *filter, char **output)
 {
 	/* TODO: prompt for a path in nuklear */
 	*output = strdup("unnamed");
 	return STOP;
 }
 
-int c_editmode_pick_save(c_editmode_t *self, const char *filter, char **output)
+int32_t c_editmode_pick_save(c_editmode_t *self, const char *filter, char **output)
 {
 	/* TODO: prompt for a path in nuklear */
 	*output = strdup("unnamed");

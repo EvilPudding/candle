@@ -2602,26 +2602,9 @@ void mesh_cuboid(mesh_t *self, float tex_scale, vec3_t p2, vec3_t p1)
 
 void mesh_cube(mesh_t *self, float size, float tex_scale)
 {
-	mesh_lock(self);
-	size /= 2;
-	int v[8] = {
-		mesh_add_vert(self, VEC3(size, size, size)),
-		mesh_add_vert(self, VEC3(-size, size, size)),
-		mesh_add_vert(self, VEC3(-size, -size, size)),
-		mesh_add_vert(self, VEC3(size, -size, size)),
-		mesh_add_vert(self, VEC3(size, size, -size)),
-		mesh_add_vert(self, VEC3(-size, size, -size)),
-		mesh_add_vert(self, VEC3(-size, -size, -size)),
-		mesh_add_vert(self, VEC3(size, -size, -size))
-	};
-
-	mesh_add_quad(self, v[0], Z3, Z2, v[1], Z3, Z2, v[2], Z3, Z2, v[3], Z3, Z2);
-	mesh_add_quad(self, v[5], Z3, Z2, v[4], Z3, Z2, v[7], Z3, Z2, v[6], Z3, Z2);
-	mesh_add_quad(self, v[6], Z3, Z2, v[2], Z3, Z2, v[1], Z3, Z2, v[5], Z3, Z2);
-	mesh_add_quad(self, v[3], Z3, Z2, v[7], Z3, Z2, v[4], Z3, Z2, v[0], Z3, Z2);
-	mesh_add_quad(self, v[7], Z3, Z2, v[3], Z3, Z2, v[2], Z3, Z2, v[6], Z3, Z2);
-	mesh_add_quad(self, v[5], Z3, Z2, v[1], Z3, Z2, v[0], Z3, Z2, v[4], Z3, Z2);
-	mesh_unlock(self);
+	size /= 2.0f;
+	mesh_cuboid(self, tex_scale, vec3(-size, -size, -size),
+	            vec3(size, size, size));
 }
 
 void mesh_wait(mesh_t *self)
