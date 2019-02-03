@@ -32,8 +32,10 @@
 #define TP2(a, b) a##b
 #define TP(a, b) TP2(a, b)
 
+#ifndef EMSCRIPTEN
 __attribute__((always_inline))
 __attribute__((optimize("unroll-loops")))
+#endif
 static inline uint32_t murmur_hash(const void *key, int32_t len, uint32_t seed)
 {
     /* 32-Bit MurmurHash3: https://code.google.com/p/smhasher/wiki/MurmurHash3*/
