@@ -2,8 +2,6 @@
 #define UNIFORMS
 #extension GL_ARB_explicit_uniform_location : require
 #extension GL_ARB_texture_query_levels : enable
-#extension GL_ARB_bindless_texture : enable
-#extension GL_EXT_bindless_texture : enable
 #extension GL_EXT_shader_io_blocks : enable
 #extension GL_ARB_shading_language_420pack : enable
 precision mediump float;
@@ -22,17 +20,19 @@ struct camera_t
 struct light_t
 {
 	vec4 color;
-	samplerCube shadow_map;
 	float radius;
-	float padding;
+	int layer;
+	vec2 padding;
 };
 
 struct property_t
 {
 	vec4 color;
+	ivec2 size;
 	float blend;
 	float scale;
-	sampler2D texture;
+	vec3 padding;
+	int layer;
 };
 
 struct material_t
@@ -45,14 +45,14 @@ struct material_t
 	property_t emissive;
 };
 
-layout(bindless_sampler) uniform;
 layout(std140, binding = 19) uniform renderer_t
 {
 	camera_t camera;
 } renderer;
+
 layout(std140, binding = 20) uniform scene_t
 {
-	material_t materials[255];
+	material_t materials[128];
 	light_t lights[255];
 	vec4 test_color;
 } scene;
@@ -66,6 +66,8 @@ layout(location = 22) uniform vec2 screen_size;
 layout(location = 23) uniform bool has_tex;
 layout(location = 24) uniform bool has_normals;
 layout(location = 25) uniform bool receive_shadows;
+layout(location = 26) uniform sampler2D g_cache;
+layout(location = 27) uniform sampler2D g_indir;
 
 /* layout(location = 25) uniform camera_t camera; */
 

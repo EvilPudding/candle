@@ -6,7 +6,7 @@ layout (location = 1) out vec4 NMR; // normal_roughness_metalness
 
 void main()
 {
-	vec4 dif  = resolveProperty(mat(albedo), texcoord);
+	vec4 dif  = resolveProperty(mat(albedo), texcoord, true);
 	if(dif.a < 0.7) discard;
 
 	dif.rgb += poly_color;
@@ -23,8 +23,8 @@ void main()
 		NMR.rg = encode_normal(vec3(0.0, 1.0, 0.0));
 	}
 
-	NMR.b = resolveProperty(mat(metalness), texcoord).r;
-	NMR.a = resolveProperty(mat(roughness), texcoord).r;
+	NMR.b = resolveProperty(mat(metalness), texcoord, false).r;
+	NMR.a = resolveProperty(mat(roughness), texcoord, false).r;
 
 	/* AlbedoColor = scene.test_color; */
 }

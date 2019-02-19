@@ -204,6 +204,7 @@ int c_window_draw(c_window_t *self)
 		return CONTINUE;
 	}
 
+	glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE); glerr();
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); glerr();
 	/* glClear(GL_COLOR_BUFFER_BIT); */
 	glClear(GL_DEPTH_BUFFER_BIT);
@@ -214,7 +215,9 @@ int c_window_draw(c_window_t *self)
 
 	shader_t *shader = vs_bind(g_quad_vs);
 	uint32_t uni = shader_uniform(shader, "tex", NULL);
-	glUniformHandleui64ARB(uni, texture_handle(tex, tex->draw_id));
+	glUniform1i(uni, 0);
+	glActiveTexture(GL_TEXTURE0);
+	texture_bind(tex, tex->draw_id);
 
 	glUniform2f(22, self->width, self->height); glerr();
 

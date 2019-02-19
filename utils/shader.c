@@ -20,11 +20,11 @@ static const char default_vs[] =
 	"layout (location = 3) in vec3 TG;\n"
 	"layout (location = 4) in vec2 ID;\n"
 	"layout (location = 5) in vec3 COL;\n"
-	"layout (location = 6) in uvec4 BID;\n"
+	"layout (location = 6) in vec4 BID;\n"
 	"layout (location = 7) in vec4 WEI;\n"
 
 	"layout (location = 8) in mat4 M;\n"
-	"layout (location = 12) in uvec4 PROPS;\n"
+	"layout (location = 12) in vec4 PROPS;\n"
 	/* PROPS.x = material PROPS.y = NOTHING PROPS.zw = id */
 #ifdef MESH4
 	"layout (location = 13) in float ANG4;\n"
@@ -49,9 +49,9 @@ static const char default_vs[] =
 	"	obj_pos = (M * vec4(0, 0, 0, 1)).xyz;\n"
 	"	model = M;\n"
 	"	poly_color = COL;\n"
-	"	matid = PROPS.x;\n"
+	"	matid = uint(PROPS.x);\n"
 	"	poly_id = ID;\n"
-	"	id = PROPS.zw;\n"
+	"	id = uvec2(PROPS.zw);\n"
 	"	texcoord = UV;\n";
 static const char default_vs_end[] = 
 	"\n"
@@ -85,6 +85,7 @@ static int g_sources_num = 0;
 void shaders_common_glsl_reg(void);
 void shaders_depth_glsl_reg(void);
 void shaders_gbuffer_glsl_reg(void);
+void shaders_query_mips_glsl_reg(void);
 void shaders_select_glsl_reg(void);
 void shaders_decals_glsl_reg(void);
 void shaders_ambient_glsl_reg(void);
@@ -123,6 +124,7 @@ void shaders_reg()
 	shaders_decals_glsl_reg();
 	shaders_depth_glsl_reg();
 	shaders_gbuffer_glsl_reg();
+	shaders_query_mips_glsl_reg();
 	shaders_editmode_glsl_reg();
 	shaders_highlight_glsl_reg();
 	shaders_phong_glsl_reg();
@@ -517,7 +519,6 @@ shader_t *shader_new(fs_t *fs, vs_t *vs)
 
 void shader_bind(shader_t *self)
 {
-	/* printf("shader bound f:%s v:%s\n", self->fs->filename, g_vs[self->index].name); */
 	glUseProgram(self->program); glerr();
 }
 

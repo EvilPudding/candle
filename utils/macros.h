@@ -2,6 +2,10 @@
 #define MACROS_H
 #include <stdint.h>
 
+#define true 1
+#define false 0
+typedef uint32_t bool_t;
+
 #define _GNU_SOURCE
 #ifndef ARGNUM
 #define ARGNUM(...) \

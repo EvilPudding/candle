@@ -228,8 +228,6 @@ static int render_loop(void)
 		/* SDL_Delay(1); */
 	}
 
-	/* TODO, cleanup on exit */
-	exit(0);
 	ecm_clean(1);
 	loader_update(g_candle->loader);
 

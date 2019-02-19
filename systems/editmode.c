@@ -1012,10 +1012,17 @@ int32_t c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 	{
 		title = tex->name;
 	}
+	float w = tex->width;
+	float h = tex->height;
+	/* if (w > 1000) */
+	{
+		h = 1000.0f * (h / w);
+		w = 1000.0f;
+	}
 
 	res = nk_can_begin_titled(self->nk, buffer, title,
-			nk_rect(self->spawn_pos.x, self->spawn_pos.y, tex->width + 30,
-				tex->height + 130 + 35),
+			nk_rect(self->spawn_pos.x, self->spawn_pos.y, w + 30,
+				h + 130 + 35),
 			NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
 			NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE);
 	if (res)
@@ -1056,9 +1063,8 @@ int32_t c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 		/* im.handle.ptr = 1; */
 		struct nk_command_buffer *canvas = nk_window_get_canvas(self->nk);
 		struct nk_rect total_space = nk_window_get_content_region(self->nk);
-		total_space.w = tex->width;
-		total_space.h = tex->height;
-
+		total_space.w = w;
+		total_space.h = h;
 		total_space.y += 85 + 35;
 		/* total_space.h -= 85; */
 		nk_draw_image_ext(canvas, total_space, &im, nk_rgba(255, 255, 255, 255), 1);

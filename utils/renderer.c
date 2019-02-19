@@ -36,8 +36,11 @@ static int pass_bind_buffer(pass_t *pass, bind_t *bind, shader_t *shader)
 		{
 			if(buffer->bufs[t].ready)
 			{
-				glUniformHandleui64ARB(sb->buffer.u_tex[t],
-						texture_handle(buffer, t)); glerr();
+				int i = pass->bound_textures++;
+				glActiveTexture(GL_TEXTURE0 + 64 + i);
+				texture_bind(buffer, t);
+				glUniform1i(sb->buffer.u_tex[t], 64 + i);
+				glerr();
 			}
 			/* glUniform1i(sb->buffer.u_tex[t], buffer->bufs[t].id); glerr(); */
 		}
@@ -45,8 +48,7 @@ static int pass_bind_buffer(pass_t *pass, bind_t *bind, shader_t *shader)
 	return 1;
 }
 
-void bind_get_uniforms(bind_t *bind,
-		shader_bind_t *sb, shader_t *shader)
+void bind_get_uniforms(bind_t *bind, shader_bind_t *sb, shader_t *shader)
 {
 	int t;
 	switch(bind->type)
@@ -74,19 +76,22 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 {
 	int i;
 
-	if(!pass) return;
+	if (!pass) return;
 
 	/* if(self->shader->frame_bind == self->frame) return; */
 	/* self->shader->frame_bind = self->frame; */
 
-	if(pass->output->target != GL_TEXTURE_2D)
+	if (shader)
 	{
-		glUniform2f(22, pass->output->width, pass->output->height);
-	}
-	else
-	{
-		uvec2_t size = pass->output->sizes[pass->framebuffer_id];
-		glUniform2f(22, size.x, size.y);
+		if (pass->output->target != GL_TEXTURE_2D)
+		{
+			glUniform2f(22, pass->output->width, pass->output->height);
+		}
+		else
+		{
+			uvec2_t size = pass->output->sizes[pass->framebuffer_id];
+			glUniform2f(22, size.x, size.y);
+		}
 	}
 
 	glerr();
@@ -94,10 +99,14 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 	for(i = 0; i < pass->binds_size; i++)
 	{
 		bind_t *bind = &pass->binds[i];
-		shader_bind_t *sb = &bind->vs_uniforms[shader->index];
-		if(!sb->cached)
+		shader_bind_t *sb = NULL;
+		if (shader)
 		{
-			bind_get_uniforms(bind, sb, shader);
+			sb =  &bind->vs_uniforms[shader->index];
+			if (!sb->cached)
+			{
+				bind_get_uniforms(bind, sb, shader);
+			}
 		}
 
 		switch(bind->type)
@@ -144,6 +153,10 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 				bind->vec4 = ((vec4_getter)bind->getter)(bind->usrptr);
 			}
 			glUniform4f(sb->vec4.u, _vec4(bind->vec4));
+			glerr();
+			break;
+		case CALLBACK:
+			bind->getter(bind->usrptr);
 			glerr();
 			break;
 		default:
@@ -205,9 +218,10 @@ static void update_ubo(renderer_t *self, int32_t camid)
 		glBufferData(GL_UNIFORM_BUFFER, sizeof(self->glvars[camid]),
 				&self->glvars[camid], GL_DYNAMIC_DRAW); glerr();
 	}
-	void *p = glMapNamedBuffer(self->ubos[camid], GL_WRITE_ONLY);
+	glBindBuffer(GL_UNIFORM_BUFFER, self->ubos[camid]);
+	void *p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
 	memcpy(p, &self->glvars[camid], sizeof(self->glvars[camid]));
-	glUnmapNamedBuffer(self->ubos[camid]); glerr();
+	glUnmapBuffer(GL_UNIFORM_BUFFER); glerr();
 }
 
 void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model)
@@ -310,41 +324,115 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 /* 	); */
 }
 
+float wrap(float x)
+{
+	return fmod(1.0f + fmod(x, 1.0f), 1.0f);
+}
+
+void load_mip(prop_t *prop, vec2_t coords, int mip, int frame)
+{
+	/* int num_tiles = prop->texture->bufs[0].num_tiles[mip]; */
+
+	coords.x = wrap(coords.x);
+	coords.y = wrap(coords.y);
+	int x = floor((coords.x * prop->texture->sizes[mip].x) / 128);
+	int y = floor((coords.y * prop->texture->sizes[mip].y) / 128);
+	int tiles_per_row = ceil(((float)prop->texture->sizes[mip].x) / 128);
+
+	int tex_tile = y * tiles_per_row + x;
+
+	load_tile(prop->texture, &prop->texture->bufs[0].mips[mip][tex_tile],
+	          mip, frame);
+}
+
+void *renderer_process_query_mips(renderer_t *self)
+{
+	texture_t *tex = renderer_tex(self, ref("query_mips"));
+	if (!tex->framebuffer_ready) return NULL;
+	vec3_t *coords= alloca(sizeof(*coords) * tex->width * tex->height);
+	vec4_t *mips= alloca(sizeof(*mips) * tex->width * tex->height);
+
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, tex->frame_buffer[0]); glerr();
+
+	glReadBuffer(GL_COLOR_ATTACHMENT0); glerr();
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1); glerr();
+
+	glReadPixels(0, 0, tex->width, tex->height, tex->bufs[1].format,
+			GL_FLOAT, coords); glerr();
+
+	glReadBuffer(GL_COLOR_ATTACHMENT1); glerr();
+
+	glReadPixels(0, 0, tex->width, tex->height, tex->bufs[2].format,
+			GL_FLOAT, mips); glerr();
+
+	for (int y = 0; y < tex->height; y++) {
+		for (int x = 0; x < tex->width; x++) {
+			int i = y * tex->width + x;
+			mat_t *mat = g_mats[(int)coords[i].z];
+			for (prop_t *prop = &mat->albedo; prop <= &mat->emissive; prop++)
+			{
+				if (prop->texture && prop->texture->bufs[0].ready)
+				{
+					int mip0 = floor(mips[i].r);
+					int mip1 = ceil(mips[i].r);
+					vec2_t pos = vec2_scale(coords[i].xy, prop->scale);
+					load_mip(prop, pos, mip0, self->frame);
+					if (mip0 != mip1)
+						load_mip(prop, pos, mip1, self->frame);
+				}
+			}
+		}
+	}
+
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+	glerr();
+	return NULL;
+}
+
 void renderer_default_pipeline(renderer_t *self)
 {
-	texture_t *gbuffer =	texture_new_2D(0, 0, 0, 0,
-		buffer_new("nmr",		1, 4),
-		buffer_new("albedo",	1, 4),
-		buffer_new("depth",		1, -1)
+	texture_t *query_mips =	texture_new_2D(0, 0, 0,
+		buffer_new("mips",		true, 4),
+		buffer_new("coords",	true, 3), /* Texcoords, Matid */
+		buffer_new("depth",		true, -1)
+	);
+
+	texture_t *gbuffer =	texture_new_2D(0, 0, 0,
+		buffer_new("nmr",		true, 4),
+		buffer_new("albedo",	true, 4),
+		buffer_new("depth",		true, -1)
 	);
 
 	texture_t *ssao =		texture_new_2D(0, 0, 0,
-		buffer_new("occlusion",	1, 1)
+		buffer_new("occlusion",	true, 1)
 	);
 	texture_t *light =	texture_new_2D(0, 0, 0,
-		buffer_new("color",	1, 4)
+		buffer_new("color",	true, 4)
 	);
 	texture_t *refr =		texture_new_2D(0, 0, TEX_MIPMAP,
-		buffer_new("color",	1, 4)
+		buffer_new("color",	true, 4)
 	);
 	texture_t *tmp =		texture_new_2D(0, 0, TEX_MIPMAP,
-		buffer_new("color",	1, 4)
+		buffer_new("color",	true, 4)
 	);
 	texture_t *final =		texture_new_2D(0, 0, TEX_INTERPOLATE,
-		buffer_new("color",	1, 4)
+		buffer_new("color",	true, 4)
 	);
 	/* texture_t *bloom =		texture_new_2D(0, 0, TEX_INTERPOLATE, */
-		/* buffer_new("color",	1, 4) */
+		/* buffer_new("color",	true, 4) */
 	/* ); */
 	/* texture_t *bloom2 =		texture_new_2D(0, 0, TEX_INTERPOLATE, */
-		/* buffer_new("color",	1, 4) */
+		/* buffer_new("color",	true, 4) */
 	/* ); */
 	texture_t *selectable =	texture_new_2D(0, 0, 0,
-		buffer_new("geomid",	1, 2),
-		buffer_new("id",		1, 2),
-		buffer_new("depth",		1, -1)
+		buffer_new("geomid",	true, 2),
+		buffer_new("id",		true, 2),
+		buffer_new("depth",		true, -1)
 	);
 
+	renderer_add_tex(self, "query_mips",	0.05f, query_mips);
 	renderer_add_tex(self, "gbuffer",		1.0f, gbuffer);
 	renderer_add_tex(self, "ssao",			1.0f, ssao);
 	renderer_add_tex(self, "light",			1.0f, light);
@@ -355,6 +443,41 @@ void renderer_default_pipeline(renderer_t *self)
 
 	/* renderer_add_tex(self, "bloom",		0.3f, bloom); */
 	/* renderer_add_tex(self, "bloom2",		0.3f, bloom2); */
+
+	renderer_add_pass(self, "query_mips", "query_mips", ref("visible"), 0,
+			query_mips, query_mips, 0,
+		(bind_t[]){
+			{CLEAR_DEPTH, .number = 1.0f},
+			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{NONE}
+		}
+	);
+
+	renderer_add_pass(self, "query_mips", "query_mips", ref("decals"),
+			DEPTH_LOCK | DEPTH_EQUAL | DEPTH_GREATER, query_mips, query_mips, 0,
+		(bind_t[]){
+			{TEX, "gbuffer", .buffer = gbuffer},
+			{NONE}
+		}
+	);
+
+	renderer_add_pass(self, "query_mips", "query_mips", ref("transparent"), 0,
+			query_mips, query_mips, 0,
+		(bind_t[]){
+			{NONE}
+		}
+	);
+
+
+	renderer_add_pass(self, "svt", NULL, -1, 0,
+			query_mips, query_mips, 0,
+		(bind_t[]){
+			{CALLBACK, .getter = (getter_cb)renderer_process_query_mips, .usrptr = self},
+			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{NONE}
+		}
+	);
+
 
 	renderer_add_pass(self, "gbuffer", "gbuffer", ref("visible"), 0, gbuffer,
 			gbuffer, 0,
@@ -590,9 +713,15 @@ int renderer_resize(renderer_t *self, int width, int height)
 static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 {
 	if(!pass->active) return NULL;
-	if(pass->shader_name && !pass->shader) pass->shader = fs_new(pass->shader_name);
+	if(pass->shader_name[0] && !pass->shader) pass->shader = fs_new(pass->shader_name);
 
+	pass->bound_textures = 0;
 	c_render_device_rebind(c_render_device(&SYS), (void*)bind_pass, pass);
+	if (pass->binds && pass->binds[0].type == CALLBACK)
+	{
+		bind_pass(pass, NULL);
+		return NULL;
+	}
 
 	if(pass->shader)
 	{
@@ -769,6 +898,8 @@ entity_t renderer_entity_at_pixel(renderer_t *self, int x, int y,
 }
 
 
+extern texture_t *g_cache;
+extern texture_t *g_indir;
 int renderer_component_menu(renderer_t *self, void *ctx)
 {
 	nk_layout_row_dynamic(ctx, 0, 1);
@@ -787,7 +918,7 @@ int renderer_component_menu(renderer_t *self, void *ctx)
 	nk_layout_row_end(ctx);
 	nk_layout_row_dynamic(ctx, 0, 1);
 
-	for(i = 1; i < self->outputs_num; i++)
+	for(i = 0; i < self->outputs_num; i++)
 	{
 		pass_output_t *output = &self->outputs[i];
 		if(output->buffer)
@@ -797,6 +928,14 @@ int renderer_component_menu(renderer_t *self, void *ctx)
 				c_editmode_open_texture(c_editmode(&SYS), output->buffer);
 			}
 		}
+	}
+	if (nk_button_label(ctx, "cache"))
+	{
+		c_editmode_open_texture(c_editmode(&SYS), g_cache);
+	}
+	if (nk_button_label(ctx, "indir"))
+	{
+		c_editmode_open_texture(c_editmode(&SYS), g_indir);
 	}
 	return CONTINUE;
 }

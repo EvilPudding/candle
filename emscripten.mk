@@ -1,9 +1,10 @@
 CC = emcc
 LD = emcc
+AR = emar
 
 DIR = build
 
-DEPS =  $(shell sdl2-config --libs) -lm -lGL -lGLEW
+DEPS =  -s USE_SDL=2 -s LEGACY_GL_EMULATION=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0
 
 SHAD = $(patsubst %.glsl, $(DIR)/%.glsl.o, $(wildcard shaders/*.glsl))
 
@@ -14,7 +15,7 @@ SRCS = $(wildcard *.c) $(wildcard components/*.c) $(wildcard systems/*.c) \
 OBJS_REL = $(patsubst %.c, $(DIR)/%.o, $(SRCS))
 OBJS_DEB = $(patsubst %.c, $(DIR)/%.debug.o, $(SRCS))
 
-CFLAGS = -s USE_SDL=2  $(shell sdl2-config --cflags) -DUSE_VAO -Wall -I. -Wuninitialized \
+CFLAGS = -s USE_SDL=2 -s LEGACY_GL_EMULATION=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -DUSE_VAO -Wall -I. -Wuninitialized \
 	-Wstrict-prototypes $(PARENTCFLAGS)
 
 CFLAGS_REL = $(CFLAGS) -O3

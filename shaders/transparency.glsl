@@ -21,18 +21,18 @@ void main()
 	/* float far_depth = textureLod(gbuffer.depth, pp, 0).r; */
 	/* if(gl_FragCoord.z > far_depth) discard; */
 
-	float dif  = resolveProperty(mat(albedo), texcoord).a;
+	float dif  = resolveProperty(mat(albedo), texcoord, true).a;
 	if(dif < 0.7) discard;
 
-	vec4 trans = resolveProperty(mat(transparency), texcoord);
-	vec4 emit = resolveProperty(mat(emissive), texcoord);
+	vec4 trans = resolveProperty(mat(transparency), texcoord, false);
+	vec4 emit = resolveProperty(mat(emissive), texcoord, false);
 
 	vec3 final;
 	if(trans.a > 0.0)
 	{
 		/* float depth = far_depth - gl_FragCoord.z; */
 
-		float rough = resolveProperty(mat(roughness), texcoord).r;
+		float rough = resolveProperty(mat(roughness), texcoord, false).r;
 		vec3 nor = get_normal();
 
 		vec2 coord = pp + nor.xy * (rough * 0.03);

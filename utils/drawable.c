@@ -486,14 +486,14 @@ static void bind_buffer(uint32_t *vbo, int32_t id, uint32_t type, int32_t dim,
 
 		glEnableVertexAttribArray(id); glerr();
 
-		if(type == GL_FLOAT)
+		/* if(type == GL_FLOAT) */
 		{
 			glVertexAttribPointer(id, step, type, GL_FALSE, size, offset);
 		}
-		else
-		{
-			glVertexAttribIPointer(id, step, type, size, offset);
-		}
+		/* else */
+		/* { */
+			/* glVertexAttribIPointer(id, step, type, size, offset); */
+		/* } */
 
 		glVertexAttribDivisor(id, instanced_divisor); glerr();
 
@@ -937,9 +937,10 @@ static void draw_conf_update_skin(draw_conf_t *self)
 	}
 	if(self->last_skin_update == skin->update_id) return;
 	self->last_skin_update = skin->update_id;
-	void *p = glMapNamedBuffer(self->skin, GL_WRITE_ONLY);
+	glBindBuffer(GL_UNIFORM_BUFFER, self->skin); glerr();
+	void *p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
 	memcpy(p, &skin->transforms[0], skin->bones_num * sizeof(mat4_t));
-	glUnmapNamedBuffer(self->skin); glerr();
+	glUnmapBuffer(GL_UNIFORM_BUFFER); glerr();
 }
 
 int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
@@ -978,14 +979,16 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 		glDisable(GL_CULL_FACE); glerr();
 	}
 
-	glUniform1ui(23, mesh->has_texcoords);
-	glUniform1ui(25, mesh->receive_shadows);
+	glUniform1i(23, mesh->has_texcoords);
+	glUniform1i(25, mesh->receive_shadows);
 
 	glBindVertexArray(self->vao); glerr();
 
 	glLineWidth(3);
 
+#ifndef __EMSCRIPTEN__
 	glPolygonMode(GL_FRONT_AND_BACK, mesh->wireframe ? GL_LINE : GL_FILL);
+#endif
 
 	if(self->vars.xray) glDepthRange(0, 0.01);
 
@@ -993,25 +996,28 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	if(vector_count(mesh->faces))
 	{
 		primitive = GL_TRIANGLES;
-		glUniform1ui(24, 1);
+		glUniform1i(24, 1);
 	}
 	else
 	{
 
 		primitive = GL_LINES;
-		glUniform1ui(24, 0);
+		glUniform1i(24, 0);
 	}
 	
 	if(instance_id == -1)
 	{
-		glDrawElementsInstancedBaseInstance(primitive,
-				self->varray->ind_num, GL_UNSIGNED_INT, 0, self->inst_num, 0);
+		glDrawElementsInstanced(primitive,
+			self->varray->ind_num, GL_UNSIGNED_INT, 0, self->inst_num);
 		glerr();
 	}
 	else
 	{
-		glDrawElementsInstancedBaseInstance(primitive,
-				self->varray->ind_num, GL_UNSIGNED_INT, 0, 1, instance_id);
+		/* glDrawElementsInstancedBaseInstance(primitive, */
+		/* 		self->varray->ind_num, GL_UNSIGNED_INT, 0, 1, instance_id); */
+		glDrawElements(primitive, self->varray->ind_num, GL_UNSIGNED_INT, 0);
+
+		/* glDrawArraysOneInstance(primitive, instance_id, self->varray->ind_num, int instance ); */
 		glerr();
 	}
 	SDL_SemPost(self->semaphore);

@@ -22,7 +22,8 @@ static void copy_prop(prop_t *prop, struct gl_property *glprop)
 	glprop->scale = prop->scale;
 	if(prop->texture)
 	{
-		glprop->texture = texture_handle(prop->texture, 0);
+		glprop->layer = prop->texture->bufs[0].id;
+		glprop->size = prop->texture->sizes[0];
 	}
 }
 
@@ -40,7 +41,7 @@ void c_render_device_update_lights(c_render_device_t *self)
 		gllight->radius = light->radius;
 		if(light->renderer)
 		{
-			gllight->shadow_map = texture_handle(light->renderer->output, 1);
+			gllight->layer = light->renderer->output->id;
 		}
 	}
 }
@@ -115,6 +116,8 @@ void fs_bind(fs_t *fs)
 	/* printf("fs_bind %s\n", fs->filename); */
 }
 
+extern texture_t *g_cache;
+extern texture_t *g_indir;
 shader_t *vs_bind(vs_t *vs)
 {
 	c_render_device_t *rd = c_render_device(&SYS);
@@ -131,6 +134,14 @@ shader_t *vs_bind(vs_t *vs)
 	}
 
 	shader_bind(rd->shader);
+	glUniform1i(26, 34);
+	glActiveTexture(GL_TEXTURE0 + 34);
+	texture_bind(g_cache, 0);
+
+	glUniform1i(27, 35);
+	glActiveTexture(GL_TEXTURE0 + 35);
+	texture_bind(g_indir, 0);
+	glerr();
 
 	if(rd->shader && rd->bind_function)
 	{
@@ -164,6 +175,7 @@ c_render_device_t *c_render_device_new()
 {
 	c_render_device_t *self = component_new("render_device");
 	SDL_AtomicSet((SDL_atomic_t*)&self->updates_ram, 1);
+	svp_init();
 
 	return self;
 }
@@ -192,10 +204,15 @@ int world_frame(void)
 	return rd->frame;
 }
 
+void c_render_device_destroy(c_render_device_t *self)
+{
+	texture_destroy(g_cache);
+}
+
 REG()
 {
 	ct_t *ct = ct_new("render_device", sizeof(c_render_device_t),
-			NULL, NULL, 1, ref("window"));
+			NULL, c_render_device_destroy, 1, ref("window"));
 
 	ct_listener(ct, WORLD, ref("world_update"), c_render_device_update);
 
