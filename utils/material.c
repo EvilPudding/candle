@@ -20,7 +20,7 @@ mat_t *mat_new(const char *name)
 	mat_t *self = calloc(1, sizeof *self);
 	mat_set_normal(self, (prop_t){.color=vec4(0.5, 0.5, 1.0, 0.0)});
 	self->albedo.color = vec4(0.5, 0.5, 0.5, 1.0);
-	self->vil = vil_get(&g_mat_ctx, ref("material"));
+	/* self->vil = vil_get(&g_mat_ctx, ref("material")); */
 
 	self->albedo.scale = 1;
 	self->roughness.scale = 1;
@@ -291,10 +291,10 @@ int mat_menu(mat_t *self, void *ctx)
 	changes |= mat_prop_menu(self, "metalness", &self->metalness, ctx); 
 	changes |= mat_prop_menu(self, "transparency", &self->transparency, ctx); 
 	changes |= mat_prop_menu(self, "emissive", &self->emissive, ctx); 
-	if(nk_button_label(ctx, "vil"))
-	{
-		c_editmode(&SYS)->open_vil = self->vil;
-	}
+	/* if(nk_button_label(ctx, "vil")) */
+	/* { */
+	/* 	c_editmode(&SYS)->open_vil = self->vil; */
+	/* } */
 	/* return CONTINUE; */
 	return changes;
 }

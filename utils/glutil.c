@@ -42,11 +42,13 @@ void _check_gl_error(const char *file, int line)
 	{
 		exit(1);
 	}
+#ifndef __EMSCRIPTEN__
 	if(SDL_ThreadID() != g_candle->render_id)
 	{
 		printf("glerr called in non render thread\n");
 		exit(1);
 	}
+#endif
 }
 
 /* SDL_sem *glSem = NULL; */

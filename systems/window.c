@@ -9,6 +9,11 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <emscripten/html5.h>
+#endif
+
 int window_width = 1360;
 int window_height = 766;
 
@@ -21,11 +26,46 @@ extern SDL_Window *mainWindow;
 
 static void init_context_b(c_window_t *self)
 {
+/* #ifdef __EMSCRIPTEN__ */
+
+/* 	emscripten_set_canvas_element_size("#canvas", self->width, self->height); */
+/*     /1* else { *1/ */
+/*         /1* enter_soft_fullscreen(); *1/ */
+
+/* 	EmscriptenWebGLContextAttributes attrs; */
+/* 	emscripten_webgl_init_context_attributes(&attrs); */
+/* 	attrs.antialias = false; */
+/* 	attrs.majorVersion = 2; */
+/* 	attrs.minorVersion = 0; */
+/* 	attrs.alpha = false; */
+/* 	attrs.depth = true; */
+/* 	attrs.enableExtensionsByDefault = true; */
+/* 	EMSCRIPTEN_WEBGL_CONTEXT_HANDLE ctx = emscripten_webgl_create_context(0, &attrs); */
+
+/* 	/1* if (emscripten_webgl_enable_extension(ctx, "EXT_color_buffer_float") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
+/* 	/1* if (emscripten_webgl_enable_extension(ctx, "GL_EXT_color_buffer_float") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
+/* 	/1* if (emscripten_webgl_enable_extension(ctx, "EXT_texture_filter_anisotropic") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
+/* 	/1* if (emscripten_webgl_enable_extension(ctx, "GL_EXT_texture_filter_anisotropic") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
+/* 	/1* if (emscripten_webgl_enable_extension(ctx, "OES_texture_float_linear") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
+/* 	/1* if (emscripten_webgl_enable_extension(ctx, "GL_OES_texture_float_linear") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
+/* 	/1* if (emscripten_webgl_enable_extension(ctx, "WEBGL_lose_context") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
+/* 	/1* if (emscripten_webgl_enable_extension(ctx, "WEBGL_depth_texture") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
+/* 	/1* if (emscripten_webgl_enable_extension(ctx, "GL_WEBGL_lose_context") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
+/* 	emscripten_webgl_make_context_current(ctx); */
+/*  const char* embeddedCode = */
+/*         "window.WebGLRenderingContext = window.WebGL2RenderingContext || window.WebGLRenderingContext;\n"; */
+/*     emscripten_run_script(embeddedCode); */
+/* #else */
 	mainWindow = self->window = SDL_CreateWindow("Candle",
 			SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 			self->width, self->height,
 			SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
 			| SDL_WINDOW_ALLOW_HIGHDPI);
+	if (!mainWindow)
+	{
+		printf("Window could not be created! SDL Error: %s\n",
+				SDL_GetError());
+	}
 
 	context = self->context = SDL_GL_CreateContext(self->window);
 
@@ -35,6 +75,7 @@ static void init_context_b(c_window_t *self)
 				SDL_GetError());
 		exit(1);
 	}
+/* #endif */
 
 	glInit();
 
@@ -45,33 +86,41 @@ static void init_context_b(c_window_t *self)
 	const GLubyte *version = glGetString( GL_VERSION );
 	const GLubyte *glslVersion = glGetString(GL_SHADING_LANGUAGE_VERSION);
 
-	GLint major, minor;
-	glGetIntegerv(GL_MAJOR_VERSION, &major);
-	glGetIntegerv(GL_MINOR_VERSION, &minor);
+	/* GLint major, minor; */
+	/* glGetIntegerv(GL_MAJOR_VERSION, &major); */
+	/* glGetIntegerv(GL_MINOR_VERSION, &minor); */
+	/* glerr(); */
 	printf("GL Vendor : %s\n", vendor);
 	printf("GL Renderer : %s\n", renderer);
 	printf("GL Version (string) : %s\n", version);
-	printf("GL Version (integer) : %d.%d\n", major, minor);
+	/* printf("GL Version (integer) : %d.%d\n", major, minor); */
 	printf("GLSL Version : %s\n", glslVersion); 
 
 }
 
 void c_window_init(c_window_t *self)
 {
-	SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
 	SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER|SDL_INIT_EVENTS);
 	/* SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, */
 			/* SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); */
 
+	SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
 	self->width = window_width;
 	self->height = window_height;
 
 	/* SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1); */
 
+#ifdef __EMSCRIPTEN__
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
+#else
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
 			SDL_GL_CONTEXT_PROFILE_CORE);
+#endif
 
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
@@ -145,6 +194,7 @@ void c_window_debug(GLenum source,
 
 int c_window_created(c_window_t *self)
 {
+	printf("WINDOW CREATED\n"); fflush(stdin);
 	init_context_b(self);
 
 #ifdef DEBUG
@@ -179,9 +229,11 @@ int c_window_created(c_window_t *self)
 
 c_window_t *c_window_new(int width, int height)
 {
+	printf("WINDOW NEW\n"); fflush(stdin);
 	c_window_t *self = component_new("window");
 	self->width = width ? width : window_width;
 	self->height = height ? height : window_height;
+	printf("WINDOW NEW end\n"); fflush(stdin);
 	return self;
 }
 
@@ -219,7 +271,8 @@ int c_window_draw(c_window_t *self)
 	glActiveTexture(GL_TEXTURE0);
 	texture_bind(tex, tex->draw_id);
 
-	glUniform2f(22, self->width, self->height); glerr();
+	uint32_t ss = shader_uniform(shader, "screen_size", NULL);
+	glUniform2f(ss, self->width, self->height); glerr();
 
 	drawable_draw(&self->draw);
 	glerr();

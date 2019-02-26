@@ -6,6 +6,13 @@
 
 /* TODO maybe skin_t should not be defined on a component header */
 #include <components/skin.h>
+#ifdef SHORT_IND
+typedef uint16_t vertid_t;
+#define IDTYPE GL_UNSIGNED_SHORT
+#else
+typedef uint32_t vertid_t;
+#define IDTYPE GL_UNSIGNED_INT
+#endif
 
 typedef struct drawable_t drawable_t;
 
@@ -22,21 +29,21 @@ typedef struct
 	uvec4_t *bid;	/* 6 */
 	vec4_t  *wei;	/* 7 */
 
-	unsigned int *ind;
+	vertid_t *ind;
 
-	int vert_num;
-	int vert_alloc;
-	int vert_num_gl;
+	int32_t vert_num;
+	int32_t vert_alloc;
+	int32_t vert_num_gl;
 
-	int ind_num;
-	int ind_alloc;
-	int ind_num_gl;
+	int32_t ind_num;
+	int32_t ind_alloc;
+	int32_t ind_num_gl;
 
-	int updating;
+	bool_t updating;
 	GLuint vbo[24];
 
-	int update_id_gl;
-	int update_id_ram;
+	int32_t update_id_gl;
+	int32_t update_id_ram;
 
 	mesh_t *mesh;
 } varray_t;
@@ -51,8 +58,8 @@ struct conf_vars
 	mesh_t *mesh;
 	skin_t *skin;
 	vs_t *vs;
-	int xray;
-	int padding;
+	int32_t xray;
+	int32_t padding;
 };
 typedef struct draw_conf_t draw_conf_t;
 

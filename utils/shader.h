@@ -7,21 +7,21 @@
 
 typedef struct
 {
-	int type;
+	uint32_t type;
 	char *code;
 } vertex_modifier_t;
 
 typedef struct
 {
 	char *name;
-	int index;
+	uint32_t index;
 	vertex_modifier_t vmodifiers[32];
 	vertex_modifier_t gmodifiers[32];
-	int vmodifier_num;
-	int gmodifier_num;
+	uint32_t vmodifier_num;
+	uint32_t gmodifier_num;
 	GLuint vprogram;
 	GLuint gprogram;
-	int ready;
+	uint32_t ready;
 	char *vcode;
 	char *gcode;
 } vs_t;
@@ -34,7 +34,7 @@ typedef struct
 	shader_t *combinations[32];
 
 	char *filename;
-	int ready;
+	uint32_t ready;
 } fs_t;
 
 typedef struct
@@ -49,20 +49,20 @@ typedef struct light_t light_t;
 typedef struct shader_t
 {
 	fs_t *fs;
-	int index;
-	int frame_bind;
+	uint32_t index;
+	uint32_t frame_bind;
 
 	GLuint program;
 
 	GLuint u_bones[30];
 
-	int ready;
+	uint32_t ready;
 } shader_t;
 
 shader_t *vs_bind(vs_t *vs);
 void fs_bind(fs_t *fs);
 
-vs_t *vs_new(const char *name, int num_modifiers, ...);
+vs_t *vs_new(const char *name, uint32_t num_modifiers, ...);
 fs_t *fs_new(const char *filename);
 vertex_modifier_t vertex_modifier_new(const char *code);
 vertex_modifier_t geometry_modifier_new(const char *code);
@@ -76,7 +76,7 @@ GLuint shader_uniform(shader_t *self, const char *uniform, const char *member);
 GLuint _shader_uniform(shader_t *self, const char *uniform, const char *member);
 void shader_destroy(shader_t *self);
 void shader_add_source(const char *name, unsigned char data[],
-		unsigned int len);
+		uint32_t len);
 void shaders_reg(void);
 
 /* TODO this should not be shared */

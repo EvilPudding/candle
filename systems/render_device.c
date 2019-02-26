@@ -89,18 +89,13 @@ void c_render_device_update_ubo(c_render_device_t *self)
 	else
 	{
 		glBindBuffer(GL_UNIFORM_BUFFER, self->ubo); glerr();
-		GLvoid* p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY); glerr();
-		/* if(self->scene_changes & 0x2) */
-		/* { */
-			memcpy(p, &self->scene, sizeof(self->scene));
-		/* } */
-		/* else */
-		/* { */
-			/* memcpy(p, &self->scene.camera, sizeof(self->scene.camera)); */
-		/* } */
-		glUnmapBuffer(GL_UNIFORM_BUFFER); glerr();
-		/* self->scene_changes = 0; */
-		/* self->updates &= ~0x2; */
+		/* GLvoid* p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY); glerr(); */
+		/* memcpy(p, &self->scene, sizeof(self->scene)); */
+
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(self->scene), &self->scene);glerr();
+
+		/* glUnmapBuffer(GL_UNIFORM_BUFFER); glerr(); */
+
 		SDL_AtomicSet((SDL_atomic_t*)&self->updates_ubo, 0);
 	}
 }
@@ -113,16 +108,14 @@ void fs_bind(fs_t *fs)
 
 	render_device->frag_bound = fs;
 	render_device->shader = NULL;
-	/* printf("fs_bind %s\n", fs->filename); */
 }
 
 extern texture_t *g_cache;
 extern texture_t *g_indir;
 shader_t *vs_bind(vs_t *vs)
 {
+	uint32_t loc;
 	c_render_device_t *rd = c_render_device(&SYS);
-
-	/* printf("vs_bind %s\n", vs->name); */
 
 	if(!rd->shader || rd->shader->index != vs->index)
 	{
@@ -134,14 +127,26 @@ shader_t *vs_bind(vs_t *vs)
 	}
 
 	shader_bind(rd->shader);
-	glUniform1i(26, 34);
+
+	loc = glGetUniformLocation(rd->shader->program, "g_cache");
+	glUniform1i(loc, 34);
 	glActiveTexture(GL_TEXTURE0 + 34);
 	texture_bind(g_cache, 0);
 
-	glUniform1i(27, 35);
+	loc = glGetUniformLocation(rd->shader->program, "g_indir");
+	glUniform1i(loc, 35);
 	glActiveTexture(GL_TEXTURE0 + 35);
 	texture_bind(g_indir, 0);
 	glerr();
+
+	loc = glGetUniformBlockIndex(rd->shader->program, "scene_t");
+	glUniformBlockBinding(rd->shader->program, loc, 20); glerr();
+
+	loc = glGetUniformBlockIndex(rd->shader->program, "renderer_t");
+	glUniformBlockBinding(rd->shader->program, loc, 19); glerr();
+
+	loc = glGetUniformBlockIndex(rd->shader->program, "skin_t");
+	glUniformBlockBinding(rd->shader->program, loc, 21); glerr();
 
 	if(rd->shader && rd->bind_function)
 	{

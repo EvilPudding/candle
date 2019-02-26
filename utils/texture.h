@@ -8,10 +8,10 @@
 #define MAX_MIPS 9
 typedef struct
 {
-	uint32_t bound_index;
+	uint32_t bound;
 	uint32_t touched;
-	uint16_t indir_x;
-	uint16_t indir_y;
+	uint32_t indir_x;
+	uint32_t indir_y;
 	uint32_t bytes[128 * 128];
 } tex_tile_t;
 
@@ -22,6 +22,7 @@ typedef struct
 	int dims;
 	uint32_t format;
 	uint32_t internal;
+	uint32_t type;
 	char *name;
 	GLubyte *data;
 	uint32_t ready;
@@ -99,7 +100,7 @@ int32_t texture_target(texture_t *self, texture_t *depth, int32_t fb);
 int32_t texture_target_sub(texture_t *self, int32_t width, int32_t height,
 		texture_t *depth, int32_t fb);
 void texture_destroy(texture_t *self);
-void load_tile(texture_t *self, tex_tile_t *tile, int mip, int frame);
+bool_t load_tile(texture_t *self, tex_tile_t *tile, int mip, int frame);
 
 void texture_set_xy(texture_t *self, int32_t x, int32_t y,
 		GLubyte r, GLubyte g, GLubyte b, GLubyte a);

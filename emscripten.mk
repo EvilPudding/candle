@@ -4,7 +4,10 @@ AR = emar
 
 DIR = build
 
-DEPS =  -s USE_SDL=2 -s LEGACY_GL_EMULATION=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0
+EMOPTS = -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1 -s USE_WEBGL2=1 -s FULL_ES3=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s EMULATE_FUNCTION_POINTER_CASTS=1 \
+		 --source-map-base http://localhost:8080/ -s SAFE_HEAP=1
+
+DEPS =  $(EMOPTS)
 
 SHAD = $(patsubst %.glsl, $(DIR)/%.glsl.o, $(wildcard shaders/*.glsl))
 
@@ -15,10 +18,10 @@ SRCS = $(wildcard *.c) $(wildcard components/*.c) $(wildcard systems/*.c) \
 OBJS_REL = $(patsubst %.c, $(DIR)/%.o, $(SRCS))
 OBJS_DEB = $(patsubst %.c, $(DIR)/%.debug.o, $(SRCS))
 
-CFLAGS = -s USE_SDL=2 -s LEGACY_GL_EMULATION=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -DUSE_VAO -Wall -I. -Wuninitialized \
+CFLAGS = $(EMOPTS) -DUSE_VAO -Wall -I. -Wuninitialized \
 	-Wstrict-prototypes $(PARENTCFLAGS)
 
-CFLAGS_REL = $(CFLAGS) -O3
+CFLAGS_REL = $(CFLAGS) -g3
 
 CFLAGS_DEB = $(CFLAGS) -g3 -DDEBUG
 

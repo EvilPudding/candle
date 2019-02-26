@@ -50,8 +50,12 @@ typedef struct candle_t
 	void *candle_thr;
 	void *ticker_thr;
 	int fps;
+#ifndef __EMSCRIPTEN__
 	SDL_threadID render_id;
 	SDL_sem *sem;
+#endif
+	int fps_count;
+	uint64_t last_tick;
 
 } candle_t;
 

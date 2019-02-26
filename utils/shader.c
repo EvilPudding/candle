@@ -45,8 +45,8 @@ static const char default_vs[] =
 	"\n"
 	"void main()\n"
 	"{\n"
-	"	vec4 pos = vec4(P.xyz, 1.0f);\n"
-	"	obj_pos = (M * vec4(0, 0, 0, 1)).xyz;\n"
+	"	vec4 pos = vec4(P.xyz, 1.0);\n"
+	"	obj_pos = (M * vec4(0.0, 0.0, 0.0, 1.0)).xyz;\n"
 	"	model = M;\n"
 	"	poly_color = COL;\n"
 	"	matid = uint(PROPS.x);\n"
@@ -61,7 +61,7 @@ static const char default_vs_end[] =
 static const char default_gs[] = "";
 
 static void checkShaderError(GLuint shader, const char *name, const char *code);
-static char *string_preprocess(const char *src, int len, int defines);
+static char *string_preprocess(const char *src, uint32_t len, uint32_t defines);
 
 struct source
 {
@@ -70,17 +70,17 @@ struct source
 	char *src;
 };
 
-static char *shader_preprocess(struct source source, int defines);
+static char *shader_preprocess(struct source source, uint32_t defines);
 
 vs_t g_vs[32];
-int g_vs_num = 0;
+uint32_t g_vs_num = 0;
 
 fs_t g_fs[32];
-int g_fs_num = 0;
+uint32_t g_fs_num = 0;
 
 static struct source *g_sources = NULL;
 
-static int g_sources_num = 0;
+static uint32_t g_sources_num = 0;
 
 void shaders_common_glsl_reg(void);
 void shaders_depth_glsl_reg(void);
@@ -155,11 +155,11 @@ vertex_modifier_t geometry_modifier_new(const char *code)
 }
 
 
-int vs_new_loader(vs_t *self)
+uint32_t vs_new_loader(vs_t *self)
 {
-	int i;
-	int vcode_size = 0;
-	int gcode_size = 0;
+	uint32_t i;
+	uint32_t vcode_size = 0;
+	uint32_t gcode_size = 0;
 
 	for(i = 0; i < self->vmodifier_num; i++)
 	{
@@ -196,14 +196,13 @@ int vs_new_loader(vs_t *self)
 		checkShaderError(self->gprogram, self->name, self->gcode);
 	}
 	self->ready = 1;
-	/* printf("vs ready %s\n", self->code); */
-
+	printf("vs ready %s\n", self->name);
 	return 1;
 }
 
-vs_t *vs_new(const char *name, int num_modifiers, ...)
+vs_t *vs_new(const char *name, uint32_t num_modifiers, ...)
 {
-	int i = g_vs_num++;
+	uint32_t i = g_vs_num++;
 	vs_t *self = &g_vs[i];
 	self->index = i;
 	self->name = strdup(name);
@@ -248,9 +247,9 @@ vs_t *vs_new(const char *name, int num_modifiers, ...)
 }
 
 void shader_add_source(const char *name, unsigned char data[],
-		unsigned int len)
+		uint32_t len)
 {
-	int i = g_sources_num++;
+	uint32_t i = g_sources_num++;
 	g_sources = realloc(g_sources, (sizeof *g_sources) * g_sources_num);
 	g_sources[i].len = len + 1;
 	g_sources[i].filename = strdup(name);
@@ -263,7 +262,7 @@ void shader_add_source(const char *name, unsigned char data[],
 static const struct source shader_source(const char *filename)
 {
 	struct source res = {0};
-	int i;
+	uint32_t i;
 	for(i = 0; i < g_sources_num; i++)
 	{
 		if(!strcmp(filename, g_sources[i].filename))
@@ -310,17 +309,29 @@ static const struct source shader_source(const char *filename)
 
 }
 
-static char *string_preprocess(const char *src, int len, int defines)
+static char *string_preprocess(const char *src, uint32_t len, uint32_t defines)
 {
 	size_t lsize = len;
+/* #ifndef __EMSCRIPTEN__ */
+/* #define VERSION "#version 300 es\n" */
+/* #else */
+/* #define VERSION "" */
+/* #endif */
+
+#define VERSION "#version 300 es\n"
 
 	/* char defs[][64] = { "#version 420\n" */
-	char defs[][64] = { "#version 330\n"
+	char defs[][64] = { VERSION
+		, "precision mediump float;\n"
+		, "precision mediump int;\n"
 #ifdef MESH4
 		, "#define MESH4\n"
 #endif
+#ifdef __EMSCRIPTEN__
+		, "#define EMSCRIPTEN\n"
+#endif
 	};
-	int i;
+	uint32_t i;
 	char *buffer = NULL;
 	if(defines)
 	{
@@ -388,7 +399,7 @@ static char *string_preprocess(const char *src, int len, int defines)
 	return buffer;
 }
 
-static char *shader_preprocess(struct source source, int defines)
+static char *shader_preprocess(struct source source, uint32_t defines)
 {
 	if(!source.src) return NULL;
 	return string_preprocess(source.src, source.len, defines);
@@ -416,7 +427,7 @@ static void checkShaderError(GLuint shader,
 	}
 }
 
-static int shader_new_loader(shader_t *self)
+static uint32_t shader_new_loader(shader_t *self)
 {
 	uint32_t fprogram = self->fs->program;
 	uint32_t vprogram = g_vs[self->index].vprogram;
@@ -434,8 +445,8 @@ static int shader_new_loader(shader_t *self)
 
 	glLinkProgram(self->program); glerr();
 
-	int isLinked = 1;
-#ifdef DEBUG
+	int32_t isLinked = 1;
+/* #ifdef DEBUG */
 	glValidateProgram(self->program);
 	/* checkShaderError(self->program, self->fs->filename, NULL); */
 
@@ -446,18 +457,18 @@ static int shader_new_loader(shader_t *self)
 	{
 		GLchar log_string[bufflen + 1];
 		glGetProgramInfoLog(self->program, bufflen, 0, log_string);
-		printf("Log found for '%s':\n%s", self->fs->filename, log_string);
+		printf("Log found for '%s':\n%s\n", self->fs->filename, log_string);
 	}
 
 	glGetProgramiv(self->program, GL_LINK_STATUS, &isLinked);
-#endif
+/* #endif */
 	self->ready = 1;
 	printf("shader %d ready f:%s v:%s %d\n", self->program, self->fs->filename,
 			g_vs[self->index].name, isLinked);
 	return 1;
 }
 
-static int fs_new_loader(fs_t *self)
+static uint32_t fs_new_loader(fs_t *self)
 {
 	self->program = 0;
 
@@ -476,7 +487,7 @@ static int fs_new_loader(fs_t *self)
 
 	checkShaderError(self->program, self->filename, self->code);
 	self->ready = 1;
-	/* printf("fs ready %s\n", buffer); */
+	printf("fs ready %s\n", buffer);
 
 	return 1;
 }
@@ -484,7 +495,7 @@ static int fs_new_loader(fs_t *self)
 fs_t *fs_new(const char *filename)
 {
 	if(!filename) return NULL;
-	int i;
+	uint32_t i;
 	for(i = 0; i < g_fs_num; i++)
 	{
 		if(!strcmp(filename, g_fs[i].filename)) return &g_fs[i];
@@ -546,7 +557,7 @@ GLuint shader_uniform(shader_t *self, const char *uniform, const char *member)
 
 void fs_destroy(fs_t *self)
 {
-	int i;
+	uint32_t i;
 	for(i = 0; i < g_vs_num; i++)
 	{
 		shader_destroy(self->combinations[i]);

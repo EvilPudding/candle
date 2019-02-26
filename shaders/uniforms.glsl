@@ -1,10 +1,5 @@
 #ifndef UNIFORMS
 #define UNIFORMS
-#extension GL_ARB_explicit_uniform_location : require
-#extension GL_ARB_texture_query_levels : enable
-#extension GL_EXT_shader_io_blocks : enable
-#extension GL_ARB_shading_language_420pack : enable
-precision mediump float;
 
 struct camera_t
 {
@@ -45,29 +40,29 @@ struct material_t
 	property_t emissive;
 };
 
-layout(std140, binding = 19) uniform renderer_t
+layout(std140) uniform renderer_t
 {
 	camera_t camera;
 } renderer;
 
-layout(std140, binding = 20) uniform scene_t
+layout(std140) uniform scene_t
 {
 	material_t materials[128];
 	light_t lights[255];
 	vec4 test_color;
 } scene;
 
-layout(std140, binding = 21) uniform skin_t
+layout(std140) uniform skin_t
 {
 	mat4 bones[30];
 } skin;
 
-layout(location = 22) uniform vec2 screen_size;
-layout(location = 23) uniform bool has_tex;
-layout(location = 24) uniform bool has_normals;
-layout(location = 25) uniform bool receive_shadows;
-layout(location = 26) uniform sampler2D g_cache;
-layout(location = 27) uniform sampler2D g_indir;
+/* layout(location = 22) */ uniform vec2 screen_size;
+/* layout(location = 23) */ uniform bool has_tex;
+/* layout(location = 24) */ uniform bool has_normals;
+/* layout(location = 25) */ uniform bool receive_shadows;
+/* layout(location = 26) */ uniform sampler2D g_cache;
+/* layout(location = 27) */ uniform sampler2D g_indir;
 
 /* layout(location = 25) uniform camera_t camera; */
 

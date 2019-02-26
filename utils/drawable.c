@@ -388,26 +388,31 @@ static int32_t varray_add_vert(
 	return i;
 }
 
-void varray_add_line(varray_t *self, int32_t v1, int32_t v2)
+void varray_add_line(varray_t *self, vertid_t v1, vertid_t v2)
 {
 	int32_t i = self->ind_num;
 
 	self->ind_num += 2;
 	varray_ind_grow(self);
 
-	self->ind[i + 0] = v1;
-	self->ind[i + 1] = v2;
+	memcpy(&self->ind[i + 0], &v1, sizeof(*self->ind));
+	memcpy(&self->ind[i + 1], &v2, sizeof(*self->ind));
+	/* self->ind[i + 0] = v1; */
+	/* self->ind[i + 1] = v2; */
 }
 
-void varray_add_triangle(varray_t *self, int32_t v1, int32_t v2, int32_t v3)
+void varray_add_triangle(varray_t *self, vertid_t v1, vertid_t v2, vertid_t v3)
 {
 	int32_t i = self->ind_num;
 	self->ind_num += 3;
 	varray_ind_grow(self);
 
-	self->ind[i + 0] = v1;
-	self->ind[i + 1] = v2;
-	self->ind[i + 2] = v3;
+	memcpy(&self->ind[i + 0], &v1, sizeof(*self->ind));
+	memcpy(&self->ind[i + 1], &v2, sizeof(*self->ind));
+	memcpy(&self->ind[i + 2], &v3, sizeof(*self->ind));
+	/* self->ind[i + 0] = v1; */
+	/* self->ind[i + 1] = v2; */
+	/* self->ind[i + 2] = v3; */
 
 	/* vec2_print(self->id[v1]); */
 	/* vec2_print(self->id[v2]); */
@@ -848,7 +853,7 @@ static void varray_update_buffers(varray_t *self)
 		glerr();
 
 	}
-	self->updating = 0;
+	self->updating = false;
 }
 
 void varray_update(varray_t *self)
@@ -859,7 +864,7 @@ void varray_update(varray_t *self)
 	{
 		mesh_lock_write(self->mesh);
 
-		self->updating = 1;
+		self->updating = true;
 		glBindVertexArray(0); glerr();
 
 		varray_update_ram(self);
@@ -886,7 +891,7 @@ static void varray_bind(varray_t *self)
 	bind_buffer(&vbo[3], 3, GL_FLOAT, 3, 0);
 
 	/* ID BUFFER */
-	bind_buffer(&vbo[4], 4, GL_UNSIGNED_INT, 2, 0);
+	bind_buffer(&vbo[4], 4, IDTYPE, 2, 0);
 
 	/* COLOR BUFFER */
 	bind_buffer(&vbo[5], 5, GL_FLOAT, 3, 0);
@@ -894,7 +899,7 @@ static void varray_bind(varray_t *self)
 	if(self->mesh->has_skin)
 	{
 		/* BONEID BUFFER */
-		bind_buffer(&vbo[6], 6, GL_UNSIGNED_INT, 4, 0);
+		bind_buffer(&vbo[6], 6, IDTYPE, 4, 0);
 
 		/* BONE WEIGHT BUFFER */
 		bind_buffer(&vbo[7], 7, GL_FLOAT, 4, 0);
@@ -915,7 +920,7 @@ static void draw_conf_update_vao(draw_conf_t *self)
 	bind_buffer(&self->vbo[8], 8, GL_FLOAT, 16, 1);
 
 	/* PROPERTY BUFFER */
-	bind_buffer(&self->vbo[12], 12, GL_UNSIGNED_INT, 4, 1);
+	bind_buffer(&self->vbo[12], 12, IDTYPE, 4, 1);
 
 #ifdef MESH4
 	/* 4D ANGLE BUFFER */
@@ -946,7 +951,9 @@ static void draw_conf_update_skin(draw_conf_t *self)
 int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 {
 	if(!self || !self->inst_num) return 0;
+#ifndef __EMSCRIPTEN__
 	SDL_SemWait(self->semaphore);
+#endif
 	mesh_t *mesh = self->vars.mesh;
 	/* printf("%d %p %d %s\n", self->vars.transparent, self->vars.mesh, */
 			/* self->vars.xray, self->vars.vs->name); */
@@ -954,6 +961,8 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	if(!self->varray) self->varray = varray_get(self->vars.mesh);
 
 	varray_update(self->varray);
+
+	if (self->varray->ind_num == 0) return 1;
 
 	draw_conf_update_inst(self, instance_id);
 
@@ -966,7 +975,7 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 		glBindBufferBase(GL_UNIFORM_BUFFER, 21, self->skin); glerr();
 	}
 
-	vs_bind(self->vars.vs);
+	shader_t *shader = vs_bind(self->vars.vs);
 
 	int32_t cull_was_enabled = glIsEnabled(GL_CULL_FACE);
 	if(mesh->cull)
@@ -979,15 +988,17 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 		glDisable(GL_CULL_FACE); glerr();
 	}
 
-	glUniform1i(23, mesh->has_texcoords);
-	glUniform1i(25, mesh->receive_shadows);
+	glUniform1i(shader_uniform(shader, "has_tex", NULL), mesh->has_texcoords);
+	glUniform1i(shader_uniform(shader, "receive_shadows", NULL),
+	                           mesh->receive_shadows);
 
 	glBindVertexArray(self->vao); glerr();
 
-	glLineWidth(3);
+	glLineWidth(3); glerr();
 
 #ifndef __EMSCRIPTEN__
 	glPolygonMode(GL_FRONT_AND_BACK, mesh->wireframe ? GL_LINE : GL_FILL);
+	glerr();
 #endif
 
 	if(self->vars.xray) glDepthRange(0, 0.01);
@@ -996,31 +1007,34 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	if(vector_count(mesh->faces))
 	{
 		primitive = GL_TRIANGLES;
-		glUniform1i(24, 1);
+		glUniform1i(shader_uniform(shader, "has_normals", NULL), 1);
+		glerr();
 	}
 	else
 	{
 
 		primitive = GL_LINES;
-		glUniform1i(24, 0);
+		glUniform1i(shader_uniform(shader, "has_normals", NULL), 0);
+		glerr();
 	}
 	
 	if(instance_id == -1)
 	{
-		glDrawElementsInstanced(primitive,
-			self->varray->ind_num, GL_UNSIGNED_INT, 0, self->inst_num);
-		glerr();
+		glDrawElementsInstanced(primitive, self->varray->ind_num, IDTYPE,
+		                        0, self->inst_num); glerr();
 	}
 	else
 	{
 		/* glDrawElementsInstancedBaseInstance(primitive, */
 		/* 		self->varray->ind_num, GL_UNSIGNED_INT, 0, 1, instance_id); */
-		glDrawElements(primitive, self->varray->ind_num, GL_UNSIGNED_INT, 0);
+		glDrawElements(primitive, self->varray->ind_num, IDTYPE, 0);
 
 		/* glDrawArraysOneInstance(primitive, instance_id, self->varray->ind_num, int instance ); */
 		glerr();
 	}
+#ifndef __EMSCRIPTEN__
 	SDL_SemPost(self->semaphore);
+#endif
 
 	glDepthRange(0.0, 1.00);
 	if(cull_was_enabled) glEnable(GL_CULL_FACE);
@@ -1031,7 +1045,6 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 
 int32_t drawable_draw(drawable_t *self)
 {
-
 	/* if(self->conf->vars.scale_dist > 0.0f) */
 	/* { */
 	/* 	c_node_update_model(node); */
@@ -1244,6 +1257,7 @@ static int32_t draw_group_draw(draw_group_t *self)
 	if(!self) return 0;
 	int32_t res = 0;
 	khiter_t k;
+
 	for(k = kh_begin(self); k != kh_end(self); ++k)
 	{
 		if(!kh_exist(self, k)) continue;

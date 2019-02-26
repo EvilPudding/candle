@@ -172,60 +172,73 @@ void candle_skip_frame(int frames)
 	skip += frames;
 }
 
-static int render_loop(void)
+static void render_loop_init(void)
 {
 	g_candle->loader = loader_new();
 
-	int last = SDL_GetTicks();
-	int fps = 0;
+	g_candle->last_tick = SDL_GetTicks();
+	g_candle->fps_count = 0;
+#ifndef __EMSCRIPTEN__
 	g_candle->render_id = SDL_ThreadID();
+#endif
 	//SDL_GL_MakeCurrent(state->renderer->window, state->renderer->context); 
 	/* SDL_LockMutex(g_candle->mut); */
 	entity_add_component(SYS, c_window_new(0, 0));
 	entity_add_component(SYS, c_render_device_new());
 	/* printf("unlock 2\n"); */
+}
+
+static void render_loop_tick(void)
+{
+	candle_handle_events();
+
+	loader_update(g_candle->loader);
+	glerr();
+
+	/* if(state->gameStarted) */
+	{
+		/* candle_handle_events(self); */
+		/* printf("\t%ld\n", self->render_id); */
+		entity_signal(entity_null, sig("world_draw"), NULL, NULL);
+
+		ecm_clean(0);
+
+		if(!skip)
+		{
+			SDL_GL_SwapWindow(c_window(&SYS)->window);
+		}
+		else
+		{
+			skip--;
+		}
+
+		glerr();
+		g_candle->fps_count++;
+		/* candle_handle_events(self); */
+
+	}
+
+	int current = SDL_GetTicks();
+	if(current - g_candle->last_tick > 1000)
+	{
+		g_candle->fps = g_candle->fps_count;
+		g_candle->fps_count = 0;
+		g_candle->last_tick = current;
+	}
+	glerr();
+	/* SDL_Delay(16); */
+	/* SDL_Delay(1); */
+}
+
+#ifndef __EMSCRIPTEN__
+static int render_loop(void)
+{
+	render_loop_init();
 	SDL_SemPost(g_candle->sem);
 
 	while(!g_candle->exit)
 	{
-		candle_handle_events();
-
-		loader_update(g_candle->loader);
-		glerr();
-
-		/* if(state->gameStarted) */
-		{
-			/* candle_handle_events(self); */
-			/* printf("\t%ld\n", self->render_id); */
-			entity_signal(entity_null, sig("world_draw"), NULL, NULL);
-
-			ecm_clean(0);
-
-			if(!skip)
-			{
-				SDL_GL_SwapWindow(c_window(&SYS)->window);
-			}
-			else
-			{
-				skip--;
-			}
-
-			glerr();
-			fps++;
-			/* candle_handle_events(self); */
-
-		}
-
-		int current = SDL_GetTicks();
-		if(current - last > 1000)
-		{
-			g_candle->fps = fps;
-			fps = 0;
-			last = current;
-		}
-		glerr();
-		/* SDL_Delay(16); */
-		/* SDL_Delay(1); */
+		render_loop_tick();
 	}
 
 	ecm_clean(1);
@@ -233,6 +246,7 @@ static int render_loop(void)
 
 	return 1;
 }
+#endif
 
 void candle_register()
 {
@@ -248,17 +262,24 @@ void candle_register()
 	signal_init(sig("expr_del"), sizeof(void*));
 }
 
+static void ticker_loop_tick(void)
+{
+	int current = SDL_GetTicks();
+	float dt = 16.0f / 1000.0f;
+	/* float dt = (current - g_candle->last_update) / 1000.0; */
+	entity_signal(entity_null, sig("world_update"), &dt, NULL);
+	ecm_clean(0);
+	g_candle->last_update = current;
+	SDL_Delay(16);
+}
 static int ticker_loop(void)
 {
 	do
 	{
-		int current = SDL_GetTicks();
-		float dt = 16.0f / 1000.0f;
-		/* float dt = (current - g_candle->last_update) / 1000.0; */
-		entity_signal(entity_null, sig("world_update"), &dt, NULL);
-		ecm_clean(0);
-		g_candle->last_update = current;
-		SDL_Delay(16);
+		ticker_loop_tick();
+#ifdef __EMSCRIPTEN__
+		render_loop_tick();
+#endif
 	}
 	while(!g_candle->exit);
 
@@ -283,8 +304,12 @@ static int ticker_loop(void)
 void candle_wait(void)
 {
 	/* SDL_WaitThread(candle->candle_thr, NULL); */
+#ifdef __EMSCRIPTEN__
+	ticker_loop();
+#else
 	SDL_WaitThread(g_candle->render_thr, NULL);
 	SDL_WaitThread(g_candle->ticker_thr, NULL);
+#endif
 }
 
 void candle_reg_cmd(const char *key, cmd_cb cb)
@@ -427,13 +452,13 @@ void candle_init(void)
 	shaders_reg();
 
 	candle_register();
-
 }
 
 __attribute__((constructor (CONSTR_AFTER_REG)))
 void candle_init2(void)
 {
-	if(g_candle->sem) return;
+	printf("here %d\n", __LINE__);
+	if(g_candle->mouse_visible[0]) return;
 
 	g_candle->mouse_owners[0] = entity_null;
 	g_candle->mouse_visible[0] = 1;
@@ -448,19 +473,20 @@ void candle_init2(void)
 	textures_reg();
 	meshes_reg();
 	materials_reg();
-	/* entity_add_component(SYS, c_model_new(NULL, NULL, 0, 0)); */
 
-	//int res = pipe(candle->events);
-	//if(res == -1) exit(1);
 
-	/* candle->candle_thr = SDL_CreateThread((int(*)(void*))candle_loop, "candle_loop", candle); */
+#ifndef __EMSCRIPTEN__
 	g_candle->sem = SDL_CreateSemaphore(0);
 	g_candle->render_thr = SDL_CreateThread((int(*)(void*))render_loop, "render_loop", NULL);
 	g_candle->ticker_thr = SDL_CreateThread((int(*)(void*))ticker_loop, "ticker_loop", NULL);
 	SDL_SemWait(g_candle->sem);
+#else
+	render_loop_init();
+#endif
 	/* SDL_Delay(500); */
 
 	/* candle_import_dir(candle, entity_null, "./"); */
+	printf("here %d\n", __LINE__);
 }
 
 static __attribute__((__used__)) void prevent_linker_removal(void)

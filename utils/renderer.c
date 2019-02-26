@@ -85,12 +85,14 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 	{
 		if (pass->output->target != GL_TEXTURE_2D)
 		{
-			glUniform2f(22, pass->output->width, pass->output->height);
+			glUniform2f(shader_uniform(shader, "screen_size", NULL),
+			            pass->output->width, pass->output->height);
 		}
 		else
 		{
 			uvec2_t size = pass->output->sizes[pass->framebuffer_id];
-			glUniform2f(22, size.x, size.y);
+			glUniform2f(shader_uniform(shader, "screen_size", NULL),
+			            size.x, size.y);
 		}
 	}
 
@@ -219,9 +221,12 @@ static void update_ubo(renderer_t *self, int32_t camid)
 				&self->glvars[camid], GL_DYNAMIC_DRAW); glerr();
 	}
 	glBindBuffer(GL_UNIFORM_BUFFER, self->ubos[camid]);
-	void *p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-	memcpy(p, &self->glvars[camid], sizeof(self->glvars[camid]));
-	glUnmapBuffer(GL_UNIFORM_BUFFER); glerr();
+	/* void *p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY); */
+	/* memcpy(p, &self->glvars[camid], sizeof(self->glvars[camid])); */
+
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(self->glvars[camid]), &self->glvars[camid]);glerr();
+
+	/* glUnmapBuffer(GL_UNIFORM_BUFFER); glerr(); */
 }
 
 void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model)
@@ -329,19 +334,15 @@ float wrap(float x)
 	return fmod(1.0f + fmod(x, 1.0f), 1.0f);
 }
 
-void load_mip(prop_t *prop, vec2_t coords, int mip, int frame)
+bool_t load_mip(prop_t *prop, vec2_t coords, int mip, int frame)
 {
-	/* int num_tiles = prop->texture->bufs[0].num_tiles[mip]; */
+	int tiles_per_row = ceilf(((float)prop->texture->sizes[mip].x) / 128.0f);
 
-	coords.x = wrap(coords.x);
-	coords.y = wrap(coords.y);
-	int x = floor((coords.x * prop->texture->sizes[mip].x) / 128);
-	int y = floor((coords.y * prop->texture->sizes[mip].y) / 128);
-	int tiles_per_row = ceil(((float)prop->texture->sizes[mip].x) / 128);
-
+	int x = floor((coords.x * prop->texture->sizes[mip].x) / 128.0f);
+	int y = floor((coords.y * prop->texture->sizes[mip].y) / 128.0f);
 	int tex_tile = y * tiles_per_row + x;
 
-	load_tile(prop->texture, &prop->texture->bufs[0].mips[mip][tex_tile],
+	return load_tile(prop->texture, &prop->texture->bufs[0].mips[mip][tex_tile],
 	          mip, frame);
 }
 
@@ -367,6 +368,7 @@ void *renderer_process_query_mips(renderer_t *self)
 	glReadPixels(0, 0, tex->width, tex->height, tex->bufs[2].format,
 			GL_FLOAT, mips); glerr();
 
+	int loaded = 0;
 	for (int y = 0; y < tex->height; y++) {
 		for (int x = 0; x < tex->width; x++) {
 			int i = y * tex->width + x;
@@ -377,15 +379,27 @@ void *renderer_process_query_mips(renderer_t *self)
 				{
 					int mip0 = floor(mips[i].r);
 					int mip1 = ceil(mips[i].r);
-					vec2_t pos = vec2_scale(coords[i].xy, prop->scale);
-					load_mip(prop, pos, mip0, self->frame);
+
+					vec2_t rcoords = coords[i].xy;
+					rcoords.y = 1.0f - rcoords.y;
+					rcoords = vec2_scale(rcoords, prop->scale);
+
+					rcoords.x = wrap(rcoords.x);
+					rcoords.y = wrap(rcoords.y);
+
+					/* rcoords.x *= prop->texture->width; */
+					/* rcoords.y *= prop->texture->height; */
+
+					loaded += load_mip(prop, rcoords, mip0, self->frame);
 					if (mip0 != mip1)
-						load_mip(prop, pos, mip1, self->frame);
+						loaded += load_mip(prop, rcoords, mip1, self->frame);
+					if (loaded > 100) goto end;
 				}
 			}
 		}
 	}
 
+end:
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	glerr();
 	return NULL;
@@ -393,17 +407,24 @@ void *renderer_process_query_mips(renderer_t *self)
 
 void renderer_default_pipeline(renderer_t *self)
 {
-	texture_t *query_mips =	texture_new_2D(0, 0, 0,
-		buffer_new("mips",		true, 4),
-		buffer_new("coords",	true, 3), /* Texcoords, Matid */
-		buffer_new("depth",		true, -1)
-	);
+	/* texture_t *query_mips =	texture_new_2D(0, 0, 0, */
+	/* 	buffer_new("mips",		true, 4), */
+	/* 	buffer_new("coords",	true, 3), /1* Texcoords, Matid *1/ */
+	/* 	buffer_new("depth",		true, -1) */
+	/* ); */
+	_texture_new_2D_pre(0, 0, 0);
+		buffer_new("depth",		true, -1);
+		buffer_new("coords",	true, 3); /* Texcoords, Matid */
+		buffer_new("mips",		true, 4);
+	texture_t *query_mips = _texture_new(0);
 
-	texture_t *gbuffer =	texture_new_2D(0, 0, 0,
-		buffer_new("nmr",		true, 4),
-		buffer_new("albedo",	true, 4),
-		buffer_new("depth",		true, -1)
-	);
+	_texture_new_2D_pre(0, 0, 0);
+		buffer_new("depth",		true, -1);
+		buffer_new("albedo",	true, 4);
+		buffer_new("nmr",		true, 4);
+	texture_t *gbuffer = _texture_new(0);
+	/* texture_t *gbuffer =	texture_new_2D(0, 0, 0, */
+	/* ); */
 
 	texture_t *ssao =		texture_new_2D(0, 0, 0,
 		buffer_new("occlusion",	true, 1)
@@ -426,13 +447,19 @@ void renderer_default_pipeline(renderer_t *self)
 	/* texture_t *bloom2 =		texture_new_2D(0, 0, TEX_INTERPOLATE, */
 		/* buffer_new("color",	true, 4) */
 	/* ); */
-	texture_t *selectable =	texture_new_2D(0, 0, 0,
-		buffer_new("geomid",	true, 2),
-		buffer_new("id",		true, 2),
-		buffer_new("depth",		true, -1)
-	);
 
-	renderer_add_tex(self, "query_mips",	0.05f, query_mips);
+	/* texture_t *selectable =	texture_new_2D(0, 0, 0, */
+	/* 	buffer_new("geomid",	true, 2), */
+	/* 	buffer_new("id",		true, 2), */
+	/* 	buffer_new("depth",		true, -1) */
+	/* ); */
+	_texture_new_2D_pre(0, 0, 0);
+		buffer_new("depth",		true, -1);
+		buffer_new("id",		true, 2);
+		buffer_new("geomid",	true, 2);
+	texture_t *selectable = _texture_new(0);
+
+	renderer_add_tex(self, "query_mips",	0.1f, query_mips);
 	renderer_add_tex(self, "gbuffer",		1.0f, gbuffer);
 	renderer_add_tex(self, "ssao",			1.0f, ssao);
 	renderer_add_tex(self, "light",			1.0f, light);
@@ -788,6 +815,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 		draw_group(pass->draw_signal);
 
 	}
+	glerr();
 
 	glDisable(GL_DEPTH_TEST);
 

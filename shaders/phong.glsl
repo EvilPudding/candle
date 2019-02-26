@@ -57,7 +57,7 @@ void main()
 		}
 		/* FragColor = vec4(vec3(texture(light(shadow_map), vec3(c_pos)).a) / 10.0, 1.0); return; */
 		/* FragColor = vec4(vec3(lookup_single(-w_light_dir)) / 10.0, 1.0); return; */
-		sd = 0;
+		sd = 0.0;
 
 
 		if(sd < 0.95)

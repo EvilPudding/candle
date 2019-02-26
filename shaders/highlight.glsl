@@ -19,20 +19,20 @@ const vec2 zero = vec2(0.003922, 0.000000);
 
 float filtered(vec2 c, vec2 fil)
 {
-	fil = round(fil * 255); 
-	c = round(c * 255); 
+	fil = round(fil * 255.0); 
+	c = round(c * 255.0); 
 
 	if(c.x != fil.x || c.y != fil.y)
 	{
-		return 0;
+		return 0.0;
 	}
-	return 1;
+	return 1.0;
 }
 
 bool is_equal(vec2 a, vec2 b)
 {
-	a = round(a * 255); 
-	b = round(b * 255); 
+	a = round(a * 255.0); 
+	b = round(b * 255.0); 
 
 	return (b.x == a.x && b.y == a.y);
 }

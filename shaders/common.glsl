@@ -73,52 +73,53 @@ float mip_map_scalar(in vec2 texture_coordinate) // in texel units
 #define MAX_MIPS 9
 float mip_map_level(in vec2 texture_coordinate) // in texel units
 {
-	return clamp(0.5 * log2(mip_map_scalar(texture_coordinate)), 0.0, MAX_MIPS - 1);
+	return clamp(0.5 * log2(mip_map_scalar(texture_coordinate)), 0.0, float(MAX_MIPS - 1));
 }
 
-#define g_indir_w 128
-#define g_indir_h 44
-#define g_cache_w 62
-#define g_cache_h 10
+#define g_indir_w 256
+#define g_indir_h 256
+#define g_cache_w 64
+#define g_cache_h 32
 
 vec4 solveMip(const property_t prop, int mip, vec2 coords, bool draw)
 {
-	int tiles_per_row = int(ceil(float(prop.size.x) / 128));
-	int tiles_per_col = int(ceil(float(prop.size.y) / 128));
+	int tiles_per_row = int(ceil(float(prop.size.x) / 128.0));
+	int tiles_per_col = int(ceil(float(prop.size.y) / 128.0));
 	int offset = prop.layer;
 
 	for (int i = 0; i < MAX_MIPS && i < mip; i++)
 	{
 		offset += tiles_per_row * tiles_per_col;
-		tiles_per_row = int(ceil(max(tiles_per_row / 2.0, 1.0)));
-		tiles_per_col = int(ceil(max(tiles_per_col / 2.0, 1.0)));
-		coords.x /= 2;
-		coords.y /= 2;
+		tiles_per_row = int(ceil(0.5 * float(tiles_per_row)));
+		tiles_per_col = int(ceil(0.5 * float(tiles_per_col)));
+		coords.x /= 2.0;
+		coords.y /= 2.0;
 	}
-	vec2 intile_coords = vec2(mod(vec2(coords), 128));
+	vec2 intile_coords = mod(vec2(coords), 128.0);
 
-	int x = int(floor(coords.x / 128));
-	int y = int(floor(coords.y / 128));
+	int x = int(floor(coords.x / 128.0));
+	int y = int(floor(coords.y / 128.0));
 	int tex_tile = y * tiles_per_row + x + offset;
 	/* int tex_tile = offset; */
 
 	vec3 info = texelFetch(g_indir, ivec2(tex_tile % g_indir_w, tex_tile / g_indir_w), 0).rgb;
-	int cache_tile = int(info.r * 255) + int(info.g * (256 * 255));
+	int cache_tile = int(info.r * 255.0) + int(info.g * (256.0 * 255.0));
 
-	ivec2 cache_coords = ivec2(cache_tile % 62, cache_tile / 62) * 128;
-	if ( draw && ( intile_coords.x >= 126 || intile_coords.y >= 126 ||
-	    intile_coords.x <= 1 || intile_coords.y <= 1))
-		return vec4(0, 1, 0, 1);
+	ivec2 cache_coords = ivec2(cache_tile % g_cache_w, cache_tile / g_cache_w) * 128;
+	if ( draw && ( intile_coords.x >= 126.0 || intile_coords.y >= 126.0 ||
+	    intile_coords.x <= 1.0 || intile_coords.y <= 1.0))
+		return vec4(0.0, 1.0, 0.0, 1.0);
 	return textureLod(g_cache,
-			(vec2(cache_coords) + intile_coords) / vec2(g_cache_w * 128, g_cache_h * 128), 0);
+			(vec2(cache_coords) + intile_coords)
+			/ vec2(float(g_cache_w) * 128.0, float(g_cache_h) * 128.0), 0.0);
 }
 
 vec4 textureSVT(const property_t prop, vec2 coords, bool draw)
 {
 	coords.y = 1.0 - coords.y;
 	coords *= prop.scale;
-	vec2 rcoords = fract(coords) * prop.size;
-	float mip = mip_map_level(coords * prop.size);
+	vec2 rcoords = fract(coords) * vec2(prop.size);
+	float mip = mip_map_level(coords * vec2(prop.size));
 	int mip0 = int(floor(mip));
 	int mip1 = int(ceil(mip));
 
@@ -145,7 +146,7 @@ vec4 resolveProperty(property_t prop, vec2 coords, bool draw)
 
 float lookup_single(vec3 shadowCoord)
 {
-	float light_layer = light(layer);
+	float light_layer = float(light(layer));
 	float cube_layer;
 	vec2 tc = sampleCube(shadowCoord, cube_layer);
 	/* return texture(shadow_map, vec3(tc, light_layer + cube_layer)).a; */
@@ -522,7 +523,7 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
     float adjacentLength = length(deltaP);
     vec2 adjacentUnit = normalize(deltaP);
 
-	int numMips = textureQueryLevels(screen);
+	int numMips = MAX_MIPS;
     vec4 reflect_color = vec4(0.0);
     float remainingAlpha = 1.0;
     float maxMipLevel = 3.0;
