@@ -20,7 +20,7 @@ void c_decal_init(c_decal_t *self)
 	self->visible = 1;
 } 
 
-c_decal_t *c_decal_new(mat_t *mat, int visible)
+c_decal_t *c_decal_new(mat_t *mat, int visible, int selectable)
 {
 	c_decal_t *self = component_new("decal");
 
@@ -31,7 +31,7 @@ c_decal_t *c_decal_new(mat_t *mat, int visible)
 
 	c_model_t *mc = c_model(self);
 	c_model_set_groups(mc, ref("decals"), 0, ref("transparent_decals"),
-			ref("selectable"));
+			selectable ? ref("selectable") : 0);
 
 	return self;
 }
