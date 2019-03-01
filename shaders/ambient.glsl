@@ -6,7 +6,7 @@ in vec3 Position_worldspace;
 in vec3 LightDirection_tangentspace;
 layout (location = 0) out vec4 FragColor;
 
-void main()
+void main(void)
 {
 	vec3 dif = resolveProperty(albedo, texcoord, true).rgb;
 

@@ -67,7 +67,7 @@ void varray_vert_prealloc(varray_t *self, int32_t size)
 	self->tex = realloc(self->tex, self->vert_alloc * sizeof(*self->tex));
 	self->tan = realloc(self->tan, self->vert_alloc * sizeof(*self->tan));
 	self->col = realloc(self->col, self->vert_alloc * sizeof(*self->col));
-	if(self->mesh->has_skin)
+	/* if(self->mesh->has_skin) */
 	{
 		self->wei = realloc(self->wei, self->vert_alloc * sizeof(*self->wei));
 		self->bid = realloc(self->bid, self->vert_alloc * sizeof(*self->bid));
@@ -341,7 +341,8 @@ static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
 
 	self->props[i].x = draw->mat;
 	self->props[i].y = 0;/*TODO: use y for something;*/
-	self->props[i].zw = entity_to_uvec2(draw->entity);
+	uvec2_t ent = entity_to_uvec2(draw->entity);
+	self->props[i].zw = vec2(_vec2(ent));
 	self->comps[i] = &draw->grp[gid];
 	self->inst[i] = draw->transform;
 
@@ -352,7 +353,9 @@ static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
 	self->trans_updates++;
 	self->props_updates++;
 
+#ifndef __EMSCRIPTEN__
 	SDL_SemPost(self->semaphore);
+#endif
 	return i;
 }
 
@@ -365,7 +368,7 @@ static int32_t varray_add_vert(
 		vec3_t c,
 		int32_t id,
 		vec4_t wei,
-		uvec4_t bid)
+		vec4_t bid)
 {
 	/* int32_t i = draw_conf_get_vert(self, p, n, t); */
 	/* if(i >= 0) return i; */
@@ -379,7 +382,7 @@ static int32_t varray_add_vert(
 	self->col[i] = c;
 	self->id[i] = int_to_vec2(id);
 
-	if(self->mesh->has_skin)
+	/* if(self->mesh->has_skin) */
 	{
 		self->bid[i] = bid;
 		self->wei[i] = wei;
@@ -438,9 +441,9 @@ void varray_edges_to_gl(varray_t *self)
 		vertex_t *V1 = e_vert(curr_edge, mesh);
 		vertex_t *V2 = e_vert(next_edge, mesh);
 		int32_t v1 = varray_add_vert(self, V1->pos,
-				vec3(0.0f), vec2(0.0f), vec3(0.0f), V1->color.xyz, 0, vec4(0,0,0,0), uvec4(0,0,0,0));
+				vec3(0.0f), vec2(0.0f), vec3(0.0f), V1->color.xyz, 0, vec4(0,0,0,0), vec4(0,0,0,0));
 		int32_t v2 = varray_add_vert(self, V2->pos,
-				vec3(0.0f), vec2(0.0f), vec3(0.0f), V2->color.xyz, 0, vec4(0,0,0,0), uvec4(0,0,0,0));
+				vec3(0.0f), vec2(0.0f), vec3(0.0f), V2->color.xyz, 0, vec4(0,0,0,0), vec4(0,0,0,0));
 
 		varray_add_line(self, v1, v2);
 
@@ -538,7 +541,9 @@ static void draw_conf_remove_instance(draw_conf_t *self, int32_t id)
 		puts("??");
 		return;
 	}
+#ifndef __EMSCRIPTEN__
 	SDL_SemWait(self->semaphore);
+#endif
 	int32_t last = --self->inst_num;
 
 	self->comps[id]->conf = NULL;
@@ -559,7 +564,9 @@ static void draw_conf_remove_instance(draw_conf_t *self, int32_t id)
 		self->props_updates++;
 	}
 
+#ifndef __EMSCRIPTEN__
 	SDL_SemPost(self->semaphore);
+#endif
 }
 
 varray_t *varray_get(mesh_t *mesh)
@@ -658,23 +665,27 @@ void drawable_model_changed(drawable_t *self)
 		if(!conf) continue;
 
 		/* BUFFEREABLE INSTANCE PROPERTIES */ 
-		uvec4_t *props = &grp->conf->props[grp->instance_id];
+		vec4_t *props = &grp->conf->props[grp->instance_id];
 		uvec2_t new_ent = entity_to_uvec2(self->entity);
 
-		uvec4_t new_props = uvec4(
+		vec4_t new_props = vec4(
 				self->mat,
 				0 /* TODO use y for something */,
 				new_ent.x,
 				new_ent.y);
 
-		if(!uvec4_equals(*props, new_props))
+		if(!vec4_equals(*props, new_props))
 		{
 			*props = new_props;
 			if(!(grp->updates & MASK_PROPS))
 			{
+#ifndef __EMSCRIPTEN__
 				SDL_SemWait(conf->semaphore);
+#endif
 				conf->props_updates++;
+#ifndef __EMSCRIPTEN__
 				SDL_SemPost(conf->semaphore);
+#endif
 				grp->updates |= MASK_PROPS;
 			}
 		}
@@ -796,7 +807,7 @@ static void varray_update_buffers(varray_t *self)
 		/* COLOR BUFFER */
 		create_buffer(&vbo[5], self->col, 3, self->vert_num, 0);
 
-		if(self->mesh->has_skin)
+		/* if(self->mesh->has_skin) */
 		{
 			/* BONEID BUFFER */
 			create_buffer(&vbo[6], self->bid, 4, self->vert_num, 0);
@@ -837,7 +848,7 @@ static void varray_update_buffers(varray_t *self)
 		/* COLOR BUFFER */
 		update_buffer(&vbo[5], self->col, 3, self->vert_num, 0); glerr();
 
-		if(self->mesh->has_skin)
+		/* if(self->mesh->has_skin) */
 		{
 			/* BONEID BUFFER */
 			update_buffer(&vbo[6], self->bid, 4, self->vert_num, 0); glerr();
@@ -891,15 +902,15 @@ static void varray_bind(varray_t *self)
 	bind_buffer(&vbo[3], 3, GL_FLOAT, 3, 0);
 
 	/* ID BUFFER */
-	bind_buffer(&vbo[4], 4, IDTYPE, 2, 0);
+	bind_buffer(&vbo[4], 4, GL_FLOAT, 2, 0);
 
 	/* COLOR BUFFER */
 	bind_buffer(&vbo[5], 5, GL_FLOAT, 3, 0);
 
-	if(self->mesh->has_skin)
+	/* if(self->mesh->has_skin) */
 	{
 		/* BONEID BUFFER */
-		bind_buffer(&vbo[6], 6, IDTYPE, 4, 0);
+		bind_buffer(&vbo[6], 6, GL_FLOAT, 4, 0);
 
 		/* BONE WEIGHT BUFFER */
 		bind_buffer(&vbo[7], 7, GL_FLOAT, 4, 0);
@@ -920,7 +931,7 @@ static void draw_conf_update_vao(draw_conf_t *self)
 	bind_buffer(&self->vbo[8], 8, GL_FLOAT, 16, 1);
 
 	/* PROPERTY BUFFER */
-	bind_buffer(&self->vbo[12], 12, IDTYPE, 4, 1);
+	bind_buffer(&self->vbo[12], 12, GL_FLOAT, 4, 1);
 
 #ifdef MESH4
 	/* 4D ANGLE BUFFER */
@@ -962,7 +973,10 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 
 	varray_update(self->varray);
 
-	if (self->varray->ind_num == 0) return 1;
+	if (self->varray->ind_num == 0)
+	{
+		goto end;
+	}
 
 	draw_conf_update_inst(self, instance_id);
 
@@ -1017,6 +1031,7 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 		glUniform1i(shader_uniform(shader, "has_normals", NULL), 0);
 		glerr();
 	}
+	if (self->inst_num == 1) instance_id = 0;
 	
 	if(instance_id == -1)
 	{
@@ -1032,12 +1047,14 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 		/* glDrawArraysOneInstance(primitive, instance_id, self->varray->ind_num, int instance ); */
 		glerr();
 	}
+	if(cull_was_enabled) glEnable(GL_CULL_FACE);
+
+end:
 #ifndef __EMSCRIPTEN__
 	SDL_SemPost(self->semaphore);
 #endif
 
 	glDepthRange(0.0, 1.00);
-	if(cull_was_enabled) glEnable(GL_CULL_FACE);
 
 	return 1;
 

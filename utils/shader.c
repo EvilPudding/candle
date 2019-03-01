@@ -33,7 +33,7 @@ static const char default_vs[] =
 	"flat out uvec2 id;\n"
 	"flat out uint matid;\n"
 	"flat out vec2 object_id;\n"
-	"flat out vec2 poly_id;\n"
+	"flat out uvec2 poly_id;\n"
 	"flat out vec3 obj_pos;\n"
 	"flat out mat4 model;\n"
 	"out vec3 poly_color;\n"
@@ -50,7 +50,7 @@ static const char default_vs[] =
 	"	model = M;\n"
 	"	poly_color = COL;\n"
 	"	matid = uint(PROPS.x);\n"
-	"	poly_id = ID;\n"
+	"	poly_id = uvec2(ID);\n"
 	"	id = uvec2(PROPS.zw);\n"
 	"	texcoord = UV;\n";
 static const char default_vs_end[] = 

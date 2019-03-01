@@ -22,6 +22,15 @@ static int renderer_update_screen_texture(renderer_t *self);
 
 static void bind_pass(pass_t *pass, shader_t *shader);
 
+static void pass_unbind_textures(pass_t *pass)
+{
+	for (uint32_t i = 0; i < pass->bound_textures; i++)
+	{
+		glActiveTexture(GL_TEXTURE0 + 31 + i);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+}
+
 static int pass_bind_buffer(pass_t *pass, bind_t *bind, shader_t *shader)
 {
 	shader_bind_t *sb = &bind->vs_uniforms[shader->index];
@@ -37,9 +46,12 @@ static int pass_bind_buffer(pass_t *pass, bind_t *bind, shader_t *shader)
 			if(buffer->bufs[t].ready)
 			{
 				int i = pass->bound_textures++;
-				glActiveTexture(GL_TEXTURE0 + 64 + i);
+				/* if (i == 0) printf("%s binding id %d %s\n", pass->name, */
+				/*                    buffer->bufs[t].id, */
+				/*                    buffer->bufs[t].name); */
+				glActiveTexture(GL_TEXTURE0 + 31 + i);
 				texture_bind(buffer, t);
-				glUniform1i(sb->buffer.u_tex[t], 64 + i);
+				glUniform1i(sb->buffer.u_tex[t], 31 + i);
 				glerr();
 			}
 			/* glUniform1i(sb->buffer.u_tex[t], buffer->bufs[t].id); glerr(); */
@@ -350,8 +362,10 @@ void *renderer_process_query_mips(renderer_t *self)
 {
 	texture_t *tex = renderer_tex(self, ref("query_mips"));
 	if (!tex->framebuffer_ready) return NULL;
-	vec3_t *coords= alloca(sizeof(*coords) * tex->width * tex->height);
-	vec4_t *mips= alloca(sizeof(*mips) * tex->width * tex->height);
+	vec4_t *coords= alloca(sizeof(*coords) * tex->width * tex->height);
+	struct{
+		uint8_t _[4];
+	} *mips = alloca(sizeof(*mips) * tex->width * tex->height);
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, tex->frame_buffer[0]); glerr();
@@ -366,21 +380,28 @@ void *renderer_process_query_mips(renderer_t *self)
 	glReadBuffer(GL_COLOR_ATTACHMENT1); glerr();
 
 	glReadPixels(0, 0, tex->width, tex->height, tex->bufs[2].format,
-			GL_FLOAT, mips); glerr();
+			GL_UNSIGNED_BYTE, mips); glerr();
 
 	int loaded = 0;
 	for (int y = 0; y < tex->height; y++) {
 		for (int x = 0; x < tex->width; x++) {
 			int i = y * tex->width + x;
-			mat_t *mat = g_mats[(int)coords[i].z];
-			for (prop_t *prop = &mat->albedo; prop <= &mat->emissive; prop++)
+			mat_t *mat = g_mats[(int)(coords[i].z * 255.0f)];
+
+			uint32_t p = 0;
+			for (prop_t *prop = &mat->albedo; prop <= &mat->emissive; prop++, p++)
 			{
 				if (prop->texture && prop->texture->bufs[0].ready)
 				{
-					int mip0 = floor(mips[i].r);
-					int mip1 = ceil(mips[i].r);
+					float mip = ((float)mips[i]._[p]) * (8.0f / 255.0f);
+					int mip0 = floor(mip);
+					int mip1 = ceil(mip);
+					if (mip0 > MAX_MIPS) mip0 = MAX_MIPS;
+					if (mip1 > MAX_MIPS) mip1 = MAX_MIPS;
+					if (mip0 < 0) mip0 = 0;
+					if (mip1 < 0) mip1 = 0;
 
-					vec2_t rcoords = coords[i].xy;
+					vec2_t rcoords = vec2_scale(vec2_sub_number(coords[i].xy, 0.5f), 16.0f);
 					rcoords.y = 1.0f - rcoords.y;
 					rcoords = vec2_scale(rcoords, prop->scale);
 
@@ -414,8 +435,8 @@ void renderer_default_pipeline(renderer_t *self)
 	/* ); */
 	_texture_new_2D_pre(0, 0, 0);
 		buffer_new("depth",		true, -1);
-		buffer_new("coords",	true, 3); /* Texcoords, Matid */
-		buffer_new("mips",		true, 4);
+		buffer_new("coords",	false, 4); /* Texcoords, Matid */
+		buffer_new("mips",		false, 4);
 	texture_t *query_mips = _texture_new(0);
 
 	_texture_new_2D_pre(0, 0, 0);
@@ -455,8 +476,8 @@ void renderer_default_pipeline(renderer_t *self)
 	/* ); */
 	_texture_new_2D_pre(0, 0, 0);
 		buffer_new("depth",		true, -1);
-		buffer_new("id",		true, 2);
-		buffer_new("geomid",	true, 2);
+		buffer_new("id",		true, 4);
+		buffer_new("geomid",	true, 4);
 	texture_t *selectable = _texture_new(0);
 
 	renderer_add_tex(self, "query_mips",	0.1f, query_mips);
@@ -476,6 +497,7 @@ void renderer_default_pipeline(renderer_t *self)
 		(bind_t[]){
 			{CLEAR_DEPTH, .number = 1.0f},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{INT, "transparent", .integer = false},
 			{NONE}
 		}
 	);
@@ -484,6 +506,7 @@ void renderer_default_pipeline(renderer_t *self)
 			DEPTH_LOCK | DEPTH_EQUAL | DEPTH_GREATER, query_mips, query_mips, 0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
+			{INT, "transparent", .integer = false},
 			{NONE}
 		}
 	);
@@ -491,6 +514,7 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_pass(self, "query_mips", "query_mips", ref("transparent"), 0,
 			query_mips, query_mips, 0,
 		(bind_t[]){
+			{INT, "transparent", .integer = true},
 			{NONE}
 		}
 	);
@@ -535,9 +559,8 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	/* DECAL PASS */
-	renderer_add_pass(self, "decals_pass", "decals", ref("decals"),
-			DEPTH_LOCK | DEPTH_EQUAL | DEPTH_GREATER,
-			gbuffer, gbuffer, 0,
+	renderer_add_pass(self, "decals_pass", "decals", ref("decals"), 0,
+			gbuffer, NULL, 0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
 			{NONE}
@@ -554,7 +577,7 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	renderer_add_pass(self, "render_pass", "phong", ref("light"),
-			DEPTH_LOCK | ADD | DEPTH_EQUAL | DEPTH_GREATER, light, gbuffer, 0,
+			0, light, NULL, 0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
 			{NONE}
@@ -594,7 +617,6 @@ void renderer_default_pipeline(renderer_t *self)
 		}
 	);
 	/* renderer_add_kawase(self, ssao, tmp, 0, 0); */
-
 
 	/* renderer_tex(self, ref(light))->mipmaped = 1; */
 	renderer_add_pass(self, "final", "ssr", ref("quad"), 0, final,
@@ -743,7 +765,8 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 	if(pass->shader_name[0] && !pass->shader) pass->shader = fs_new(pass->shader_name);
 
 	pass->bound_textures = 0;
-	c_render_device_rebind(c_render_device(&SYS), (void*)bind_pass, pass);
+	c_render_device_t *rd = c_render_device(&SYS);
+	c_render_device_rebind(rd, (void*)bind_pass, pass);
 	if (pass->binds && pass->binds[0].type == CALLBACK)
 	{
 		bind_pass(pass, NULL);
@@ -797,7 +820,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 		for(f = 0; f < 6; f++)
 		{
 			update_ubo(self, f);
-			glBindBufferBase(GL_UNIFORM_BUFFER, 19, self->ubos[f]); glerr();
+			c_render_device_bind_ubo(rd, 19, self->ubos[f]);
 			texture_target(pass->output, pass->depth, f);
 
 			if(pass->clear) glClear(pass->clear);
@@ -807,7 +830,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 	}
 	else
 	{
-		glBindBufferBase(GL_UNIFORM_BUFFER, 19, self->ubos[pass->camid]); glerr();
+		c_render_device_bind_ubo(rd, 19, self->ubos[pass->camid]);
 		texture_target(pass->output, pass->depth, pass->framebuffer_id);
 
 		if(pass->clear) glClear(pass->clear);
@@ -815,6 +838,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 		draw_group(pass->draw_signal);
 
 	}
+	pass_unbind_textures(pass);
 	glerr();
 
 	glDisable(GL_DEPTH_TEST);
@@ -916,9 +940,9 @@ entity_t renderer_entity_at_pixel(renderer_t *self, int x, int y,
 	texture_t *tex = renderer_tex(self, ref("selectable"));
 	if(!tex) return entity_null;
 
-	unsigned int pos = texture_get_pixel(tex, 0,
+	uint32_t pos = texture_get_pixel(tex, 0,
 			x * self->resolution, y * self->resolution, depth);
-	struct { unsigned int pos, uid; } *cast = (void*)&result;
+	struct { uint32_t pos, uid; } *cast = (void*)&result;
 
 	cast->pos = pos;
 	cast->uid = g_ecm->entities_info[pos].uid;

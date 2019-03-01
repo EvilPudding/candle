@@ -29,8 +29,6 @@ static void init_context_b(c_window_t *self)
 /* #ifdef __EMSCRIPTEN__ */
 
 /* 	emscripten_set_canvas_element_size("#canvas", self->width, self->height); */
-/*     /1* else { *1/ */
-/*         /1* enter_soft_fullscreen(); *1/ */
 
 /* 	EmscriptenWebGLContextAttributes attrs; */
 /* 	emscripten_webgl_init_context_attributes(&attrs); */
@@ -39,11 +37,10 @@ static void init_context_b(c_window_t *self)
 /* 	attrs.minorVersion = 0; */
 /* 	attrs.alpha = false; */
 /* 	attrs.depth = true; */
-/* 	attrs.enableExtensionsByDefault = true; */
 /* 	EMSCRIPTEN_WEBGL_CONTEXT_HANDLE ctx = emscripten_webgl_create_context(0, &attrs); */
 
-/* 	/1* if (emscripten_webgl_enable_extension(ctx, "EXT_color_buffer_float") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
-/* 	/1* if (emscripten_webgl_enable_extension(ctx, "GL_EXT_color_buffer_float") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
+/* 	if (emscripten_webgl_enable_extension(ctx, "EXT_color_buffer_float") == EM_FALSE) printf("%d\n", __LINE__); */
+/* 	if (emscripten_webgl_enable_extension(ctx, "GL_EXT_color_buffer_float") == EM_FALSE) printf("%d\n", __LINE__); */
 /* 	/1* if (emscripten_webgl_enable_extension(ctx, "EXT_texture_filter_anisotropic") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
 /* 	/1* if (emscripten_webgl_enable_extension(ctx, "GL_EXT_texture_filter_anisotropic") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
 /* 	/1* if (emscripten_webgl_enable_extension(ctx, "OES_texture_float_linear") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
@@ -52,9 +49,6 @@ static void init_context_b(c_window_t *self)
 /* 	/1* if (emscripten_webgl_enable_extension(ctx, "WEBGL_depth_texture") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
 /* 	/1* if (emscripten_webgl_enable_extension(ctx, "GL_WEBGL_lose_context") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
 /* 	emscripten_webgl_make_context_current(ctx); */
-/*  const char* embeddedCode = */
-/*         "window.WebGLRenderingContext = window.WebGL2RenderingContext || window.WebGLRenderingContext;\n"; */
-/*     emscripten_run_script(embeddedCode); */
 /* #else */
 	mainWindow = self->window = SDL_CreateWindow("Candle",
 			SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
@@ -77,10 +71,22 @@ static void init_context_b(c_window_t *self)
 	}
 /* #endif */
 
+#ifdef __EMSCRIPTEN__
+	if (!SDL_GL_ExtensionSupported("EXT_color_buffer_float")) {
+		exit(1);
+	}
+	/* emscripten_run_script( */
+	/* 		"function throwOnGLError(err, funcName, args) {\n" */
+	/* 		"throw WebGLDebugUtils.glEnumToString(err) + ' was caused by call to: ' + funcName;\n" */
+	/* 		"};\n" */
+	/* 		"canvas = document.getElementById('canvas');\n" */
+	/* 		"gl = canvas.getContext('webgl2');\n" */
+	/* 		"gl = WebGLDebugUtils.makeDebugContext(gl, throwOnGLError);\n"); */
+#endif
+
 	glInit();
 
 	glDepthFunc(GL_LESS); glerr();
-
 	const GLubyte *renderer = glGetString( GL_RENDERER );
 	const GLubyte *vendor = glGetString( GL_VENDOR );
 	const GLubyte *version = glGetString( GL_VERSION );
@@ -194,7 +200,6 @@ void c_window_debug(GLenum source,
 
 int c_window_created(c_window_t *self)
 {
-	printf("WINDOW CREATED\n"); fflush(stdin);
 	init_context_b(self);
 
 #ifdef DEBUG
@@ -229,11 +234,9 @@ int c_window_created(c_window_t *self)
 
 c_window_t *c_window_new(int width, int height)
 {
-	printf("WINDOW NEW\n"); fflush(stdin);
 	c_window_t *self = component_new("window");
 	self->width = width ? width : window_width;
 	self->height = height ? height : window_height;
-	printf("WINDOW NEW end\n"); fflush(stdin);
 	return self;
 }
 
@@ -256,7 +259,7 @@ int c_window_draw(c_window_t *self)
 		return CONTINUE;
 	}
 
-	glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE); glerr();
+	/* glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE); glerr(); */
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); glerr();
 	/* glClear(GL_COLOR_BUFFER_BIT); */
 	glClear(GL_DEPTH_BUFFER_BIT);
@@ -276,6 +279,9 @@ int c_window_draw(c_window_t *self)
 
 	drawable_draw(&self->draw);
 	glerr();
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 	return CONTINUE;
 }
 

@@ -15,7 +15,7 @@ BUFFER {
 /* } gbuffer; */
 
 
-void main()
+void main(void)
 {
 	vec2 pp = pixel_pos();
 	/* float far_depth = textureLod(gbuffer.depth, pp, 0).r; */

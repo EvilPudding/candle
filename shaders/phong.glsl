@@ -10,8 +10,11 @@ BUFFER {
 	sampler2D nmr;
 } gbuffer;
 
-void main()
+void main(void)
 {
+	float depth = textureLod(gbuffer.depth, pixel_pos(), 0.0).r;
+	if (depth > gl_FragCoord.z) discard;
+
 	ivec2 fc = ivec2(gl_FragCoord.xy);
 	vec4 dif = texelFetch(gbuffer.albedo, fc, 0);
 	if(dif.a == 0.0) discard;

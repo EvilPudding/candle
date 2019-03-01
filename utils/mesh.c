@@ -189,7 +189,7 @@ static void vert_init(vertex_t *self)
 	self->tmp = -1;
 	self->half = -1;
 	self->wei = vec4(0.0f);
-	self->bid = uvec4(0);
+	self->bid = vec4(0);
 }
 
 
@@ -2751,8 +2751,11 @@ void *mesh_loader(const char *path, const char *name, uint32_t ext)
 	mesh_t *mesh = mesh_new();
 	strcpy(mesh->name, path);
 
+#ifndef __EMSCRIPTEN__
 	SDL_CreateThread((int(*)(void*))load_mesh, "load_mesh", mesh);
-	/* load_mesh(mesh); */
+#else
+	load_mesh(mesh);
+#endif
 
 	return mesh;
 }

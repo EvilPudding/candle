@@ -23,7 +23,7 @@ flat in vec3 obj_pos;
 flat in uvec2 id;
 flat in mat4 model;
 flat in uint matid;
-flat in vec2 poly_id;
+flat in uvec2 poly_id;
 
 in vec3 poly_color;
 in vec3 vertex_position;
@@ -77,7 +77,7 @@ float mip_map_level(in vec2 texture_coordinate) // in texel units
 }
 
 #define g_indir_w 256
-#define g_indir_h 256
+#define g_indir_h 64
 #define g_cache_w 64
 #define g_cache_h 32
 
@@ -95,7 +95,7 @@ vec4 solveMip(const property_t prop, int mip, vec2 coords, bool draw)
 		coords.x /= 2.0;
 		coords.y /= 2.0;
 	}
-	vec2 intile_coords = mod(vec2(coords), 128.0);
+	vec2 intile_coords = mod(vec2(coords), 128.0) + 0.5f;
 
 	int x = int(floor(coords.x / 128.0));
 	int y = int(floor(coords.y / 128.0));
@@ -105,13 +105,14 @@ vec4 solveMip(const property_t prop, int mip, vec2 coords, bool draw)
 	vec3 info = texelFetch(g_indir, ivec2(tex_tile % g_indir_w, tex_tile / g_indir_w), 0).rgb;
 	int cache_tile = int(info.r * 255.0) + int(info.g * (256.0 * 255.0));
 
-	ivec2 cache_coords = ivec2(cache_tile % g_cache_w, cache_tile / g_cache_w) * 128;
-	if ( draw && ( intile_coords.x >= 126.0 || intile_coords.y >= 126.0 ||
-	    intile_coords.x <= 1.0 || intile_coords.y <= 1.0))
-		return vec4(0.0, 1.0, 0.0, 1.0);
+	ivec2 cache_coords = ivec2(cache_tile % g_cache_w, cache_tile / g_cache_w) * 129;
+	/* if ( draw && ( intile_coords.x >= 126.0 || intile_coords.y >= 126.0 || */
+	    /* intile_coords.x <= 1.0 || intile_coords.y <= 1.0)) */
+		/* return vec4(0.0, 1.0, 0.0, 1.0); */
+	const vec2 g_cache_size = vec2(g_cache_w * 129, g_cache_h * 129);
 	return textureLod(g_cache,
-			(vec2(cache_coords) + intile_coords)
-			/ vec2(float(g_cache_w) * 128.0, float(g_cache_h) * 128.0), 0.0);
+			(vec2(cache_coords) + intile_coords) / g_cache_size, 0.0);
+	/* return texelFetch(g_cache, cache_coords + ivec2(floor(intile_coords)), 0); */
 }
 
 vec4 textureSVT(const property_t prop, vec2 coords, bool draw)

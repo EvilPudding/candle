@@ -73,6 +73,7 @@ typedef struct c_render_device_t
 	int updates_ram;
 	int updates_ubo;
 	int frame;
+	uint32_t bound_ubos[32];
 } c_render_device_t;
 
 DEF_CASTER("render_device", c_render_device, c_render_device_t)
@@ -83,5 +84,8 @@ void c_render_device_rebind(
 		void(*bind_function)(void *usrptr, shader_t *shader),
 		void *usrptr);
 void world_changed(void);
+void c_render_device_bind_ubo(c_render_device_t *self, uint32_t base,
+                              uint32_t ubo);
+
 
 #endif /* !RENDER_DEVICE_H */

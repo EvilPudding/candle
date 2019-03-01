@@ -8,7 +8,7 @@ BUFFER {
 	sampler2D color;
 } buf;
 
-void main()
+void main(void)
 {
 	float brightPassThreshold = 1.0;
 

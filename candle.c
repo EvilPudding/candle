@@ -270,22 +270,25 @@ static void ticker_loop_tick(void)
 	entity_signal(entity_null, sig("world_update"), &dt, NULL);
 	ecm_clean(0);
 	g_candle->last_update = current;
+#ifndef __EMSCRIPTEN__
 	SDL_Delay(16);
+#endif
 }
-static int ticker_loop(void)
+static void ticker_loop(void)
 {
+#ifndef __EMSCRIPTEN__
 	do
 	{
+#endif
 		ticker_loop_tick();
 #ifdef __EMSCRIPTEN__
 		render_loop_tick();
-#endif
+#else
 	}
 	while(!g_candle->exit);
+#endif
 
 	ecm_clean(1);
-
-	return 1;
 }
 
 /* static int candle_loop(candle_t *self) */
@@ -301,11 +304,14 @@ static int ticker_loop(void)
 /* 	return 1; */
 /* } */
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 void candle_wait(void)
 {
 	/* SDL_WaitThread(candle->candle_thr, NULL); */
 #ifdef __EMSCRIPTEN__
-	ticker_loop();
+	emscripten_set_main_loop(ticker_loop, 60, true);
 #else
 	SDL_WaitThread(g_candle->render_thr, NULL);
 	SDL_WaitThread(g_candle->ticker_thr, NULL);
@@ -457,7 +463,6 @@ void candle_init(void)
 __attribute__((constructor (CONSTR_AFTER_REG)))
 void candle_init2(void)
 {
-	printf("here %d\n", __LINE__);
 	if(g_candle->mouse_visible[0]) return;
 
 	g_candle->mouse_owners[0] = entity_null;
@@ -486,7 +491,6 @@ void candle_init2(void)
 	/* SDL_Delay(500); */
 
 	/* candle_import_dir(candle, entity_null, "./"); */
-	printf("here %d\n", __LINE__);
 }
 
 static __attribute__((__used__)) void prevent_linker_removal(void)

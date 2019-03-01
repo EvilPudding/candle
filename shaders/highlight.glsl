@@ -42,7 +42,7 @@ BUFFER {
 	sampler2D geomid;
 } sbuffer;
 
-void main()
+void main(void)
 {
 	vec2 c;
 	vec2 c2;

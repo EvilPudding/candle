@@ -49,7 +49,7 @@ tex_tile_t *g_tiles;
 const int g_cache_w = 64;
 const int g_cache_h = 32;
 const int g_indir_w = 256;
-const int g_indir_h = 256;
+const int g_indir_h = 64;
 int g_cache_n = 0;
 int g_indir_n = 0;
 void svp_init()
@@ -57,8 +57,8 @@ void svp_init()
 	int max;
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max);
 	printf("Max texture size %d\n", max);
-	max = floorf(((float)max) / 128);
-	g_cache = texture_new_2D(g_cache_w * 128, g_cache_h * 128, TEX_INTERPOLATE,
+	max = floorf(((float)max) / 129);
+	g_cache = texture_new_2D(g_cache_w * 129, g_cache_h * 129, TEX_INTERPOLATE,
 	                         buffer_new("color", false, 4));
 	g_cache_bound = calloc(g_cache_w * g_cache_h, sizeof(*g_cache_bound));
 	g_indir = texture_new_2D(g_indir_w, g_indir_h, 0,
@@ -83,7 +83,7 @@ static struct tpair *pair(texture_t *tex, int id)
 static void texture_update_gl_loader(texture_t *self)
 {
 
-	if(self->target == GL_TEXTURE_2D)
+	if(self->target == GL_TEXTURE_2D && !self->sparse_it)
 	{
 		glActiveTexture(GL_TEXTURE0 + ID_2D);
 		glBindTexture(self->target, self->bufs[0].id);
@@ -92,7 +92,7 @@ static void texture_update_gl_loader(texture_t *self)
 				self->bufs[0].format, GL_UNSIGNED_BYTE, self->bufs[0].data);
 		glerr();
 	}
-	if(self->target == GL_TEXTURE_3D)
+	if(self->target == GL_TEXTURE_3D && !self->sparse_it)
 	{
 		glActiveTexture(GL_TEXTURE0 + ID_3D);
 		glBindTexture(self->target, self->bufs[0].id);
@@ -151,30 +151,27 @@ uint32_t texture_get_pixel(texture_t *self, int32_t buffer, int32_t x, int32_t y
 	if(!self->framebuffer_ready) return 0;
 	uint32_t data = 0;
 	y = self->height - y;
-	glFlush();
-	glFinish();
 
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, self->frame_buffer[0]); glerr();
 
 	{
-		glReadBuffer(GL_COLOR_ATTACHMENT0 + buffer);
+		glReadBuffer(GL_COLOR_ATTACHMENT0 + buffer); glerr();
 
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1); glerr();
 
-		glReadPixels(x, y, 1, 1, GL_RG, GL_UNSIGNED_BYTE, &data);
+		glReadPixels(x, y, 1, 1, self->bufs[buffer + self->depth_buffer].format,
+		             GL_UNSIGNED_BYTE, &data); glerr();
 	}
 	if(depth)
 	{
-		float fetch_depth = 0;
+		float fetch_depth = 0.988937f;
+#ifndef __EMSCRIPTEN__
 
-		/* texture_bind(self, DEPTH_TEX); */
-		glReadBuffer(GL_NONE);
+		/* glReadBuffer(GL_NONE); glerr(); */
 
-		/* texture_2D_frame_buffer(self); */
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-		glReadPixels(x, y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &fetch_depth);
+		glReadPixels(x, y, 1, 1, self->bufs[0].format, GL_FLOAT, &fetch_depth); glerr();
+#endif
 
 		*depth = fetch_depth;
 	}
@@ -203,6 +200,7 @@ static void texture_update_sizes(texture_t *self)
 	int m;
 	self->sizes[0].x = self->width;
 	self->sizes[0].y = self->height;
+	printf("updating sizes %u %u\n", self->width, self->height);
 	for(m = 1; m < MAX_MIPS; m++)
 	{
 		int w = floor(((float)self->sizes[m - 1].x) / 2.0f);
@@ -312,10 +310,10 @@ bool_t load_tile(texture_t *self, tex_tile_t *tile, int mip, int frame)
 	} indir_info = {cache_tile, mip};
 
 
-	int vx = (indir_info.cache_tile % g_cache_w) * 128;
-	int vy = (indir_info.cache_tile / g_cache_w) * 128;
+	int vx = (indir_info.cache_tile % g_cache_w) * 129;
+	int vy = (indir_info.cache_tile / g_cache_w) * 129;
 	texture_bind(g_cache, 0);
-	glTexSubImage2D(self->target, 0, vx, vy, 128, 128,
+	glTexSubImage2D(self->target, 0, vx, vy, 129, 129,
 			self->bufs[0].format, GL_UNSIGNED_BYTE,
 			tile->bytes); glerr();
 
@@ -329,10 +327,45 @@ bool_t load_tile(texture_t *self, tex_tile_t *tile, int mip, int frame)
 	return true;
 }
 
-#include<utils/shader.h>
+void fill_remaining(tex_tile_t *tile, int w, int h)
+{
+	/* int t[129 * 129] = {0}; */
+	for (int y = 0; y < h; y++)
+	{
+		int wy = y % h;
+		for (int x = w; x < 129; x++)
+		{
+			int wx = x % w;
+			/* tile->bytes[y * 129 + x] = 0xFF00FFFF; */
+			tile->bytes[y * 129 + x] = tile->bytes[wy * 129 + wx];
+		}
+	}
+	for (int y = h; y < 129; y++)
+	{
+		int wy = y % h;
+		for (int x = 0; x < 129; x++)
+		{
+			int wx = x % w;
+			tile->bytes[y * 129 + x] = tile->bytes[wy * 129 + wx];
+		}
+	}
+	/* for (int y = 0; y < 129; y+=4) */
+	/* { */
+	/* 	for (int x = 0; x < 129; x+=4) */
+	/* 	{ */
+	/* 		printf(t[y * 129 + x] ? "@" : "-"); */
+	/* 	} */
+	/* 	printf("\n"); */
+	/* } */
+	/* printf("\n"); */
+
+}
+
 static int32_t texture_from_file_loader(texture_t *self)
 {
 	glActiveTexture(GL_TEXTURE0 + ID_2D);
+	const uint32_t format = self->bufs[0].format;
+	const uint32_t type = self->bufs[0].type;
 
 	glGenTextures(1, &self->bufs[0].id); glerr();
 	glBindTexture(self->target, self->bufs[0].id); glerr();
@@ -356,8 +389,7 @@ static int32_t texture_from_file_loader(texture_t *self)
 	glTexParameteri(self->target, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
 	glTexImage2D(self->target, 0, self->bufs[0].internal, self->width,
-			self->height, 0, self->bufs[0].format,
-			self->bufs[0].type, self->bufs[0].data); glerr();
+			self->height, 0, format, type, self->bufs[0].data); glerr();
 
 	glGenerateMipmap(self->target); glerr();
 	texture_update_sizes(self);
@@ -373,14 +405,12 @@ static int32_t texture_from_file_loader(texture_t *self)
 
 	self->bufs[0].indir_n = g_indir_n;
 	self->bufs[0].tiles = &g_tiles[g_indir_n];
-	const uint32_t format = self->bufs[0].format;
-	const uint32_t type = self->bufs[0].type;
 
-	glPixelStorei(GL_PACK_ROW_LENGTH, 128);
 	glPixelStorei(GL_PACK_SKIP_PIXELS, 0);
 	glPixelStorei(GL_PACK_SKIP_ROWS, 0);
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 	texture_target(self, NULL, 0); glerr();
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0); glerr();
 
 	int tiles_x = ceilf(((float)self->width) / 128);
 	int tiles_y = ceilf(((float)self->height) / 128);
@@ -395,6 +425,17 @@ static int32_t texture_from_file_loader(texture_t *self)
 		for (int y = 0; y < tiles_y; y++) for (int x = 0; x < tiles_x; x++)
 		{
 			tex_tile_t *tilep = &g_tiles[g_indir_n];
+			if (g_indir_n >= g_indir_h * g_indir_w)
+			{
+				printf("tile %p out of bounds\n", tilep);
+				__builtin_trap();
+			}
+			if (tilep >= &g_tiles[g_indir_w * g_indir_h])
+			{
+				printf("spoopy %d\n", g_indir_n);
+				__builtin_trap();
+			}
+
 			tilep->bound = false;
 			tilep->indir_x = g_indir_n % g_indir_w;
 			tilep->indir_y = g_indir_n / g_indir_w;
@@ -402,16 +443,35 @@ static int32_t texture_from_file_loader(texture_t *self)
 
 			int tx = x * 128;
 			int ty = y * 128;
-			int w = fmin(128, self->sizes[m].x - tx);
-			int h = fmin(128, self->sizes[m].y - ty); 
+			int w = fmin(129, self->sizes[m].x - tx);
+			int h = fmin(129, self->sizes[m].y - ty); 
 			if (self->sizes[m].x <= 0 || w <= 0) continue;
 			if (self->sizes[m].y <= 0 || h <= 0) continue;
 
-			/* printf("%d %d %d %d %d\n", m, tx, ty, self->sizes[m].x, self->sizes[m].y); */
-			glReadPixels(tx, ty, w, h, format, type, tilep->bytes); glerr();
+			glPixelStorei(GL_PACK_ROW_LENGTH, 129);
+			glReadPixels(tx, ty, w, h, format, GL_UNSIGNED_BYTE, tilep->bytes); glerr();
+			int wx, wy;
+			int nh, nw;
+			if (h < 129)
+			{
+				nh = 128 - h >= 2 ? 2 : 1;
+				wy = (ty + h) % self->sizes[m].y;
+				glReadPixels(tx, wy, w, nh, format, GL_UNSIGNED_BYTE, tilep->bytes + h * 129); glerr();
+			}
+			if (w < 129)
+			{
+				nw = 128 - w >= 2 ? 2 : 1;
+				wx = (tx + w) % self->sizes[m].x;
+				glReadPixels(wx, ty, nw, h, format, GL_UNSIGNED_BYTE, tilep->bytes + w); glerr();
+			}
+			if (w < 129 && h < 129)
+			{
+				glReadPixels(wx, wy, nw, nh, format, GL_UNSIGNED_BYTE,
+				             tilep->bytes + w + h * 129); glerr();
+			}
 		}
-		tiles_x = ceilf(0.5 * tiles_x);
-		tiles_y = ceilf(0.5 * tiles_y);
+		tiles_x = ceilf(0.5f * tiles_x);
+		tiles_y = ceilf(0.5f * tiles_y);
 
 	}
 	glPixelStorei(GL_PACK_ROW_LENGTH, 0);
@@ -419,15 +479,16 @@ static int32_t texture_from_file_loader(texture_t *self)
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	glerr();
 
-	/* for (int m = 0; m < MAX_MIPS; m++) */
-	/* { */
-	/* 	for (int tile = 0; tile < self->bufs[0].num_tiles[m]; tile++) */
-	/* 	{ */
-	/* 		load_tile(self, &self->bufs[0].mips[m][tile], m, 0); */
-	/* 	} */
-	/* } */
+/* 	for (int m = 0; m < MAX_MIPS; m++) */
+/* 	{ */
+/* 		for (int tile = 0; tile < self->bufs[0].num_tiles[m]; tile++) */
+/* 		{ */
+/* 			load_tile(self, &self->bufs[0].mips[m][tile], m, 0); */
+/* 		} */
+/* 	} */
 
 	/* glGenerateMipmap(self->target); glerr(); */
+	glBindTexture(self->target, 0); glerr();
 
 	stbi_image_free(self->bufs[0].data);
 	for(int i = 0; i < self->bufs_size; i++)
@@ -442,6 +503,7 @@ static int32_t texture_from_file_loader(texture_t *self)
 	/* self->bufs[0].ready = 0; */
 	/* self->bufs[0].id = 0; */
 	self->bufs[0].id = self->bufs[0].indir_n;
+	self->sparse_it = true;
 
 	world_changed();
 
@@ -473,6 +535,7 @@ static int32_t texture_from_file_loader(texture_t *self)
 
 int32_t buffer_new(const char *name, int32_t is_float, int32_t dims)
 {
+	is_float = false;
 	texture_t *texture = _g_tex_creating;
 
 	int32_t i = texture->bufs_size++;
@@ -488,25 +551,25 @@ int32_t buffer_new(const char *name, int32_t is_float, int32_t dims)
 	if(dims == 4)
 	{
 		texture->bufs[i].format   = GL_RGBA;
-		texture->bufs[i].internal = is_float ? GL_RGBA32F : GL_RGBA8;
+		texture->bufs[i].internal = is_float ? GL_RGBA16F : GL_RGBA8;
 		texture->bufs[i].type = is_float ? GL_FLOAT : GL_UNSIGNED_BYTE;
 	}
 	else if(dims == 3)
 	{
 		texture->bufs[i].format   = GL_RGB;
-		texture->bufs[i].internal = is_float ? GL_RGB32F : GL_RGB8;
+		texture->bufs[i].internal = is_float ? GL_RGB16F : GL_RGB8;
 		texture->bufs[i].type = is_float ? GL_FLOAT : GL_UNSIGNED_BYTE;
 	}
 	else if(dims == 2)
 	{
 		texture->bufs[i].format   = GL_RG;
-		texture->bufs[i].internal = is_float ? GL_RG32F : GL_RG8;
+		texture->bufs[i].internal = is_float ? GL_RG16F : GL_RG8;
 		texture->bufs[i].type = is_float ? GL_FLOAT : GL_UNSIGNED_BYTE;
 	}
 	else if(dims == 1)
 	{
 		texture->bufs[i].format   = GL_RED;
-		texture->bufs[i].internal = is_float ? GL_R32F : GL_R8;
+		texture->bufs[i].internal = is_float ? GL_R16F : GL_R8;
 		texture->bufs[i].type = is_float ? GL_FLOAT : GL_UNSIGNED_BYTE;
 	}
 	else if(dims == -1)
@@ -672,7 +735,8 @@ int32_t texture_load_from_memory(texture_t *self, void *buffer, int32_t len)
 
 	temp.bufs[0].dims = 0;
 	temp.bufs[0].data = stbi_load_from_memory(buffer, len, (int32_t*)&temp.width,
-			(int32_t*)&temp.height, &temp.bufs[0].dims, 0);
+			(int32_t*)&temp.height, &temp.bufs[0].dims, 4);
+	temp.bufs[0].dims = 4;
 
 	if(!temp.bufs[0].data)
 	{
@@ -719,7 +783,8 @@ int32_t texture_load(texture_t *self, const char *filename)
 
 	temp.bufs[0].dims = 0;
 	temp.bufs[0].data = stbi_load(filename, (int32_t*)&temp.width,
-			(int32_t*)&temp.height, &temp.bufs[0].dims, 0);
+			(int32_t*)&temp.height, &temp.bufs[0].dims, 4);
+	temp.bufs[0].dims = 4;
 
 	if(!temp.bufs[0].data)
 	{
@@ -848,13 +913,14 @@ static int32_t texture_2D_frame_buffer(texture_t *self)
 int32_t texture_target_sub(texture_t *self, int32_t width, int32_t height,
 		texture_t *depth, int32_t fb) 
 {
+	bool_t ready = self->framebuffer_ready;
 	if(!self->bufs[self->depth_buffer].id)
 	{
 		/* This condition is testing if there is a color buffer */
 		/* it's misleading and should be changed */
 		return 0;
 	}
-	if(!self->framebuffer_ready)
+	if(!ready)
 	{
 		if(self->target == GL_TEXTURE_2D)
 		{
@@ -879,10 +945,10 @@ int32_t texture_target_sub(texture_t *self, int32_t width, int32_t height,
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, self->frame_buffer[fb]); glerr();
 
-	if(depth && self->last_depth != depth && self->target == GL_TEXTURE_2D)
+	if(!ready || (self->last_depth != depth && self->target == GL_TEXTURE_2D))
 	{
 		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-				self->target, depth->bufs[0].id, 0);
+				self->target, depth ? depth->bufs[0].id : 0, 0);
 		self->last_depth = depth;
 
 		glDrawBuffers(self->bufs_size - self->depth_buffer, attachments);
@@ -991,7 +1057,7 @@ int32_t texture_2D_resize(texture_t *self, int32_t width, int32_t height)
 		/* self->framebuffer_ready = 0; */
 	}
 
-	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(self->target, 0);
 	glerr();
 
 	return 1;
@@ -1124,7 +1190,7 @@ texture_t *texture_cubemap
 
 int32_t load_tex(texture_t *texture)
 {
-	char buffer[256];
+	char buffer[512];
 	strcpy(buffer, texture->name);
 	texture_load(texture, buffer);
 	return 1;
@@ -1135,7 +1201,11 @@ void *tex_loader(const char *path, const char *name, uint32_t ext)
 	texture_t *texture = texture_new_2D(0, 0, TEX_INTERPOLATE);
 	strcpy(texture->name, path);
 
+#ifndef __EMSCRIPTEN__
 	SDL_CreateThread((int32_t(*)(void*))load_tex, "load_tex", texture);
+#else
+	load_tex(texture);
+#endif
 
 	return texture;
 }

@@ -26,7 +26,7 @@ typedef struct
 	vec2_t *id;		/* 4 */
 	vec3_t *col;	/* 5 */
 
-	uvec4_t *bid;	/* 6 */
+	vec4_t *bid;	/* 6 */
 	vec4_t  *wei;	/* 7 */
 
 	vertid_t *ind;
@@ -77,7 +77,7 @@ typedef struct draw_conf_t
 	varray_t *varray;
 
 	mat4_t *inst;	/* 8 */
-	uvec4_t *props;	/* 12 */
+	vec4_t *props;	/* 12 */
 #ifdef MESH4
 	float *angle4;	/* 13 */
 #endif

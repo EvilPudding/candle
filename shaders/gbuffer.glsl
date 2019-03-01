@@ -4,7 +4,7 @@ layout (location = 0) out vec4 AlbedoColor;
 layout (location = 1) out vec4 NMR; // normal_roughness_metalness
 
 
-void main()
+void main(void)
 {
 	vec4 dif  = resolveProperty(mat(albedo), texcoord, true);
 	if(dif.a < 0.7) discard;

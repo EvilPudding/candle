@@ -40,6 +40,7 @@ void _check_gl_error(const char *file, int line)
 	}
 	if(got_error)
 	{
+		__builtin_trap();
 		exit(1);
 	}
 #ifndef __EMSCRIPTEN__

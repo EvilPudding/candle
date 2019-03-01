@@ -35,9 +35,9 @@ vec3 real_pos(float depth, vec2 coord)
 
 float range(float v, float min, float max)
 {
-	return clamp((v - min) / (max - min), 0, 1);
+	return clamp((v - min) / (max - min), 0.0, 1.0);
 }
-void main()
+void main(void)
 {
 	float intensity = 0.0;
 	vec2 p = pixel_pos();
@@ -49,19 +49,19 @@ void main()
 
 	float d = length(proj_pixel - selected_pos);
 	d = 1.0 - abs((d-start_radius)/0.4);
-	d = clamp(d, 0, 1);
-	intensity += pow(d, 1);
+	d = clamp(d, 0.0, 1.0);
+	intensity += pow(d, 1.0);
 
 	vec3 proj_mouse = real_pos(dist, mouse_pos);
 	/* FragColor = vec4(proj_mouse - proj_pixel, 1);return; */
 
 	float dist_to_mouse = length(proj_mouse - proj_pixel);
 	float md = clamp((0.4 - dist_to_mouse)/0.4 - 0.1, 0.0, 1.0);
-	intensity += pow(md, 2);
-	intensity -= max(dist_to_mouse - (1 - tool_fade) * start_radius * 2.1, 0) * tool_fade;
+	intensity += pow(md, 2.0);
+	intensity -= max(dist_to_mouse - (1.0 - tool_fade) * start_radius * 2.1, 0.0) * tool_fade;
 
-	if(intensity < 0.9) intensity = 0;
-	if(intensity > 1.0) intensity = 1;
+	if(intensity < 0.9) intensity = 0.0;
+	if(intensity > 1.0) intensity = 1.0;
 
 	float rad = abs(length(proj_mouse - selected_pos) - start_radius);
 

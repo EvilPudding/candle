@@ -39,7 +39,7 @@ void c_render_device_update_lights(c_render_device_t *self)
 		struct gl_light *gllight = &self->scene.lights[light->id];
 		gllight->color = light->color;
 		gllight->radius = light->radius;
-		if(light->renderer)
+		if(light->renderer && light->renderer->output)
 		{
 			gllight->layer = light->renderer->output->id;
 		}
@@ -84,6 +84,7 @@ void c_render_device_update_ubo(c_render_device_t *self)
 		glBufferData(GL_UNIFORM_BUFFER, sizeof(self->scene), &self->scene,
 				GL_STATIC_DRAW); glerr();
 		glBindBufferBase(GL_UNIFORM_BUFFER, 20, self->ubo); glerr();
+		c_render_device_bind_ubo(self, 20, self->ubo);
 	}
 	/* else if(self->scene_changes) */
 	else
@@ -108,6 +109,12 @@ void fs_bind(fs_t *fs)
 
 	render_device->frag_bound = fs;
 	render_device->shader = NULL;
+}
+
+void c_render_device_bind_ubo(c_render_device_t *self, uint32_t base,
+                              uint32_t ubo)
+{
+	self->bound_ubos[base] = ubo;
 }
 
 extern texture_t *g_cache;
@@ -139,14 +146,29 @@ shader_t *vs_bind(vs_t *vs)
 	texture_bind(g_indir, 0);
 	glerr();
 
-	loc = glGetUniformBlockIndex(rd->shader->program, "scene_t");
-	glUniformBlockBinding(rd->shader->program, loc, 20); glerr();
+	/* GLint size; */
+	if (rd->bound_ubos[20])
+	{
+		loc = glGetUniformBlockIndex(rd->shader->program, "scene_t");
+		glUniformBlockBinding(rd->shader->program, loc, 20); glerr();
+		/* glGetActiveUniformBlockiv(rd->shader->program, loc, GL_UNIFORM_BLOCK_DATA_SIZE, &size); */
+		glBindBufferBase(GL_UNIFORM_BUFFER, 20, rd->bound_ubos[20]); glerr();
+	}
 
-	loc = glGetUniformBlockIndex(rd->shader->program, "renderer_t");
-	glUniformBlockBinding(rd->shader->program, loc, 19); glerr();
+	if (rd->bound_ubos[19])
+	{
+		loc = glGetUniformBlockIndex(rd->shader->program, "renderer_t");
+		glUniformBlockBinding(rd->shader->program, loc, 19); glerr();
+		/* glGetActiveUniformBlockiv(rd->shader->program, loc, GL_UNIFORM_BLOCK_DATA_SIZE, &size); */
+		glBindBufferBase(GL_UNIFORM_BUFFER, 19, rd->bound_ubos[19]); glerr();
+	}
 
-	loc = glGetUniformBlockIndex(rd->shader->program, "skin_t");
-	glUniformBlockBinding(rd->shader->program, loc, 21); glerr();
+	if (rd->bound_ubos[21])
+	{
+		loc = glGetUniformBlockIndex(rd->shader->program, "skin_t");
+		glUniformBlockBinding(rd->shader->program, loc, 21); glerr();
+		glBindBufferBase(GL_UNIFORM_BUFFER, 21, rd->bound_ubos[21]); glerr();
+	}
 
 	if(rd->shader && rd->bind_function)
 	{

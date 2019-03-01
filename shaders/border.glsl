@@ -50,7 +50,7 @@ float is_selected(ivec2 coord)
 	return 0.0;
 }
 
-void main()
+void main(void)
 {
 	ivec2 tc = ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y));
 	const float weight[6] = float[] (0.382925, 0.24173, 0.060598, 0.005977, 0.000229, 0.000003);

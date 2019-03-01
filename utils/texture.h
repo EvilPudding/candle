@@ -12,7 +12,7 @@ typedef struct
 	uint32_t touched;
 	uint32_t indir_x;
 	uint32_t indir_y;
-	uint32_t bytes[128 * 128];
+	uint32_t bytes[129 * 129];
 } tex_tile_t;
 
 typedef struct

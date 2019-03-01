@@ -178,7 +178,9 @@ void ecm_destroy_all()
 entity_t ecm_new_entity()
 {
 
+#ifndef __EMSCRIPTEN__
 	SDL_SemWait(sem);
+#endif
 	entity_info_t *info;
 
 	unsigned int i = g_ecm->entities_info[0].next_free;
@@ -208,7 +210,9 @@ entity_t ecm_new_entity()
 	separate->pos = i;
 	separate->uid = info->uid;
 
+#ifndef __EMSCRIPTEN__
 	SDL_SemPost(sem);
+#endif
 	return ent;
 }
 
@@ -346,13 +350,17 @@ void ecm_clean(int force)
 	if(g_ecm->safe && rt)
 	{
 		ecm_clean2(force);
+#ifndef __EMSCRIPTEN__
 		SDL_SemPost(sem1);
+#endif
 	}
 
 	if(!rt)
 	{
 		SDL_AtomicIncRef((SDL_atomic_t*)&g_ecm->safe);
+#ifndef __EMSCRIPTEN__
 		SDL_SemWait(sem1);
+#endif
 	}
 }
 

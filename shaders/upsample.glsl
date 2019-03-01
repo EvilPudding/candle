@@ -11,7 +11,7 @@ BUFFER {
 uniform int level;
 uniform float alpha;
 
-void main()
+void main(void)
 {
 	/* FragColor = vec4(texcoord, 0, 1); */
 	/* return; */
