@@ -406,6 +406,7 @@ static int32_t texture_from_file_loader(texture_t *self)
 	self->bufs[0].indir_n = g_indir_n;
 	self->bufs[0].tiles = &g_tiles[g_indir_n];
 
+	glPixelStorei(GL_PACK_ROW_LENGTH, 129);
 	glPixelStorei(GL_PACK_SKIP_PIXELS, 0);
 	glPixelStorei(GL_PACK_SKIP_ROWS, 0);
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
@@ -425,16 +426,6 @@ static int32_t texture_from_file_loader(texture_t *self)
 		for (int y = 0; y < tiles_y; y++) for (int x = 0; x < tiles_x; x++)
 		{
 			tex_tile_t *tilep = &g_tiles[g_indir_n];
-			if (g_indir_n >= g_indir_h * g_indir_w)
-			{
-				printf("tile %p out of bounds\n", tilep);
-				__builtin_trap();
-			}
-			if (tilep >= &g_tiles[g_indir_w * g_indir_h])
-			{
-				printf("spoopy %d\n", g_indir_n);
-				__builtin_trap();
-			}
 
 			tilep->bound = false;
 			tilep->indir_x = g_indir_n % g_indir_w;
@@ -448,13 +439,12 @@ static int32_t texture_from_file_loader(texture_t *self)
 			if (self->sizes[m].x <= 0 || w <= 0) continue;
 			if (self->sizes[m].y <= 0 || h <= 0) continue;
 
-			glPixelStorei(GL_PACK_ROW_LENGTH, 129);
 			glReadPixels(tx, ty, w, h, format, GL_UNSIGNED_BYTE, tilep->bytes); glerr();
 			int wx, wy;
 			int nh, nw;
 			if (h < 129)
 			{
-				nh = 128 - h >= 2 ? 2 : 1;
+				nh = (128 - h) >= 2 ? 2 : 1;
 				wy = (ty + h) % self->sizes[m].y;
 				glReadPixels(tx, wy, w, nh, format, GL_UNSIGNED_BYTE, tilep->bytes + h * 129); glerr();
 			}
