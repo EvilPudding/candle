@@ -22,7 +22,8 @@ static void copy_prop(prop_t *prop, struct gl_property *glprop)
 	glprop->scale = prop->scale;
 	if(prop->texture)
 	{
-		glprop->texture = texture_handle(prop->texture, 0);
+		glprop->layer = prop->texture->bufs[0].id;
+		glprop->size = prop->texture->sizes[0];
 	}
 }
 
@@ -38,9 +39,9 @@ void c_render_device_update_lights(c_render_device_t *self)
 		struct gl_light *gllight = &self->scene.lights[light->id];
 		gllight->color = light->color;
 		gllight->radius = light->radius;
-		if(light->renderer)
+		if(light->renderer && light->renderer->output)
 		{
-			gllight->shadow_map = texture_handle(light->renderer->output, 1);
+			gllight->layer = light->renderer->output->id;
 		}
 	}
 }
@@ -83,23 +84,19 @@ void c_render_device_update_ubo(c_render_device_t *self)
 		glBufferData(GL_UNIFORM_BUFFER, sizeof(self->scene), &self->scene,
 				GL_STATIC_DRAW); glerr();
 		glBindBufferBase(GL_UNIFORM_BUFFER, 20, self->ubo); glerr();
+		c_render_device_bind_ubo(self, 20, self->ubo);
 	}
 	/* else if(self->scene_changes) */
 	else
 	{
 		glBindBuffer(GL_UNIFORM_BUFFER, self->ubo); glerr();
-		GLvoid* p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY); glerr();
-		/* if(self->scene_changes & 0x2) */
-		/* { */
-			memcpy(p, &self->scene, sizeof(self->scene));
-		/* } */
-		/* else */
-		/* { */
-			/* memcpy(p, &self->scene.camera, sizeof(self->scene.camera)); */
-		/* } */
-		glUnmapBuffer(GL_UNIFORM_BUFFER); glerr();
-		/* self->scene_changes = 0; */
-		/* self->updates &= ~0x2; */
+		/* GLvoid* p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY); glerr(); */
+		/* memcpy(p, &self->scene, sizeof(self->scene)); */
+
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(self->scene), &self->scene);glerr();
+
+		/* glUnmapBuffer(GL_UNIFORM_BUFFER); glerr(); */
+
 		SDL_AtomicSet((SDL_atomic_t*)&self->updates_ubo, 0);
 	}
 }
@@ -112,14 +109,20 @@ void fs_bind(fs_t *fs)
 
 	render_device->frag_bound = fs;
 	render_device->shader = NULL;
-	/* printf("fs_bind %s\n", fs->filename); */
 }
 
+void c_render_device_bind_ubo(c_render_device_t *self, uint32_t base,
+                              uint32_t ubo)
+{
+	self->bound_ubos[base] = ubo;
+}
+
+extern texture_t *g_cache;
+extern texture_t *g_indir;
 shader_t *vs_bind(vs_t *vs)
 {
+	uint32_t loc;
 	c_render_device_t *rd = c_render_device(&SYS);
-
-	/* printf("vs_bind %s\n", vs->name); */
 
 	if(!rd->shader || rd->shader->index != vs->index)
 	{
@@ -131,6 +134,41 @@ shader_t *vs_bind(vs_t *vs)
 	}
 
 	shader_bind(rd->shader);
+
+	loc = glGetUniformLocation(rd->shader->program, "g_cache");
+	glUniform1i(loc, 34);
+	glActiveTexture(GL_TEXTURE0 + 34);
+	texture_bind(g_cache, 0);
+
+	loc = glGetUniformLocation(rd->shader->program, "g_indir");
+	glUniform1i(loc, 35);
+	glActiveTexture(GL_TEXTURE0 + 35);
+	texture_bind(g_indir, 0);
+	glerr();
+
+	/* GLint size; */
+	if (rd->bound_ubos[20])
+	{
+		loc = glGetUniformBlockIndex(rd->shader->program, "scene_t");
+		glUniformBlockBinding(rd->shader->program, loc, 20); glerr();
+		/* glGetActiveUniformBlockiv(rd->shader->program, loc, GL_UNIFORM_BLOCK_DATA_SIZE, &size); */
+		glBindBufferBase(GL_UNIFORM_BUFFER, 20, rd->bound_ubos[20]); glerr();
+	}
+
+	if (rd->bound_ubos[19])
+	{
+		loc = glGetUniformBlockIndex(rd->shader->program, "renderer_t");
+		glUniformBlockBinding(rd->shader->program, loc, 19); glerr();
+		/* glGetActiveUniformBlockiv(rd->shader->program, loc, GL_UNIFORM_BLOCK_DATA_SIZE, &size); */
+		glBindBufferBase(GL_UNIFORM_BUFFER, 19, rd->bound_ubos[19]); glerr();
+	}
+
+	if (rd->bound_ubos[21])
+	{
+		loc = glGetUniformBlockIndex(rd->shader->program, "skin_t");
+		glUniformBlockBinding(rd->shader->program, loc, 21); glerr();
+		glBindBufferBase(GL_UNIFORM_BUFFER, 21, rd->bound_ubos[21]); glerr();
+	}
 
 	if(rd->shader && rd->bind_function)
 	{
@@ -164,6 +202,7 @@ c_render_device_t *c_render_device_new()
 {
 	c_render_device_t *self = component_new("render_device");
 	SDL_AtomicSet((SDL_atomic_t*)&self->updates_ram, 1);
+	svp_init();
 
 	return self;
 }
@@ -192,10 +231,15 @@ int world_frame(void)
 	return rd->frame;
 }
 
+void c_render_device_destroy(c_render_device_t *self)
+{
+	texture_destroy(g_cache);
+}
+
 REG()
 {
 	ct_t *ct = ct_new("render_device", sizeof(c_render_device_t),
-			NULL, NULL, 1, ref("window"));
+			NULL, c_render_device_destroy, 1, ref("window"));
 
 	ct_listener(ct, WORLD, ref("world_update"), c_render_device_update);
 

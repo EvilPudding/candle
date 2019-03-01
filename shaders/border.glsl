@@ -6,26 +6,24 @@ layout (location = 0) out vec4 FragColor;
 
 uniform bool horizontal;
 
-uniform float weight[6] = float[] (0.382925, 0.24173, 0.060598, 0.005977, 0.000229, 0.000003);
-
 uniform vec2 sel_id;
 
 float filtered(vec2 c, vec2 fil)
 {
-	fil = round(fil * 255); 
-	c = round(c * 255); 
+	fil = round(fil * 255.0); 
+	c = round(c * 255.0); 
 
 	if(c.x != fil.x || c.y != fil.y)
 	{
-		return 0;
+		return 0.0;
 	}
-	return 1;
+	return 1.0;
 }
 
 bool is_equal(vec2 a, vec2 b)
 {
-	a = round(a * 255); 
-	b = round(b * 255); 
+	a = round(a * 255.0); 
+	b = round(b * 255.0); 
 
 	return (b.x == a.x && b.y == a.y);
 }
@@ -52,9 +50,11 @@ float is_selected(ivec2 coord)
 	return 0.0;
 }
 
-void main()
+void main(void)
 {
 	ivec2 tc = ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y));
+	const float weight[6] = float[] (0.382925, 0.24173, 0.060598, 0.005977, 0.000229, 0.000003);
+
 
 	float selected = is_selected(tc);
 
@@ -65,8 +65,8 @@ void main()
 	{
 		if(horizontal)
 		{
-			float sel_percent = selected * weight[0] * 2;
-			float min_d = 2;
+			float sel_percent = selected * weight[0] * 2.0;
+			float min_d = 2.0;
 			float w;
 			for(int i = 1; i < 6; ++i)
 			{
@@ -74,14 +74,14 @@ void main()
 
 				w = is_selected(tc + off);
 				sel_percent += w * weight[i];
-				if(w > 0)
+				if(w > 0.0)
 				{
 					min_d = min(texelFetch(sbuffer.depth, tc + off, 0).r, min_d);
 				}
 
 				w = is_selected(tc - off);
 				sel_percent += w * weight[i];
-				if(w > 0)
+				if(w > 0.0)
 				{
 					min_d = min(texelFetch(sbuffer.depth, tc - off, 0).r, min_d);
 				}
@@ -99,14 +99,14 @@ void main()
 
 				w = texelFetch(tmp.color, tc + off, 0).r;
 				sel_percent += w * weight[i];
-				if(w > 0)
+				if(w > 0.0)
 				{
 					min_d = min(texelFetch(tmp.color, tc + off, 0).g, min_d);
 				}
 
 				w = texelFetch(tmp.color, tc - off, 0).r;
 				sel_percent += w * weight[i];
-				if(w > 0)
+				if(w > 0.0)
 				{
 					min_d = min(texelFetch(tmp.color, tc - off, 0).g, min_d);
 				}
@@ -114,7 +114,7 @@ void main()
 
 			}
 			float depth = texelFetch(sbuffer.depth, tc, 0).r;
-			FragColor = vec4((depth > min_d ? sel_color: 1 - sel_color) * 2, sel_percent);
+			FragColor = vec4((depth > min_d ? sel_color: 1.0 - sel_color) * 2.0, sel_percent);
 		}
 	}
 }

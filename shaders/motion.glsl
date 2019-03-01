@@ -14,7 +14,7 @@ BUFFER {
 	sampler2D nmr;
 } gbuffer;
 
-void main()
+void main(void)
 {
 	vec2 p = pixel_pos();
 	vec3 c_pos = get_position(gbuffer.depth, p);

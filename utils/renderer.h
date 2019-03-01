@@ -44,7 +44,8 @@ enum bind_type
 	VEC4,
 	CAM,
 	CLEAR_COLOR,
-	CLEAR_DEPTH
+	CLEAR_DEPTH,
+	CALLBACK
 };
 
 typedef vec2_t(*vec2_getter)(void *usrptr);
@@ -147,6 +148,7 @@ typedef struct pass_t
 
 	int32_t active;
 	int32_t camid;
+	int bound_textures;
 } pass_t;
 
 struct gl_camera

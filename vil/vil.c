@@ -15,7 +15,7 @@ struct vil_arg
 	slot_t link;
 	void *data;
 	vitype_t *type;
-	int expanded;
+	uint32_t expanded;
 };
 
 struct vil_ret
@@ -30,14 +30,14 @@ typedef struct vicall_t
 	vitype_t *type;
 	vitype_t *parent;
 
-	unsigned int id;
+	uint32_t id;
 	char name[32];
 	vicall_t *next;
 	vicall_t *prev;
 
-	int collapsable;
-	int is_input;
-	int is_output;
+	uint32_t collapsable;
+	uint32_t is_input;
+	uint32_t is_output;
 
 	struct nk_color color;
 
@@ -52,16 +52,16 @@ typedef struct vicall_t
 typedef struct vitype_t
 {
 	char name[32];
-	unsigned int id;
+	uint32_t id;
 
 	vicall_t call_buf[32];
 	struct vil_link links[64];
 	vicall_t *begin;
 	vicall_t *end;
-	unsigned int call_count;
-	unsigned int link_count;
+	uint32_t call_count;
+	uint32_t link_count;
 
-	unsigned int		builtin_size;
+	uint32_t    		builtin_size;
 	vitype_gui_cb		builtin_gui;
 	/* vitype_load_cb	builtin_load; */
 	/* vitype_save_cb	builtin_save; */
@@ -71,12 +71,12 @@ typedef struct vitype_t
 static slot_t linking;
 vicall_t *g_dragging;
 vicall_t *g_hovered;
-static unsigned int linking_type;
+static uint32_t linking_type;
 static slot_t g_call_unlink;
 static slot_t g_call_link;
 static struct nk_vec2 scrolling;
 
-static int get_call_output_y(vicall_t *root, int *field,
+static uint32_t get_call_output_y(vicall_t *root, uint32_t *field,
 		vicall_t *call, float *y,
 		slot_t parent_slot, slot_t search);
 
@@ -97,10 +97,10 @@ void vil_add_domain(vil_t *self, const char *name, vec4_t color)
 }
 
 vitype_t *vil_add_type(vil_t *ctx, const char *name,
-		vitype_gui_cb builtin_gui, int builtin_size)
+		vitype_gui_cb builtin_gui, uint32_t builtin_size)
 {
-	int ret = 0;
-	int id = ref(name);
+	int32_t ret = 0;
+	uint32_t id = ref(name);
 	khiter_t k = kh_put(vitype, ctx->types, id, &ret);
 	if(ret != 1) exit(1);
 	vitype_t **type = &kh_value(ctx->types, k);
@@ -144,7 +144,7 @@ static void type_pop(vitype_t *type, vicall_t *call)
 	call->prev = NULL;
 }
 
-static vicall_t *get_call(vitype_t *type, int id)
+static vicall_t *get_call(vitype_t *type, uint32_t id)
 {
 	vicall_t *iter = type->begin;
 	while (iter) {
@@ -178,11 +178,11 @@ void vicall_color(vicall_t *self, vec4_t color)
 }
 
 vicall_t *vitype_add(vitype_t *parent, vitype_t *type,
-		const char *name, vec2_t pos, int flags)
+		const char *name, vec2_t pos, uint32_t flags)
 {
 	vicall_t *call;
 	/* NK_ASSERT((nk_size)type->call_count < NK_LEN(type->call_buf)); */
-	unsigned int i = parent->call_count++;
+	uint32_t i = parent->call_count++;
 	call = &parent->call_buf[i];
 	call->id = i;
 	call->bounds.x = pos.x;
@@ -210,9 +210,9 @@ vicall_t *vitype_add(vitype_t *parent, vitype_t *type,
 }
 
 static void type_unlink(vicall_t *root, slot_t out_slot,
-		int field)
+		uint32_t field)
 {
-	int i;
+	uint32_t i;
 	vitype_t *type = root->parent;
 
 	if(type->link_count > 1)
@@ -233,7 +233,7 @@ static void type_unlink(vicall_t *root, slot_t out_slot,
 }
 
 void vicall_link(vicall_t *root, slot_t in_slot, slot_t out_slot,
-		int field)
+		uint32_t field)
 {
 	struct vil_link *link = &root->parent->links[root->parent->link_count++];
 
@@ -244,13 +244,13 @@ void vicall_link(vicall_t *root, slot_t in_slot, slot_t out_slot,
 	root->input_args[field].link = in_slot;
 }
 
-static void output_options(vicall_t *root, int *field,
+static void output_options(vicall_t *root, uint32_t *field,
 		vicall_t *call, slot_t parent_slot, struct nk_context *nk)
 {
 	slot_t slot = parent_slot;
 	slot._[slot.depth++] = call->id;
 	vicall_t *it;
-	int call_field = (*field)++;
+	uint32_t call_field = (*field)++;
 	if(call->type->builtin_size)
 	{
 		if(!root->output_args[call_field].link.depth) /* is not linked */
@@ -272,11 +272,11 @@ static void output_options(vicall_t *root, int *field,
 	}
 }
 
-static float call_outputs(vicall_t *root, int *field,
+static float call_outputs(vicall_t *root, uint32_t *field,
 		vicall_t *call, slot_t parent_slot, float y,
 		struct nk_context *nk)
 {
-	int call_field = (*field)++;
+	uint32_t call_field = (*field)++;
 	vicall_t *it;
 	slot_t slot = parent_slot;
 	slot._[slot.depth++] = call->id;
@@ -342,7 +342,7 @@ static float call_outputs(vicall_t *root, int *field,
 	return y;
 }
 
-static int get_call_output_y(vicall_t *root, int *field,
+static uint32_t get_call_output_y(vicall_t *root, uint32_t *field,
 		vicall_t *call, float *y,
 		slot_t parent_slot, slot_t search)
 {
@@ -350,7 +350,7 @@ static int get_call_output_y(vicall_t *root, int *field,
 	slot_t slot = parent_slot;
 	slot._[slot.depth++] = call->id;
 
-	int call_field = (*field)++;
+	uint32_t call_field = (*field)++;
 
 	float h = 29.0f;
 	if(slot.val == search.val)
@@ -376,13 +376,13 @@ static int get_call_output_y(vicall_t *root, int *field,
 	}
 	return 0;
 }
-static int get_call_input_y(vicall_t *root, int *field,
+static uint32_t get_call_input_y(vicall_t *root, uint32_t *field,
 		vicall_t *call, float *y, slot_t parent_slot, slot_t search)
 {
 	slot_t slot = parent_slot;
 	slot._[slot.depth++] = call->id;
 
-	int call_field = (*field)++;
+	uint32_t call_field = (*field)++;
 
 	float h = root->input_args[call_field].height;
 	if(slot.val == search.val)
@@ -414,39 +414,39 @@ static int get_call_input_y(vicall_t *root, int *field,
 
 static struct nk_vec2 get_output_position(vitype_t *type, slot_t search)
 {
-	int field = 0;
+	uint32_t field = 0;
 	vicall_t *call = get_call(type, search._[0]);
 	float y = call->bounds.y + 33;
-	get_call_output_y(call, &field, call, &y, (slot_t){0}, search);
+	get_call_output_y(call, &field, call, &y, (slot_t){.val=0}, search);
 	return nk_vec2(call->bounds.x + call->bounds.w, y);
 }
 
 static struct nk_vec2 get_input_position(vitype_t *type, slot_t search)
 {
-	int field = 0;
+	uint32_t field = 0;
 	vicall_t *call = get_call(type, search._[0]);
 	float y = call->bounds.y + 33;
-	get_call_input_y(call, &field, call, &y, (slot_t){0}, search);
+	get_call_input_y(call, &field, call, &y, (slot_t){.val=0}, search);
 
 	return nk_vec2(call->bounds.x, y);
 }
 
-static void call_inputs(vicall_t *root, int *field,
+static void call_inputs(vicall_t *root, uint32_t *field,
 		vicall_t *call, float *y, slot_t parent_slot,
 		struct nk_context *nk)
 {
-	int call_field = (*field)++;
+	uint32_t call_field = (*field)++;
 
 	slot_t slot = parent_slot;
 	slot._[slot.depth++] = call->id;
 
 	struct vil_arg *arg = &root->input_args[call_field];
 
-	int is_linking = linking.depth && linking._[0] != root->id;
-	int linking_allowed = is_linking && linking_type == call->type->id
+	uint32_t is_linking = linking.depth && linking._[0] != root->id;
+	uint32_t linking_allowed = is_linking && linking_type == call->type->id
 		&& !root->is_input;
 
-	int is_linked = arg->link.depth;
+	uint32_t is_linked = arg->link.depth;
 
 	float call_h = arg->height;
 
@@ -498,12 +498,12 @@ static void call_inputs(vicall_t *root, int *field,
 	if(call->type->builtin_gui) *y += call_h;
 }
 
-static float call_gui(vicall_t *root, int *field,
+static float call_gui(vicall_t *root, uint32_t *field,
 		char **inherited_data, vicall_t *call, void *nk)
 {
 	vicall_t *it;
 	float call_h = 0.0f;
-	int call_field = (*field)++;
+	uint32_t call_field = (*field)++;
 	char **data = (char**)&root->input_args[call_field].data;
 
 	if(root->input_args[call_field].link.depth || root->is_input)
@@ -561,7 +561,7 @@ const char *vicall_name(const vicall_t *self)
 	return self->name;
 }
 
-int vitype_gui(vitype_t *type, void *nk)
+uint32_t vitype_gui(vitype_t *type, void *nk)
 {
 	struct nk_rect total_space;
 	const struct nk_input *in = &(((struct nk_context *)nk)->input);
@@ -640,7 +640,7 @@ int vitype_gui(vitype_t *type, void *nk)
 						hovered = it;
 					}
 
-					int field = 0;
+					uint32_t field = 0;
 					char *inherited_data = NULL;
 					float h = call_gui(it, &field, &inherited_data, it, nk);
 					it->bounds.h = h;
@@ -663,8 +663,8 @@ int vitype_gui(vitype_t *type, void *nk)
 						if (nk_contextual_begin(nk, 0, nk_vec2(100, 220), bd))
 						{
 							nk_layout_row_dynamic(nk, 25, 1);
-							int field = 0;
-							slot_t sl = {0};
+							uint32_t field = 0;
+							slot_t sl = {.val=0};
 							output_options(it, &field, it, sl, nk);
 							nk_contextual_end(nk);
 						}
@@ -683,8 +683,8 @@ int vitype_gui(vitype_t *type, void *nk)
 					it->bounds = bounds;
 
 
-					slot_t sl = {0};
-					int field = 0;
+					slot_t sl = {.val=0};
+					uint32_t field = 0;
 					/* output connector */
 					call_outputs(it, &field, it, sl, call->bounds.y + 29, nk);
 					/* input connector */
@@ -708,7 +708,7 @@ int vitype_gui(vitype_t *type, void *nk)
 			}
 
 			/* draw each link */
-			int n;
+			uint32_t n;
 			struct nk_command_buffer *canvas = nk_window_get_canvas(nk);
 			for (n = 0; n < type->link_count; ++n)
 			{

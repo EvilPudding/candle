@@ -1,6 +1,7 @@
 #ifndef MODEL_H
 #define MODEL_H
 
+#include <utils/macros.h>
 #include <ecs/ecm.h>
 #include "node.h"
 #include <utils/shader.h>
@@ -76,7 +77,7 @@ struct edit_tool
 	void *defaults;
 	char name[32];
 	uint32_t ref;
-	int require_sys;
+	bool_t require_sys;
 };
 extern struct edit_tool g_edit_tools[];
 
@@ -129,18 +130,18 @@ typedef struct
 	/* int layers_num; */
 	float scale_dist;
 
-	int visible;
-	int cast_shadow;
+	bool_t visible;
+	bool_t cast_shadow;
 	uint32_t visible_group;
 	uint32_t shadow_group;
 	uint32_t transparent_group;
 	uint32_t selectable_group;
 	/* before_draw_cb before_draw; */
-	int xray;
+	bool_t xray;
 
 	drawable_t draw;
 	/* drawable_t select; */
-	int modified;
+	bool_t modified;
 } c_model_t;
 
 DEF_CASTER("model", c_model, c_model_t)
@@ -148,14 +149,14 @@ vs_t *model_vs(void);
 
 void c_model_edit(c_model_t *self, mesh_edit_t type, geom_t target);
 /* void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset); */
-c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow, int visible);
-c_model_t *c_model_cull_face(c_model_t *self, int cull_front, int cull_back);
-c_model_t *c_model_wireframe(c_model_t *self, int wireframe);
-c_model_t *c_model_smooth(c_model_t *self, int smooth);
+c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, bool_t cast_shadow, bool_t visible);
+c_model_t *c_model_cull_face(c_model_t *self, bool_t cull_front, bool_t cull_back);
+c_model_t *c_model_wireframe(c_model_t *self, bool_t wireframe);
+c_model_t *c_model_smooth(c_model_t *self, bool_t smooth);
 c_model_t *c_model_paint(c_model_t *self, mat_t *mat);
-void c_model_set_xray(c_model_t *self, int xray);
-void c_model_set_visible(c_model_t *self, int visible);
-void c_model_set_cast_shadow(c_model_t *self, int cast_shadow);
+void c_model_set_xray(c_model_t *self, bool_t xray);
+void c_model_set_visible(c_model_t *self, bool_t visible);
+void c_model_set_cast_shadow(c_model_t *self, bool_t cast_shadow);
 void c_model_set_vs(c_model_t *self, vs_t *vs);
 void c_model_set_mat(c_model_t *self, mat_t *mat);
 void c_model_set_mesh(c_model_t *self, mesh_t *mesh);

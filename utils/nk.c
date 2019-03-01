@@ -52,7 +52,7 @@ can_default_color_style[NK_COLOR_COUNT] = {
 void nk_draw_image_ext(struct nk_command_buffer *b, struct nk_rect r,
     const struct nk_image *img, struct nk_color col, int no_blending);
 
-#define NK_SHADER_VERSION "#version 400\n"
+#define NK_SHADER_VERSION "#version 300 es\n"
 
 struct nk_can_device {
     struct nk_buffer cmds;

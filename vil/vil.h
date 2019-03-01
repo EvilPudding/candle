@@ -36,18 +36,18 @@ typedef union
 
 void vil_context_init(vil_t *self);
 vitype_t *vil_add_type(vil_t *ctx, const char *name,
-		vitype_gui_cb builtin_gui, int builtin_size);
+		vitype_gui_cb builtin_gui, uint32_t builtin_size);
 vitype_t *vil_get(vil_t *ctx, uint32_t ref);
 
 void vicall_link(vicall_t *root, slot_t in_slot, slot_t out_slot,
-		int field);
+		uint32_t field);
 
 const char *vicall_name(const vicall_t *call);
 void vicall_color(vicall_t *self, vec4_t color);
 
-int vitype_gui(vitype_t *type, void *nk);
+uint32_t vitype_gui(vitype_t *type, void *nk);
 vicall_t *vitype_add(vitype_t *parent, vitype_t *type,
-		const char *name, vec2_t pos, int flags);
+		const char *name, vec2_t pos, uint32_t flags);
 void vitype_add_solver(vitype_t *type, const char *solvespace,
 		visolver_cb solver);
 

@@ -70,7 +70,7 @@ typedef struct vertex_t
 
 	/* Skin */
 	vec4_t  wei;
-	uvec4_t bid;
+	vec4_t bid;
 } vertex_t;
 
 #define v_half(v, m) (m_edge(m, v->half))

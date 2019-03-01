@@ -490,7 +490,7 @@ void c_model_init_drawables(c_model_t *self)
 	drawable_set_vs(&self->draw, model_vs());
 }
 
-c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, int cast_shadow, int visible)
+c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, bool_t cast_shadow, bool_t visible)
 {
 	c_model_t *self = component_new("model");
 	if(c_entity(self) == SYS)
@@ -621,7 +621,7 @@ c_model_t *c_model_cull_invert(c_model_t *self)
 	return self;
 }
 
-c_model_t *c_model_cull_face(c_model_t *self, int cull_front, int cull_back)
+c_model_t *c_model_cull_face(c_model_t *self, bool_t cull_front, bool_t cull_back)
 {
 	self->mesh->cull = cull_front | (cull_back << 1);
 	drawable_model_changed(&self->draw);
@@ -633,13 +633,13 @@ void c_model_set_vs(c_model_t *self, vs_t *vs)
 	drawable_set_vs(&self->draw, vs);
 }
 
-void c_model_set_xray(c_model_t *self, int xray)
+void c_model_set_xray(c_model_t *self, bool_t xray)
 {
 	self->xray = xray;
 	drawable_set_xray(&self->draw, xray);
 }
 
-c_model_t *c_model_smooth(c_model_t *self, int smooth)
+c_model_t *c_model_smooth(c_model_t *self, bool_t smooth)
 {
 	/* self->layers[layer].smooth_angle = smooth; */
 	self->mesh->smooth_angle = smooth;
@@ -648,7 +648,7 @@ c_model_t *c_model_smooth(c_model_t *self, int smooth)
 	return self;
 }
 
-c_model_t *c_model_wireframe(c_model_t *self, int wireframe)
+c_model_t *c_model_wireframe(c_model_t *self, bool_t wireframe)
 {
 	/* self->layers[layer].wireframe = wireframe; */
 	self->mesh->wireframe = wireframe;
@@ -721,7 +721,7 @@ void c_model_set_mat(c_model_t *self, mat_t *mat)
 
 }
 
-void c_model_set_cast_shadow(c_model_t *self, int cast_shadow)
+void c_model_set_cast_shadow(c_model_t *self, bool_t cast_shadow)
 {
 	if(self->cast_shadow == cast_shadow) return;
 
@@ -737,7 +737,7 @@ void c_model_set_cast_shadow(c_model_t *self, int cast_shadow)
 
 }
 
-void c_model_set_visible(c_model_t *self, int visible)
+void c_model_set_visible(c_model_t *self, bool_t visible)
 {
 	self->visible = visible;
 	drawable_set_mesh(&self->draw, visible ? self->mesh : NULL);

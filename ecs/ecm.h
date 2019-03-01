@@ -83,8 +83,6 @@ typedef struct
 	int32_t is_interaction;
 } dep_t;
 
-#define PAGE_SIZE 32
-
 struct comp_page
 {
 	char *components;

@@ -98,7 +98,7 @@ static inline void type##n##_print(type##n##_t const a) \
 	printf(")\n"); \
 }
 
-#define MAFS_DEFINE_VEC(n_t, type, n, sqrt, pow, floor, round) \
+#define MAFS_DEFINE_VEC(n_t, type, n, sqrt, pow, floor, round, tabs) \
 static inline type##n##_t type##n##_add_number(type##n##_t const a, n_t b) \
 { \
 	type##n##_t r; \
@@ -230,7 +230,7 @@ static inline type##n##_t type##n##_abs(type##n##_t a) \
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		r._[i] = fabs(a._[i]); \
+		r._[i] = tabs(a._[i]); \
 	return r; \
 } \
 static inline type##n##_t type##n##_round(type##n##_t a) \
@@ -416,23 +416,24 @@ static inline type##3_t type##3_rotate(const type##3_t v, const type##3_t a, \
 	); \
 }
 
+static inline uint32_t _ignore(uint32_t a) { return a; }
 
-#define MAFS_DEFINE_TYPE(n_t, type, format, sqrt, pow, floor, round) \
+#define MAFS_DEFINE_TYPE(n_t, type, format, sqrt, pow, floor, round, tabs) \
 	MAFS_DEFINE_STRUCTS(n_t, type) \
 	MAFS_DEFINE_CONSTRUCTOR(n_t, type) \
-	MAFS_DEFINE_VEC(n_t, type, 2, sqrt, pow, floor, round) \
-	MAFS_DEFINE_VEC(n_t, type, 3, sqrt, pow, floor, round) \
-	MAFS_DEFINE_VEC(n_t, type, 4, sqrt, pow, floor, round) \
+	MAFS_DEFINE_VEC(n_t, type, 2, sqrt, pow, floor, round, tabs) \
+	MAFS_DEFINE_VEC(n_t, type, 3, sqrt, pow, floor, round, tabs) \
+	MAFS_DEFINE_VEC(n_t, type, 4, sqrt, pow, floor, round, tabs) \
 	MAFS_DEFINE_VEC_PRINT(n_t, type, format, 2) \
 	MAFS_DEFINE_VEC_PRINT(n_t, type, format, 3) \
 	MAFS_DEFINE_VEC_PRINT(n_t, type, format, 4) \
 	MAFS_DEFINE_SPECIFIC(n_t, type, sqrt, pow)
 
 #ifndef __OPENCL_C_VERSION__
-MAFS_DEFINE_TYPE(uint32_t, uvec, "%u", sqrtf, powf, floorf, roundf)
+MAFS_DEFINE_TYPE(uint32_t, uvec, "%u", sqrtf, powf, floorf, roundf, _ignore)
 #endif
-MAFS_DEFINE_TYPE(float, vec, "%f", sqrtf, powf, floorf, roundf)
-MAFS_DEFINE_TYPE(double, d, "%lf", sqrt, pow, floor, round)
+MAFS_DEFINE_TYPE(float, vec, "%f", sqrtf, powf, floorf, roundf, fabs)
+MAFS_DEFINE_TYPE(double, d, "%lf", sqrt, pow, floor, round, fabs)
 
 typedef struct mat4_t { union {
 	struct { vec4_t a, b, c, d; };

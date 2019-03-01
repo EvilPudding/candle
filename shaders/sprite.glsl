@@ -3,10 +3,10 @@
 
 layout (location = 0) out vec4 FragColor;
 
-void main()
+void main(void)
 {
 	/* FragColor = ssr(albedo.texture); */
-	FragColor = texture2D(mat(albedo).texture, texcoord);
+	FragColor = resolveProperty(mat(albedo), texcoord, true);
 }  
 
 // vim: set ft=c:

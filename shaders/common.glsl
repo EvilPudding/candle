@@ -23,13 +23,38 @@ flat in vec3 obj_pos;
 flat in uvec2 id;
 flat in mat4 model;
 flat in uint matid;
-flat in vec2 poly_id;
+flat in uvec2 poly_id;
 
 in vec3 poly_color;
 in vec3 vertex_position;
 in vec2 texcoord;
 in mat3 TM;
 
+vec2 sampleCube(const vec3 v, out float faceIndex)
+{
+	vec3 vAbs = abs(v);
+	float ma;
+	vec2 uv;
+	if(vAbs.z >= vAbs.x && vAbs.z >= vAbs.y)
+	{
+		faceIndex = v.z < 0.0 ? 5.0 : 4.0;
+		ma = 0.5 / vAbs.z;
+		uv = vec2(v.z < 0.0 ? -v.x : v.x, -v.y);
+	}
+	else if(vAbs.y >= vAbs.x)
+	{
+		faceIndex = v.y < 0.0 ? 3.0 : 2.0;
+		ma = 0.5 / vAbs.y;
+		uv = vec2(v.x, v.y < 0.0 ? -v.z : v.z);
+	}
+	else
+	{
+		faceIndex = v.x < 0.0 ? 1.0 : 0.0;
+		ma = 0.5 / vAbs.x;
+		uv = vec2(v.x < 0.0 ? v.z : -v.z, -v.y);
+	}
+	return uv * ma + 0.5;
+}
 
 vec2 pixel_pos()
 {
@@ -37,17 +62,80 @@ vec2 pixel_pos()
 	return gl_FragCoord.xy / screen_size;
 }
 
+// Does not take into account GL_TEXTURE_MIN_LOD/GL_TEXTURE_MAX_LOD/GL_TEXTURE_LOD_BIAS,
+// nor implementation-specific flexibility allowed by OpenGL spec
+float mip_map_scalar(in vec2 texture_coordinate) // in texel units
+{
+    vec2 dx_vtc = dFdx(texture_coordinate);
+    vec2 dy_vtc = dFdy(texture_coordinate);
+    return max(dot(dx_vtc, dx_vtc), dot(dy_vtc, dy_vtc));
+}
+#define MAX_MIPS 9
+float mip_map_level(in vec2 texture_coordinate) // in texel units
+{
+	return clamp(0.5 * log2(mip_map_scalar(texture_coordinate)), 0.0, float(MAX_MIPS - 1));
+}
 
-vec4 resolveProperty(property_t prop, vec2 coords)
+#define g_indir_w 256
+#define g_indir_h 64
+#define g_cache_w 64
+#define g_cache_h 32
+
+vec4 solveMip(const property_t prop, int mip, vec2 coords, bool draw)
+{
+	int tiles_per_row = int(ceil(float(prop.size.x) / 128.0));
+	int tiles_per_col = int(ceil(float(prop.size.y) / 128.0));
+	int offset = prop.layer;
+
+	for (int i = 0; i < MAX_MIPS && i < mip; i++)
+	{
+		offset += tiles_per_row * tiles_per_col;
+		tiles_per_row = int(ceil(0.5 * float(tiles_per_row)));
+		tiles_per_col = int(ceil(0.5 * float(tiles_per_col)));
+		coords.x /= 2.0;
+		coords.y /= 2.0;
+	}
+	vec2 intile_coords = mod(vec2(coords), 128.0) + 0.5f;
+
+	int x = int(floor(coords.x / 128.0));
+	int y = int(floor(coords.y / 128.0));
+	int tex_tile = y * tiles_per_row + x + offset;
+	/* int tex_tile = offset; */
+
+	vec3 info = texelFetch(g_indir, ivec2(tex_tile % g_indir_w, tex_tile / g_indir_w), 0).rgb;
+	int cache_tile = int(info.r * 255.0) + int(info.g * (256.0 * 255.0));
+
+	ivec2 cache_coords = ivec2(cache_tile % g_cache_w, cache_tile / g_cache_w) * 129;
+	/* if ( draw && ( intile_coords.x >= 126.0 || intile_coords.y >= 126.0 || */
+	    /* intile_coords.x <= 1.0 || intile_coords.y <= 1.0)) */
+		/* return vec4(0.0, 1.0, 0.0, 1.0); */
+	const vec2 g_cache_size = vec2(g_cache_w * 129, g_cache_h * 129);
+	return textureLod(g_cache,
+			(vec2(cache_coords) + intile_coords) / g_cache_size, 0.0);
+	/* return texelFetch(g_cache, cache_coords + ivec2(floor(intile_coords)), 0); */
+}
+
+vec4 textureSVT(const property_t prop, vec2 coords, bool draw)
+{
+	coords.y = 1.0 - coords.y;
+	coords *= prop.scale;
+	vec2 rcoords = fract(coords) * vec2(prop.size);
+	float mip = mip_map_level(coords * vec2(prop.size));
+	int mip0 = int(floor(mip));
+	int mip1 = int(ceil(mip));
+
+	return mix(solveMip(prop, mip0, rcoords, draw), solveMip(prop, mip1, rcoords, draw), fract(mip));
+	/* return solveMip(prop, 0, rcoords, draw); */
+}
+
+vec4 resolveProperty(property_t prop, vec2 coords, bool draw)
 {
 	/* vec3 tex; */
 	if(prop.blend > 0.001)
 	{
-		coords *= prop.scale;
 		return mix(
 			prop.color,
-			texture(prop.texture, vec2(coords.x, 1.0-coords.y)),
-			/* textureLod(prop.texture, prop.scale * coords, 3.0), */
+			textureSVT(prop, coords, draw),
 			prop.blend
 		);
 	}
@@ -59,7 +147,11 @@ vec4 resolveProperty(property_t prop, vec2 coords)
 
 float lookup_single(vec3 shadowCoord)
 {
-	return texture(light(shadow_map), shadowCoord).a;
+	float light_layer = float(light(layer));
+	float cube_layer;
+	vec2 tc = sampleCube(shadowCoord, cube_layer);
+	/* return texture(shadow_map, vec3(tc, light_layer + cube_layer)).a; */
+	return 0.0f;
 }
 
 /* float prec = 0.05; */
@@ -94,7 +186,7 @@ vec3 decode_normal(vec2 enc)
 
 float get_metalness()
 {
-	return resolveProperty(mat(metalness), texcoord).r;
+	return resolveProperty(mat(metalness), texcoord, false).r;
 }
 
 vec3 get_position(sampler2D depth)
@@ -124,7 +216,7 @@ vec3 get_normal(vec2 tc)
 	vec3 norm;
 	if(has_tex)
 	{
-		vec3 texcolor = resolveProperty(mat(normal), tc).rgb * 2.0 - 1.0;
+		vec3 texcolor = resolveProperty(mat(normal), tc, false).rgb * 2.0 - 1.0;
 		norm = TM * texcolor;
 
 	}
@@ -432,7 +524,7 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
     float adjacentLength = length(deltaP);
     vec2 adjacentUnit = normalize(deltaP);
 
-	int numMips = textureQueryLevels(screen);
+	int numMips = MAX_MIPS;
     vec4 reflect_color = vec4(0.0);
     float remainingAlpha = 1.0;
     float maxMipLevel = 3.0;
@@ -701,7 +793,6 @@ vec4 pbr(vec4 base_color, vec2 metallic_roughness,
 /* 	return */
 /* 		PCF_Filter( uv, zReceiver, filterRadiusUV ); */ 
 /* } */
-
 
 #endif
 

@@ -84,20 +84,20 @@ static void c_light_create_renderer(c_light_t *self)
 {
 	renderer_t *renderer = renderer_new(1.0f);
 
-	texture_t *output =	texture_cubemap(self->shadow_size, self->shadow_size, 1);
+	/* texture_t *output =	texture_cubemap(self->shadow_size, self->shadow_size, 1); */
 
-	renderer_add_pass(renderer, "depth", "depth", self->visible_group,
-			CULL_DISABLE, output, output, 0,
-			(bind_t[]){
-				{CLEAR_DEPTH, .number = 1.0f},
-				{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, self->radius)},
-				{NONE}
-			}
-	);
+	/* renderer_add_pass(renderer, "depth", "depth", self->visible_group, */
+	/* 		CULL_DISABLE, output, output, 0, */
+	/* 		(bind_t[]){ */
+	/* 			{CLEAR_DEPTH, .number = 1.0f}, */
+	/* 			{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, self->radius)}, */
+	/* 			{NONE} */
+	/* 		} */
+	/* ); */
 
 	renderer_resize(renderer, self->shadow_size, self->shadow_size);
 
-	renderer_set_output(renderer, output);
+	/* renderer_set_output(renderer, output); */
 
 	self->renderer = renderer;
 }
@@ -236,7 +236,7 @@ static int c_light_draw(c_light_t *self)
 	if(self->visible && self->renderer && self->radius > 0 &&
 			self->visible_group && self->frames_passed <= 0)
 	{
-		renderer_draw(self->renderer);
+		/* renderer_draw(self->renderer); */
 	}
 	return CONTINUE;
 }

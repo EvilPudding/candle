@@ -10,8 +10,11 @@ BUFFER {
 	sampler2D nmr;
 } gbuffer;
 
-void main()
+void main(void)
 {
+	float depth = textureLod(gbuffer.depth, pixel_pos(), 0.0).r;
+	if (depth > gl_FragCoord.z) discard;
+
 	ivec2 fc = ivec2(gl_FragCoord.xy);
 	vec4 dif = texelFetch(gbuffer.albedo, fc, 0);
 	if(dif.a == 0.0) discard;
@@ -53,11 +56,11 @@ void main()
 		float sd = 0.0f;
 		if(dif.a >= 1.0)
 		{
-			sd = get_shadow(w_light_dir, point_to_light, dist_to_eye, depth);
+			/* sd = get_shadow(w_light_dir, point_to_light, dist_to_eye, depth); */
 		}
 		/* FragColor = vec4(vec3(texture(light(shadow_map), vec3(c_pos)).a) / 10.0, 1.0); return; */
 		/* FragColor = vec4(vec3(lookup_single(-w_light_dir)) / 10.0, 1.0); return; */
-		/* sd = 0; */
+		sd = 0.0;
 
 
 		if(sd < 0.95)

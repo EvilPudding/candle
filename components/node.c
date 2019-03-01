@@ -16,7 +16,7 @@ static void c_node_init(c_node_t *self)
 	self->parent = entity_null;
 }
 
-static int c_node_created(c_node_t *self)
+int32_t c_node_created(c_node_t *self)
 {
 	if(c_entity(self) != SYS)
 	{

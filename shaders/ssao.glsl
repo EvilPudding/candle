@@ -9,7 +9,7 @@ BUFFER {
 	sampler2D nmr;
 } gbuffer;
 
-void main()
+void main(void)
 {
 	vec3 c_pos_o = get_position(gbuffer.depth);
 	vec3 c_nor = get_normal(gbuffer.nmr);

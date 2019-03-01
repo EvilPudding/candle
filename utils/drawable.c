@@ -67,7 +67,7 @@ void varray_vert_prealloc(varray_t *self, int32_t size)
 	self->tex = realloc(self->tex, self->vert_alloc * sizeof(*self->tex));
 	self->tan = realloc(self->tan, self->vert_alloc * sizeof(*self->tan));
 	self->col = realloc(self->col, self->vert_alloc * sizeof(*self->col));
-	if(self->mesh->has_skin)
+	/* if(self->mesh->has_skin) */
 	{
 		self->wei = realloc(self->wei, self->vert_alloc * sizeof(*self->wei));
 		self->bid = realloc(self->bid, self->vert_alloc * sizeof(*self->bid));
@@ -341,7 +341,8 @@ static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
 
 	self->props[i].x = draw->mat;
 	self->props[i].y = 0;/*TODO: use y for something;*/
-	self->props[i].zw = entity_to_uvec2(draw->entity);
+	uvec2_t ent = entity_to_uvec2(draw->entity);
+	self->props[i].zw = vec2(_vec2(ent));
 	self->comps[i] = &draw->grp[gid];
 	self->inst[i] = draw->transform;
 
@@ -352,7 +353,9 @@ static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
 	self->trans_updates++;
 	self->props_updates++;
 
+#ifndef __EMSCRIPTEN__
 	SDL_SemPost(self->semaphore);
+#endif
 	return i;
 }
 
@@ -365,7 +368,7 @@ static int32_t varray_add_vert(
 		vec3_t c,
 		int32_t id,
 		vec4_t wei,
-		uvec4_t bid)
+		vec4_t bid)
 {
 	/* int32_t i = draw_conf_get_vert(self, p, n, t); */
 	/* if(i >= 0) return i; */
@@ -379,7 +382,7 @@ static int32_t varray_add_vert(
 	self->col[i] = c;
 	self->id[i] = int_to_vec2(id);
 
-	if(self->mesh->has_skin)
+	/* if(self->mesh->has_skin) */
 	{
 		self->bid[i] = bid;
 		self->wei[i] = wei;
@@ -388,26 +391,31 @@ static int32_t varray_add_vert(
 	return i;
 }
 
-void varray_add_line(varray_t *self, int32_t v1, int32_t v2)
+void varray_add_line(varray_t *self, vertid_t v1, vertid_t v2)
 {
 	int32_t i = self->ind_num;
 
 	self->ind_num += 2;
 	varray_ind_grow(self);
 
-	self->ind[i + 0] = v1;
-	self->ind[i + 1] = v2;
+	memcpy(&self->ind[i + 0], &v1, sizeof(*self->ind));
+	memcpy(&self->ind[i + 1], &v2, sizeof(*self->ind));
+	/* self->ind[i + 0] = v1; */
+	/* self->ind[i + 1] = v2; */
 }
 
-void varray_add_triangle(varray_t *self, int32_t v1, int32_t v2, int32_t v3)
+void varray_add_triangle(varray_t *self, vertid_t v1, vertid_t v2, vertid_t v3)
 {
 	int32_t i = self->ind_num;
 	self->ind_num += 3;
 	varray_ind_grow(self);
 
-	self->ind[i + 0] = v1;
-	self->ind[i + 1] = v2;
-	self->ind[i + 2] = v3;
+	memcpy(&self->ind[i + 0], &v1, sizeof(*self->ind));
+	memcpy(&self->ind[i + 1], &v2, sizeof(*self->ind));
+	memcpy(&self->ind[i + 2], &v3, sizeof(*self->ind));
+	/* self->ind[i + 0] = v1; */
+	/* self->ind[i + 1] = v2; */
+	/* self->ind[i + 2] = v3; */
 
 	/* vec2_print(self->id[v1]); */
 	/* vec2_print(self->id[v2]); */
@@ -433,9 +441,9 @@ void varray_edges_to_gl(varray_t *self)
 		vertex_t *V1 = e_vert(curr_edge, mesh);
 		vertex_t *V2 = e_vert(next_edge, mesh);
 		int32_t v1 = varray_add_vert(self, V1->pos,
-				vec3(0.0f), vec2(0.0f), vec3(0.0f), V1->color.xyz, 0, vec4(0,0,0,0), uvec4(0,0,0,0));
+				vec3(0.0f), vec2(0.0f), vec3(0.0f), V1->color.xyz, 0, vec4(0,0,0,0), vec4(0,0,0,0));
 		int32_t v2 = varray_add_vert(self, V2->pos,
-				vec3(0.0f), vec2(0.0f), vec3(0.0f), V2->color.xyz, 0, vec4(0,0,0,0), uvec4(0,0,0,0));
+				vec3(0.0f), vec2(0.0f), vec3(0.0f), V2->color.xyz, 0, vec4(0,0,0,0), vec4(0,0,0,0));
 
 		varray_add_line(self, v1, v2);
 
@@ -486,14 +494,14 @@ static void bind_buffer(uint32_t *vbo, int32_t id, uint32_t type, int32_t dim,
 
 		glEnableVertexAttribArray(id); glerr();
 
-		if(type == GL_FLOAT)
+		/* if(type == GL_FLOAT) */
 		{
 			glVertexAttribPointer(id, step, type, GL_FALSE, size, offset);
 		}
-		else
-		{
-			glVertexAttribIPointer(id, step, type, size, offset);
-		}
+		/* else */
+		/* { */
+			/* glVertexAttribIPointer(id, step, type, size, offset); */
+		/* } */
 
 		glVertexAttribDivisor(id, instanced_divisor); glerr();
 
@@ -533,7 +541,9 @@ static void draw_conf_remove_instance(draw_conf_t *self, int32_t id)
 		puts("??");
 		return;
 	}
+#ifndef __EMSCRIPTEN__
 	SDL_SemWait(self->semaphore);
+#endif
 	int32_t last = --self->inst_num;
 
 	self->comps[id]->conf = NULL;
@@ -554,7 +564,9 @@ static void draw_conf_remove_instance(draw_conf_t *self, int32_t id)
 		self->props_updates++;
 	}
 
+#ifndef __EMSCRIPTEN__
 	SDL_SemPost(self->semaphore);
+#endif
 }
 
 varray_t *varray_get(mesh_t *mesh)
@@ -653,23 +665,27 @@ void drawable_model_changed(drawable_t *self)
 		if(!conf) continue;
 
 		/* BUFFEREABLE INSTANCE PROPERTIES */ 
-		uvec4_t *props = &grp->conf->props[grp->instance_id];
+		vec4_t *props = &grp->conf->props[grp->instance_id];
 		uvec2_t new_ent = entity_to_uvec2(self->entity);
 
-		uvec4_t new_props = uvec4(
+		vec4_t new_props = vec4(
 				self->mat,
 				0 /* TODO use y for something */,
 				new_ent.x,
 				new_ent.y);
 
-		if(!uvec4_equals(*props, new_props))
+		if(!vec4_equals(*props, new_props))
 		{
 			*props = new_props;
 			if(!(grp->updates & MASK_PROPS))
 			{
+#ifndef __EMSCRIPTEN__
 				SDL_SemWait(conf->semaphore);
+#endif
 				conf->props_updates++;
+#ifndef __EMSCRIPTEN__
 				SDL_SemPost(conf->semaphore);
+#endif
 				grp->updates |= MASK_PROPS;
 			}
 		}
@@ -791,7 +807,7 @@ static void varray_update_buffers(varray_t *self)
 		/* COLOR BUFFER */
 		create_buffer(&vbo[5], self->col, 3, self->vert_num, 0);
 
-		if(self->mesh->has_skin)
+		/* if(self->mesh->has_skin) */
 		{
 			/* BONEID BUFFER */
 			create_buffer(&vbo[6], self->bid, 4, self->vert_num, 0);
@@ -832,7 +848,7 @@ static void varray_update_buffers(varray_t *self)
 		/* COLOR BUFFER */
 		update_buffer(&vbo[5], self->col, 3, self->vert_num, 0); glerr();
 
-		if(self->mesh->has_skin)
+		/* if(self->mesh->has_skin) */
 		{
 			/* BONEID BUFFER */
 			update_buffer(&vbo[6], self->bid, 4, self->vert_num, 0); glerr();
@@ -848,7 +864,7 @@ static void varray_update_buffers(varray_t *self)
 		glerr();
 
 	}
-	self->updating = 0;
+	self->updating = false;
 }
 
 void varray_update(varray_t *self)
@@ -859,7 +875,7 @@ void varray_update(varray_t *self)
 	{
 		mesh_lock_write(self->mesh);
 
-		self->updating = 1;
+		self->updating = true;
 		glBindVertexArray(0); glerr();
 
 		varray_update_ram(self);
@@ -886,15 +902,15 @@ static void varray_bind(varray_t *self)
 	bind_buffer(&vbo[3], 3, GL_FLOAT, 3, 0);
 
 	/* ID BUFFER */
-	bind_buffer(&vbo[4], 4, GL_UNSIGNED_INT, 2, 0);
+	bind_buffer(&vbo[4], 4, GL_FLOAT, 2, 0);
 
 	/* COLOR BUFFER */
 	bind_buffer(&vbo[5], 5, GL_FLOAT, 3, 0);
 
-	if(self->mesh->has_skin)
+	/* if(self->mesh->has_skin) */
 	{
 		/* BONEID BUFFER */
-		bind_buffer(&vbo[6], 6, GL_UNSIGNED_INT, 4, 0);
+		bind_buffer(&vbo[6], 6, GL_FLOAT, 4, 0);
 
 		/* BONE WEIGHT BUFFER */
 		bind_buffer(&vbo[7], 7, GL_FLOAT, 4, 0);
@@ -915,7 +931,7 @@ static void draw_conf_update_vao(draw_conf_t *self)
 	bind_buffer(&self->vbo[8], 8, GL_FLOAT, 16, 1);
 
 	/* PROPERTY BUFFER */
-	bind_buffer(&self->vbo[12], 12, GL_UNSIGNED_INT, 4, 1);
+	bind_buffer(&self->vbo[12], 12, GL_FLOAT, 4, 1);
 
 #ifdef MESH4
 	/* 4D ANGLE BUFFER */
@@ -937,15 +953,18 @@ static void draw_conf_update_skin(draw_conf_t *self)
 	}
 	if(self->last_skin_update == skin->update_id) return;
 	self->last_skin_update = skin->update_id;
-	void *p = glMapNamedBuffer(self->skin, GL_WRITE_ONLY);
+	glBindBuffer(GL_UNIFORM_BUFFER, self->skin); glerr();
+	void *p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
 	memcpy(p, &skin->transforms[0], skin->bones_num * sizeof(mat4_t));
-	glUnmapNamedBuffer(self->skin); glerr();
+	glUnmapBuffer(GL_UNIFORM_BUFFER); glerr();
 }
 
 int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 {
 	if(!self || !self->inst_num) return 0;
+#ifndef __EMSCRIPTEN__
 	SDL_SemWait(self->semaphore);
+#endif
 	mesh_t *mesh = self->vars.mesh;
 	/* printf("%d %p %d %s\n", self->vars.transparent, self->vars.mesh, */
 			/* self->vars.xray, self->vars.vs->name); */
@@ -953,6 +972,11 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	if(!self->varray) self->varray = varray_get(self->vars.mesh);
 
 	varray_update(self->varray);
+
+	if (self->varray->ind_num == 0)
+	{
+		goto end;
+	}
 
 	draw_conf_update_inst(self, instance_id);
 
@@ -965,7 +989,7 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 		glBindBufferBase(GL_UNIFORM_BUFFER, 21, self->skin); glerr();
 	}
 
-	vs_bind(self->vars.vs);
+	shader_t *shader = vs_bind(self->vars.vs);
 
 	int32_t cull_was_enabled = glIsEnabled(GL_CULL_FACE);
 	if(mesh->cull)
@@ -978,14 +1002,18 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 		glDisable(GL_CULL_FACE); glerr();
 	}
 
-	glUniform1ui(23, mesh->has_texcoords);
-	glUniform1ui(25, mesh->receive_shadows);
+	glUniform1i(shader_uniform(shader, "has_tex", NULL), mesh->has_texcoords);
+	glUniform1i(shader_uniform(shader, "receive_shadows", NULL),
+	                           mesh->receive_shadows);
 
 	glBindVertexArray(self->vao); glerr();
 
-	glLineWidth(3);
+	glLineWidth(3); glerr();
 
+#ifndef __EMSCRIPTEN__
 	glPolygonMode(GL_FRONT_AND_BACK, mesh->wireframe ? GL_LINE : GL_FILL);
+	glerr();
+#endif
 
 	if(self->vars.xray) glDepthRange(0, 0.01);
 
@@ -993,31 +1021,40 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	if(vector_count(mesh->faces))
 	{
 		primitive = GL_TRIANGLES;
-		glUniform1ui(24, 1);
+		glUniform1i(shader_uniform(shader, "has_normals", NULL), 1);
+		glerr();
 	}
 	else
 	{
 
 		primitive = GL_LINES;
-		glUniform1ui(24, 0);
+		glUniform1i(shader_uniform(shader, "has_normals", NULL), 0);
+		glerr();
 	}
+	if (self->inst_num == 1) instance_id = 0;
 	
 	if(instance_id == -1)
 	{
-		glDrawElementsInstancedBaseInstance(primitive,
-				self->varray->ind_num, GL_UNSIGNED_INT, 0, self->inst_num, 0);
-		glerr();
+		glDrawElementsInstanced(primitive, self->varray->ind_num, IDTYPE,
+		                        0, self->inst_num); glerr();
 	}
 	else
 	{
-		glDrawElementsInstancedBaseInstance(primitive,
-				self->varray->ind_num, GL_UNSIGNED_INT, 0, 1, instance_id);
+		/* glDrawElementsInstancedBaseInstance(primitive, */
+		/* 		self->varray->ind_num, GL_UNSIGNED_INT, 0, 1, instance_id); */
+		glDrawElements(primitive, self->varray->ind_num, IDTYPE, 0);
+
+		/* glDrawArraysOneInstance(primitive, instance_id, self->varray->ind_num, int instance ); */
 		glerr();
 	}
+	if(cull_was_enabled) glEnable(GL_CULL_FACE);
+
+end:
+#ifndef __EMSCRIPTEN__
 	SDL_SemPost(self->semaphore);
+#endif
 
 	glDepthRange(0.0, 1.00);
-	if(cull_was_enabled) glEnable(GL_CULL_FACE);
 
 	return 1;
 
@@ -1025,7 +1062,6 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 
 int32_t drawable_draw(drawable_t *self)
 {
-
 	/* if(self->conf->vars.scale_dist > 0.0f) */
 	/* { */
 	/* 	c_node_update_model(node); */
@@ -1238,6 +1274,7 @@ static int32_t draw_group_draw(draw_group_t *self)
 	if(!self) return 0;
 	int32_t res = 0;
 	khiter_t k;
+
 	for(k = kh_begin(self); k != kh_end(self); ++k)
 	{
 		if(!kh_exist(self, k)) continue;

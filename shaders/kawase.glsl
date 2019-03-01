@@ -28,7 +28,8 @@ vec3 fetch(ivec2 coord)
 		   fs(coord + ivec2(1, 1)) +
 		   fs(coord + ivec2(0, 1));
 }
-void main()
+
+void main(void)
 {
 	ivec2 tc = ivec2(gl_FragCoord.xy);
 	vec3 c = vec3(0.0);

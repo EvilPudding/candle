@@ -12,7 +12,7 @@ BUFFER {
 	sampler2D color;
 } buf;
 
-void main()
+void main(void)
 {
 	ivec2 tc = ivec2(gl_FragCoord);
 	vec3 c = texelFetch(buf.color, pp, 0).rgb * weight[0];

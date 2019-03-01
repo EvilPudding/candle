@@ -4,9 +4,12 @@
 #include <SDL2/SDL.h>
 #include <GL/glew.h>
 #include <SDL2/SDL_opengl.h>
-#ifndef WIN32
+#ifdef EMSCRIPTEN
+#elif LINUX
 #include <GL/glx.h>
+#else
 #endif
+
 #include "mafs.h"
 
 #define glerr() _check_gl_error(__FILE__,__LINE__)

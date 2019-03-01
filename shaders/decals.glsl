@@ -10,8 +10,10 @@ BUFFER {
 	/* sampler2D nmr; */
 } gbuffer;
 
-void main()
+void main(void)
 {
+	float depth = textureLod(gbuffer.depth, pixel_pos(), 0.0).r;
+	if(depth > gl_FragCoord.z) discard;
 
 	/* vec2 pos = pixel_pos(); */
 	/* vec3 pos3 = textureLod(gbuffer.wposition, pos, 0).rgb ; */
@@ -25,17 +27,17 @@ void main()
 	if(diff.z > 0.5) discard;
 	vec2 tc = m_pos.xy - 0.5;
 
-	vec3 vnorm = resolveProperty(mat(normal), tc).rgb * 2.0 - 1.0;
+	vec3 vnorm = resolveProperty(mat(normal), tc, false).rgb * 2.0 - 1.0;
 	/* vnorm = vec3(0.0, 0.0, 1.0); */
 
 	vec3 norm = ((camera(view) * model) * vec4(vnorm, 0.0)).xyz;
 	/* if(dot(norm, get_normal(gbuffer.nmr)) < 0.5) discard; */
 
 	/* AlbedoColor = vec4(get_normal(gbuffer.nmr), 1); */
-	AlbedoColor = resolveProperty(mat(albedo), tc);
+	AlbedoColor = resolveProperty(mat(albedo), tc, true);
 
-	NRM.b = resolveProperty(mat(roughness), tc).r;
-	NRM.a = resolveProperty(mat(metalness), tc).r;
+	NRM.b = resolveProperty(mat(roughness), tc, false).r;
+	NRM.a = resolveProperty(mat(metalness), tc, false).r;
 	NRM.rg = encode_normal(norm);
 
 }

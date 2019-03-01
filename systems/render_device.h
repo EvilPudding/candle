@@ -16,17 +16,19 @@ typedef struct uniform_t uniform_t;
 struct gl_light
 {
 	vec4_t color;
-	uint64_t shadow_map;
 	float radius;
-	float padding;
+	int32_t layer;
+	vec2_t padding;
 };
 
 struct gl_property
 {
 	vec4_t color;
+	uvec2_t size;
 	float blend;
 	float scale;
-	uint64_t texture;
+	vec3_t padding;
+	int32_t layer;
 };
 
 struct gl_material
@@ -47,7 +49,7 @@ struct gl_pass
 
 struct gl_scene
 {
-	struct gl_material materials[255];
+	struct gl_material materials[128];
 	struct gl_light lights[255];
 	vec4_t test_color;
 };
@@ -71,6 +73,7 @@ typedef struct c_render_device_t
 	int updates_ram;
 	int updates_ubo;
 	int frame;
+	uint32_t bound_ubos[32];
 } c_render_device_t;
 
 DEF_CASTER("render_device", c_render_device, c_render_device_t)
@@ -81,5 +84,8 @@ void c_render_device_rebind(
 		void(*bind_function)(void *usrptr, shader_t *shader),
 		void *usrptr);
 void world_changed(void);
+void c_render_device_bind_ubo(c_render_device_t *self, uint32_t base,
+                              uint32_t ubo);
+
 
 #endif /* !RENDER_DEVICE_H */

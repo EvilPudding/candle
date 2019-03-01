@@ -9,6 +9,11 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <emscripten/html5.h>
+#endif
+
 int window_width = 1360;
 int window_height = 766;
 
@@ -21,11 +26,40 @@ extern SDL_Window *mainWindow;
 
 static void init_context_b(c_window_t *self)
 {
+/* #ifdef __EMSCRIPTEN__ */
+
+/* 	emscripten_set_canvas_element_size("#canvas", self->width, self->height); */
+
+/* 	EmscriptenWebGLContextAttributes attrs; */
+/* 	emscripten_webgl_init_context_attributes(&attrs); */
+/* 	attrs.antialias = false; */
+/* 	attrs.majorVersion = 2; */
+/* 	attrs.minorVersion = 0; */
+/* 	attrs.alpha = false; */
+/* 	attrs.depth = true; */
+/* 	EMSCRIPTEN_WEBGL_CONTEXT_HANDLE ctx = emscripten_webgl_create_context(0, &attrs); */
+
+/* 	if (emscripten_webgl_enable_extension(ctx, "EXT_color_buffer_float") == EM_FALSE) printf("%d\n", __LINE__); */
+/* 	if (emscripten_webgl_enable_extension(ctx, "GL_EXT_color_buffer_float") == EM_FALSE) printf("%d\n", __LINE__); */
+/* 	/1* if (emscripten_webgl_enable_extension(ctx, "EXT_texture_filter_anisotropic") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
+/* 	/1* if (emscripten_webgl_enable_extension(ctx, "GL_EXT_texture_filter_anisotropic") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
+/* 	/1* if (emscripten_webgl_enable_extension(ctx, "OES_texture_float_linear") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
+/* 	/1* if (emscripten_webgl_enable_extension(ctx, "GL_OES_texture_float_linear") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
+/* 	/1* if (emscripten_webgl_enable_extension(ctx, "WEBGL_lose_context") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
+/* 	/1* if (emscripten_webgl_enable_extension(ctx, "WEBGL_depth_texture") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
+/* 	/1* if (emscripten_webgl_enable_extension(ctx, "GL_WEBGL_lose_context") == EM_FALSE) printf("%d\n", __LINE__); *1/ */
+/* 	emscripten_webgl_make_context_current(ctx); */
+/* #else */
 	mainWindow = self->window = SDL_CreateWindow("Candle",
 			SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 			self->width, self->height,
 			SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
 			| SDL_WINDOW_ALLOW_HIGHDPI);
+	if (!mainWindow)
+	{
+		printf("Window could not be created! SDL Error: %s\n",
+				SDL_GetError());
+	}
 
 	context = self->context = SDL_GL_CreateContext(self->window);
 
@@ -35,43 +69,64 @@ static void init_context_b(c_window_t *self)
 				SDL_GetError());
 		exit(1);
 	}
+/* #endif */
+
+#ifdef __EMSCRIPTEN__
+	if (!SDL_GL_ExtensionSupported("EXT_color_buffer_float")) {
+		exit(1);
+	}
+	/* emscripten_run_script( */
+	/* 		"function throwOnGLError(err, funcName, args) {\n" */
+	/* 		"throw WebGLDebugUtils.glEnumToString(err) + ' was caused by call to: ' + funcName;\n" */
+	/* 		"};\n" */
+	/* 		"canvas = document.getElementById('canvas');\n" */
+	/* 		"gl = canvas.getContext('webgl2');\n" */
+	/* 		"gl = WebGLDebugUtils.makeDebugContext(gl, throwOnGLError);\n"); */
+#endif
 
 	glInit();
 
 	glDepthFunc(GL_LESS); glerr();
-
 	const GLubyte *renderer = glGetString( GL_RENDERER );
 	const GLubyte *vendor = glGetString( GL_VENDOR );
 	const GLubyte *version = glGetString( GL_VERSION );
 	const GLubyte *glslVersion = glGetString(GL_SHADING_LANGUAGE_VERSION);
 
-	GLint major, minor;
-	glGetIntegerv(GL_MAJOR_VERSION, &major);
-	glGetIntegerv(GL_MINOR_VERSION, &minor);
+	/* GLint major, minor; */
+	/* glGetIntegerv(GL_MAJOR_VERSION, &major); */
+	/* glGetIntegerv(GL_MINOR_VERSION, &minor); */
+	/* glerr(); */
 	printf("GL Vendor : %s\n", vendor);
 	printf("GL Renderer : %s\n", renderer);
 	printf("GL Version (string) : %s\n", version);
-	printf("GL Version (integer) : %d.%d\n", major, minor);
+	/* printf("GL Version (integer) : %d.%d\n", major, minor); */
 	printf("GLSL Version : %s\n", glslVersion); 
 
 }
 
 void c_window_init(c_window_t *self)
 {
-	SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
 	SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER|SDL_INIT_EVENTS);
 	/* SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, */
 			/* SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); */
 
+	SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
 	self->width = window_width;
 	self->height = window_height;
 
 	/* SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1); */
 
+#ifdef __EMSCRIPTEN__
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
+#else
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
 			SDL_GL_CONTEXT_PROFILE_CORE);
+#endif
 
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
@@ -204,6 +259,7 @@ int c_window_draw(c_window_t *self)
 		return CONTINUE;
 	}
 
+	/* glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE); glerr(); */
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); glerr();
 	/* glClear(GL_COLOR_BUFFER_BIT); */
 	glClear(GL_DEPTH_BUFFER_BIT);
@@ -214,12 +270,18 @@ int c_window_draw(c_window_t *self)
 
 	shader_t *shader = vs_bind(g_quad_vs);
 	uint32_t uni = shader_uniform(shader, "tex", NULL);
-	glUniformHandleui64ARB(uni, texture_handle(tex, tex->draw_id));
+	glUniform1i(uni, 0);
+	glActiveTexture(GL_TEXTURE0);
+	texture_bind(tex, tex->draw_id);
 
-	glUniform2f(22, self->width, self->height); glerr();
+	uint32_t ss = shader_uniform(shader, "screen_size", NULL);
+	glUniform2f(ss, self->width, self->height); glerr();
 
 	drawable_draw(&self->draw);
 	glerr();
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 	return CONTINUE;
 }
 

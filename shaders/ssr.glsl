@@ -22,7 +22,7 @@ BUFFER {
 	sampler2D color;
 } refr;
 
-void main()
+void main(void)
 {
 	ivec2 fc = ivec2(gl_FragCoord.xy);
 	vec4 cc = texelFetch(light.color, fc, 0);
@@ -38,7 +38,8 @@ void main()
 
     /* FragColor = vec4(vec3(texelFetch(portal.depth, fc, 0).r), 1.0); return; */
 
-    cc.rgb *= texelFetch(ssao.occlusion, fc, 0).r;
+    /* cc.rgb *= texelFetch(ssao.occlusion, fc, 0).r; */
+	cc.rgb *= texelFetch(ssao.occlusion, fc, 0).r;
 
 	vec3 final = cc.rgb + ssred.rgb * ssred.a;
 
