@@ -498,6 +498,7 @@ void renderer_default_pipeline(renderer_t *self)
 			{CLEAR_DEPTH, .number = 1.0f},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{INT, "transparent", .integer = false},
+			{SKIP, .integer = 4},
 			{NONE}
 		}
 	);
@@ -507,6 +508,7 @@ void renderer_default_pipeline(renderer_t *self)
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
 			{INT, "transparent", .integer = false},
+			{SKIP, .integer = 4},
 			{NONE}
 		}
 	);
@@ -515,6 +517,7 @@ void renderer_default_pipeline(renderer_t *self)
 			query_mips, query_mips, 0,
 		(bind_t[]){
 			{INT, "transparent", .integer = true},
+			{SKIP, .integer = 4},
 			{NONE}
 		}
 	);
@@ -525,6 +528,7 @@ void renderer_default_pipeline(renderer_t *self)
 		(bind_t[]){
 			{CALLBACK, .getter = (getter_cb)renderer_process_query_mips, .usrptr = self},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{SKIP, .integer = 4},
 			{NONE}
 		}
 	);
@@ -772,7 +776,8 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 		bind_pass(pass, NULL);
 		return NULL;
 	}
-
+	if (self->frame % pass->draw_every != 0)
+		return NULL;
 	if(pass->shader)
 	{
 		fs_bind(pass->shader);
@@ -1095,6 +1100,7 @@ void renderer_add_pass(
 	int bind_count;
 	for(bind_count = 0; binds[bind_count].type != NONE; bind_count++);
 
+	pass->draw_every = 1;
 	pass->binds = malloc(sizeof(bind_t) * bind_count);
 	int j;
 	pass->binds_size = 0;
@@ -1115,6 +1121,11 @@ void renderer_add_pass(
 		{
 			pass->clear |= GL_DEPTH_BUFFER_BIT;
 			pass->clear_depth = binds[i].number;
+			continue;
+		}
+		if(binds[i].type == SKIP)
+		{
+			pass->draw_every = binds[i].integer;
 			continue;
 		}
 

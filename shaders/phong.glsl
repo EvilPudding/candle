@@ -12,8 +12,8 @@ BUFFER {
 
 void main(void)
 {
-	float depth = textureLod(gbuffer.depth, pixel_pos(), 0.0).r;
-	if (depth > gl_FragCoord.z) discard;
+	/* float depth = textureLod(gbuffer.depth, pixel_pos(), 0.0).r; */
+	/* if (depth > gl_FragCoord.z) discard; */
 
 	ivec2 fc = ivec2(gl_FragCoord.xy);
 	vec4 dif = texelFetch(gbuffer.albedo, fc, 0);

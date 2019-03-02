@@ -45,7 +45,8 @@ enum bind_type
 	CAM,
 	CLEAR_COLOR,
 	CLEAR_DEPTH,
-	CALLBACK
+	CALLBACK,
+	SKIP
 };
 
 typedef vec2_t(*vec2_getter)(void *usrptr);
@@ -148,7 +149,8 @@ typedef struct pass_t
 
 	int32_t active;
 	int32_t camid;
-	int bound_textures;
+	uint32_t bound_textures;
+	uint32_t draw_every;
 } pass_t;
 
 struct gl_camera
@@ -239,5 +241,6 @@ vec3_t renderer_real_pos(renderer_t *self, float depth, vec2_t coord);
 vec3_t renderer_screen_pos(renderer_t *self, vec3_t pos);
 int renderer_component_menu(renderer_t *self, void *ctx);
 void renderer_destroy(renderer_t *self);
+void *renderer_process_query_mips(renderer_t *self);
 
 #endif /* !RENDERER_H */

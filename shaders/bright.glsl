@@ -10,7 +10,7 @@ BUFFER {
 
 void main(void)
 {
-	float brightPassThreshold = 1.0;
+	float brightPassThreshold = 0.99;
 
 	vec3 luminanceVector = vec3(0.2125, 0.7154, 0.0721);
 	vec3 c = textureLod(buf.color, texcoord, 0.0).rgb;
