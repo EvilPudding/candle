@@ -467,9 +467,20 @@ nk_can_begin_titled(struct nk_context *ctx, const char *name, const char *title,
     return ret;
 }
 
+
+#define MAX_VERTEX_BUFFER (512 * 1024)
+#define MAX_ELEMENT_BUFFER (128 * 1024)
+static void *g_vertices;
+static void *g_elements;
+
 NK_API void
 nk_can_device_create(void)
 {
+#ifdef __EMSCRIPTEN__
+	g_vertices = malloc((size_t)MAX_VERTEX_BUFFER);
+	g_elements = malloc((size_t)MAX_ELEMENT_BUFFER);
+#endif
+
     GLint status;
     static const GLchar *vertex_shader =
         NK_SHADER_VERSION
@@ -878,8 +889,7 @@ nk_tree_entity_image_push_hashed(struct nk_context *ctx, enum nk_tree_type type,
     return nk_tree_entity_base(ctx, type, &img, title, initial_state, selected, has_children, hash, len, seed);
 }
 
-void nk_can_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
-		int max_element_buffer)
+void nk_can_render(enum nk_anti_aliasing AA)
 {
     struct nk_can_device *dev = &can.ogl;
     int width, height;
@@ -917,7 +927,6 @@ void nk_can_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
     {
         /* convert from command queue into draw list and draw to screen */
         const struct nk_draw_command *cmd;
-        void *vertices, *elements;
         const nk_draw_index *offset = NULL;
         struct nk_buffer vbuf, ebuf;
 
@@ -926,12 +935,14 @@ void nk_can_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
         glBindBuffer(GL_ARRAY_BUFFER, dev->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dev->ebo);
 
-        glBufferData(GL_ARRAY_BUFFER, max_vertex_buffer, NULL, GL_STREAM_DRAW);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, max_element_buffer, NULL, GL_STREAM_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, MAX_VERTEX_BUFFER, NULL, GL_STREAM_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, MAX_ELEMENT_BUFFER, NULL, GL_STREAM_DRAW);
 
         /* load vertices/elements directly into vertex/element buffer */
-        vertices = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-        elements = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
+#ifndef __EMSCRIPTEN__
+        g_vertices = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+        g_elements = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
+#endif
         {
             /* fill convert configuration */
             struct nk_convert_config config;
@@ -954,12 +965,19 @@ void nk_can_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
             config.line_AA = AA;
 
             /* setup buffers to load vertices and elements */
-            nk_buffer_init_fixed(&vbuf, vertices, (nk_size)max_vertex_buffer);
-            nk_buffer_init_fixed(&ebuf, elements, (nk_size)max_element_buffer);
+            nk_buffer_init_fixed(&vbuf, g_vertices, (nk_size)MAX_VERTEX_BUFFER);
+            nk_buffer_init_fixed(&ebuf, g_elements, (nk_size)MAX_ELEMENT_BUFFER);
             nk_convert(&can.ctx, &dev->cmds, &vbuf, &ebuf, &config);
         }
+#ifndef __EMSCRIPTEN__
         glUnmapBuffer(GL_ARRAY_BUFFER);
         glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
+#else
+		glBufferSubData(GL_ARRAY_BUFFER, 0, (size_t)MAX_VERTEX_BUFFER,
+		                g_vertices);
+		glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, (size_t)MAX_ELEMENT_BUFFER,
+		                g_elements);
+#endif
 
         /* iterate over and execute each draw command */
         nk_draw_foreach(cmd, &can.ctx, &dev->cmds) {

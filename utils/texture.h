@@ -8,6 +8,12 @@
 #define MAX_MIPS 9
 typedef struct
 {
+	ivec2_t pos;
+	uvec2_t size;
+} probe_tile_t;
+
+typedef struct
+{
 	uint32_t bound;
 	uint32_t touched;
 	uint32_t indir_x;
@@ -97,8 +103,10 @@ int32_t texture_2D_resize(texture_t *self, int32_t width, int32_t height);
 void texture_bind(texture_t *self, int32_t tex);
 
 int32_t texture_target(texture_t *self, texture_t *depth, int32_t fb);
-int32_t texture_target_sub(texture_t *self, int32_t width, int32_t height,
-		texture_t *depth, int32_t fb);
+int32_t texture_target_sub(texture_t *self,
+		texture_t *depth, int32_t fb, int32_t x, int32_t y,
+		int32_t width, int32_t height);
+
 void texture_destroy(texture_t *self);
 bool_t load_tile(texture_t *self, tex_tile_t *tile, int mip, int frame);
 
@@ -118,5 +126,6 @@ int32_t buffer_new(const char *name, int32_t is_float, int32_t dims);
 
 void textures_reg(void);
 void svp_init(void);
+void svp_destroy(void);
 
 #endif /* !TEXTURE_H */

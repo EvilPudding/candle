@@ -15,9 +15,9 @@ struct camera_t
 struct light_t
 {
 	vec4 color;
+	ivec2 pos;
+	int lod;
 	float radius;
-	int layer;
-	vec2 padding;
 };
 
 struct property_t
@@ -48,7 +48,7 @@ layout(std140) uniform renderer_t
 layout(std140) uniform scene_t
 {
 	material_t materials[128];
-	light_t lights[255];
+	light_t lights[62];
 	vec4 test_color;
 } scene;
 
@@ -65,6 +65,7 @@ layout(std140) uniform skin_t
 /* layout(location = 25) */ uniform bool receive_shadows;
 /* layout(location = 26) */ uniform sampler2D g_cache;
 /* layout(location = 27) */ uniform sampler2D g_indir;
+/* layout(location = 28) */ uniform sampler2D g_probes;
 
 /* layout(location = 25) uniform camera_t camera; */
 

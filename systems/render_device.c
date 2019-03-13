@@ -38,11 +38,9 @@ void c_render_device_update_lights(c_render_device_t *self)
 
 		struct gl_light *gllight = &self->scene.lights[light->id];
 		gllight->color = light->color;
+		gllight->pos = light->tile.pos;
+		gllight->lod = light->lod;
 		gllight->radius = light->radius;
-		if(light->renderer && light->renderer->output)
-		{
-			gllight->layer = light->renderer->output->id;
-		}
 	}
 }
 
@@ -119,6 +117,7 @@ void c_render_device_bind_ubo(c_render_device_t *self, uint32_t base,
 
 extern texture_t *g_cache;
 extern texture_t *g_indir;
+extern texture_t *g_probe_cache;
 shader_t *vs_bind(vs_t *vs)
 {
 	uint32_t loc;
@@ -144,7 +143,13 @@ shader_t *vs_bind(vs_t *vs)
 	glUniform1i(loc, 35);
 	glActiveTexture(GL_TEXTURE0 + 35);
 	texture_bind(g_indir, 0);
+
+	loc = glGetUniformLocation(rd->shader->program, "g_probes");
+	glUniform1i(loc, 36);
+	glActiveTexture(GL_TEXTURE0 + 36);
+	texture_bind(g_probe_cache, 0);
 	glerr();
+
 
 	/* GLint size; */
 	if (rd->bound_ubos[20])
@@ -233,7 +238,7 @@ int world_frame(void)
 
 void c_render_device_destroy(c_render_device_t *self)
 {
-	texture_destroy(g_cache);
+	svp_destroy();
 }
 
 REG()

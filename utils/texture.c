@@ -43,6 +43,7 @@ struct tpair {
 };
 
 texture_t *g_cache;
+texture_t *g_probe_cache;
 tex_tile_t **g_cache_bound;
 texture_t *g_indir;
 tex_tile_t *g_tiles;
@@ -52,6 +53,17 @@ const int g_indir_w = 256;
 const int g_indir_h = 64;
 int g_cache_n = 0;
 int g_indir_n = 0;
+
+bool_t *g_probe_tiles;
+uint32_t g_min_shadow_tile = 64;
+uint32_t g_max_probe_levels;
+uint32_t g_num_shadows;
+
+uint32_t get_sum_tiles(uint32_t level)
+{
+	return 2 * (pow(2, level) - 1);
+}
+
 void svp_init()
 {
 	int max;
@@ -65,9 +77,70 @@ void svp_init()
 	                         buffer_new("indir", false, 3));
 	g_tiles = malloc(g_indir_w * g_indir_h * sizeof(tex_tile_t));
 
-	/* glGetIntegerv(GL_TEXTURE_MAX_LEVEL, &max); */
-	/* printf("MAX LEVELS %d\n", max); */
+	g_probe_cache = texture_new_2D(1024 * 4, 1024 * 6, 0,
+	                               buffer_new("color", true, 4),
+	                               buffer_new("depth", false, -1)
+	                               );
+
+	g_max_probe_levels = log2(1024 / g_min_shadow_tile) + 1;
+	g_num_shadows = get_sum_tiles(g_max_probe_levels);
+	g_probe_tiles = malloc(g_num_shadows * sizeof(g_probe_tiles));
+	for (uint32_t t = 0; t < g_num_shadows; t++)
+	{
+		g_probe_tiles[t] = false;
+	}
+
 	glerr();
+}
+
+uint32_t get_level_y(uint32_t level)
+{
+	return 3 * ((int)pow(2, 11 - level)) * ((int)pow(2, level) - 1);
+}
+
+uint32_t get_level_size(uint32_t level)
+{
+	return (1024 / pow(2, level));
+}
+
+probe_tile_t get_free_tile(uint32_t level, uint32_t *result_level)
+{
+	probe_tile_t result = {0};
+	do
+	{
+		const uint32_t num_tiles_at_level = 2 * pow(2, level);
+		const uint32_t y = get_level_y(level);
+		const uint32_t first_tile = get_sum_tiles(level);
+		const uint32_t size = get_level_size(level);
+		for (uint32_t i = 0; i < num_tiles_at_level; i++)
+		{
+			if (!g_probe_tiles[first_tile + i])
+			{
+				g_probe_tiles[first_tile + i] = true;
+				if (result_level)
+					*result_level = level;
+				result.pos = ivec2(2 * size * i, y);
+				result.size = uvec2(size, size);
+				return result;
+			}
+		}
+		if (num_tiles_at_level + first_tile > g_num_shadows)
+		{
+			*result_level = ~0;
+			break;
+		}
+		level++;
+	} while(true);
+
+	return result;
+}
+
+void svp_destroy()
+{
+	texture_destroy(g_cache);
+	texture_destroy(g_indir);
+	texture_destroy(g_probe_cache);
+	free(g_tiles);
 }
 
 static struct tpair *pair(texture_t *tex, int id)
@@ -525,7 +598,9 @@ static int32_t texture_from_file_loader(texture_t *self)
 
 int32_t buffer_new(const char *name, int32_t is_float, int32_t dims)
 {
+#ifdef __EMSCRIPTEN__
 	is_float = false;
+#endif
 	texture_t *texture = _g_tex_creating;
 
 	int32_t i = texture->bufs_size++;
@@ -900,8 +975,8 @@ static int32_t texture_2D_frame_buffer(texture_t *self)
 	return 1;
 }
 
-int32_t texture_target_sub(texture_t *self, int32_t width, int32_t height,
-		texture_t *depth, int32_t fb) 
+int32_t texture_target_sub(texture_t *self, texture_t *depth, int32_t fb,
+                          int32_t x, int32_t y, int32_t width, int32_t height) 
 {
 	bool_t ready = self->framebuffer_ready;
 	if(!self->bufs[self->depth_buffer].id)
@@ -962,7 +1037,7 @@ int32_t texture_target_sub(texture_t *self, int32_t width, int32_t height,
 		}
 	}
 
-	glViewport(0, 0, width, height); glerr();
+	glViewport(x, y, width, height); glerr();
 	return 1;
 }
 
@@ -972,7 +1047,7 @@ int32_t texture_target(texture_t *self, texture_t *depth, int32_t fb)
 	int h = self->sizes[fb].y;
 	/* if(w == 0) w = self->width; */
 	/* if(h == 0) h = self->height; */
-	return texture_target_sub(self, w, h, depth, fb);
+	return texture_target_sub(self, depth, fb, 0, 0, w, h);
 }
 
 void texture_draw_id(texture_t *self, int32_t tex)

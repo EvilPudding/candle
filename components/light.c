@@ -80,20 +80,38 @@ void c_light_init(c_light_t *self)
 
 }
 
+void c_light_set_lod(c_light_t *self, uint32_t lod)
+{
+	if (self->lod != lod)
+	{
+		self->lod = lod;
+		self->frames_passed = -1;
+	}
+}
+
+probe_tile_t get_free_tile(uint32_t level, uint32_t *result_level);
+uint32_t get_level_size(uint32_t level);
+
+extern texture_t *g_probe_cache;
 static void c_light_create_renderer(c_light_t *self)
 {
 	renderer_t *renderer = renderer_new(1.0f);
 
-	/* texture_t *output =	texture_cubemap(self->shadow_size, self->shadow_size, 1); */
+	self->tile = get_free_tile(0, &self->lod);
 
-	/* renderer_add_pass(renderer, "depth", "depth", self->visible_group, */
-	/* 		CULL_DISABLE, output, output, 0, */
-	/* 		(bind_t[]){ */
-	/* 			{CLEAR_DEPTH, .number = 1.0f}, */
-	/* 			{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, self->radius)}, */
-	/* 			{NONE} */
-	/* 		} */
-	/* ); */
+	texture_t *output =	g_probe_cache;
+
+	renderer_add_pass(renderer, "depth", "depth", self->visible_group,
+			CULL_DISABLE, output, output, 0,
+			(bind_t[]){
+				{CLEAR_DEPTH, .number = 1.0f},
+				{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 1.0f)},
+				{NONE}
+			}
+	);
+	renderer->pos = self->tile.pos;
+	renderer->size = self->tile.size;
+	renderer->cubemap = true;
 
 	renderer_resize(renderer, self->shadow_size, self->shadow_size);
 
@@ -236,7 +254,7 @@ static int c_light_draw(c_light_t *self)
 	if(self->visible && self->renderer && self->radius > 0 &&
 			self->visible_group && self->frames_passed <= 0)
 	{
-		/* renderer_draw(self->renderer); */
+		renderer_draw(self->renderer);
 	}
 	return CONTINUE;
 }

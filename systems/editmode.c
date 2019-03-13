@@ -23,9 +23,6 @@ static void c_editmode_selected_delete(c_editmode_t *self);
 #define SCALE		2
 #define POLYPEN		3
 
-#define MAX_VERTEX_MEMORY (512 * 1024)
-#define MAX_ELEMENT_MEMORY (128 * 1024)
-
 mat_t *g_sel_mat = NULL;
 
 int32_t translate_init(struct edit_translate *self, c_editmode_t *ec)
@@ -1016,8 +1013,8 @@ int32_t c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 	float h = tex->height;
 	/* if (w > 1000) */
 	{
-		h = 600.0f * (h / w);
-		w = 600.0f;
+		h = 300.0f * (h / w);
+		w = 300.0f;
 	}
 
 	res = nk_can_begin_titled(self->nk, buffer, title,
@@ -1417,8 +1414,7 @@ int32_t c_editmode_draw(c_editmode_t *self)
 			}
 		}
 
-
-		nk_can_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_MEMORY, MAX_ELEMENT_MEMORY);
+		nk_can_render(NK_ANTI_ALIASING_ON);
 	}
 	return CONTINUE;
 }

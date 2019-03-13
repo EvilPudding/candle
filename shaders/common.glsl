@@ -30,26 +30,26 @@ in vec3 vertex_position;
 in vec2 texcoord;
 in mat3 TM;
 
-vec2 sampleCube(const vec3 v, out float faceIndex)
+vec2 sampleCube(const vec3 v, out int faceIndex)
 {
 	vec3 vAbs = abs(v);
 	float ma;
 	vec2 uv;
 	if(vAbs.z >= vAbs.x && vAbs.z >= vAbs.y)
 	{
-		faceIndex = v.z < 0.0 ? 5.0 : 4.0;
+		faceIndex = v.z < 0.0 ? 5 : 4;
 		ma = 0.5 / vAbs.z;
 		uv = vec2(v.z < 0.0 ? -v.x : v.x, -v.y);
 	}
 	else if(vAbs.y >= vAbs.x)
 	{
-		faceIndex = v.y < 0.0 ? 3.0 : 2.0;
+		faceIndex = v.y < 0.0 ? 3 : 2;
 		ma = 0.5 / vAbs.y;
 		uv = vec2(v.x, v.y < 0.0 ? -v.z : v.z);
 	}
 	else
 	{
-		faceIndex = v.x < 0.0 ? 1.0 : 0.0;
+		faceIndex = v.x < 0.0 ? 1 : 0;
 		ma = 0.5 / vAbs.x;
 		uv = vec2(v.x < 0.0 ? v.z : -v.z, -v.y);
 	}
@@ -144,14 +144,23 @@ vec4 resolveProperty(property_t prop, vec2 coords, bool draw)
 
 /* float ambient = 0.08; */
 /* float ambient = 1.00; */
+float linearize(float depth)
+{
+    return 2.0 * 0.1 * 100.0 / (100.0 + 0.1 - (2.0 * depth - 1.0) * (100.0 - 0.1));
+}
+float unlinearize(float depth)
+{
+	return 100.0 * (1.0 - (0.1 / depth)) / (100.0 - 0.1);
+}
+
 
 float lookup_single(vec3 shadowCoord)
 {
-	float light_layer = float(light(layer));
-	float cube_layer;
-	vec2 tc = sampleCube(shadowCoord, cube_layer);
-	/* return texture(shadow_map, vec3(tc, light_layer + cube_layer)).a; */
-	return 0.0f;
+	int size = 1024 / int(pow(2.0, float(light(lod))));
+	int cube_layer;
+	ivec2 tc = ivec2(floor(sampleCube(shadowCoord, cube_layer) * float(size)));
+	ivec2 pos = ivec2(cube_layer % 2, cube_layer / 2) * size;
+	return texelFetch(g_probes, tc + pos, 0).r * 90.0f;
 }
 
 /* float prec = 0.05; */
@@ -275,15 +284,6 @@ float shadow_at_dist_no_tan(vec3 vec, float i)
 
 
 	return 0.0;
-}
-
-float linearize(float depth)
-{
-    return 2.0 * 0.1 * 100.0 / (100.0 + 0.1 - (2.0 * depth - 1.0) * (100.0 - 0.1));
-}
-float unlinearize(float depth)
-{
-	return 100.0 * (1.0 - (0.1 / depth)) / (100.0 - 0.1);
 }
 
 float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)
@@ -707,94 +707,6 @@ vec4 pbr(vec4 base_color, vec2 metallic_roughness,
     return vec4(pow(color,vec3(1.0/2.2)), base_color.a);
 }
 
-/* FROM */
-/* https://developer.nvidia.com/sites/default/files/akamai/gamedev/docs/PCSS_Integration.pdf */
-
-/* #define BLOCKER_SEARCH_NUM_SAMPLES 16 */ 
-/* #define PCF_NUM_SAMPLES 16 */ 
-/* #define NEAR_PLANE 9.5 */ 
-/* #define LIGHT_WORLD_SIZE .5 */ 
-/* #define LIGHT_FRUSTUM_WIDTH 3.75 */ 
-/* // Assuming that LIGHT_FRUSTUM_WIDTH == LIGHT_FRUSTUM_HEIGHT */ 
-/* #define LIGHT_SIZE_UV (LIGHT_WORLD_SIZE / LIGHT_FRUSTUM_WIDTH) */ 
-/* vec2 poissonDisk[16] = vec2[] ( */ 
-/* 	vec2( -0.94201624, -0.39906216 ), */ 
-/* 	vec2( 0.94558609, -0.76890725 ), */ 
-/* 	vec2( -0.094184101, -0.92938870 ), */ 
-/* 	vec2( 0.34495938, 0.29387760 ), */ 
-/* 	vec2( -0.91588581, 0.45771432 ), */ 
-/* 	vec2( -0.81544232, -0.87912464 ), */ 
-/* 	vec2( -0.38277543, 0.27676845 ), */ 
-/* 	vec2( 0.97484398, 0.75648379 ), */ 
-/* 	vec2( 0.44323325, -0.97511554 ), */ 
-/* 	vec2( 0.53742981, -0.47373420 ), */ 
-/* 	vec2( -0.26496911, -0.41893023 ), */ 
-/* 	vec2( 0.79197514, 0.19090188 ), */ 
-/* 	vec2( -0.24188840, 0.99706507 ), */ 
-/* 	vec2( -0.81409955, 0.91437590 ), */ 
-/* 	vec2( 0.19984126, 0.78641367 ), */ 
-/* 	vec2( 0.14383161, -0.14100790 ) */ 
-/* ); */ 
-
-/* float PenumbraSize( float zReceiver, float zBlocker) */ 
-/* { */ 
-/* 	return (zReceiver - zBlocker) / zBlocker; */ 
-/* } */ 
-
-/* void FindBlocker( out float avgBlockerDepth,  out float numBlockers, vec2 uv, float zReceiver ) */ 
-/* { */ 
-/* 	//This uses similar triangles to compute what */  
-/* 	//area of the shadow map we should search */ 
-/* 	float searchWidth = LIGHT_SIZE_UV * (zReceiver - NEAR_PLANE) / zReceiver; */ 
-/* 	float blockerSum = 0; */ 
-/* 	numBlockers = 0; */ 
-/* 	for( int i = 0; i < BLOCKER_SEARCH_NUM_SAMPLES; ++i ) */ 
-/* 	{ */ 
-/* 		float shadowMapDepth = texture( light_shadow_map,  uv + poissonDisk[i] * searchWidth); */ 
-/* 		if ( shadowMapDepth < zReceiver ) { */ 
-/* 			blockerSum += shadowMapDepth; */ 
-/* 			numBlockers++; */ 
-/* 		} */ 
-/* 	} */ 
-/* 	avgBlockerDepth = blockerSum / numBlockers; */ 
-/* } */ 
-
-/* float PCF_Filter( */ 
-/* 		vec2 */
-/* 		uv, float zReceiver, */ 
-/* 		float filterRadiusUV ) */ 
-/* { */ 
-/* 	float sum = 0.0; */ 
-/* 	for ( int i = 0; i < PCF_NUM_SAMPLES; ++i ) */ 
-/* 	{ */ 
-/* 		vec2 offset = poissonDisk[i] * filterRadiusUV; */ 
-/* 		sum += tDepthMap.SampleCmpLevelZero(PCF_Sampler, uv + offset, zReceiver); */ 
-/* 	} */ 
-/* 	return */
-/* 		sum / PCF_NUM_SAMPLES; */ 
-/* } */ 
-/* float PCSS ( Texture2D shadowMapTex, vec3 coords  ) */ 
-/* { */ 
-/* 	vec2 uv = coords.xy; */ 
-/* 	float zReceiver = coords.z; */ 
-/* 	// Assumed to be eye-space z in this code */
-/* 	// STEP 1: blocker search */ 
-/* 	float avgBlockerDepth = 0; */ 
-/* 	float numBlockers = 0; */ 
-/* 	FindBlocker( avgBlockerDepth, numBlockers, uv, zReceiver ); */ 
-/* 	if( numBlockers < 1 ) */   
-/* 		//There are no occluders so early out (this saves filtering) */ 
-/* 		return */
-/* 			1.0; */ 
-/* 	// STEP 2: penumbra size */ 
-/* 	float penumbraRatio = PenumbraSize(zReceiver, avgBlockerDepth); */     
-/* 	float filterRadiusUV = penumbraRatio * LIGHT_SIZE_UV * NEAR_PLANE / coords.z; */ 
-/* 	// STEP 3: filtering */ 
-/* 	return */
-/* 		PCF_Filter( uv, zReceiver, filterRadiusUV ); */ 
-/* } */
-
 #endif
-
 
 // vim: set ft=c:

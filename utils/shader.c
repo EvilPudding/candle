@@ -487,7 +487,7 @@ static uint32_t fs_new_loader(fs_t *self)
 
 	checkShaderError(self->program, self->filename, self->code);
 	self->ready = 1;
-	printf("fs ready %s\n", buffer);
+	/* printf("fs ready %s\n", buffer); */
 
 	return 1;
 }

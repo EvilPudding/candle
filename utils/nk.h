@@ -16,8 +16,7 @@
 
 NK_API struct nk_context* nk_can_init(SDL_Window *win);
 
-void nk_can_render(enum nk_anti_aliasing AA, int max_vertex_buffer,
-		int max_element_buffer);
+void nk_can_render(enum nk_anti_aliasing AA);
 void nk_draw_image_ext(struct nk_command_buffer *b, struct nk_rect r,
     const struct nk_image *img, struct nk_color col, int no_blending);
 

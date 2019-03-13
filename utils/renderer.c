@@ -189,10 +189,6 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 
 void renderer_set_output(renderer_t *self, texture_t *tex)
 {
-	if(tex->target == GL_TEXTURE_CUBE_MAP)
-	{
-		self->fov = M_PI / 2.0f;
-	}
 	self->output = tex;
 	self->ready = 0;
 }
@@ -223,7 +219,7 @@ void renderer_add_tex(renderer_t *self, const char *name,
 static void update_ubo(renderer_t *self, int32_t camid)
 {
 	if(!self->ubo_changed[camid]) return;
-	self->ubo_changed[camid] = 0;
+	self->ubo_changed[camid] = false;
 	// TODO this should be gl thread only
 	if(!self->ubos[camid])
 	{
@@ -236,7 +232,8 @@ static void update_ubo(renderer_t *self, int32_t camid)
 	/* void *p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY); */
 	/* memcpy(p, &self->glvars[camid], sizeof(self->glvars[camid])); */
 
-	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(self->glvars[camid]), &self->glvars[camid]);glerr();
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(self->glvars[camid]),
+	                &self->glvars[camid]); glerr();
 
 	/* glUnmapBuffer(GL_UNIFORM_BUFFER); glerr(); */
 }
@@ -245,7 +242,7 @@ void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model)
 {
 	vec3_t pos = mat4_mul_vec4(*model, vec4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
 
-	if(self->output && self->output->target == GL_TEXTURE_CUBE_MAP)
+	if(self->output && self->cubemap)
 	{
 		int32_t i;
 		vec3_t p1[6] = {
@@ -263,7 +260,7 @@ void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model)
 			var->inv_model = mat4_look_at(pos, vec3_add(pos, p1[i]), up[i]);
 			var->model = mat4_invert(var->inv_model);
 			var->pos = pos;
-			self->ubo_changed[i] = 1;
+			self->ubo_changed[i] = true;
 		}
 	}
 	else
@@ -272,7 +269,7 @@ void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model)
 		self->glvars[camid].pos = pos;
 		self->glvars[camid].model = *model;
 		self->glvars[camid].inv_model = mat4_invert(*model);
-		self->ubo_changed[camid] = 1;
+		self->ubo_changed[camid] = true;
 
 	}
 }
@@ -362,7 +359,11 @@ void *renderer_process_query_mips(renderer_t *self)
 {
 	texture_t *tex = renderer_tex(self, ref("query_mips"));
 	if (!tex->framebuffer_ready) return NULL;
-	vec4_t *coords= alloca(sizeof(*coords) * tex->width * tex->height);
+
+	struct{
+		uint8_t _[4];
+	} *coords = alloca(sizeof(*coords) * tex->width * tex->height);
+
 	struct{
 		uint8_t _[4];
 	} *mips = alloca(sizeof(*mips) * tex->width * tex->height);
@@ -375,7 +376,7 @@ void *renderer_process_query_mips(renderer_t *self)
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1); glerr();
 
 	glReadPixels(0, 0, tex->width, tex->height, tex->bufs[1].format,
-			GL_FLOAT, coords); glerr();
+			GL_UNSIGNED_BYTE, coords); glerr();
 
 	glReadBuffer(GL_COLOR_ATTACHMENT1); glerr();
 
@@ -386,7 +387,7 @@ void *renderer_process_query_mips(renderer_t *self)
 	for (int y = 0; y < tex->height; y++) {
 		for (int x = 0; x < tex->width; x++) {
 			int i = y * tex->width + x;
-			mat_t *mat = g_mats[(int)(coords[i].z * 255.0f)];
+			mat_t *mat = g_mats[coords[i]._[2]];
 
 			uint32_t p = 0;
 			for (prop_t *prop = &mat->albedo; prop <= &mat->emissive; prop++, p++)
@@ -401,7 +402,10 @@ void *renderer_process_query_mips(renderer_t *self)
 					if (mip0 < 0) mip0 = 0;
 					if (mip1 < 0) mip1 = 0;
 
-					vec2_t rcoords = vec2_scale(vec2_sub_number(coords[i].xy, 0.5f), 16.0f);
+					vec2_t rcoords = vec2(((float)coords[i]._[0]) / 255.0f - 0.5f,
+					                      ((float)coords[i]._[1]) / 255.0f - 0.5f);
+
+					rcoords = vec2_scale(rcoords, 16.0f);
 					rcoords.y = 1.0f - rcoords.y;
 					rcoords = vec2_scale(rcoords, prop->scale);
 
@@ -683,7 +687,7 @@ void renderer_update_projection(renderer_t *self)
 			self->near, self->far
 	);
 	self->glvars[0].inv_projection = mat4_invert(self->glvars[0].projection); 
-	self->ubo_changed[0] = 1;
+	self->ubo_changed[0] = true;
 
 	uint32_t f;
 	for(f = 1; f < 6; f++)
@@ -691,7 +695,7 @@ void renderer_update_projection(renderer_t *self)
 		self->glvars[f].projection = self->glvars[0].projection;
 		self->glvars[f].inv_projection = self->glvars[0].inv_projection;
 		self->glvars[f].pos = self->glvars[0].pos;
-		self->ubo_changed[f] = 1;
+		self->ubo_changed[f] = true;
 	}
 }
 
@@ -776,8 +780,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 		bind_pass(pass, NULL);
 		return NULL;
 	}
-	if (self->frame % pass->draw_every != 0)
-		return NULL;
+	if (self->frame % pass->draw_every != 0) return NULL;
 	if(pass->shader)
 	{
 		fs_bind(pass->shader);
@@ -819,16 +822,25 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 		glClearDepth(pass->clear_depth);
 	}
 
-	if(pass->output->target == GL_TEXTURE_CUBE_MAP)
+	if(self->cubemap)
 	{
-		uint32_t f;
-		for(f = 0; f < 6; f++)
+		glEnable(GL_SCISSOR_TEST);
+		glScissor(self->pos.x, self->pos.y, self->size.x * 2, self->size.y * 3);
+		texture_target(pass->output, pass->depth, 0);
+		if(pass->clear) glClear(pass->clear);
+		glDisable(GL_SCISSOR_TEST);
+
+		for(uint32_t f = 0; f < 6; f++)
 		{
+			uvec2_t pos;
+
+			pos.x = self->pos.x + (f % 2) * self->size.x;
+			pos.y = self->pos.y + (f / 2) * self->size.y;
+
 			update_ubo(self, f);
 			c_render_device_bind_ubo(rd, 19, self->ubos[f]);
-			texture_target(pass->output, pass->depth, f);
-
-			if(pass->clear) glClear(pass->clear);
+			texture_target_sub(pass->output, pass->depth, 0,
+			                   pos.x, pos.y, self->size.x, self->size.y);
 
 			draw_group(pass->draw_signal);
 		}
@@ -836,7 +848,16 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 	else
 	{
 		c_render_device_bind_ubo(rd, 19, self->ubos[pass->camid]);
-		texture_target(pass->output, pass->depth, pass->framebuffer_id);
+		if (self->size.x > 0)
+		{
+			texture_target_sub(pass->output, pass->depth, pass->framebuffer_id,
+			                   self->pos.x, self->pos.y,
+			                   self->size.x, self->size.y);
+		}
+		else
+		{
+			texture_target(pass->output, pass->depth, pass->framebuffer_id);
+		}
 
 		if(pass->clear) glClear(pass->clear);
 
@@ -919,6 +940,8 @@ renderer_t *renderer_new(float resolution)
 	}
 	self->near = 0.1f;
 	self->far = 100.0f;
+	self->fov = M_PI / 2.0f;
+	self->cubemap = false;
 
 	self->resolution = resolution;
 
@@ -957,6 +980,7 @@ entity_t renderer_entity_at_pixel(renderer_t *self, int x, int y,
 
 extern texture_t *g_cache;
 extern texture_t *g_indir;
+extern texture_t *g_probe_cache;
 int renderer_component_menu(renderer_t *self, void *ctx)
 {
 	nk_layout_row_dynamic(ctx, 0, 1);
@@ -993,6 +1017,10 @@ int renderer_component_menu(renderer_t *self, void *ctx)
 	if (nk_button_label(ctx, "indir"))
 	{
 		c_editmode_open_texture(c_editmode(&SYS), g_indir);
+	}
+	if (nk_button_label(ctx, "probes"))
+	{
+		c_editmode_open_texture(c_editmode(&SYS), g_probe_cache);
 	}
 	return CONTINUE;
 }
@@ -1174,16 +1202,6 @@ void renderer_destroy(renderer_t *self)
 	}
 }
 
-void renderer_clear_shaders(renderer_t *self, shader_t *shader)
-{
-	int i;
-	for(i = 0; i < self->passes_size; i++)
-	{
-		/* shader_destroy(self->passes[i].shader); */
-	}
-	self->passes_size = 0;
-}
-
 int renderer_draw(renderer_t *self)
 {
 	self->frame++;
@@ -1196,6 +1214,7 @@ int renderer_draw(renderer_t *self)
 	if(!self->output) renderer_default_pipeline(self);
 
 	if(!self->ready) renderer_update_screen_texture(self);
+
 	for(i = 0; i < self->camera_count; i++)
 	{
 		update_ubo(self, i);
@@ -1205,7 +1224,6 @@ int renderer_draw(renderer_t *self)
 	{
 		renderer_draw_pass(self, &self->passes[i]);
 	}
-
 	c_render_device_rebind(c_render_device(&SYS), NULL, NULL);
 
 	glerr();

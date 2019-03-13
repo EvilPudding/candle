@@ -16,9 +16,9 @@ typedef struct uniform_t uniform_t;
 struct gl_light
 {
 	vec4_t color;
+	ivec2_t pos;
+	int32_t lod;
 	float radius;
-	int32_t layer;
-	vec2_t padding;
 };
 
 struct gl_property
@@ -50,7 +50,7 @@ struct gl_pass
 struct gl_scene
 {
 	struct gl_material materials[128];
-	struct gl_light lights[255];
+	struct gl_light lights[62];
 	vec4_t test_color;
 };
 

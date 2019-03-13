@@ -10,7 +10,9 @@ void main(void)
 	if(dif.a < 0.7) discard;
 
 	float dist = length(vertex_position);
-    FragColor = vec4(0.0, 0.0, 0.0, dist);
+    /* FragColor = vec4(texcoord, 0.0f, 1.0f); */
+	/* glDepth */
+	gl_FragDepth = dist / 90.0f;
 }  
 
 // vim: set ft=c:

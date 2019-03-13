@@ -140,6 +140,7 @@ typedef struct pass_t
 	bind_t *binds;
 
 	texture_t *output;
+
 	int32_t framebuffer_id;
 	texture_t *depth;
 	vec4_t clear_color;
@@ -194,6 +195,10 @@ typedef struct c_renderer_t
 	uint32_t ubos[6];
 	uint32_t ubo_changed[6];
 	int moved[6];
+
+	bool_t cubemap;
+	ivec2_t pos;
+	uvec2_t size;
 } renderer_t;
 
 renderer_t *renderer_new(float resolution);
@@ -224,7 +229,6 @@ void renderer_toggle_pass(renderer_t *self, uint32_t hash, int active);
 
 entity_t renderer_get_camera(renderer_t *self);
 
-void renderer_clear_shader(renderer_t *self, shader_t *shader);
 entity_t renderer_entity_at_pixel(renderer_t *self, int x, int y,
 		float *depth);
 unsigned int renderer_geom_at_pixel(renderer_t *self, int x, int y,
