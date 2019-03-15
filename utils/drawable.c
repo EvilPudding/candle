@@ -43,7 +43,7 @@ static draw_group_t *get_group(uint32_t ref)
 	{
 		k = kh_put(draw_group, g_draw_groups, ref, &ret);
 		grp = &kh_value(g_draw_groups, k);
-		*grp = (draw_group_t){ 0 };
+		*grp = (draw_group_t){ kh_init(config) };
 	}
 	else
 	{
@@ -80,8 +80,7 @@ void draw_conf_inst_prealloc(draw_conf_t *self, int32_t size)
 	self->inst_alloc += size;
 
 	self->inst = realloc(self->inst, self->inst_alloc * sizeof(*self->inst));
-	self->props = realloc(self->props, self->inst_alloc *
-			sizeof(*self->props));
+	self->props = realloc(self->props, self->inst_alloc * sizeof(*self->props));
 	/* memset(self->props + (self->inst_alloc - size), 0, size * sizeof(*self->props)); */
 
 #ifdef MESH4
@@ -89,8 +88,7 @@ void draw_conf_inst_prealloc(draw_conf_t *self, int32_t size)
 			sizeof(*self->angle4));
 #endif
 
-	self->comps = realloc(self->comps, self->inst_alloc *
-			sizeof(*self->comps));
+	self->comps = realloc(self->comps, self->inst_alloc * sizeof(*self->comps));
 }
 void draw_conf_inst_grow(draw_conf_t *self)
 {
@@ -619,24 +617,23 @@ draw_conf_t *drawable_get_conf(drawable_t *self, uint32_t gid)
 	}
 
 	draw_group_t *draw_group = get_group(self->grp[gid].grp);
-	if(draw_group == NULL) return NULL;
-
+	if(draw_group->configs == NULL) return NULL;
 
 	uint32_t p = murmur_hash(&conf, sizeof(conf), 0);
 
-	khiter_t k = kh_get(config, draw_group, p);
-	if(k == kh_end(draw_group))
+	khiter_t k = kh_get(config, draw_group->configs, p);
+	if(k == kh_end(draw_group->configs))
 	{
 		int32_t ret;
-		k = kh_put(config, draw_group, p, &ret);
+		k = kh_put(config, draw_group->configs, p, &ret);
 
-		result = kh_value(draw_group, k) = calloc(1, sizeof(draw_conf_t));
+		result = kh_value(draw_group->configs, k) = calloc(1, sizeof(draw_conf_t));
 		result->semaphore = SDL_CreateSemaphore(1);
 		result->vars = conf;
 	}
 	else
 	{
-		result = kh_value(draw_group, k);
+		result = kh_value(draw_group->configs, k);
 	}
 	return result;
 }
@@ -1275,10 +1272,10 @@ static int32_t draw_group_draw(draw_group_t *self)
 	int32_t res = 0;
 	khiter_t k;
 
-	for(k = kh_begin(self); k != kh_end(self); ++k)
+	for(k = kh_begin(self->configs); k != kh_end(self->configs); ++k)
 	{
-		if(!kh_exist(self, k)) continue;
-		draw_conf_t *conf = kh_value(self, k);
+		if(!kh_exist(self->configs, k)) continue;
+		draw_conf_t *conf = kh_value(self->configs, k);
 		res |= draw_conf_draw(conf, -1);
 	}
 	return res;

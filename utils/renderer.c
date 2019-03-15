@@ -502,26 +502,26 @@ void renderer_default_pipeline(renderer_t *self)
 			{CLEAR_DEPTH, .number = 1.0f},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{INT, "transparent", .integer = false},
-			{SKIP, .integer = 4},
+			{SKIP, .integer = 8},
 			{NONE}
 		}
 	);
 
-	renderer_add_pass(self, "query_mips", "query_mips", ref("decals"),
-			DEPTH_LOCK | DEPTH_EQUAL | DEPTH_GREATER, query_mips, query_mips, 0,
-		(bind_t[]){
-			{TEX, "gbuffer", .buffer = gbuffer},
-			{INT, "transparent", .integer = false},
-			{SKIP, .integer = 4},
-			{NONE}
-		}
-	);
+	/* renderer_add_pass(self, "query_mips", "query_mips", ref("decals"), */
+	/* 		DEPTH_LOCK | DEPTH_EQUAL | DEPTH_GREATER, query_mips, query_mips, 0, */
+	/* 	(bind_t[]){ */
+	/* 		{TEX, "gbuffer", .buffer = gbuffer}, */
+	/* 		{INT, "transparent", .integer = false}, */
+	/* 		{SKIP, .integer = 8}, */
+	/* 		{NONE} */
+	/* 	} */
+	/* ); */
 
 	renderer_add_pass(self, "query_mips", "query_mips", ref("transparent"), 0,
 			query_mips, query_mips, 0,
 		(bind_t[]){
 			{INT, "transparent", .integer = true},
-			{SKIP, .integer = 4},
+			{SKIP, .integer = 8},
 			{NONE}
 		}
 	);
@@ -532,7 +532,7 @@ void renderer_default_pipeline(renderer_t *self)
 		(bind_t[]){
 			{CALLBACK, .getter = (getter_cb)renderer_process_query_mips, .usrptr = self},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
-			{SKIP, .integer = 4},
+			{SKIP, .integer = 8},
 			{NONE}
 		}
 	);
@@ -567,13 +567,13 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	/* DECAL PASS */
-	renderer_add_pass(self, "decals_pass", "decals", ref("decals"), 0,
-			gbuffer, NULL, 0,
-		(bind_t[]){
-			{TEX, "gbuffer", .buffer = gbuffer},
-			{NONE}
-		}
-	);
+	/* renderer_add_pass(self, "decals_pass", "decals", ref("decals"), 0, */
+	/* 		gbuffer, NULL, 0, */
+	/* 	(bind_t[]){ */
+	/* 		{TEX, "gbuffer", .buffer = gbuffer}, */
+	/* 		{NONE} */
+	/* 	} */
+	/* ); */
 
 	renderer_add_pass(self, "ambient_light_pass", "phong", ref("ambient"),
 			ADD, light, NULL, 0,

@@ -66,7 +66,6 @@ typedef struct draw_conf_t draw_conf_t;
 struct draw_grp
 {
 	uint32_t grp;
-	int32_t box;
 	draw_conf_t *conf;
 	int32_t instance_id;
 	uint8_t updates;
@@ -123,7 +122,11 @@ typedef struct drawable_t
 
 KHASH_MAP_INIT_INT(config, draw_conf_t*)
 
-typedef khash_t(config) draw_group_t;
+typedef struct
+{
+	khash_t(config) *configs;
+	uint32_t update_id;
+} draw_group_t;
 
 void drawable_init(drawable_t *self, uint32_t group, void *usrptr);
 

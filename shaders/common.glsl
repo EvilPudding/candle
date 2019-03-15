@@ -160,7 +160,7 @@ float lookup_single(vec3 shadowCoord)
 	int cube_layer;
 	ivec2 tc = ivec2(floor(sampleCube(shadowCoord, cube_layer) * float(size)));
 	ivec2 pos = ivec2(cube_layer % 2, cube_layer / 2) * size;
-	return texelFetch(g_probes, tc + pos, 0).r * 90.0f;
+	return texelFetch(g_probes, tc + pos + light(pos), 0).r * 90.0f;
 }
 
 /* float prec = 0.05; */
@@ -295,7 +295,7 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)
 	{
 
 		/* sd = 0.5; */
-		float shadow_len = min(0.8 * (point_to_light / ocluder_to_light - 1.0), 10.0);
+		float shadow_len = min(0.4 * (point_to_light / ocluder_to_light - 1.0), 10.0);
 		float p = 0.01 * linearize(depth);
 		if(shadow_len > 0.001)
 		{

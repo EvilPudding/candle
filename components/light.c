@@ -97,7 +97,7 @@ static void c_light_create_renderer(c_light_t *self)
 {
 	renderer_t *renderer = renderer_new(1.0f);
 
-	self->tile = get_free_tile(0, &self->lod);
+	self->tile = get_free_tile(1, &self->lod);
 
 	texture_t *output =	g_probe_cache;
 
@@ -205,6 +205,7 @@ static int c_light_pre_draw(c_light_t *self)
 		renderer_set_model(self->renderer, 0, &node->model);
 		/* renderer_pass(self->renderer, ref("depth"))->clear_color = */
 			/* vec4(0, 0, 0, self->radius); */
+		renderer_draw(self->renderer);
 	}
 	self->modified = 0;
 	return CONTINUE;
@@ -249,15 +250,16 @@ int c_light_menu(c_light_t *self, void *ctx)
 	return CONTINUE;
 }
 
-static int c_light_draw(c_light_t *self)
-{
-	if(self->visible && self->renderer && self->radius > 0 &&
-			self->visible_group && self->frames_passed <= 0)
-	{
-		renderer_draw(self->renderer);
-	}
-	return CONTINUE;
-}
+/* static int c_light_draw(c_light_t *self) */
+/* { */
+/* 	if(self->visible && self->renderer && self->radius > 0 && */
+/* 			self->visible_group && self->frames_passed <= 0) */
+/* 	{ */
+/* 		printf("redrawing light %d\n", self->id); */
+/* 		renderer_draw(self->renderer); */
+/* 	} */
+/* 	return CONTINUE; */
+/* } */
 
 static void c_light_destroy(c_light_t *self)
 {
@@ -292,7 +294,7 @@ REG()
 
 	ct_listener(ct, WORLD, sig("editmode_toggle"), c_light_editmode_toggle);
 	ct_listener(ct, WORLD, sig("component_menu"), c_light_menu);
-	ct_listener(ct, WORLD | 51, sig("world_draw"), c_light_draw);
+	/* ct_listener(ct, WORLD | 51, sig("world_draw"), c_light_draw); */
 	ct_listener(ct, WORLD, sig("world_pre_draw"), c_light_pre_draw);
 	ct_listener(ct, ENTITY, sig("node_changed"), c_light_position_changed);
 }

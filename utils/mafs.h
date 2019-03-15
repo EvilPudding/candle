@@ -5,6 +5,7 @@
 #include <math.h>
 #include <float.h>
 #include <stdint.h>
+#include <stdlib.h>
 #define CONST static const
 void sincosf(float x, float *sin, float *cos);
 #else
@@ -431,7 +432,7 @@ static inline uint32_t _ignore(uint32_t a) { return a; }
 
 #ifndef __OPENCL_C_VERSION__
 MAFS_DEFINE_TYPE(uint32_t, uvec, "%u", sqrtf, powf, floorf, roundf, _ignore)
-MAFS_DEFINE_TYPE(int32_t, ivec, "%d", sqrtf, powf, floorf, roundf, fabs)
+MAFS_DEFINE_TYPE(int32_t, ivec, "%d", sqrtf, powf, floorf, roundf, abs)
 #endif
 MAFS_DEFINE_TYPE(float, vec, "%f", sqrtf, powf, floorf, roundf, fabs)
 MAFS_DEFINE_TYPE(double, d, "%lf", sqrt, pow, floor, round, fabs)

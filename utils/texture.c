@@ -77,10 +77,10 @@ void svp_init()
 	                         buffer_new("indir", false, 3));
 	g_tiles = malloc(g_indir_w * g_indir_h * sizeof(tex_tile_t));
 
-	g_probe_cache = texture_new_2D(1024 * 4, 1024 * 6, 0,
-	                               buffer_new("color", true, 4),
-	                               buffer_new("depth", false, -1)
-	                               );
+	texture_new_pre(1024 * 4, 1024 * 6, 0);
+		buffer_new("depth", false, -1);
+		buffer_new("color", false, 1);
+	g_probe_cache = _texture_new();
 
 	g_max_probe_levels = log2(1024 / g_min_shadow_tile) + 1;
 	g_num_shadows = get_sum_tiles(g_max_probe_levels);
@@ -978,13 +978,9 @@ static int32_t texture_2D_frame_buffer(texture_t *self)
 int32_t texture_target_sub(texture_t *self, texture_t *depth, int32_t fb,
                           int32_t x, int32_t y, int32_t width, int32_t height) 
 {
-	bool_t ready = self->framebuffer_ready;
-	if(!self->bufs[self->depth_buffer].id)
-	{
-		/* This condition is testing if there is a color buffer */
-		/* it's misleading and should be changed */
+	if (!self->bufs[self->depth_buffer].id)
 		return 0;
-	}
+	bool_t ready = self->framebuffer_ready;
 	if(!ready)
 	{
 		if(self->target == GL_TEXTURE_2D)
@@ -1012,11 +1008,15 @@ int32_t texture_target_sub(texture_t *self, texture_t *depth, int32_t fb,
 
 	if(!ready || (self->last_depth != depth && self->target == GL_TEXTURE_2D))
 	{
+		/* glBindTexture (GL_TEXTURE_2D, 0); */
 		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
 				self->target, depth ? depth->bufs[0].id : 0, 0);
 		self->last_depth = depth;
 
-		glDrawBuffers(self->bufs_size - self->depth_buffer, attachments);
+		if (!self->bufs[self->depth_buffer].id)
+			glDrawBuffer(GL_NONE);
+		else
+			glDrawBuffers(self->bufs_size - self->depth_buffer, attachments);
 
 		GLuint status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
 		if(status != GL_FRAMEBUFFER_COMPLETE)
