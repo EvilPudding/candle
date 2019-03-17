@@ -38,7 +38,7 @@ void c_light_init(c_light_t *self)
 	self->shadow_size = 512;
 	self->radius = 5.0f;
 	self->visible = 1;
-	self->shadow_cooldown = 4;
+	self->shadow_cooldown = 1;
 
 	self->ambient_group = ref("ambient");
 	self->light_group = ref("light");
@@ -114,6 +114,7 @@ static void c_light_create_renderer(c_light_t *self)
 	renderer->cubemap = true;
 
 	renderer_resize(renderer, self->shadow_size, self->shadow_size);
+	renderer->output = output;
 
 	/* renderer_set_output(renderer, output); */
 

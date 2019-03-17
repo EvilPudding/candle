@@ -21,7 +21,7 @@ OBJS_DEB = $(patsubst %.c, $(DIR)/%.debug.o, $(SRCS))
 CFLAGS = $(EMOPTS) -DUSE_VAO -Wall -I. -Wuninitialized \
 	-Wstrict-prototypes $(PARENTCFLAGS)
 
-CFLAGS_REL = $(CFLAGS) -O2
+CFLAGS_REL = $(CFLAGS) -O3
 
 CFLAGS_DEB = $(CFLAGS) -g3 -DDEBUG
 

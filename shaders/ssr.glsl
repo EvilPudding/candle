@@ -32,7 +32,7 @@ void main(void)
 	vec3 nor = decode_normal(normal_metalic_roughness.rg);
 
 	vec4 ssred = ssr2(gbuffer.depth, refr.color, albedo,
-			normal_metalic_roughness.ba, nor);
+			normal_metalic_roughness.ba, nor) * 1.5;
 
 	/* FragColor = ssred; return; */
 

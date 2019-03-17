@@ -152,6 +152,9 @@ typedef struct pass_t
 	int32_t camid;
 	uint32_t bound_textures;
 	uint32_t draw_every;
+
+	/* int32_t sec; */
+	/* uint64_t nano; */
 } pass_t;
 
 struct gl_camera

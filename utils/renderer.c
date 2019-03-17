@@ -766,7 +766,6 @@ int renderer_resize(renderer_t *self, int width, int height)
 	return CONTINUE;
 }
 
-
 static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 {
 	if(!pass->active) return NULL;

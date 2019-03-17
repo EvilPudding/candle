@@ -68,7 +68,6 @@ void svp_init()
 {
 	int max;
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max);
-	printf("Max texture size %d\n", max);
 	max = floorf(((float)max) / 129);
 	g_cache = texture_new_2D(g_cache_w * 129, g_cache_h * 129, TEX_INTERPOLATE,
 	                         buffer_new("color", false, 4));
@@ -77,10 +76,10 @@ void svp_init()
 	                         buffer_new("indir", false, 3));
 	g_tiles = malloc(g_indir_w * g_indir_h * sizeof(tex_tile_t));
 
-	texture_new_pre(1024 * 4, 1024 * 6, 0);
+	_texture_new_2D_pre(1024 * 4, 1024 * 6, 0);
 		buffer_new("depth", false, -1);
-		buffer_new("color", false, 1);
-	g_probe_cache = _texture_new();
+		buffer_new("color", false, 4);
+	g_probe_cache = _texture_new(0);
 
 	g_max_probe_levels = log2(1024 / g_min_shadow_tile) + 1;
 	g_num_shadows = get_sum_tiles(g_max_probe_levels);
@@ -258,9 +257,16 @@ void texture_update_brightness(texture_t *self)
 {
 	texture_bind(self, 0);
 
-	uint8_t data[300];
-	glGetTexImage(self->target, 9, self->bufs[0].format, GL_UNSIGNED_BYTE,
-			data);
+	uint8_t data[4];
+
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, self->frame_buffer[MAX_MIPS - 1]); glerr();
+	glReadBuffer(GL_COLOR_ATTACHMENT0); glerr();
+
+	/* glGetTexImage(self->target, 9, self->bufs[0].format, GL_UNSIGNED_BYTE, */
+			/* data); */
+	glReadPixels(0, 0, 1, 1, self->bufs[0].format, GL_UNSIGNED_BYTE, data); glerr();
+
 	uint8_t r = data[0];
 	uint8_t g = data[1];
 	uint8_t b = data[2];
@@ -273,7 +279,6 @@ static void texture_update_sizes(texture_t *self)
 	int m;
 	self->sizes[0].x = self->width;
 	self->sizes[0].y = self->height;
-	printf("updating sizes %u %u\n", self->width, self->height);
 	for(m = 1; m < MAX_MIPS; m++)
 	{
 		int w = floor(((float)self->sizes[m - 1].x) / 2.0f);
@@ -598,6 +603,7 @@ static int32_t texture_from_file_loader(texture_t *self)
 
 int32_t buffer_new(const char *name, int32_t is_float, int32_t dims)
 {
+	is_float = false;
 #ifdef __EMSCRIPTEN__
 	is_float = false;
 #endif
@@ -1008,15 +1014,11 @@ int32_t texture_target_sub(texture_t *self, texture_t *depth, int32_t fb,
 
 	if(!ready || (self->last_depth != depth && self->target == GL_TEXTURE_2D))
 	{
-		/* glBindTexture (GL_TEXTURE_2D, 0); */
 		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
 				self->target, depth ? depth->bufs[0].id : 0, 0);
 		self->last_depth = depth;
 
-		if (!self->bufs[self->depth_buffer].id)
-			glDrawBuffer(GL_NONE);
-		else
-			glDrawBuffers(self->bufs_size - self->depth_buffer, attachments);
+		glDrawBuffers(self->bufs_size - self->depth_buffer, attachments);
 
 		GLuint status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
 		if(status != GL_FRAMEBUFFER_COMPLETE)

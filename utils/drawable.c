@@ -43,7 +43,7 @@ static draw_group_t *get_group(uint32_t ref)
 	{
 		k = kh_put(draw_group, g_draw_groups, ref, &ret);
 		grp = &kh_value(g_draw_groups, k);
-		*grp = (draw_group_t){ kh_init(config) };
+		*grp = (draw_group_t){ kh_init(config), 0 };
 	}
 	else
 	{

@@ -147,7 +147,7 @@ shader_t *vs_bind(vs_t *vs)
 	loc = glGetUniformLocation(rd->shader->program, "g_probes");
 	glUniform1i(loc, 36);
 	glActiveTexture(GL_TEXTURE0 + 36);
-	texture_bind(g_probe_cache, 0);
+	texture_bind(g_probe_cache, 1);
 	glerr();
 
 

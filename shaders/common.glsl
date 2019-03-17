@@ -153,6 +153,21 @@ float unlinearize(float depth)
 	return 100.0 * (1.0 - (0.1 / depth)) / (100.0 - 0.1);
 }
 
+const vec4 bitSh = vec4(256. * 256. * 256., 256. * 256., 256., 1.);
+const vec4 bitMsk = vec4(0.,vec3(1./256.0));
+const vec4 bitShifts = vec4(1.) / bitSh;
+
+vec4 encode_float_rgba (float value) {
+	value /= 256.0 * 256.0;
+    vec4 comp = fract(value * bitSh);
+    comp -= comp.xxyz * bitMsk;
+    return comp;
+}
+
+float decode_float_rgba (vec4 color) {
+    return dot(color, bitShifts) * (256.0 * 256.0);
+}
+/* -------------------------------------------------------------------------- */
 
 float lookup_single(vec3 shadowCoord)
 {
@@ -160,15 +175,17 @@ float lookup_single(vec3 shadowCoord)
 	int cube_layer;
 	ivec2 tc = ivec2(floor(sampleCube(shadowCoord, cube_layer) * float(size)));
 	ivec2 pos = ivec2(cube_layer % 2, cube_layer / 2) * size;
-	return texelFetch(g_probes, tc + pos + light(pos), 0).r * 90.0f;
+	/* return texelFetch(g_probes, tc + pos + light(pos), 0).r * 90.0f; */
+	vec4 distance = texelFetch(g_probes, tc + pos + light(pos), 0);
+	return decode_float_rgba(distance);
 }
 
 /* float prec = 0.05; */
 float lookup(vec3 coord)
 {
-	float dist = length(coord);
+	float dist = dot(coord, coord);
 	float dist2 = lookup_single(coord) - dist;
-	return (dist2 > -0.01) ? 1.0 : 0.0;
+	return (dist2 > -(0.01 * 0.01)) ? 1.0 : 0.0;
 }
 
 /* SPHEREMAP TRANSFORM */
@@ -288,9 +305,9 @@ float shadow_at_dist_no_tan(vec3 vec, float i)
 
 float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)
 {
-	float ocluder_to_light = lookup_single(-vec);
+	float ocluder_to_light = sqrt(lookup_single(-vec));
 
-	float sd = ((ocluder_to_light - point_to_light) > -0.05) ? 0.0 : 1.0;
+	float sd = ((ocluder_to_light - point_to_light) > -0.01) ? 0.0 : 1.0;
 	if(sd > 0.5)
 	{
 
@@ -306,7 +323,7 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)
 			float iters = 1.0 + min(round(shadow_len / inc), 20.0);
 			inc = shadow_len / iters;
 
-			for (i = inc; count < iters; i += inc)
+			for (i = inc; count < iters && i < 20.0; i += inc)
 			{
 				if(shadow_at_dist_no_tan(vec, i) > 0.5) break;
 
@@ -489,7 +506,6 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
 	float metallic = metallic_roughness.x;
 
 	perceptualRoughness = clamp(perceptualRoughness, c_MinRoughness, 1.0);
-	metallic = clamp(metallic, 0.0, 1.0);
 
 	if(perceptualRoughness > 0.95) return vec4(0.0);
 
@@ -586,7 +602,7 @@ struct PBRInfo
     float metalness;              // metallic value at the surface
     vec3 reflectance0;            // full reflectance color (normal incidence angle)
     vec3 reflectance90;           // reflectance color at grazing angle
-    float alpha_roughness;         // roughness mapped to a more linear change in the roughness (proposed by [2])
+    float alpha_roughness_sq;         // roughness mapped to a more linear change in the roughness (proposed by [2])
     vec3 diffuse_color;            // color contribution from diffuse lighting
     vec3 specularColor;           // color contribution from specular lighting
 };
@@ -620,16 +636,16 @@ float geometricOcclusion(PBRInfo pbrInputs)
 {
     float NdotL = pbrInputs.NdotL;
     float NdotV = pbrInputs.NdotV;
-    float r = pbrInputs.alpha_roughness;
+    float r = pbrInputs.alpha_roughness_sq;
 
-    float attenuationL = 2.0 * NdotL / (NdotL + sqrt(r * r + (1.0 - r * r) * (NdotL * NdotL)));
-    float attenuationV = 2.0 * NdotV / (NdotV + sqrt(r * r + (1.0 - r * r) * (NdotV * NdotV)));
+    float attenuationL = 2.0 * NdotL / (NdotL + sqrt(r + (1.0 - r) * (NdotL * NdotL)));
+    float attenuationV = 2.0 * NdotV / (NdotV + sqrt(r + (1.0 - r) * (NdotV * NdotV)));
     return attenuationL * attenuationV;
 }
 
 float microfacetDistribution(PBRInfo pbrInputs)
 {
-    float roughnessSq = pbrInputs.alpha_roughness * pbrInputs.alpha_roughness;
+    float roughnessSq = pbrInputs.alpha_roughness_sq;
     float f = (pbrInputs.NdotH * roughnessSq - pbrInputs.NdotH) * pbrInputs.NdotH + 1.0;
     return roughnessSq / (M_PI * f * f);
 }
@@ -648,7 +664,8 @@ vec4 pbr(vec4 base_color, vec2 metallic_roughness,
     metallic = clamp(metallic, 0.0, 1.0);
     // Roughness is authored as perceptual roughness; as is convention,
     // convert to material roughness by squaring the perceptual roughness [2].
-    float alpha_roughness = perceptualRoughness * perceptualRoughness;
+    float alpha_roughness_sq = perceptualRoughness * perceptualRoughness;
+	alpha_roughness_sq = alpha_roughness_sq * alpha_roughness_sq;
 
     // The albedo may be defined from a base texture or a flat color
 
@@ -669,7 +686,6 @@ vec4 pbr(vec4 base_color, vec2 metallic_roughness,
     vec3 v = normalize(-c_pos);        // Vector from surface point to camera
     vec3 l = normalize(light_dir);             // Vector from surface point to light
     vec3 h = normalize(l+v);                          // Half vector between both l and v
-    /* vec3 reflection = -normalize(reflect(v, c_nor)); */
 
     float NdotL = clamp(dot(c_nor, l), 0.001, 1.0);
     float NdotV = clamp(abs(dot(c_nor, v)), 0.001, 1.0);
@@ -679,11 +695,11 @@ vec4 pbr(vec4 base_color, vec2 metallic_roughness,
 
 	PBRInfo pbrInputs = PBRInfo( NdotL, NdotV, NdotH, LdotH, VdotH,
 			perceptualRoughness, metallic, specularEnvironmentR0,
-			specularEnvironmentR90, alpha_roughness, diffuse_color,
+			specularEnvironmentR90, alpha_roughness_sq, diffuse_color,
 			specularColor);
 
     // Calculate the shading terms for the microfacet specular shading model
-    vec3 F = specularReflection(pbrInputs);
+    vec3  F = specularReflection(pbrInputs);
     float G = geometricOcclusion(pbrInputs);
     float D = microfacetDistribution(pbrInputs);
 
@@ -692,17 +708,6 @@ vec4 pbr(vec4 base_color, vec2 metallic_roughness,
     vec3 specContrib = F * G * D / (4.0 * NdotL * NdotV);
     // Obtain final intensity as reflectance (BRDF) scaled by the energy of the light (cosine law)
     vec3 color = NdotL * light_color.xyz * (diffuseContrib + specContrib);
-
-    // Apply optional PBR terms for additional (optional) shading
-/* #ifdef HAS_OCCLUSIONMAP */
-    /* float ao = texture(u_OcclusionSampler, v_UV).r; */
-    /* color = mix(color, color * ao, u_OcclusionStrength); */
-/* #endif */
-
-/* #ifdef HAS_EMISSIVEMAP */
-    /* vec3 emissive = SRGBtoLINEAR(texture(u_EmissiveSampler, v_UV)).rgb * u_EmissiveFactor; */
-    /* color += emissive; */
-/* #endif */
 
     return vec4(pow(color,vec3(1.0/2.2)), base_color.a);
 }

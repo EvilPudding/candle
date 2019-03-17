@@ -60,7 +60,7 @@ void main(void)
 			/* sd = 1.0 -lookup(-w_light_dir); */
 		}
 		/* FragColor = vec4(vec3(texture(light(shadow_map), vec3(c_pos)).a) / 10.0, 1.0); return; */
-		/* FragColor = vec4(vec3(lookup_single(-w_light_dir)) / 10.0, 1.0); return; */
+		/* FragColor = vec4(vec3(lookup_single(-w_light_dir)), 1.0); return; */
 
 		if(sd < 0.95)
 		{
