@@ -630,7 +630,7 @@ int32_t c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 			{
 				int32_t res = tool->mmove(tool->usrptr,
 						self->mouse_position, self);
-				if(c_keyboard(self)->shift)
+				if(c_keyboard(self)->ctrl)
 				{
 					c_editmode_update_mouse(self, event->x, event->y);
 				}
@@ -640,7 +640,7 @@ int32_t c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 			{
 				int32_t res = tool->mdrag(tool->usrptr,
 						self->mouse_screen_pos, SDL_BUTTON_LEFT, self);
-				if(c_keyboard(self)->shift)
+				if(c_keyboard(self)->ctrl)
 				{
 					c_editmode_update_mouse(self, event->x, event->y);
 				}
@@ -1377,8 +1377,6 @@ int32_t c_editmode_update(c_editmode_t *self, float *dt)
 
 int32_t c_editmode_draw(c_editmode_t *self)
 {
-	/* return CONTINUE; */
-
 	if(self->nk && (self->visible || self->control))
 	{
 		if(self->menu_x >= 0)

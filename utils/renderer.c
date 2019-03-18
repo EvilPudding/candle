@@ -22,11 +22,12 @@ static int renderer_update_screen_texture(renderer_t *self);
 
 static void bind_pass(pass_t *pass, shader_t *shader);
 
+#define FIRST_TEX 3
 static void pass_unbind_textures(pass_t *pass)
 {
 	for (uint32_t i = 0; i < pass->bound_textures; i++)
 	{
-		glActiveTexture(GL_TEXTURE0 + 31 + i);
+		glActiveTexture(GL_TEXTURE0 + FIRST_TEX + i);
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 }
@@ -49,9 +50,9 @@ static int pass_bind_buffer(pass_t *pass, bind_t *bind, shader_t *shader)
 				/* if (i == 0) printf("%s binding id %d %s\n", pass->name, */
 				/*                    buffer->bufs[t].id, */
 				/*                    buffer->bufs[t].name); */
-				glActiveTexture(GL_TEXTURE0 + 31 + i);
+				glActiveTexture(GL_TEXTURE0 + FIRST_TEX + i);
 				texture_bind(buffer, t);
-				glUniform1i(sb->buffer.u_tex[t], 31 + i);
+				glUniform1i(sb->buffer.u_tex[t], FIRST_TEX + i);
 				glerr();
 			}
 			/* glUniform1i(sb->buffer.u_tex[t], buffer->bufs[t].id); glerr(); */

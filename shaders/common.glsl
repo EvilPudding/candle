@@ -158,14 +158,14 @@ const vec4 bitMsk = vec4(0.,vec3(1./256.0));
 const vec4 bitShifts = vec4(1.) / bitSh;
 
 vec4 encode_float_rgba (float value) {
-	value /= 256.0 * 256.0;
+	value /= 256.0;
     vec4 comp = fract(value * bitSh);
     comp -= comp.xxyz * bitMsk;
     return comp;
 }
 
 float decode_float_rgba (vec4 color) {
-    return dot(color, bitShifts) * (256.0 * 256.0);
+    return dot(color, bitShifts) * (256.0);
 }
 /* -------------------------------------------------------------------------- */
 
@@ -184,8 +184,8 @@ float lookup_single(vec3 shadowCoord)
 float lookup(vec3 coord)
 {
 	float dist = dot(coord, coord);
-	float dist2 = lookup_single(coord) - dist;
-	return (dist2 > -(0.01 * 0.01)) ? 1.0 : 0.0;
+	float dist2 = lookup_single(coord) - sqrt(dist);
+	return (dist2 > -(0.01)) ? 1.0 : 0.0;
 }
 
 /* SPHEREMAP TRANSFORM */
@@ -305,7 +305,7 @@ float shadow_at_dist_no_tan(vec3 vec, float i)
 
 float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)
 {
-	float ocluder_to_light = sqrt(lookup_single(-vec));
+	float ocluder_to_light = lookup_single(-vec);
 
 	float sd = ((ocluder_to_light - point_to_light) > -0.01) ? 0.0 : 1.0;
 	if(sd > 0.5)
@@ -323,7 +323,7 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)
 			float iters = 1.0 + min(round(shadow_len / inc), 20.0);
 			inc = shadow_len / iters;
 
-			for (i = inc; count < iters && i < 20.0; i += inc)
+			for (i = inc; count < iters && count < 20.0; i += inc)
 			{
 				if(shadow_at_dist_no_tan(vec, i) > 0.5) break;
 

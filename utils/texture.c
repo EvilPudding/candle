@@ -149,9 +149,9 @@ static struct tpair *pair(texture_t *tex, int id)
 	p->i = id;
 	return p;
 }
-#define ID_2D 31
-#define ID_CUBE 64
-#define ID_3D 33
+#define ID_2D 0
+#define ID_CUBE 1
+#define ID_3D 2
 static void texture_update_gl_loader(texture_t *self)
 {
 
@@ -547,13 +547,13 @@ static int32_t texture_from_file_loader(texture_t *self)
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	glerr();
 
-/* 	for (int m = 0; m < MAX_MIPS; m++) */
-/* 	{ */
-/* 		for (int tile = 0; tile < self->bufs[0].num_tiles[m]; tile++) */
-/* 		{ */
-/* 			load_tile(self, &self->bufs[0].mips[m][tile], m, 0); */
-/* 		} */
-/* 	} */
+	for (int m = 0; m < MAX_MIPS; m++)
+	{
+		for (int tile = 0; tile < self->bufs[0].num_tiles[m]; tile++)
+		{
+			load_tile(self, &self->bufs[0].mips[m][tile], m, 0);
+		}
+	}
 
 	/* glGenerateMipmap(self->target); glerr(); */
 	glBindTexture(self->target, 0); glerr();
