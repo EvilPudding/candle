@@ -920,6 +920,7 @@ int32_t c_editmode_key_up(c_editmode_t *self, char *key)
 			cam->active = 0;
 			c_window(self)->renderer = self->backup_renderer;
 			self->control = 0;
+			g_candle->exit = 1;
 		}
 		entity_signal(entity_null, sig("editmode_toggle"), NULL, NULL);
 	}
@@ -1013,8 +1014,8 @@ int32_t c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 	float h = tex->height;
 	/* if (w > 1000) */
 	{
-		h = 300.0f * (h / w);
-		w = 300.0f;
+		h = 800.0f * (h / w);
+		w = 800.0f;
 	}
 
 	res = nk_can_begin_titled(self->nk, buffer, title,

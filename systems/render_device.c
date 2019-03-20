@@ -135,18 +135,18 @@ shader_t *vs_bind(vs_t *vs)
 	shader_bind(rd->shader);
 
 	loc = glGetUniformLocation(rd->shader->program, "g_cache");
-	glUniform1i(loc, 34);
-	glActiveTexture(GL_TEXTURE0 + 34);
+	glUniform1i(loc, 3);
+	glActiveTexture(GL_TEXTURE0 + 3);
 	texture_bind(g_cache, 0);
 
 	loc = glGetUniformLocation(rd->shader->program, "g_indir");
-	glUniform1i(loc, 35);
-	glActiveTexture(GL_TEXTURE0 + 35);
+	glUniform1i(loc, 4);
+	glActiveTexture(GL_TEXTURE0 + 4);
 	texture_bind(g_indir, 0);
 
 	loc = glGetUniformLocation(rd->shader->program, "g_probes");
-	glUniform1i(loc, 36);
-	glActiveTexture(GL_TEXTURE0 + 36);
+	glUniform1i(loc, 5);
+	glActiveTexture(GL_TEXTURE0 + 5);
 	texture_bind(g_probe_cache, 1);
 	glerr();
 

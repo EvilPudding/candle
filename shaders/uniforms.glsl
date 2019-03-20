@@ -15,7 +15,7 @@ struct camera_t
 struct light_t
 {
 	vec4 color;
-	ivec2 pos;
+	uvec2 pos;
 	int lod;
 	float radius;
 };
@@ -23,11 +23,11 @@ struct light_t
 struct property_t
 {
 	vec4 color;
-	ivec2 size;
+	uvec2 size;
 	float blend;
 	float scale;
 	vec3 padding;
-	int layer;
+	uint layer;
 };
 
 struct material_t

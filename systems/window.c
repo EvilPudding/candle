@@ -204,7 +204,9 @@ int c_window_created(c_window_t *self)
 
 #ifdef DEBUG
 	glEnable(GL_DEBUG_OUTPUT);
+	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, 0, GL_TRUE);
 	glDebugMessageCallback((void*)c_window_debug, self);
+
 #endif
 	if(!g_quad_vs)
 	{

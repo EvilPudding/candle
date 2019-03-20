@@ -22,7 +22,7 @@ static int renderer_update_screen_texture(renderer_t *self);
 
 static void bind_pass(pass_t *pass, shader_t *shader);
 
-#define FIRST_TEX 3
+#define FIRST_TEX 5
 static void pass_unbind_textures(pass_t *pass)
 {
 	for (uint32_t i = 0; i < pass->bound_textures; i++)
@@ -344,16 +344,53 @@ float wrap(float x)
 	return fmod(1.0f + fmod(x, 1.0f), 1.0f);
 }
 
-bool_t load_mip(prop_t *prop, vec2_t coords, int mip, int frame)
+bool_t load_mip(prop_t *prop, vec2_t coords, uint32_t mip, uint32_t frame)
 {
-	int tiles_per_row = ceilf(((float)prop->texture->sizes[mip].x) / 128.0f);
+	uint32_t x = floor((coords.x * prop->texture->sizes[mip].x) / 128.0f);
+	uint32_t y = floor((coords.y * prop->texture->sizes[mip].y) / 128.0f);
 
-	int x = floor((coords.x * prop->texture->sizes[mip].x) / 128.0f);
-	int y = floor((coords.y * prop->texture->sizes[mip].y) / 128.0f);
-	int tex_tile = y * tiles_per_row + x;
+	return load_tile(prop->texture, mip, x, y, frame);
+}
 
-	return load_tile(prop->texture, &prop->texture->bufs[0].mips[mip][tex_tile],
-	          mip, frame);
+bool_t load_prop(prop_t *prop, vec2_t coords, uint32_t mip, uint32_t frame)
+{
+	float fmip = ((float)mip) * (8.0f / 255.0f);
+	if (prop->texture && prop->texture->bufs[0].ready)
+	{
+		bool_t loaded = false;
+		int mip0 = floorf(fmip);
+		int mip1 = ceilf(fmip);
+		if (mip0 > MAX_MIPS) mip0 = MAX_MIPS;
+		if (mip1 > MAX_MIPS) mip1 = MAX_MIPS;
+		if (mip0 < 0) mip0 = 0;
+		if (mip1 < 0) mip1 = 0;
+
+		coords.y = 1.0f - coords.y;
+		coords = vec2_scale(coords, prop->scale);
+
+		coords.x = wrap(coords.x);
+		coords.y = wrap(coords.y);
+
+		/* coords.x *= prop->texture->width; */
+		/* coords.y *= prop->texture->height; */
+
+		loaded |= load_mip(prop, coords, mip0, frame);
+		if (mip0 != mip1)
+			loaded |= load_mip(prop, coords, mip1, frame);
+		if (loaded)
+			return false;
+	}
+	return true;
+}
+
+vec2_t tc_unmap(vec2_t tc)
+{
+
+#define TC_MAX ( 64.0f)
+#define TC_MIN (-64.0f)
+#define NUM_COORDS 65536.0f
+
+	return vec2_add_number(vec2_scale(tc, (TC_MAX - TC_MIN) / NUM_COORDS), TC_MIN);
 }
 
 void *renderer_process_query_mips(renderer_t *self)
@@ -368,6 +405,11 @@ void *renderer_process_query_mips(renderer_t *self)
 	struct{
 		uint8_t _[4];
 	} *mips = alloca(sizeof(*mips) * tex->width * tex->height);
+
+	struct{
+		uint8_t _[4];
+	} *mips2 = alloca(sizeof(*mips2) * tex->width * tex->height);
+
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, tex->frame_buffer[0]); glerr();
@@ -384,44 +426,33 @@ void *renderer_process_query_mips(renderer_t *self)
 	glReadPixels(0, 0, tex->width, tex->height, tex->bufs[2].format,
 			GL_UNSIGNED_BYTE, mips); glerr();
 
-	int loaded = 0;
+	glReadBuffer(GL_COLOR_ATTACHMENT2); glerr();
+
+	glReadPixels(0, 0, tex->width, tex->height, tex->bufs[3].format,
+			GL_UNSIGNED_BYTE, mips2); glerr();
+
 	for (int y = 0; y < tex->height; y++) {
 		for (int x = 0; x < tex->width; x++) {
 			int i = y * tex->width + x;
-			mat_t *mat = g_mats[coords[i]._[2]];
+			vec2_t rcoords;
+			rcoords.x = 256.0f * ((float)coords[i]._[0]) + ((float)coords[i]._[1]);
+			rcoords.y = 256.0f * ((float)coords[i]._[2]) + ((float)coords[i]._[3]);
+			rcoords = tc_unmap(rcoords);
 
-			uint32_t p = 0;
-			for (prop_t *prop = &mat->albedo; prop <= &mat->emissive; prop++, p++)
-			{
-				if (prop->texture && prop->texture->bufs[0].ready)
-				{
-					float mip = ((float)mips[i]._[p]) * (8.0f / 255.0f);
-					int mip0 = floor(mip);
-					int mip1 = ceil(mip);
-					if (mip0 > MAX_MIPS) mip0 = MAX_MIPS;
-					if (mip1 > MAX_MIPS) mip1 = MAX_MIPS;
-					if (mip0 < 0) mip0 = 0;
-					if (mip1 < 0) mip1 = 0;
+			mat_t *mat = g_mats[mips2[i]._[2]];
 
-					vec2_t rcoords = vec2(((float)coords[i]._[0]) / 255.0f - 0.5f,
-					                      ((float)coords[i]._[1]) / 255.0f - 0.5f);
-
-					rcoords = vec2_scale(rcoords, 16.0f);
-					rcoords.y = 1.0f - rcoords.y;
-					rcoords = vec2_scale(rcoords, prop->scale);
-
-					rcoords.x = wrap(rcoords.x);
-					rcoords.y = wrap(rcoords.y);
-
-					/* rcoords.x *= prop->texture->width; */
-					/* rcoords.y *= prop->texture->height; */
-
-					loaded += load_mip(prop, rcoords, mip0, self->frame);
-					if (mip0 != mip1)
-						loaded += load_mip(prop, rcoords, mip1, self->frame);
-					if (loaded > 100) goto end;
-				}
-			}
+			if (!load_prop(&mat->albedo, rcoords, mips[i]._[0], self->frame))
+				goto end;
+			if (!load_prop(&mat->roughness, rcoords, mips[i]._[1], self->frame))
+				goto end;
+			if (!load_prop(&mat->metalness, rcoords, mips[i]._[2], self->frame))
+				goto end;
+			if (!load_prop(&mat->transparency, rcoords, mips[i]._[3], self->frame))
+				goto end;
+			if (!load_prop(&mat->normal, rcoords, mips2[i]._[0], self->frame))
+				goto end;
+			if (!load_prop(&mat->emissive, rcoords, mips2[i]._[1], self->frame))
+				goto end;
 		}
 	}
 
@@ -442,6 +473,7 @@ void renderer_default_pipeline(renderer_t *self)
 		buffer_new("depth",		true, -1);
 		buffer_new("coords",	false, 4); /* Texcoords, Matid */
 		buffer_new("mips",		false, 4);
+		buffer_new("mips2",		false, 4);
 	texture_t *query_mips = _texture_new(0);
 
 	_texture_new_2D_pre(0, 0, 0);

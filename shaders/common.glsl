@@ -30,26 +30,26 @@ in vec3 vertex_position;
 in vec2 texcoord;
 in mat3 TM;
 
-vec2 sampleCube(const vec3 v, out int faceIndex)
+vec2 sampleCube(const vec3 v, out uint faceIndex)
 {
 	vec3 vAbs = abs(v);
 	float ma;
 	vec2 uv;
 	if(vAbs.z >= vAbs.x && vAbs.z >= vAbs.y)
 	{
-		faceIndex = v.z < 0.0 ? 5 : 4;
+		faceIndex = v.z < 0.0 ? 5u : 4u;
 		ma = 0.5 / vAbs.z;
 		uv = vec2(v.z < 0.0 ? -v.x : v.x, -v.y);
 	}
 	else if(vAbs.y >= vAbs.x)
 	{
-		faceIndex = v.y < 0.0 ? 3 : 2;
+		faceIndex = v.y < 0.0 ? 3u : 2u;
 		ma = 0.5 / vAbs.y;
 		uv = vec2(v.x, v.y < 0.0 ? -v.z : v.z);
 	}
 	else
 	{
-		faceIndex = v.x < 0.0 ? 1 : 0;
+		faceIndex = v.x < 0.0 ? 1u : 0u;
 		ma = 0.5 / vAbs.x;
 		uv = vec2(v.x < 0.0 ? v.z : -v.z, -v.y);
 	}
@@ -70,49 +70,49 @@ float mip_map_scalar(in vec2 texture_coordinate) // in texel units
     vec2 dy_vtc = dFdy(texture_coordinate);
     return max(dot(dx_vtc, dx_vtc), dot(dy_vtc, dy_vtc));
 }
-#define MAX_MIPS 9
+#define MAX_MIPS 9u
 float mip_map_level(in vec2 texture_coordinate) // in texel units
 {
-	return clamp(0.5 * log2(mip_map_scalar(texture_coordinate)), 0.0, float(MAX_MIPS - 1));
+	return clamp(0.5 * log2(mip_map_scalar(texture_coordinate)), 0.0, float(MAX_MIPS - 1u));
 }
 
-#define g_indir_w 256
-#define g_indir_h 64
-#define g_cache_w 64
-#define g_cache_h 32
+#define g_indir_w 256u
+#define g_indir_h 64u
+#define g_cache_w 64u
+#define g_cache_h 16u
+/* #define g_cache_w 64u */
+/* #define g_cache_h 32u */
 
-vec4 solveMip(const property_t prop, int mip, vec2 coords, bool draw)
+vec4 solveMip(const property_t prop, uint mip, vec2 coords, bool draw)
 {
-	int tiles_per_row = int(ceil(float(prop.size.x) / 128.0));
-	int tiles_per_col = int(ceil(float(prop.size.y) / 128.0));
-	int offset = prop.layer;
+	uint tiles_per_row = uint(ceil(float(prop.size.x) / 128.0));
+	uint tiles_per_col = uint(ceil(float(prop.size.y) / 128.0));
+	uint offset = prop.layer;
 
-	for (int i = 0; i < MAX_MIPS && i < mip; i++)
+	for (uint i = 0u; i < MAX_MIPS && i < mip; i++)
 	{
 		offset += tiles_per_row * tiles_per_col;
-		tiles_per_row = int(ceil(0.5 * float(tiles_per_row)));
-		tiles_per_col = int(ceil(0.5 * float(tiles_per_col)));
-		coords.x /= 2.0;
-		coords.y /= 2.0;
+		tiles_per_row = uint(ceil(0.5 * float(tiles_per_row)));
+		tiles_per_col = uint(ceil(0.5 * float(tiles_per_col)));
 	}
-	vec2 intile_coords = mod(vec2(coords), 128.0) + 0.5f;
 
-	int x = int(floor(coords.x / 128.0));
-	int y = int(floor(coords.y / 128.0));
-	int tex_tile = y * tiles_per_row + x + offset;
-	/* int tex_tile = offset; */
+	uvec2 indir_coords = uvec2(floor(coords / (pow(2.0, float(mip)) * 128.0)));
+	uint tex_tile = indir_coords.y * tiles_per_row + indir_coords.x + offset;
 
-	vec3 info = texelFetch(g_indir, ivec2(tex_tile % g_indir_w, tex_tile / g_indir_w), 0).rgb;
-	int cache_tile = int(info.r * 255.0) + int(info.g * (256.0 * 255.0));
+	vec3 info = texelFetch(g_indir, ivec2(tex_tile % g_indir_w, tex_tile / g_indir_w), 0).rgb * 255.0;
+	uint cache_tile = uint(info.r) + uint(info.g * 256.0);
+	float actual_mip = info.b;
 
-	ivec2 cache_coords = ivec2(cache_tile % g_cache_w, cache_tile / g_cache_w) * 129;
-	/* if ( draw && ( intile_coords.x >= 126.0 || intile_coords.y >= 126.0 || */
-	    /* intile_coords.x <= 1.0 || intile_coords.y <= 1.0)) */
-		/* return vec4(0.0, 1.0, 0.0, 1.0); */
-	const vec2 g_cache_size = vec2(g_cache_w * 129, g_cache_h * 129);
+	uvec2 cache_coords = uvec2(cache_tile % g_cache_w, cache_tile / g_cache_w) * 129u;
+
+	const vec2 g_cache_size = vec2(g_cache_w * 129u, g_cache_h * 129u);
+
+	vec2 actual_coords = coords / pow(2.0, actual_mip);
+	vec2 intile_coords = mod(actual_coords, 128.0) + 0.5f;
+
 	return textureLod(g_cache,
 			(vec2(cache_coords) + intile_coords) / g_cache_size, 0.0);
-	/* return texelFetch(g_cache, cache_coords + ivec2(floor(intile_coords)), 0); */
+	/* return texelFetch(g_cache, cache_coords + uvec2(floor(intile_coords)), 0); */
 }
 
 vec4 textureSVT(const property_t prop, vec2 coords, bool draw)
@@ -121,10 +121,11 @@ vec4 textureSVT(const property_t prop, vec2 coords, bool draw)
 	coords *= prop.scale;
 	vec2 rcoords = fract(coords) * vec2(prop.size);
 	float mip = mip_map_level(coords * vec2(prop.size));
-	int mip0 = int(floor(mip));
-	int mip1 = int(ceil(mip));
+	uint mip0 = uint(floor(mip));
+	uint mip1 = uint(ceil(mip));
 
-	return mix(solveMip(prop, mip0, rcoords, draw), solveMip(prop, mip1, rcoords, draw), fract(mip));
+	return mix(solveMip(prop, mip0, rcoords, draw),
+	           solveMip(prop, mip1, rcoords, draw), fract(mip));
 	/* return solveMip(prop, 0, rcoords, draw); */
 }
 
@@ -171,12 +172,12 @@ float decode_float_rgba (vec4 color) {
 
 float lookup_single(vec3 shadowCoord)
 {
-	int size = 1024 / int(pow(2.0, float(light(lod))));
-	int cube_layer;
-	ivec2 tc = ivec2(floor(sampleCube(shadowCoord, cube_layer) * float(size)));
-	ivec2 pos = ivec2(cube_layer % 2, cube_layer / 2) * size;
+	uint size = 1024u / uint(pow(2.0, float(light(lod))));
+	uint cube_layer;
+	uvec2 tc = uvec2(floor(sampleCube(shadowCoord, cube_layer) * float(size)));
+	uvec2 pos = uvec2(cube_layer % 2u, cube_layer / 2u) * size;
 	/* return texelFetch(g_probes, tc + pos + light(pos), 0).r * 90.0f; */
-	vec4 distance = texelFetch(g_probes, tc + pos + light(pos), 0);
+	vec4 distance = texelFetch(g_probes, ivec2(tc + pos + light(pos)), 0);
 	return decode_float_rgba(distance);
 }
 
@@ -234,8 +235,8 @@ vec3 get_position(sampler2D depth, vec2 pos)
 
 vec3 get_normal(sampler2D buffer)
 {
-	return decode_normal(texelFetch(buffer, ivec2(int(gl_FragCoord.x),
-					int(gl_FragCoord.y)), 0).rg);
+	return decode_normal(texelFetch(buffer, ivec2(gl_FragCoord.x,
+					gl_FragCoord.y), 0).rg);
 }
 vec3 get_normal(vec2 tc)
 {
@@ -381,8 +382,8 @@ float ambientOcclusion(sampler2D depth, vec3 p, vec3 n, float dist_to_eye)
 	/* vec[6] = vec2(-1.0, 1.0); */ 
 	/* vec[7] = vec2(-1.0, -1.0); */
 
-	int iterations = 12;
-	for (int j = 0; j < iterations; ++j)
+	uint iterations = 12u;
+	for (uint j = 0u; j < iterations; ++j)
 	{
 		vec2 coord1 = reflect(fTaps_Poisson[j], rnd) * rad;
 		vec2 coord2 = vec2(coord1.x * 0.707 - coord1.y * 0.707,
@@ -417,7 +418,7 @@ vec3 BinarySearch(sampler2D depthmap, vec3 dir, inout vec3 hitCoord)
 {
     float depth;
 	vec3 pc;
-    for(int i = 0; i < 16; i++)
+    for(uint i = 0u; i < 16u; i++)
     {
 		pc = get_proj_coord(depthmap, hitCoord);
 		if(pc.x > 1.0 || pc.y > 1.0 || pc.x < 0.0 || pc.y < 0.0) break;
@@ -437,7 +438,7 @@ vec3 RayCast(sampler2D depth, vec3 dir, inout vec3 hitCoord)
 {
     dir *= 0.1;  
 
-    for(int i = 0; i < 64; ++i) {
+    for(uint i = 0u; i < 64u; ++i) {
         hitCoord               += dir; 
 		dir *= 1.1;
 
@@ -540,14 +541,14 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
     float adjacentLength = length(deltaP);
     vec2 adjacentUnit = normalize(deltaP);
 
-	int numMips = MAX_MIPS;
+	uint numMips = MAX_MIPS;
     vec4 reflect_color = vec4(0.0);
     float remainingAlpha = 1.0;
     float maxMipLevel = 3.0;
     float glossMult = gloss;
 
     // cone-tracing using an isosceles triangle to approximate a cone in screen space
-    for(int i = 0; i < 1; ++i)
+    for(uint i = 0u; i < 1u; ++i)
     {
         float oppositeLength = 2.0 * tan(coneTheta) * adjacentLength;
         float incircleSize = isoscelesTriangleInRadius(oppositeLength, adjacentLength);

@@ -47,8 +47,10 @@ texture_t *g_probe_cache;
 tex_tile_t **g_cache_bound;
 texture_t *g_indir;
 tex_tile_t *g_tiles;
+/* const int g_cache_w = 64; */
+/* const int g_cache_h = 32; */
 const int g_cache_w = 64;
-const int g_cache_h = 32;
+const int g_cache_h = 16;
 const int g_indir_w = 256;
 const int g_indir_h = 64;
 int g_cache_n = 0;
@@ -308,7 +310,8 @@ static int32_t alloc_buffer_gl(struct tpair *data)
 	glActiveTexture(GL_TEXTURE0 + ID_2D);
 	glBindTexture(self->target, self->bufs[i].id); glerr();
 	glTexImage2D(self->target, 0, self->bufs[i].internal,
-			width, height, 0, self->bufs[i].format, self->bufs[i].type, NULL); glerr();
+			width, height, 0, self->bufs[i].format,
+			self->bufs[i].type, NULL); glerr();
 
 	glTexParameteri(self->target, GL_TEXTURE_WRAP_S, wrap);
 	glTexParameteri(self->target, GL_TEXTURE_WRAP_T, wrap);
@@ -348,20 +351,60 @@ void texture_alloc_buffer(texture_t *self, int32_t i)
 			NULL);
 }
 
-bool_t load_tile(texture_t *self, tex_tile_t *tile, int mip, int frame)
+void propagate_location(uint32_t mip, uint32_t x, uint32_t y,
+                        tex_tile_t *root) 
+{
+	if (mip == 0) return;
+	mip -= 1;
+	x *= 2;
+	y *= 2;
+	const uint32_t tiles_per_row = root->tex->bufs[0].num_tiles_x[mip];
+
+	for (uint32_t yy = y; yy <= y + 1; yy++)
+	{
+		if (yy >= root->tex->bufs[0].num_tiles_y[mip])
+			break;
+
+		for (uint32_t xx = x; xx <= x + 1; xx++)
+		{
+			uint32_t tex_tile = yy * tiles_per_row + xx;
+			if (xx >= root->tex->bufs[0].num_tiles_x[mip])
+				continue;
+
+			tex_tile_t *down_tile = &root->tex->bufs[0].mips[mip][tex_tile];
+			assert (down_tile->bound == 0);
+
+			down_tile->loaded_mip = root;
+
+			glTexSubImage2D(g_indir->target, 0, down_tile->indir_x, down_tile->indir_y,
+							1, 1, GL_RGB, GL_UNSIGNED_BYTE, &root->location);
+			propagate_location(mip, xx, yy, root);
+		}
+	}
+}
+
+void set_tile_location(tex_tile_t *tile, tex_cache_location_t *location)
+{
+	texture_bind(g_indir, 0);
+	glTexSubImage2D(g_indir->target, 0, tile->indir_x,
+					tile->indir_y,
+					1, 1, GL_RGB, GL_UNSIGNED_BYTE,
+					location);
+	propagate_location(tile->location.mip, tile->x, tile->y, tile);
+}
+
+uint32_t get_free_svt(void)
 {
 	uint32_t cache_tile;
-
-	tile->touched = frame;
-
-	if (tile->bound) return false;
-
 	if (g_cache_n >= g_cache_w * g_cache_h)
 	{
 		cache_tile = 0;
 		uint32_t oldest_touched = ~0;
 		for (uint32_t i = 0; i < g_cache_n; i++)
 		{
+			if (g_cache_bound[i]->bound != 1) continue;
+			if (!g_cache_bound[i]->loaded_mip) continue;
+			assert(g_cache_bound[i]->bound);
 			const uint32_t touched = g_cache_bound[i]->touched;
 			if (touched < oldest_touched)
 			{
@@ -369,74 +412,85 @@ bool_t load_tile(texture_t *self, tex_tile_t *tile, int mip, int frame)
 				oldest_touched = touched;
 			}
 		}
-		if (g_cache_bound[cache_tile])
+
+		tex_tile_t *old_tile = g_cache_bound[cache_tile];
+		assert(old_tile->bound == 1);
+		old_tile->bound = 0;
+
+		if (old_tile->loaded_mip)
 		{
-			g_cache_bound[cache_tile]->bound = false;
+			old_tile->loaded_mip->bound--;
+
+			set_tile_location(old_tile, &old_tile->loaded_mip->location);
+
+			old_tile->loaded_mip = NULL;
 		}
 	}
 	else
 	{
 		cache_tile = g_cache_n++;
 	}
+	return cache_tile;
+}
+
+bool_t load_tile(texture_t *self, uint32_t mip, uint32_t x, uint32_t y,
+                 uint32_t frame)
+{
+	assert(mip < MAX_MIPS);
+	const uint32_t tiles_per_row = self->bufs[0].num_tiles_x[mip];
+
+	uint32_t tex_tile = y * tiles_per_row + x;
+	tex_tile_t *tile = &self->bufs[0].mips[mip][tex_tile];
+	tex_tile_t *mip_tile = NULL;
+
+	tile->touched = frame;
+
+	if (tile->bound) return false;
+
+	if (mip + 1 < MAX_MIPS)
+	{
+		const uint32_t mtiles_per_row = self->bufs[0].num_tiles_x[mip + 1];
+		const uint32_t mx = x / 2;
+		const uint32_t my = y / 2;
+
+		mip_tile = &self->bufs[0].mips[mip + 1][my * mtiles_per_row + mx];
+
+		if (load_tile(self, mip + 1, mx, my, frame))
+			return true;
+
+		assert(mip_tile->bound);
+		mip_tile->bound++;
+		tile->loaded_mip = mip_tile;
+	}
+	else
+	{
+		assert(tile->loaded_mip == NULL);
+	}
+	tile->bound = 1;
+
+	uint32_t cache_tile = get_free_svt();
+
 	g_cache_bound[cache_tile] = tile;
 
-	tile->bound = true;
-
-	struct {
-		uint16_t cache_tile;
-		uint8_t mip_level;
-	} indir_info = {cache_tile, mip};
-
-
-	int vx = (indir_info.cache_tile % g_cache_w) * 129;
-	int vy = (indir_info.cache_tile / g_cache_w) * 129;
+	int vx = (cache_tile % g_cache_w) * 129;
+	int vy = (cache_tile / g_cache_w) * 129;
 	texture_bind(g_cache, 0);
-	glTexSubImage2D(self->target, 0, vx, vy, 129, 129,
-			self->bufs[0].format, GL_UNSIGNED_BYTE,
+	glTexSubImage2D(g_cache->target, 0, vx, vy, 129, 129,
+			g_cache->bufs[0].format, GL_UNSIGNED_BYTE,
 			tile->bytes); glerr();
 
-	texture_bind(g_indir, 0);
 	/* glCopyTexSubImage2D(GL_TEXTURE_2D, */
 	/* 		0, (g_cache_n % g_cache_w) * 128, */
 	/* 		  (g_cache_n / g_cache_w) * 128, x, y, 128, 128); */
-	glTexSubImage2D(g_indir->target, 0, tile->indir_x, tile->indir_y, 1, 1,
-			GL_RGB, GL_UNSIGNED_BYTE, &indir_info);
+
+	tile->location.cache_tile = cache_tile;
+
+	set_tile_location(tile, &tile->location);
+
+	if (tile->loaded_mip) assert(tile->loaded_mip->bound > 1);
+
 	glerr();
 	return true;
-}
-
-void fill_remaining(tex_tile_t *tile, int w, int h)
-{
-	/* int t[129 * 129] = {0}; */
-	for (int y = 0; y < h; y++)
-	{
-		int wy = y % h;
-		for (int x = w; x < 129; x++)
-		{
-			int wx = x % w;
-			/* tile->bytes[y * 129 + x] = 0xFF00FFFF; */
-			tile->bytes[y * 129 + x] = tile->bytes[wy * 129 + wx];
-		}
-	}
-	for (int y = h; y < 129; y++)
-	{
-		int wy = y % h;
-		for (int x = 0; x < 129; x++)
-		{
-			int wx = x % w;
-			tile->bytes[y * 129 + x] = tile->bytes[wy * 129 + wx];
-		}
-	}
-	/* for (int y = 0; y < 129; y+=4) */
-	/* { */
-	/* 	for (int x = 0; x < 129; x+=4) */
-	/* 	{ */
-	/* 		printf(t[y * 129 + x] ? "@" : "-"); */
-	/* 	} */
-	/* 	printf("\n"); */
-	/* } */
-	/* printf("\n"); */
-
 }
 
 static int32_t texture_from_file_loader(texture_t *self)
@@ -499,19 +553,27 @@ static int32_t texture_from_file_loader(texture_t *self)
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, self->frame_buffer[m]); glerr();
 		glReadBuffer(GL_COLOR_ATTACHMENT0); glerr();
 
-		self->bufs[0].num_tiles[m] = tiles_x * tiles_y;
+		self->bufs[0].num_tiles_x[m] = tiles_x;
+		self->bufs[0].num_tiles_y[m] = tiles_y;
 		self->bufs[0].mips[m] = &g_tiles[g_indir_n];
 		for (int y = 0; y < tiles_y; y++) for (int x = 0; x < tiles_x; x++)
 		{
 			tex_tile_t *tilep = &g_tiles[g_indir_n];
 
-			tilep->bound = false;
 			tilep->indir_x = g_indir_n % g_indir_w;
 			tilep->indir_y = g_indir_n / g_indir_w;
+			tilep->location.mip = m;
+			tilep->x = x;
+			tilep->y = y;
+			tilep->bound = 0;
+			tilep->loaded_mip = NULL;
+			tilep->tex = self;
 			g_indir_n++;
+			assert(g_indir_n < g_indir_w * g_indir_h);
 
 			int tx = x * 128;
 			int ty = y * 128;
+
 			int w = fmin(129, self->sizes[m].x - tx);
 			int h = fmin(129, self->sizes[m].y - ty); 
 			if (self->sizes[m].x <= 0 || w <= 0) continue;
@@ -547,13 +609,13 @@ static int32_t texture_from_file_loader(texture_t *self)
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	glerr();
 
-	for (int m = 0; m < MAX_MIPS; m++)
-	{
-		for (int tile = 0; tile < self->bufs[0].num_tiles[m]; tile++)
-		{
-			load_tile(self, &self->bufs[0].mips[m][tile], m, 0);
-		}
-	}
+	/* for (int m = 0; m < MAX_MIPS; m++) */
+	/* { */
+		/* for (int tile = 0; tile < self->bufs[0].num_tiles[m]; tile++) */
+		/* { */
+			/* load_tile(self, &self->bufs[0].mips[m][tile], m, 0); */
+		/* } */
+	/* } */
 
 	/* glGenerateMipmap(self->target); glerr(); */
 	glBindTexture(self->target, 0); glerr();

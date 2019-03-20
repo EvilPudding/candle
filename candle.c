@@ -311,7 +311,7 @@ void candle_wait(void)
 {
 	/* SDL_WaitThread(candle->candle_thr, NULL); */
 #ifdef __EMSCRIPTEN__
-	emscripten_set_main_loop(ticker_loop, 60, true);
+	emscripten_set_main_loop(ticker_loop, 0, true);
 #else
 	SDL_WaitThread(g_candle->render_thr, NULL);
 	SDL_WaitThread(g_candle->ticker_thr, NULL);

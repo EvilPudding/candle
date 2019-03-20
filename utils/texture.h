@@ -14,11 +14,26 @@ typedef struct
 
 typedef struct
 {
+	uint16_t cache_tile;
+	uint8_t mip;
+} tex_cache_location_t;
+
+typedef struct tex_tile tex_tile_t;
+typedef struct texture_t texture_t;
+
+typedef struct tex_tile
+{
 	uint32_t bound;
 	uint32_t touched;
 	uint32_t indir_x;
 	uint32_t indir_y;
 	uint32_t bytes[129 * 129];
+
+	uint32_t x;
+	uint32_t y;
+	tex_cache_location_t location;
+	tex_tile_t *loaded_mip;
+	texture_t *tex;
 } tex_tile_t;
 
 typedef struct
@@ -34,12 +49,13 @@ typedef struct
 	uint32_t ready;
 
 	tex_tile_t *mips[MAX_MIPS];
-	uint32_t num_tiles[MAX_MIPS];
+	uint32_t num_tiles_x[MAX_MIPS];
+	uint32_t num_tiles_y[MAX_MIPS];
 	tex_tile_t *tiles;
 	int indir_n;
 } buffer_t;
 
-typedef struct
+typedef struct texture_t
 {
 	char name[256];
 	int id;
@@ -108,7 +124,8 @@ int32_t texture_target_sub(texture_t *self,
 		int32_t width, int32_t height);
 
 void texture_destroy(texture_t *self);
-bool_t load_tile(texture_t *self, tex_tile_t *tile, int mip, int frame);
+bool_t load_tile(texture_t *self, uint32_t mip, uint32_t x, uint32_t y,
+                 uint32_t frame);
 
 void texture_set_xy(texture_t *self, int32_t x, int32_t y,
 		GLubyte r, GLubyte g, GLubyte b, GLubyte a);
