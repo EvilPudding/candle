@@ -79,9 +79,7 @@ float mip_map_level(in vec2 texture_coordinate) // in texel units
 #define g_indir_w 256u
 #define g_indir_h 64u
 #define g_cache_w 64u
-#define g_cache_h 16u
-/* #define g_cache_w 64u */
-/* #define g_cache_h 32u */
+#define g_cache_h 32u
 
 vec4 solveMip(const property_t prop, uint mip, vec2 coords, bool draw)
 {
@@ -176,7 +174,6 @@ float lookup_single(vec3 shadowCoord)
 	uint cube_layer;
 	uvec2 tc = uvec2(floor(sampleCube(shadowCoord, cube_layer) * float(size)));
 	uvec2 pos = uvec2(cube_layer % 2u, cube_layer / 2u) * size;
-	/* return texelFetch(g_probes, tc + pos + light(pos), 0).r * 90.0f; */
 	vec4 distance = texelFetch(g_probes, ivec2(tc + pos + light(pos)), 0);
 	return decode_float_rgba(distance);
 }
@@ -184,9 +181,9 @@ float lookup_single(vec3 shadowCoord)
 /* float prec = 0.05; */
 float lookup(vec3 coord)
 {
-	float dist = dot(coord, coord);
-	float dist2 = lookup_single(coord) - sqrt(dist);
-	return (dist2 > -(0.01)) ? 1.0 : 0.0;
+	float dist = length(coord);
+	float dist2 = lookup_single(coord) - dist;
+	return (dist2 > -0.01) ? 1.0 : 0.0;
 }
 
 /* SPHEREMAP TRANSFORM */
@@ -313,7 +310,7 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)
 	{
 
 		/* sd = 0.5; */
-		float shadow_len = min(0.4 * (point_to_light / ocluder_to_light - 1.0), 10.0);
+		float shadow_len = min(0.8 * (point_to_light / ocluder_to_light - 1.0), 10.0);
 		float p = 0.01 * linearize(depth);
 		if(shadow_len > 0.001)
 		{

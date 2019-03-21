@@ -164,7 +164,7 @@ static int c_light_position_changed(c_light_t *self)
 
 static int c_light_pre_draw(c_light_t *self)
 {
-	if(!self->modified) return CONTINUE;
+	/* if(!self->modified) return CONTINUE; */
 	if(self->radius == -1)
 	{
 		drawable_set_group(&self->draw, self->ambient_group);

@@ -17,7 +17,7 @@ struct gl_light
 {
 	vec4_t color;
 	ivec2_t pos;
-	int32_t lod;
+	uint32_t lod;
 	float radius;
 };
 
@@ -28,7 +28,7 @@ struct gl_property
 	float blend;
 	float scale;
 	vec3_t padding;
-	int32_t layer;
+	uint32_t layer;
 };
 
 struct gl_material
@@ -68,11 +68,11 @@ typedef struct c_render_device_t
 
 	fs_t *frag_bound;
 	shader_t *shader;
-	unsigned int ubo;
+	uint32_t ubo;
 	struct gl_scene scene;
-	int updates_ram;
-	int updates_ubo;
-	int frame;
+	int32_t updates_ram;
+	int32_t updates_ubo;
+	int32_t frame;
 	uint32_t bound_ubos[32];
 } c_render_device_t;
 

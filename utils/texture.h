@@ -124,8 +124,8 @@ int32_t texture_target_sub(texture_t *self,
 		int32_t width, int32_t height);
 
 void texture_destroy(texture_t *self);
-bool_t load_tile(texture_t *self, uint32_t mip, uint32_t x, uint32_t y,
-                 uint32_t frame);
+uint32_t load_tile(texture_t *self, uint32_t mip, uint32_t x, uint32_t y,
+                 uint32_t frame, uint32_t max_loads);
 
 void texture_set_xy(texture_t *self, int32_t x, int32_t y,
 		GLubyte r, GLubyte g, GLubyte b, GLubyte a);

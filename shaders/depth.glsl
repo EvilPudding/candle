@@ -9,9 +9,8 @@ void main(void)
 	vec4 dif  = resolveProperty(mat(albedo), texcoord, true);
 	if(dif.a < 0.7) discard;
 
-	FragColor = encode_float_rgba(sqrt(dot(vertex_position, vertex_position)));
-	/* float dist = length(vertex_position); */
-	/* gl_FragDepth = dist / 90.0f; */
+	/* FragColor = encode_float_rgba(dot(vertex_position, vertex_position)); */
+	FragColor = encode_float_rgba(length(vertex_position));
 }  
 
 // vim: set ft=c:
