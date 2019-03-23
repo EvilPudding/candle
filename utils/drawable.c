@@ -3,6 +3,7 @@
 #include <candle.h>
 #include <string.h>
 #include <stdlib.h>
+#include <systems/render_device.h>
 
 KHASH_MAP_INIT_INT(varray, varray_t*)
 
@@ -981,9 +982,10 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 
 	if(self->vars.skin)
 	{
+		c_render_device_t *rd = c_render_device(&SYS);
 		draw_conf_update_skin(self);
 
-		glBindBufferBase(GL_UNIFORM_BUFFER, 21, self->skin); glerr();
+		c_render_device_bind_ubo(rd, 21, self->skin);
 	}
 
 	shader_t *shader = vs_bind(self->vars.vs);

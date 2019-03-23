@@ -29,8 +29,6 @@ vec3_t c_spatial_upwards(c_spatial_t *self)
 	return vec3_norm(quat_mul_vec3(self->rot_quat, vec3(0.0f, 1.0f, 0.0f)));
 }
 
-
-
 c_spatial_t *c_spatial_new()
 {
 	c_spatial_t *self = component_new("spatial");

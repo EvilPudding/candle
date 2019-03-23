@@ -69,7 +69,7 @@ typedef struct vertex_t
 	int tmp;
 
 	/* Skin */
-	vec4_t  wei;
+	vec4_t wei;
 	vec4_t bid;
 } vertex_t;
 

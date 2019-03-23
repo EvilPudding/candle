@@ -392,7 +392,7 @@ float ambientOcclusion(sampler2D depth, vec3 p, vec3 n, float dist_to_eye)
 		ao += doAmbientOcclusion(depth, texcoord, coord2, p, n);
 	}
 	ao /= float(iterations);
-	ao = 1.0 - ao * 0.1;
+	ao = 1.0 - ao * 0.05;
 	return clamp(ao, 0.0, 1.0); 
 }
 
