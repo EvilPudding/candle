@@ -36,8 +36,8 @@ int32_t translate_init(struct edit_translate *self, c_editmode_t *ec)
 		c_node(&self->arrows)->ghost = 1;
 
 		self->X = entity_new(c_axis_new(0, VEC3(1.0f, 0.0f, 0.0f)));
-		self->Z = entity_new(c_axis_new(0, VEC3(0.0f, 0.0f, 1.0f)));
 		self->Y = entity_new(c_axis_new(0, VEC3(0.0f, 1.0f, 0.0f)));
+		self->Z = entity_new(c_axis_new(0, VEC3(0.0f, 0.0f, 1.0f)));
 
 #ifdef MESH4
 		self->W = entity_new(c_name_new("W"), c_axis_new(0, vec4(0.0f, 0.0f, 0.0f, 1.0f)));
@@ -174,8 +174,8 @@ int32_t scale_init(struct edit_scale *self, c_editmode_t *ec)
 		c_node(&self->arrows)->ghost = 1;
 
 		self->X = entity_new(c_axis_new(2, VEC3(1.0f, 0.0f, 0.0f)));
-		self->Z = entity_new(c_axis_new(2, VEC3(0.0f, 0.0f, 1.0f)));
 		self->Y = entity_new(c_axis_new(2, VEC3(0.0f, 1.0f, 0.0f)));
+		self->Z = entity_new(c_axis_new(2, VEC3(0.0f, 0.0f, 1.0f)));
 
 		c_node_add(c_node(&self->arrows), 3, self->X, self->Y, self->Z);
 	}
@@ -790,6 +790,7 @@ void c_editmode_select(c_editmode_t *self, entity_t select)
 	{
 		if(tool && tool->end) tool->end(tool->usrptr, self);
 		c_editmode_open_entity(self, self->selected);
+		self->tool = -1;
 	}
 	else
 	{
