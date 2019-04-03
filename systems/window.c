@@ -1,3 +1,4 @@
+#include <utils/glutil.h>
 #include "window.h"
 #include <utils/shader.h>
 #include <utils/drawable.h>
@@ -166,10 +167,11 @@ void c_window_toggle_fullscreen(c_window_t *self)
 		NULL, (c_t*)self);
 }
 
-void c_window_handle_resize(c_window_t *self, const SDL_Event event)
+void c_window_handle_resize(c_window_t *self, const void *event)
 {
-	self->width = event.window.data1;
-	self->height = event.window.data2;
+	
+	self->width = ((const SDL_Event*)event)->window.data1;
+	self->height = ((const SDL_Event*)event)->window.data2;
 	/* printf("window resize: %dx%d\n", self->width, self->height); */
 	if(self->renderer)
 	{
@@ -210,7 +212,7 @@ int c_window_created(c_window_t *self)
 #endif
 	if(!g_quad_vs)
 	{
-		g_quad_vs = vs_new("quad", 1, vertex_modifier_new(
+		g_quad_vs = vs_new("quad", false, 1, vertex_modifier_new(
 			/* "texcoord *= screen_size;\n" */
 			""
 		));
@@ -221,7 +223,7 @@ int c_window_created(c_window_t *self)
 	mesh_quad(g_quad_mesh);
 	g_quad_mesh->cull = 0;
 
-	drawable_init(&self->draw, ref("quad"), NULL);
+	drawable_init(&self->draw, ref("quad"));
 	drawable_set_entity(&self->draw, c_entity(self));
 	drawable_set_mesh(&self->draw, g_quad_mesh);
 	drawable_set_vs(&self->draw, g_quad_vs);

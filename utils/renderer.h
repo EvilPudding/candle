@@ -1,7 +1,6 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
-#include <utils/glutil.h>
 #include <utils/material.h>
 #include <utils/texture.h>
 #include <utils/mesh.h>

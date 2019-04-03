@@ -30,6 +30,47 @@ static const char default_vs[] =
 	"layout (location = 13) in float ANG4;\n"
 #endif
 
+	"flat out uvec2 $id;\n"
+	"flat out uint $matid;\n"
+	"flat out vec2 $object_id;\n"
+	"flat out uvec2 $poly_id;\n"
+	"flat out vec3 $obj_pos;\n"
+	"flat out mat4 $model;\n"
+	"out vec3 $poly_color;\n"
+	"out vec3 $vertex_position;\n"
+	"out vec2 $texcoord;\n"
+	"out mat3 $TM;\n"
+	"void main()\n"
+	"{\n"
+	"	vec4 pos = vec4(P.xyz, 1.0);\n"
+	"	$obj_pos = (M * vec4(0.0, 0.0, 0.0, 1.0)).xyz;\n"
+	"	$model = M;\n"
+	"	$poly_color = COL;\n"
+	"	$matid = uint(PROPS.x);\n"
+	"	$poly_id = uvec2(ID);\n"
+	"	$id = uvec2(PROPS.zw);\n"
+	"	$texcoord = UV;\n";
+static const char default_vs_end[] = 
+	"\n"
+	"	gl_Position = pos;\n"
+	"	}\n";
+
+static const char default_gs[] = 
+	"#version 300 es\n"
+	"#extension GL_EXT_geometry_shader4 : enable\n"
+	"#extension GL_EXT_gpu_shader4 : enable\n"
+	"layout(points) in;\n"
+	"layout(triangle_strip, max_vertices = 3) out;\n"
+	"flat in uvec2 $id[1];\n"
+	"flat in uint $matid[1];\n"
+	"flat in vec2 $object_id[1];\n"
+	"flat in uvec2 $poly_id[1];\n"
+	"flat in vec3 $obj_pos[1];\n"
+	"flat in mat4 $model[1];\n"
+	"in vec3 $poly_color[1];\n"
+	"in vec3 $vertex_position[1];\n"
+	"in vec2 $texcoord[1];\n"
+	"in mat3 $TM[1];\n"
 	"flat out uvec2 id;\n"
 	"flat out uint matid;\n"
 	"flat out vec2 object_id;\n"
@@ -38,30 +79,14 @@ static const char default_vs[] =
 	"flat out mat4 model;\n"
 	"out vec3 poly_color;\n"
 	"out vec3 vertex_position;\n"
-	"\n"
 	"out vec2 texcoord;\n"
-	"\n"
-	"out mat3 TM;\n"
-	"\n"
-	"void main()\n"
-	"{\n"
-	"	vec4 pos = vec4(P.xyz, 1.0);\n"
-	"	obj_pos = (M * vec4(0.0, 0.0, 0.0, 1.0)).xyz;\n"
-	"	model = M;\n"
-	"	poly_color = COL;\n"
-	"	matid = uint(PROPS.x);\n"
-	"	poly_id = uvec2(ID);\n"
-	"	id = uvec2(PROPS.zw);\n"
-	"	texcoord = UV;\n";
-static const char default_vs_end[] = 
-	"\n"
-	"	gl_Position = pos;\n"
-	"	}\n";
+	"out mat3 TM;\n";
 
-static const char default_gs[] = "";
+static const char default_gs_end[] = "";
 
 static void checkShaderError(GLuint shader, const char *name, const char *code);
-static char *string_preprocess(const char *src, uint32_t len, uint32_t defines);
+static char *string_preprocess(const char *src, uint32_t len, bool_t defines,
+                               bool_t has_gshader, bool_t has_skin);
 
 struct source
 {
@@ -70,7 +95,8 @@ struct source
 	char *src;
 };
 
-static char *shader_preprocess(struct source source, uint32_t defines);
+static char *shader_preprocess(struct source source, bool_t defines,
+                               bool_t has_gshader, bool_t has_skin);
 
 vs_t g_vs[32];
 uint32_t g_vs_num = 0;
@@ -138,20 +164,34 @@ void shaders_reg()
 	shaders_uniforms_glsl_reg();
 }
 
-vertex_modifier_t vertex_modifier_new(const char *code)
+vertex_modifier_t _vertex_modifier_new(bool_t has_skin, const char *code,
+                                       bool_t defines, bool_t has_gshader)
 {
 	vertex_modifier_t self;
 	self.type = 0;
-	self.code = strdup(code);
+	self.code = string_preprocess(code, strlen(code), defines, has_gshader,
+	                              has_skin);
 	return self;
 }
 
-vertex_modifier_t geometry_modifier_new(const char *code)
+vertex_modifier_t vertex_modifier_new(const char *code)
+{
+	return _vertex_modifier_new(false, code, false, false);
+}
+
+vertex_modifier_t _geometry_modifier_new(const char *code, bool_t defines)
 {
 	vertex_modifier_t self;
-	self.type = 0;
-	self.code = strdup(code);
+	self.type = 1;
+	self.code = string_preprocess(code, strlen(code), defines, true,
+	                              false);
 	return self;
+}
+
+
+vertex_modifier_t geometry_modifier_new(const char *code)
+{
+	return _geometry_modifier_new(code, false);
 }
 
 
@@ -200,21 +240,19 @@ uint32_t vs_new_loader(vs_t *self)
 	return 1;
 }
 
-vs_t *vs_new(const char *name, uint32_t num_modifiers, ...)
+vs_t *vs_new(const char *name, bool_t has_skin, uint32_t num_modifiers, ...)
 {
 	uint32_t i = g_vs_num++;
 	vs_t *self = &g_vs[i];
 	self->index = i;
 	self->name = strdup(name);
+	self->has_skin = has_skin;
 
 	self->ready = 0;
 	va_list va;
 
-	self->vmodifier_num = 0;
+	self->vmodifier_num = 1;
 	self->gmodifier_num = 0;
-
-	self->vmodifiers[self->vmodifier_num++] = vertex_modifier_new(
-			string_preprocess(default_vs, sizeof(default_vs), 1));
 
 	va_start(va, num_modifiers);
 	for(i = 0; i < num_modifiers; i++)
@@ -234,9 +272,13 @@ vs_t *vs_new(const char *name, uint32_t num_modifiers, ...)
 	}
 	va_end(va);
 
+	self->vmodifiers[0] = _vertex_modifier_new(has_skin, default_vs, true,
+	                                           self->gmodifier_num > 0);
+
 	if(self->gmodifier_num > 0)
 	{
 		self->gmodifiers[0] = geometry_modifier_new(default_gs);
+		self->gmodifiers[self->gmodifier_num++] = geometry_modifier_new(default_gs_end);
 	}
 
 	self->vmodifiers[self->vmodifier_num++] = vertex_modifier_new(default_vs_end);
@@ -304,24 +346,47 @@ static const struct source shader_source(const char *filename)
 	g_sources[i].filename = strdup(filename);
 	g_sources[i].src = strdup(buffer);
 
-
 	return g_sources[i];
 
 }
 
-static char *string_preprocess(const char *src, uint32_t len, uint32_t defines)
+char *replace(char *buffer, long offset, long end_offset,
+              const char *str, size_t *lsize)
+{
+	long command_size = end_offset - offset;
+	size_t inc_size = strlen(str);
+
+	long nsize = offset + inc_size + (*lsize) - command_size;
+
+	char *new_buffer = calloc(nsize + 1, 1);
+
+	memcpy(new_buffer, buffer, offset);
+
+	memcpy(new_buffer + offset, str, inc_size);
+
+	memcpy(new_buffer + offset + inc_size, buffer + end_offset,
+			(*lsize) - end_offset);
+
+	(*lsize) = nsize;
+
+	free(buffer);
+	return new_buffer;
+}
+
+static char *string_preprocess(const char *src, bool_t len, bool_t defines,
+                               bool_t has_gshader, bool_t has_skin)
 {
 	size_t lsize = len;
-/* #ifndef __EMSCRIPTEN__ */
-/* #define VERSION "#version 300 es\n" */
-/* #else */
-/* #define VERSION "" */
-/* #endif */
-
-#define VERSION "#version 300 es\n"
 
 	/* char defs[][64] = { "#version 420\n" */
-	char defs[][64] = { VERSION
+	const char version_str[] =
+		  "#version 300 es\n";
+	const char skin_str[] =
+		  "#define HAS_SKIN\n";
+
+	char defs[][64] = {
+		  "#ifndef DEFINES\n"
+		, "#define DEFINES\n"
 		, "precision mediump float;\n"
 		, "precision mediump int;\n"
 #ifdef MESH4
@@ -330,11 +395,17 @@ static char *string_preprocess(const char *src, uint32_t len, uint32_t defines)
 #ifdef __EMSCRIPTEN__
 		, "#define EMSCRIPTEN\n"
 #endif
+		, "#endif\n"
 	};
 	uint32_t i;
 	char *buffer = NULL;
 	if(defines)
 	{
+		lsize += strlen(version_str);
+		if (has_skin)
+		{
+			lsize += strlen(skin_str);
+		}
 		for(i = 0; i < sizeof(defs)/sizeof(*defs); i++)
 		{
 			lsize += strlen(defs[i]);
@@ -346,6 +417,11 @@ static char *string_preprocess(const char *src, uint32_t len, uint32_t defines)
 
 	if(defines)
 	{
+		strcat(buffer, version_str);
+		if (has_skin)
+		{
+			strcat(buffer, skin_str);
+		}
 		for(i = 0; i < sizeof(defs)/sizeof(*defs); i++)
 		{
 			strcat(buffer, defs[i]);
@@ -353,19 +429,16 @@ static char *string_preprocess(const char *src, uint32_t len, uint32_t defines)
 	}
 	strcat(buffer, src);
 
-	char *include = NULL;
-	while((include = strstr(buffer, "#include")))
+	char *token = NULL;
+	while((token = strstr(buffer, "#include")))
 	{
-		long offset = include - buffer;
+		long offset = token - buffer;
 		char include_name[512];
-		char *start = strchr(include, '"') + 1;
+		char *start = strchr(token, '"') + 1;
 		char *end = strchr(start, '"');
 		long end_offset = end - buffer + 1;
 		memcpy(include_name, start, end - start);
 		include_name[end - start] = '\0';
-
-		long command_size = end_offset - offset;
-
 		const struct source inc = shader_source(include_name);
 		if(!inc.src)
 		{
@@ -375,34 +448,28 @@ static char *string_preprocess(const char *src, uint32_t len, uint32_t defines)
 		}
 		else
 		{
-			char *include_buffer = shader_preprocess(inc, 0);
-			size_t inc_size = strlen(include_buffer);
-
-			long nsize = offset + inc_size + lsize - command_size;
-
-			char *new_buffer = calloc(nsize + 1, 1);
-
-			memcpy(new_buffer, buffer, offset);
-
-			memcpy(new_buffer + offset, include_buffer, inc_size);
-
-			memcpy(new_buffer + offset + inc_size, buffer + end_offset,
-					lsize - end_offset);
-
-			lsize = nsize;
-
+			char *include_buffer = shader_preprocess(inc, false, has_gshader, false);
+			buffer = replace(buffer, offset, end_offset, include_buffer, &lsize);
 			free(include_buffer);
-			free(buffer);
-			buffer = new_buffer;
 		}
 	}
+
+	while((token = strstr(buffer, "$")))
+	{
+		long offset = token - buffer;
+		long end_offset = offset + 1;
+		buffer = replace(buffer, offset, end_offset,
+		                 has_gshader ? "_G_" : "", &lsize);
+	}
+
 	return buffer;
 }
 
-static char *shader_preprocess(struct source source, uint32_t defines)
+static char *shader_preprocess(struct source source, bool_t defines,
+                               bool_t has_gshader, bool_t has_skin)
 {
 	if(!source.src) return NULL;
-	return string_preprocess(source.src, source.len, defines);
+	return string_preprocess(source.src, source.len, defines, has_gshader, has_skin);
 }
 
 static void checkShaderError(GLuint shader,
@@ -417,6 +484,7 @@ static void checkShaderError(GLuint shader,
 		GLchar log_string[bufflen + 1];
 		glGetShaderInfoLog(shader, bufflen, 0, log_string);
 		printf("Log found for '%s':\n%s", name, log_string);
+		printf("%s\n", code);
 	}
 
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
@@ -465,6 +533,13 @@ static uint32_t shader_new_loader(shader_t *self)
 	self->ready = 1;
 	printf("shader %d ready f:%s v:%s %d\n", self->program, self->fs->filename,
 			g_vs[self->index].name, isLinked);
+	if (!isLinked)
+	{
+		printf("%u %u %u\n", fprogram, vprogram, gprogram);
+		printf("VS: %s\n", g_vs[self->index].vcode);
+		printf("GS: %s\n", g_vs[self->index].gcode);
+		exit(1);
+	}
 	return 1;
 }
 
@@ -475,7 +550,7 @@ static uint32_t fs_new_loader(fs_t *self)
 	char buffer[256];
 	snprintf(buffer, sizeof(buffer), "%s.glsl", self->filename);
 
-	self->code  = shader_preprocess(shader_source(buffer), 1);
+	self->code  = shader_preprocess(shader_source(buffer), true, false, false);
 
 	if(!self->code) exit(1);
 
@@ -522,6 +597,7 @@ shader_t *shader_new(fs_t *fs, vs_t *vs)
 	shader_t *self = calloc(1, sizeof *self);
 	self->fs = fs;
 	self->index = vs->index;
+	self->has_skin = vs->has_skin;
 
 	self->ready = 0;
 	loader_push_wait(g_candle->loader, (loader_cb)shader_new_loader, self, NULL);
@@ -565,6 +641,7 @@ void fs_destroy(fs_t *self)
 
 	glDeleteShader(self->program); glerr();
 }
+
 void shader_destroy(shader_t *self)
 {
 	uint32_t fprogram = self->fs->program;

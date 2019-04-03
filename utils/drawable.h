@@ -16,6 +16,8 @@ typedef uint32_t vertid_t;
 
 typedef struct drawable_t drawable_t;
 
+typedef void(*draw_cb)(void *usrptr, shader_t *shader);
+
 typedef struct
 {
 	/* VERTEX DATA */
@@ -40,7 +42,7 @@ typedef struct
 	int32_t ind_num_gl;
 
 	bool_t updating;
-	GLuint vbo[24];
+	uint32_t vbo[24];
 
 	int32_t update_id_gl;
 	int32_t update_id_ram;
@@ -60,10 +62,12 @@ struct conf_vars
 	vs_t *vs;
 	int32_t xray;
 	int32_t padding;
+	draw_cb draw_callback;
+	void *usrptr;
 };
 typedef struct draw_conf_t draw_conf_t;
 
-struct draw_grp
+struct draw_bind
 {
 	uint32_t grp;
 	draw_conf_t *conf;
@@ -80,16 +84,16 @@ typedef struct draw_conf_t
 #ifdef MESH4
 	float *angle4;	/* 13 */
 #endif
-	struct draw_grp **comps;
+	struct draw_bind **comps;
 
 	int inst_num;
 	int inst_alloc;
 	int gl_inst_num;
 	/* ----------- */
 
-	GLuint vao;
-	GLuint vbo[24];
-	GLuint skin;
+	uint32_t vao;
+	uint32_t vbo[24];
+	uint32_t skin;
 
 	struct conf_vars vars;
 	void *semaphore;
@@ -112,12 +116,13 @@ typedef struct drawable_t
 	float angle4;
 #endif
 	entity_t entity;
+	draw_cb draw_callback;
 	vs_t *vs;
 
-	struct draw_grp grp[8];
-	uint32_t grp_num;
+	struct draw_bind bind[8];
+	uint32_t bind_num;
 
-	void *userptr;
+	void *usrptr;
 } drawable_t;
 
 KHASH_MAP_INIT_INT(config, draw_conf_t*)
@@ -128,7 +133,7 @@ typedef struct
 	uint32_t update_id;
 } draw_group_t;
 
-void drawable_init(drawable_t *self, uint32_t group, void *usrptr);
+void drawable_init(drawable_t *self, uint32_t group);
 
 void drawable_update(drawable_t *self);
 
@@ -141,6 +146,7 @@ void drawable_set_mat(drawable_t *self, int32_t mat);
 void drawable_set_vs(drawable_t *self, vs_t *vs);
 void drawable_set_xray(drawable_t *self, int32_t xray);
 void drawable_set_entity(drawable_t *self, entity_t entity);
+void drawable_set_callback(drawable_t *self, draw_cb cb, void *usrptr);
 
 int32_t drawable_draw(drawable_t *self);
 

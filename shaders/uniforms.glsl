@@ -52,10 +52,12 @@ layout(std140) uniform scene_t
 	vec4 test_color;
 } scene;
 
+#ifdef HAS_SKIN
 layout(std140) uniform skin_t
 {
 	mat4 bones[30];
 } skin;
+#endif
 
 /* layout(location = 22) */ uniform vec2 screen_size;
 /* layout(location = 23) */ uniform bool has_tex;
@@ -70,6 +72,7 @@ layout(std140) uniform skin_t
 #define mat(prop) (scene.materials[matid].prop)
 #define light(prop) (scene.lights[matid].prop)
 #define camera(prop) (renderer.camera.prop)
+
 
 #endif
 // vim: set ft=c:

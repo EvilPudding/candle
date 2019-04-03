@@ -20,9 +20,6 @@ typedef void(*destroy_cb)(c_t *self);
 typedef int32_t(*signal_cb)(c_t *self, void *data, void *output);
 typedef void(*c_reg_cb)(void);
 
-/* TODO: find appropriate place */
-/* typedef int32_t(*before_draw_cb)(c_t *self); */
-
 struct set_var
 {
 	char ident[64];

@@ -22,7 +22,7 @@ static int renderer_update_screen_texture(renderer_t *self);
 
 static void bind_pass(pass_t *pass, shader_t *shader);
 
-#define FIRST_TEX 6
+#define FIRST_TEX 7
 static void pass_unbind_textures(pass_t *pass)
 {
 	for (uint32_t i = 0; i < pass->bound_textures; i++)
@@ -627,7 +627,7 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	renderer_add_pass(self, "render_pass", "phong", ref("light"),
-			0, light, NULL, 0,
+			ADD, light, NULL, 0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
 			{NONE}

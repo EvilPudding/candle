@@ -14,31 +14,31 @@ static void c_skin_init(c_skin_t *self)
 {
 	if(!g_skin_vs)
 	{
-		g_skin_vs = vs_new("skin", 1, vertex_modifier_new(
+		g_skin_vs = vs_new("skin", true, 1, vertex_modifier_new(
 			"	{\n"
 			"		const vec3 colors[] = vec3[]("
-						"vec3(1,0,0),"
-						"vec3(0,1,0),"
-						"vec3(0,1,1),"
-						"vec3(0,0,1),"
-						"vec3(1,0,1),"
-						"vec3(1,1,0),"
-						"vec3(0,1,0.5),"
-						"vec3(1,0.5,1),"
-						"vec3(0,0.5,1),"
-						"vec3(0.5,1,0),"
-						"vec3(0.3,0,0)"
-				");\n"
+			"			vec3(1.0, 0.0, 0.0),"
+			"			vec3(0.0, 1.0, 0.0),"
+			"			vec3(0.0, 1.0, 1.0),"
+			"			vec3(0.0, 0.0, 1.0),"
+			"			vec3(1.0, 0.0, 1.0),"
+			"			vec3(1.0, 1.0, 0.0),"
+			"			vec3(0.0, 1.0, 0.5),"
+			"			vec3(1.0, 0.5, 1.0),"
+			"			vec3(0.0, 0.5, 1.0),"
+			"			vec3(0.5, 1.0, 0.0),"
+			"			vec3(0.3, 0.0, 0.0)"
+			"	);\n"
 			"#ifdef MESH4\n"
 			"		float Y = cos(angle4);\n"
 			"		float W = sin(angle4);\n"
 			"		pos = vec4(vec3(P.x, P.y * Y + P.w * W, P.z), 1.0);\n"
 			"#endif\n"
 
-			/* "			poly_color = colors[int(BID[0])] * WEI[0];\n" */
-			/* "			poly_color += colors[int(BID[1])] * WEI[1];\n" */
-			/* "			poly_color += colors[int(BID[2])] * WEI[2];\n" */
-			/* "			poly_color += colors[int(BID[3])] * WEI[3];\n" */
+			/* "		$poly_color  = colors[int(BID[0])] * WEI[0];\n" */
+			/* "		$poly_color += colors[int(BID[1])] * WEI[1];\n" */
+			/* "		$poly_color += colors[int(BID[2])] * WEI[2];\n" */
+			/* "		$poly_color += colors[int(BID[3])] * WEI[3];\n" */
 			"		mat4 MODIFIER;\n"
 			"		float wei = WEI[0] + WEI[1] + WEI[2] + WEI[3];\n"
 			"		if(wei > 0.0) {\n"
@@ -56,9 +56,9 @@ static void c_skin_init(c_skin_t *self)
 			"		vec3 vertex_tangent   = normalize(MODIFIER * vec4(TG, 0.0)).xyz;\n"
 			"		vec3 vertex_bitangent = cross(vertex_tangent, vertex_normal);\n"
 			"		pos = (MODIFIER * pos);\n"
-			"		vertex_position = pos.xyz;\n"
+			"		$vertex_position = pos.xyz;\n"
 
-			"		TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
+			"		$TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
 
 			"		pos = camera(projection) * pos;\n"
 			"	}\n"

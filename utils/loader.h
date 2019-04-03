@@ -1,7 +1,6 @@
 #ifndef LOADER_H
 #define LOADER_H
 
-#include "glutil.h"
 #include <ecs/ecm.h>
 
 typedef int(*loader_cb)(void*);
@@ -12,17 +11,17 @@ typedef struct
 {
 	void *usrptr;
 	loader_cb cb;
-	SDL_sem *semaphore;
+	void *semaphore;
 	c_t ct;
 } load_t;
 
 typedef struct
 {
-	SDL_Thread *thread;
-	SDL_threadID threadId;
-	SDL_GLContext *context;
-	SDL_sem *semaphore;
-	SDL_atomic_t done;
+	void *thread;
+	uint64_t threadId;
+	void *context;
+	void *semaphore;
+	int32_t done;
 	load_t stack[LOADER_STACK_SIZE];
 	int last;
 	int first;

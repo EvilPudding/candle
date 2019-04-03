@@ -1031,6 +1031,17 @@ static inline vec4_t quat_rotate(vec3_t axis, n_t angle)
 	return r;
 }
 
+/* vec4_t mat3_to_quat(mat4_t m) */
+/* { */
+/* 	vec4_t q; */
+/* 	q.w = sqrtf(1.0f + m._[0]._[0] + m._[1]._[1] + m._[2]._[2]) / 2.0f; */
+/* 	float w4 = (4.0f * q.w); */
+/* 	q.x = (m._[2]._[1] - m._[1]._[2]) / w4; */
+/* 	q.y = (m._[0]._[2] - m._[2]._[0]) / w4; */
+/* 	q.z = (m._[1]._[0] - m._[0]._[1]) / w4; */
+/* 	return q; */
+/* } */
+
 static inline vec4_t quat_from_euler(n_t yaw, n_t pitch, n_t roll)
 {
 	n_t yaw_sin, yaw_cos, pitch_sin, pitch_cos, roll_sin, roll_cos;

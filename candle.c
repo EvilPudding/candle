@@ -1,5 +1,6 @@
 #include "candle.h"
 #include <utils/file.h>
+#include <utils/glutil.h>
 
 #include <string.h>
 #include <stdlib.h>
@@ -125,7 +126,7 @@ int handle_event(SDL_Event event)
 			switch(event.window.event)
 			{
 				case SDL_WINDOWEVENT_RESIZED:
-				c_window_handle_resize(c_window(&SYS), event);
+				c_window_handle_resize(c_window(&SYS), &event);
 					break; 
 			}
 			break;

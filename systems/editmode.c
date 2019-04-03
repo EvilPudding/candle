@@ -111,7 +111,7 @@ int32_t rotate_init(struct edit_rotate *self, c_editmode_t *ec)
 
 		renderer_t *renderer = c_camera(&ec->camera)->renderer;
 
-		renderer_add_pass(renderer, "tool", "editmode", sig("quad"),
+		renderer_add_pass(renderer, "tool", "editmode", ref("quad"),
 				ADD, renderer_tex(renderer, ref("final")), NULL, 0,
 			(bind_t[]){
 				{VEC2, "mouse_pos", (getter_cb)bind_mouse_pos, self},
@@ -205,7 +205,7 @@ int32_t scale_drag(struct edit_scale *self, vec3_t p, int32_t button, c_editmode
 	c_spatial_t *sc = c_spatial(&ec->selected);
 	c_node_t *ns = c_node(sc);
 
-	vec3_t obj_pos = c_node_local_to_global(ns, Z3);
+	vec3_t obj_pos = c_node_pos_to_global(ns, Z3);
 
 	float dist = -mat4_mul_vec4(cam->renderer->glvars[0].inv_model,
 			vec4(_vec3(obj_pos), 1.0f)).z;
@@ -218,6 +218,8 @@ int32_t scale_drag(struct edit_scale *self, vec3_t p, int32_t button, c_editmode
 		self->start_scale = sc->scale;
 		self->dragging = 1;
 		self->start_radius = radius;
+		signal_init(ref("transform_start"), sizeof(void*));
+		entity_signal_same(ec->selected, ref("transform_start"), NULL, NULL);
 	}
 
 
@@ -232,6 +234,7 @@ int32_t rotate_release(struct edit_rotate *self, vec3_t p, int32_t button,
 	if(self->dragging && button == SDL_BUTTON_LEFT)
 	{
 		self->dragging = 0;
+		entity_signal_same(ec->selected, ref("transform_stop"), NULL, NULL);
 		c_camera_t *cam = c_camera(&ec->camera);
 		renderer_toggle_pass(cam->renderer, ref("tool"), 0);
 		return STOP;
@@ -239,21 +242,25 @@ int32_t rotate_release(struct edit_rotate *self, vec3_t p, int32_t button,
 	return CONTINUE;
 }
 
-int32_t scale_release(struct edit_scale *self, vec3_t p, int32_t button)
+int32_t scale_release(struct edit_scale *self, vec3_t p, int32_t button,
+                      c_editmode_t *ec)
 {
 	if(self->dragging && button == SDL_BUTTON_LEFT)
 	{
 		self->dragging = 0;
+		entity_signal_same(ec->selected, ref("transform_stop"), NULL, NULL);
 		return STOP;
 	}
 	return CONTINUE;
 }
 
-int32_t translate_release(struct edit_translate *self, vec3_t p, int32_t button)
+int32_t translate_release(struct edit_translate *self, vec3_t p, int32_t button,
+                      c_editmode_t *ec)
 {
 	if(self->dragging && button == SDL_BUTTON_LEFT)
 	{
 		self->dragging = 0;
+		entity_signal_same(ec->selected, ref("transform_stop"), NULL, NULL);
 		return STOP;
 	}
 	return CONTINUE;
@@ -266,16 +273,17 @@ int32_t translate_drag(struct edit_translate *self, vec3_t p, int32_t button, c_
 	c_node_t *ns = c_node(sc);
 	c_node_t *parent = entity_exists(ns->parent) ? c_node(&ns->parent) : NULL;
 	c_camera_t *cam = c_camera(&ec->camera);
-	vec3_t obj_pos = c_node_local_to_global(ns, Z3);
+	vec3_t obj_pos = c_node_pos_to_global(ns, Z3);
 
 	if(!self->dragging)
 	{
-		self->start_pos = c_node_local_to_global(ns, Z3);
+		self->start_pos = c_node_pos_to_global(ns, Z3);
 		self->dragging = 1;
+		entity_signal_same(ec->selected, ref("transform_start"), NULL, NULL);
 
 		if(parent)
 		{
-			vec3_t local_pos = c_node_global_to_local(parent,
+			vec3_t local_pos = c_node_pos_to_local(parent,
 					ec->mouse_position);
 			self->drag_diff = vec3_sub(sc->pos, local_pos);
 		}
@@ -291,7 +299,7 @@ int32_t translate_drag(struct edit_translate *self, vec3_t p, int32_t button, c_
 
 		if(parent)
 		{
-			pos = c_node_global_to_local(parent, pos);
+			pos = c_node_pos_to_local(parent, pos);
 		}
 
 		pos = vec3_add(self->drag_diff, pos);
@@ -300,7 +308,7 @@ int32_t translate_drag(struct edit_translate *self, vec3_t p, int32_t button, c_
 	else
 	{
 		c_node_t *nc = c_node(cam);
-		vec3_t cam_pos = c_node_local_to_global(nc, Z3);
+		vec3_t cam_pos = c_node_pos_to_global(nc, Z3);
 		c_spatial_set_pos(sc, vec3_mix(obj_pos, cam_pos,
 					(self->start_screen.y - p.y) * 10.0f));
 	}
@@ -317,7 +325,7 @@ int32_t rotate_drag(struct edit_rotate *self, vec3_t p, int32_t button, c_editmo
 	c_node_t *parent = entity_exists(ns->parent) ? c_node(&ns->parent) : NULL;
 	c_camera_t *cam = c_camera(&ec->camera);
 
-	self->obj_pos = c_node_local_to_global(ns, Z3);
+	self->obj_pos = c_node_pos_to_global(ns, Z3);
 	self->p = p.xy;
 
 	float dist = -mat4_mul_vec4(cam->renderer->glvars[0].inv_model,
@@ -330,6 +338,7 @@ int32_t rotate_drag(struct edit_rotate *self, vec3_t p, int32_t button, c_editmo
 	{
 		self->start_screen = p.xy;
 		self->dragging = 1;
+		entity_signal_same(ec->selected, ref("transform_start"), NULL, NULL);
 		self->start_radius = radius;
 
 		self->start_quat = sc->rot_quat;
@@ -350,7 +359,7 @@ int32_t rotate_drag(struct edit_rotate *self, vec3_t p, int32_t button, c_editmo
 	else			d = fmin(d + 0.3f, 0.0f);
 
 	c_node_t *nc = c_node(cam);
-	vec3_t cam_pos = c_node_local_to_global(nc, Z3);
+	vec3_t cam_pos = c_node_pos_to_global(nc, Z3);
 	vec3_t to_cam = vec3_sub(self->obj_pos, cam_pos);
 	vec3_t axis1 = to_cam;
 	if(parent) axis1 = c_node_dir_to_local(parent, to_cam);
@@ -459,7 +468,7 @@ vec3_t c_editmode_bind_selected_pos(c_editmode_t *self)
 	if(!entity_exists(self->selected)) return Z3;
 	c_node_t *nc = c_node(&self->selected);
 	if(!nc) return Z3;
-	return c_node_local_to_global(nc, Z3);
+	return c_node_pos_to_global(nc, Z3);
 }
 
 vec2_t c_editmode_bind_context(c_editmode_t *self)
@@ -492,7 +501,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 		buffer_new("color",	1, 4));
 	renderer_add_tex(renderer, "tmp", 1.0f, tmp);
 
-	renderer_add_pass(renderer, "highlights", "highlight", sig("quad"),
+	renderer_add_pass(renderer, "highlights", "highlight", ref("quad"),
 			MUL, renderer_tex(renderer, ref("final")), NULL, 0,
 		(bind_t[]){
 			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
@@ -505,7 +514,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 		}
 	);
 
-	renderer_add_pass(renderer, "highlights_0", "border", sig("quad"),
+	renderer_add_pass(renderer, "highlights_0", "border", ref("quad"),
 			0, tmp, NULL, 0,
 		(bind_t[]){
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
@@ -519,7 +528,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 		}
 	);
 
-	renderer_add_pass(renderer, "highlights_1", "border", sig("quad"),
+	renderer_add_pass(renderer, "highlights_1", "border", ref("quad"),
 			ADD, renderer_tex(renderer, ref("final")), NULL, 0,
 		(bind_t[]){
 			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
@@ -923,7 +932,7 @@ int32_t c_editmode_key_up(c_editmode_t *self, char *key)
 			self->control = 0;
 			g_candle->exit = 1;
 		}
-		entity_signal(entity_null, sig("editmode_toggle"), NULL, NULL);
+		entity_signal(entity_null, ref("editmode_toggle"), NULL, NULL);
 	}
 	else if(!self->control)
 	{
@@ -1208,7 +1217,7 @@ int32_t c_editmode_commands(c_editmode_t *self)
 									c_model(&self->selected)->mat, 1, 1)));
 					close = 1;
 				}
-				close |= entity_signal_same(self->selected, sig("component_tool"), self->nk, NULL) == STOP;
+				close |= entity_signal_same(self->selected, ref("component_tool"), self->nk, NULL) == STOP;
 			}
 			else
 			{
@@ -1217,7 +1226,7 @@ int32_t c_editmode_commands(c_editmode_t *self)
 					c_editmode_select(self, entity_new(c_node_new()));
 					close = 1;
 				}
-				close |= entity_signal_same(c_entity(self), sig("component_tool"), self->nk, NULL) == STOP;
+				close |= entity_signal_same(c_entity(self), ref("component_tool"), self->nk, NULL) == STOP;
 			}
 
 			if(close) nk_contextual_close(self->nk);
@@ -1285,7 +1294,7 @@ int32_t c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 		/* c_editmode_shell(self); */
 		int32_t i;
 
-		signal_t *sig = ecm_get_signal(sig("component_menu"));
+		signal_t *sig = ecm_get_signal(ref("component_menu"));
 
 		/* for(i = 0; i < sig->cts_size; i++) */
 		for(i = vector_count(sig->listener_types) - 1; i >= 0; i--)
@@ -1299,7 +1308,7 @@ int32_t c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 				if(nk_tree_push_id(self->nk, NK_TREE_TAB, ct->name,
 							NK_MAXIMIZED, i))
 				{
-					component_signal(comp, ct, sig("component_menu"), self->nk, NULL);
+					component_signal(comp, ct, ref("component_menu"), self->nk, NULL);
 					nk_tree_pop(self->nk);
 				}
 			}
@@ -1469,38 +1478,40 @@ REG()
 	ct_t *ct = ct_new("editmode", sizeof(c_editmode_t), c_editmode_init,
 			NULL, 1, ref("node"));
 
-	signal_init(sig("component_menu"), sizeof(struct nk_context*));
-	signal_init(sig("component_tool"), sizeof(void*));
-	signal_init(sig("editmode_toggle"), sizeof(void*));
-	signal_init(sig("pick_file_save"), sizeof(void*));
-	signal_init(sig("pick_file_load"), sizeof(void*));
+	signal_init(ref("component_menu"), sizeof(struct nk_context*));
+	signal_init(ref("component_tool"), sizeof(void*));
+	signal_init(ref("editmode_toggle"), sizeof(void*));
+	signal_init(ref("pick_file_save"), sizeof(void*));
+	signal_init(ref("pick_file_load"), sizeof(void*));
+	signal_init(ref("transform_start"), sizeof(void*));
+	signal_init(ref("transform_stop"), sizeof(void*));
 
-	ct_listener(ct, WORLD | 10, sig("key_up"), c_editmode_key_up);
+	ct_listener(ct, WORLD | 10, ref("key_up"), c_editmode_key_up);
 
-	ct_listener(ct, WORLD | 10, sig("key_down"), c_editmode_key_down);
+	ct_listener(ct, WORLD | 10, ref("key_down"), c_editmode_key_down);
 
-	ct_listener(ct, WORLD, sig("pick_file_save"), c_editmode_pick_save);
-	ct_listener(ct, WORLD, sig("pick_file_load"), c_editmode_pick_load);
+	ct_listener(ct, WORLD, ref("pick_file_save"), c_editmode_pick_save);
+	ct_listener(ct, WORLD, ref("pick_file_load"), c_editmode_pick_load);
 
-	ct_listener(ct, WORLD, sig("mouse_move"), c_editmode_mouse_move);
+	ct_listener(ct, WORLD, ref("mouse_move"), c_editmode_mouse_move);
 
-	ct_listener(ct, WORLD, sig("world_draw"), c_editmode_draw);
+	ct_listener(ct, WORLD, ref("world_draw"), c_editmode_draw);
 
-	ct_listener(ct, WORLD, sig("world_update"), c_editmode_update);
+	ct_listener(ct, WORLD, ref("world_update"), c_editmode_update);
 
-	ct_listener(ct, WORLD | 50, sig("component_menu"), c_editmode_component_menu);
+	ct_listener(ct, WORLD | 50, ref("component_menu"), c_editmode_component_menu);
 
-	ct_listener(ct, WORLD, sig("mouse_press"), c_editmode_mouse_press);
+	ct_listener(ct, WORLD, ref("mouse_press"), c_editmode_mouse_press);
 
-	ct_listener(ct, WORLD, sig("mouse_release"), c_editmode_mouse_release);
+	ct_listener(ct, WORLD, ref("mouse_release"), c_editmode_mouse_release);
 
-	ct_listener(ct, WORLD, sig("event_handle"), c_editmode_event);
+	ct_listener(ct, WORLD, ref("event_handle"), c_editmode_event);
 
-	ct_listener(ct, WORLD, sig("events_begin"), c_editmode_events_begin);
+	ct_listener(ct, WORLD, ref("events_begin"), c_editmode_events_begin);
 
-	ct_listener(ct, WORLD, sig("events_end"), c_editmode_events_end);
+	ct_listener(ct, WORLD, ref("events_end"), c_editmode_events_end);
 
-	/* ct_listener(ct, WORLD, sig("window_resize"), c_editmode_resize); */
+	/* ct_listener(ct, WORLD, ref("window_resize"), c_editmode_resize); */
 
 }
 

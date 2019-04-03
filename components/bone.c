@@ -38,8 +38,8 @@ static void c_bone_init(c_bone_t *self)
 		mesh_unlock(g_joint);
 	}
 
-	drawable_init(&self->draw, ref("transparent"), NULL);
-	drawable_init(&self->joint, ref("transparent"), NULL);
+	drawable_init(&self->draw, ref("transparent"));
+	drawable_init(&self->joint, ref("transparent"));
 	drawable_add_group(&self->draw, ref("selectable"));
 	drawable_add_group(&self->joint, ref("selectable"));
 
@@ -49,8 +49,8 @@ static void c_bone_init(c_bone_t *self)
 	drawable_set_vs(&self->draw, model_vs());
 	drawable_set_vs(&self->joint, model_vs());
 
-	drawable_set_xray(&self->draw, 1);
-	drawable_set_xray(&self->joint, 1);
+	drawable_set_xray(&self->draw, true);
+	drawable_set_xray(&self->joint, true);
 
 	drawable_set_mat(&self->draw, g_mat->id);
 	drawable_set_mat(&self->joint, g_mat->id);

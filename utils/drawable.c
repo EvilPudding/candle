@@ -12,7 +12,7 @@ static khash_t(varray) *g_varrays;
 static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
 		uint32_t gid);
 static void draw_conf_update_inst(draw_conf_t *self, int32_t id);
-static int32_t drawable_position_changed(drawable_t *self, struct draw_grp *grp);
+static int32_t drawable_position_changed(drawable_t *self, struct draw_bind *bind);
 static draw_group_t *get_group(uint32_t ref);
 static void draw_conf_remove_instance(draw_conf_t *self, int32_t id);
 
@@ -22,35 +22,43 @@ static void draw_conf_remove_instance(draw_conf_t *self, int32_t id);
 KHASH_MAP_INIT_INT(draw_group, draw_group_t)
 khash_t(draw_group) *g_draw_groups;
 
-void drawable_init(drawable_t *self, uint32_t group, void *userptr)
+void drawable_init(drawable_t *self, uint32_t group)
 {
 	self->transform = mat4();
+	self->mesh = NULL;
+	self->skin = NULL;
+	self->xray = false;
+	self->mat = 0;
+	self->entity = entity_null;
+	self->draw_callback = NULL;
+	self->usrptr = NULL;
+	self->vs = NULL;
+	self->bind_num = 0;
 
-	self->userptr = userptr;
 	drawable_add_group(self, group);
 }
 
 static draw_group_t *get_group(uint32_t ref)
 {
-	if(ref == 0) return NULL;
+	if (ref == 0) return NULL;
 	int32_t ret;
-	draw_group_t *grp;
+	draw_group_t *bind;
 	khiter_t k;
 
-	if(!g_draw_groups) g_draw_groups = kh_init(draw_group);
+	if (!g_draw_groups) g_draw_groups = kh_init(draw_group);
 	k = kh_get(draw_group, g_draw_groups, ref);
 
-	if(k == kh_end(g_draw_groups))
+	if (k == kh_end(g_draw_groups))
 	{
 		k = kh_put(draw_group, g_draw_groups, ref, &ret);
-		grp = &kh_value(g_draw_groups, k);
-		*grp = (draw_group_t){ kh_init(config), 0 };
+		bind = &kh_value(g_draw_groups, k);
+		*bind = (draw_group_t){ kh_init(config), 0 };
 	}
 	else
 	{
-		grp = &kh_value(g_draw_groups, k);
+		bind = &kh_value(g_draw_groups, k);
 	}
-	return grp;
+	return bind;
 }
 
 static void varray_clear(varray_t *self)
@@ -68,7 +76,7 @@ void varray_vert_prealloc(varray_t *self, int32_t size)
 	self->tex = realloc(self->tex, self->vert_alloc * sizeof(*self->tex));
 	self->tan = realloc(self->tan, self->vert_alloc * sizeof(*self->tan));
 	self->col = realloc(self->col, self->vert_alloc * sizeof(*self->col));
-	/* if(self->mesh->has_skin) */
+	/* if (self->mesh->has_skin) */
 	{
 		self->wei = realloc(self->wei, self->vert_alloc * sizeof(*self->wei));
 		self->bid = realloc(self->bid, self->vert_alloc * sizeof(*self->bid));
@@ -93,7 +101,7 @@ void draw_conf_inst_prealloc(draw_conf_t *self, int32_t size)
 }
 void draw_conf_inst_grow(draw_conf_t *self)
 {
-	if(self->inst_alloc < self->inst_num)
+	if (self->inst_alloc < self->inst_num)
 	{
 		self->inst_alloc = self->inst_num;
 
@@ -103,7 +111,7 @@ void draw_conf_inst_grow(draw_conf_t *self)
 
 void varray_vert_grow(varray_t *self)
 {
-	if(self->vert_alloc < self->vert_num)
+	if (self->vert_alloc < self->vert_num)
 	{
 		self->vert_alloc = self->vert_num;
 
@@ -120,7 +128,7 @@ void varray_ind_prealloc(varray_t *self, int32_t size)
 
 void varray_ind_grow(varray_t *self)
 {
-	if(self->ind_alloc < self->ind_num)
+	if (self->ind_alloc < self->ind_num)
 	{
 		self->ind_alloc = self->ind_num;
 		varray_ind_prealloc(self, 0);
@@ -130,40 +138,40 @@ void varray_ind_grow(varray_t *self)
 void drawable_remove_group(drawable_t *self, uint32_t group)
 {
 	uint32_t gid;
-	if(group == 0) return;
+	if (group == 0) return;
 
-	for(gid = 0; gid < self->grp_num; gid++)
+	for(gid = 0; gid < self->bind_num; gid++)
 	{
-		if(self->grp[gid].grp == group) break;
+		if (self->bind[gid].grp == group) break;
 	}
-	if(gid == self->grp_num)
+	if (gid == self->bind_num)
 	{
 		return;
 	}
 
-	if(self->grp[gid].conf)
+	if (self->bind[gid].conf)
 	{
-		if(self->grp[gid].grp == 0)
+		if (self->bind[gid].grp == 0)
 		{
-			free(self->grp[gid].conf);
+			free(self->bind[gid].conf);
 		}
 		else
 		{
-			draw_conf_remove_instance(self->grp[gid].conf,
-					self->grp[gid].instance_id);
+			draw_conf_remove_instance(self->bind[gid].conf,
+					self->bind[gid].instance_id);
 		}
 	}
-	self->grp_num--;
-	if(gid < self->grp_num)
+	self->bind_num--;
+	if (gid < self->bind_num)
 	{
-		struct draw_grp *last = &self->grp[self->grp_num];
-		if(last->conf)
+		struct draw_bind *last = &self->bind[self->bind_num];
+		if (last->conf)
 		{
-			last->conf->comps[last->instance_id] = &self->grp[gid];
+			last->conf->comps[last->instance_id] = &self->bind[gid];
 		}
-		self->grp[gid] = *last;
+		self->bind[gid] = *last;
 	}
-	if(self->grp_num == 0)
+	if (self->bind_num == 0)
 	{
 		drawable_add_group(self, 0);
 	}
@@ -174,24 +182,24 @@ void drawable_remove_group(drawable_t *self, uint32_t group)
 void drawable_add_group(drawable_t *self, uint32_t group)
 {
 	uint32_t gid;
-	if(group == 0 && self->grp_num > 0) return;
+	if (group == 0 && self->bind_num > 0) return;
 
-	for(gid = 0; gid < self->grp_num; gid++)
+	for(gid = 0; gid < self->bind_num; gid++)
 	{
-		if(self->grp[gid].grp == group) return;
+		if (self->bind[gid].grp == group) return;
 	}
-	if(self->grp[0].grp == 0)
+	if (self->bind[0].grp == 0)
 	{
-		if(self->grp[0].conf) free(self->grp[0].conf);
-		self->grp_num = 0;
+		if (self->bind[0].conf) free(self->bind[0].conf);
+		self->bind_num = 0;
 		gid = 0;
 	}
 
-	self->grp[gid].grp = group;
-	self->grp[gid].instance_id = 0;
-	self->grp[gid].conf = NULL;
-	self->grp[gid].updates = 0;
-	self->grp_num++;
+	self->bind[gid].grp = group;
+	self->bind[gid].instance_id = 0;
+	self->bind[gid].conf = NULL;
+	self->bind[gid].updates = 0;
+	self->bind_num++;
 	drawable_model_changed(self);
 }
 
@@ -199,38 +207,38 @@ void drawable_set_group(drawable_t *self, uint32_t group)
 {
 	uint32_t gid = 0;
 
-	if(self->grp[gid].grp == group) return;
+	if (self->bind[gid].grp == group) return;
 
-	if(group == 0 && self->grp_num > 0)
+	if (group == 0 && self->bind_num > 0)
 	{
-		drawable_remove_group(self, self->grp[gid].grp);
+		drawable_remove_group(self, self->bind[gid].grp);
 		return;
 	}
 
-	if(self->grp[gid].conf)
+	if (self->bind[gid].conf)
 	{
-		if(self->grp[gid].grp == 0)
+		if (self->bind[gid].grp == 0)
 		{
-			free(self->grp[gid].conf);
+			free(self->bind[gid].conf);
 		}
 		else
 		{
-			draw_conf_remove_instance(self->grp[gid].conf,
-					self->grp[gid].instance_id);
+			draw_conf_remove_instance(self->bind[gid].conf,
+					self->bind[gid].instance_id);
 		}
 	}
 
-	self->grp[gid].grp = group;
-	self->grp[gid].instance_id = 0;
-	self->grp[gid].conf = NULL;
-	self->grp[gid].updates = 0;
+	self->bind[gid].grp = group;
+	self->bind[gid].instance_id = 0;
+	self->bind[gid].conf = NULL;
+	self->bind[gid].updates = 0;
 
 	drawable_model_changed(self);
 }
 
 void drawable_set_skin(drawable_t *self, skin_t *skin)
 {
-	if(skin != self->skin)
+	if (skin != self->skin)
 	{
 		self->skin = skin;
 		drawable_model_changed(self);
@@ -239,26 +247,26 @@ void drawable_set_skin(drawable_t *self, skin_t *skin)
 
 void drawable_set_mesh(drawable_t *self, mesh_t *mesh)
 {
-	if(mesh != self->mesh)
+	if (mesh != self->mesh)
 	{
 		mesh_t *previous = self->mesh;
 		self->mesh = mesh;
 		drawable_model_changed(self);
-		if(mesh)
+		if (mesh)
 		{
 			mesh->ref_num++;
-			if(!previous)
+			if (!previous)
 			{
-				for(uint32_t gid = 0; gid < self->grp_num; gid++)
+				for(uint32_t gid = 0; gid < self->bind_num; gid++)
 				{
-					drawable_position_changed(self, &self->grp[gid]);
+					drawable_position_changed(self, &self->bind[gid]);
 				}
 			}
 		}
-		if(previous)
+		if (previous)
 		{
 			previous->ref_num++;
-			if(previous->ref_num == 0)
+			if (previous->ref_num == 0)
 			{
 				mesh_destroy(previous);
 			}
@@ -268,7 +276,7 @@ void drawable_set_mesh(drawable_t *self, mesh_t *mesh)
 
 void drawable_set_vs(drawable_t *self, vs_t *vs)
 {
-	if(self->vs != vs)
+	if (self->vs != vs)
 	{
 		self->vs = vs;
 		drawable_model_changed(self);
@@ -277,7 +285,7 @@ void drawable_set_vs(drawable_t *self, vs_t *vs)
 
 void drawable_set_xray(drawable_t *self, int32_t xray)
 {
-	if(self->xray != xray)
+	if (self->xray != xray)
 	{
 		self->xray = xray;
 		drawable_model_changed(self);
@@ -286,7 +294,7 @@ void drawable_set_xray(drawable_t *self, int32_t xray)
 
 void drawable_set_mat(drawable_t *self, int32_t id)
 {
-	if(self->mat != id)
+	if (self->mat != id)
 	{
 		self->mat = id;
 		drawable_model_changed(self);
@@ -300,9 +308,9 @@ void drawable_set_angle4(drawable_t *self, float angle4)
 	uint32_t gid;
 
 	self->angle4 = angle4;
-	for(gid = 0; gid < self->grp_num; gid++)
+	for(gid = 0; gid < self->bind_num; gid++)
 	{
-		drawable_position_changed(self, &self->grp[gid]);
+		drawable_position_changed(self, &self->bind[gid]);
 	}
 }
 #endif
@@ -312,15 +320,30 @@ void drawable_set_transform(drawable_t *self, mat4_t transform)
 	uint32_t gid;
 
 	self->transform = transform;
-	for(gid = 0; gid < self->grp_num; gid++)
+	for(gid = 0; gid < self->bind_num; gid++)
 	{
-		drawable_position_changed(self, &self->grp[gid]);
+		drawable_position_changed(self, &self->bind[gid]);
+	}
+}
+
+void drawable_set_callback(drawable_t *self, draw_cb cb, void *usrptr)
+{
+	if (self->draw_callback == NULL || self->usrptr != usrptr)
+	{
+		self->draw_callback = cb;
+		self->usrptr = usrptr;
+		drawable_model_changed(self);
+	}
+	else
+	{
+		self->draw_callback = cb;
+		self->usrptr = usrptr;
 	}
 }
 
 void drawable_set_entity(drawable_t *self, entity_t entity)
 {
-	if(self->entity != entity)
+	if (self->entity != entity)
 	{
 		self->entity = entity;
 		drawable_model_changed(self);
@@ -330,10 +353,12 @@ void drawable_set_entity(drawable_t *self, entity_t entity)
 static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
 		uint32_t gid)
 {
+#ifndef __EMSCRIPTEN__
 	SDL_SemWait(self->semaphore);
+#endif
 
 	int32_t i = self->inst_num++;
-	/* if(draw->grp[gid].grp == ref("light")) */
+	/* if (draw->bind[gid].bind == ref("light")) */
 		/* printf("adding		%d\n", self->inst_num); */
 
 	draw_conf_inst_grow(self);
@@ -342,12 +367,12 @@ static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
 	self->props[i].y = 0;/*TODO: use y for something;*/
 	uvec2_t ent = entity_to_uvec2(draw->entity);
 	self->props[i].zw = vec2(_vec2(ent));
-	self->comps[i] = &draw->grp[gid];
+	self->comps[i] = &draw->bind[gid];
 	self->inst[i] = draw->transform;
 
-	draw->grp[gid].instance_id = i;
-	draw->grp[gid].conf = self;
-	draw->grp[gid].updates = MASK_TRANS | MASK_PROPS;
+	draw->bind[gid].instance_id = i;
+	draw->bind[gid].conf = self;
+	draw->bind[gid].updates = MASK_TRANS | MASK_PROPS;
 
 	self->trans_updates++;
 	self->props_updates++;
@@ -370,7 +395,7 @@ static int32_t varray_add_vert(
 		vec4_t bid)
 {
 	/* int32_t i = draw_conf_get_vert(self, p, n, t); */
-	/* if(i >= 0) return i; */
+	/* if (i >= 0) return i; */
 	int32_t i = self->vert_num++;
 	varray_vert_grow(self);
 
@@ -381,7 +406,7 @@ static int32_t varray_add_vert(
 	self->col[i] = c;
 	self->id[i] = int_to_vec2(id);
 
-	/* if(self->mesh->has_skin) */
+	/* if (self->mesh->has_skin) */
 	{
 		self->bid[i] = bid;
 		self->wei[i] = wei;
@@ -401,6 +426,17 @@ void varray_add_line(varray_t *self, vertid_t v1, vertid_t v2)
 	memcpy(&self->ind[i + 1], &v2, sizeof(*self->ind));
 	/* self->ind[i + 0] = v1; */
 	/* self->ind[i + 1] = v2; */
+}
+
+void varray_add_point(varray_t *self, vertid_t v1)
+{
+	int32_t i = self->ind_num;
+
+	self->ind_num += 1;
+	varray_ind_grow(self);
+
+	memcpy(&self->ind[i], &v1, sizeof(*self->ind));
+	/* self->ind[i + 0] = v1; */
 }
 
 void varray_add_triangle(varray_t *self, vertid_t v1, vertid_t v2, vertid_t v3)
@@ -432,10 +468,10 @@ void varray_edges_to_gl(varray_t *self)
 	for(i = 0; i < vector_count(mesh->edges); i++)
 	{
 		edge_t *curr_edge = m_edge(mesh, i);
-		if(!curr_edge) continue;
+		if (!curr_edge) continue;
 
 		edge_t *next_edge = m_edge(mesh, curr_edge->next);
-		if(!next_edge) continue;
+		if (!next_edge) continue;
 
 		vertex_t *V1 = e_vert(curr_edge, mesh);
 		vertex_t *V2 = e_vert(next_edge, mesh);
@@ -449,6 +485,28 @@ void varray_edges_to_gl(varray_t *self)
 	}
 }
 
+void varray_verts_to_gl(varray_t *self)
+{
+	int32_t i;
+	mesh_t *mesh = self->mesh;
+
+	varray_ind_prealloc(self, vector_count(mesh->verts));
+
+	for(i = 0; i < vector_count(mesh->verts); i++)
+	{
+		vertex_t *curr_vert = m_vert(mesh, i);
+		if (!curr_vert) continue;
+
+		int32_t v1 = varray_add_vert(self, curr_vert->pos, vec3(0.0f),
+		                             vec2(0.0f), vec3(0.0f),
+		                             curr_vert->color.xyz, 0, vec4(0,0,0,0),
+		                             vec4(0,0,0,0));
+
+		varray_add_point(self, v1);
+	}
+}
+
+
 void varray_face_to_gl(varray_t *self, face_t *f, int32_t id)
 {
 	mesh_t *mesh = self->mesh;
@@ -461,13 +519,13 @@ void varray_face_to_gl(varray_t *self, face_t *f, int32_t id)
 		v[i] = varray_add_vert(self, V->pos, hedge->n,
 				hedge->t, hedge->tg, V->color.xyz, id, V->wei, V->bid);
 	}
-	if(f->e_size == 4)
+	if (f->e_size == 4)
 	{
 		varray_add_triangle(self, v[0], v[1], v[2]);
 		varray_add_triangle(self, v[2], v[3], v[0]);
 
 	}
-	else if(f->e_size == 3)
+	else if (f->e_size == 3)
 	{
 		varray_add_triangle(self, v[0], v[1], v[2]);
 	}
@@ -493,7 +551,7 @@ static void bind_buffer(uint32_t *vbo, int32_t id, uint32_t type, int32_t dim,
 
 		glEnableVertexAttribArray(id); glerr();
 
-		/* if(type == GL_FLOAT) */
+		/* if (type == GL_FLOAT) */
 		{
 			glVertexAttribPointer(id, step, type, GL_FALSE, size, offset);
 		}
@@ -513,7 +571,7 @@ static inline void create_buffer(uint32_t *vbo, void *arr,
 		int32_t dim, int32_t count, int32_t instanced_divisor)
 {
 	uint32_t usage = instanced_divisor ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW;
-	if(!*vbo)
+	if (!*vbo)
 	{
 		glGenBuffers(1, vbo); glerr();
 	}
@@ -535,7 +593,7 @@ static inline void update_buffer(uint32_t *vbo, void *arr, int32_t dim,
 
 static void draw_conf_remove_instance(draw_conf_t *self, int32_t id)
 {
-	if(self->inst_num == 0)
+	if (self->inst_num == 0)
 	{
 		puts("??");
 		return;
@@ -547,7 +605,7 @@ static void draw_conf_remove_instance(draw_conf_t *self, int32_t id)
 
 	self->comps[id]->conf = NULL;
 
-	if(self->inst_num && id != last)
+	if (self->inst_num && id != last)
 	{
 		self->inst[id] = self->inst[last];
 		self->props[id] = self->props[last];
@@ -574,7 +632,7 @@ varray_t *varray_get(mesh_t *mesh)
 
 	varray_t *varray;
 	khiter_t k = kh_get(varray, g_varrays, p);
-	if(k == kh_end(g_varrays))
+	if (k == kh_end(g_varrays))
 	{
 		int32_t ret;
 		k = kh_put(varray, g_varrays, p, &ret);
@@ -591,45 +649,51 @@ varray_t *varray_get(mesh_t *mesh)
 
 draw_conf_t *drawable_get_conf(drawable_t *self, uint32_t gid)
 {
-	if(!self->vs) return NULL;
-	if(!self->mesh) return NULL;
+	if (!self->vs) return NULL;
+	if (!self->mesh) return NULL;
 
 	draw_conf_t *result;
 	struct conf_vars conf = {
-		.mesh = self->mesh,
-		.skin = self->skin,
-		.xray = self->xray,
-		.vs = self->vs
+		.mesh          = self->mesh,
+		.skin          = self->skin,
+		.xray          = self->xray,
+		.vs            = self->vs,
+		.draw_callback = self->draw_callback,
+		.usrptr        = self->usrptr
 	};
 
-	if(self->grp[gid].grp == 0)
+	if (self->bind[gid].grp == 0)
 	{
-		if(!self->grp[gid].conf)
+		if (!self->bind[gid].conf)
 		{
 			result = calloc(1, sizeof(draw_conf_t));
+#ifndef __EMSCRIPTEN__
 			result->semaphore = SDL_CreateSemaphore(1);
+#endif
 		}
 		else
 		{
-			result = self->grp[gid].conf;
+			result = self->bind[gid].conf;
 		}
 		result->vars = conf;
 		return result;
 	}
 
-	draw_group_t *draw_group = get_group(self->grp[gid].grp);
-	if(draw_group->configs == NULL) return NULL;
+	draw_group_t *draw_group = get_group(self->bind[gid].grp);
+	if (draw_group->configs == NULL) return NULL;
 
 	uint32_t p = murmur_hash(&conf, sizeof(conf), 0);
 
 	khiter_t k = kh_get(config, draw_group->configs, p);
-	if(k == kh_end(draw_group->configs))
+	if (k == kh_end(draw_group->configs))
 	{
 		int32_t ret;
 		k = kh_put(config, draw_group->configs, p, &ret);
 
 		result = kh_value(draw_group->configs, k) = calloc(1, sizeof(draw_conf_t));
+#ifndef __EMSCRIPTEN__
 		result->semaphore = SDL_CreateSemaphore(1);
+#endif
 		result->vars = conf;
 	}
 	else
@@ -642,28 +706,28 @@ draw_conf_t *drawable_get_conf(drawable_t *self, uint32_t gid)
 void drawable_model_changed(drawable_t *self)
 {
 	uint32_t gid;
-	for(gid = 0; gid < self->grp_num; gid++)
+	for(gid = 0; gid < self->bind_num; gid++)
 	{
-		struct draw_grp *grp = &self->grp[gid];
+		struct draw_bind *bind = &self->bind[gid];
 		draw_conf_t *conf = drawable_get_conf(self, gid);
 
 		/* NON BUFFEREABLE INSTANCE PROPERTIES */
-		if(conf != grp->conf)
+		if (conf != bind->conf)
 		{
-			if(grp->conf)
+			if (bind->conf)
 			{
-				draw_conf_remove_instance(grp->conf, grp->instance_id);
+				draw_conf_remove_instance(bind->conf, bind->instance_id);
 			}
 
-			if(conf)
+			if (conf)
 			{
 				draw_conf_add_instance(conf, self, gid);
 			}
 		}
-		if(!conf) continue;
+		if (!conf) continue;
 
 		/* BUFFEREABLE INSTANCE PROPERTIES */ 
-		vec4_t *props = &grp->conf->props[grp->instance_id];
+		vec4_t *props = &bind->conf->props[bind->instance_id];
 		uvec2_t new_ent = entity_to_uvec2(self->entity);
 
 		vec4_t new_props = vec4(
@@ -672,10 +736,10 @@ void drawable_model_changed(drawable_t *self)
 				new_ent.x,
 				new_ent.y);
 
-		if(!vec4_equals(*props, new_props))
+		if (!vec4_equals(*props, new_props))
 		{
 			*props = new_props;
-			if(!(grp->updates & MASK_PROPS))
+			if (!(bind->updates & MASK_PROPS))
 			{
 #ifndef __EMSCRIPTEN__
 				SDL_SemWait(conf->semaphore);
@@ -684,7 +748,7 @@ void drawable_model_changed(drawable_t *self)
 #ifndef __EMSCRIPTEN__
 				SDL_SemPost(conf->semaphore);
 #endif
-				grp->updates |= MASK_PROPS;
+				bind->updates |= MASK_PROPS;
 			}
 		}
 	}
@@ -722,49 +786,38 @@ int32_t varray_update_ram(varray_t *self)
 
 	/* int32_t selection = layer->selection; */
 
-	vector_t *faces = mesh->faces;
-	vector_t *edges = mesh->edges;
-
-	/* mesh_selection_t *sel = &mesh->selections[selection]; */
-	/* if(selection != -1) */
-	/* { */
-		/* return 1; */
-	/* 	faces = sel->faces; */
-	/* 	edges = sel->edges; */
-	/* } */
-
 	int32_t i;
-	if(vector_count(faces))
+	if (vector_count(mesh->faces))
 	{
 		mesh_update_smooth_normals(mesh, 1.0f - mesh->smooth_angle);
 		int32_t triangle_count = 0;
-		for(i = 0; i < vector_count(faces); i++)
+		for(i = 0; i < vector_count(mesh->faces); i++)
 		{
 			int32_t id = i;
-			face_t *face = m_face(mesh, id); if(!face) continue;
+			face_t *face = m_face(mesh, id); if (!face) continue;
 
-			if(face->e_size == 3) triangle_count++;
+			if (face->e_size == 3) triangle_count++;
 			else triangle_count += 2;
 		}
 		varray_ind_prealloc(self, triangle_count * 3);
 
-		for(i = 0; i < vector_count(faces); i++)
+		for(i = 0; i < vector_count(mesh->faces); i++)
 		{
 			int32_t id = i;
-			face_t *face = m_face(mesh, id); if(!face) continue;
+			face_t *face = m_face(mesh, id); if (!face) continue;
 
 #ifdef MESH4
 
-			/* if(face->pair != -1) */
+			/* if (face->pair != -1) */
 			/* { */
 			/* 	cell_t *cell1 = f_cell(f_pair(face, mesh), mesh); */
 			/* 	cell_t *cell0 = f_cell(face, mesh); */
-			/* 	if(cell0 && cell1) */
+			/* 	if (cell0 && cell1) */
 			/* 	{ */
 			/* 		vec4_t n0 = get_cell_normal(mesh, cell0); */
 			/* 		vec4_t n1 = get_cell_normal(mesh, cell1); */
 			/* 		float dot = vec4_dot(n1, n0); */
-			/* 		if(dot > 0.999) continue; */
+			/* 		if (dot > 0.999) continue; */
 			/* 	} */
 			/* } */
 
@@ -773,9 +826,13 @@ int32_t varray_update_ram(varray_t *self)
 			varray_face_to_gl(self, face, id);
 		}
 	}
-	else if(vector_count(edges))
+	else if (vector_count(mesh->edges))
 	{
 		varray_edges_to_gl(self);
+	}
+	else if (vector_count(mesh->verts))
+	{
+		varray_verts_to_gl(self);
 	}
 	return 1;
 }
@@ -783,7 +840,7 @@ int32_t varray_update_ram(varray_t *self)
 static void varray_update_buffers(varray_t *self)
 {
 	uint32_t *vbo = self->vbo;
-	if(self->vert_num > self->vert_num_gl)
+	if (self->vert_num > self->vert_num_gl)
 	{
 		self->vert_num_gl = self->vert_num;
 
@@ -805,7 +862,7 @@ static void varray_update_buffers(varray_t *self)
 		/* COLOR BUFFER */
 		create_buffer(&vbo[5], self->col, 3, self->vert_num, 0);
 
-		/* if(self->mesh->has_skin) */
+		/* if (self->mesh->has_skin) */
 		{
 			/* BONEID BUFFER */
 			create_buffer(&vbo[6], self->bid, 4, self->vert_num, 0);
@@ -814,10 +871,10 @@ static void varray_update_buffers(varray_t *self)
 			create_buffer(&vbo[7], self->wei, 4, self->vert_num, 0);
 		}
 	}
-	if(self->ind_num > self->ind_num_gl)
+	if (self->ind_num > self->ind_num_gl)
 	{
 		self->ind_num_gl = self->ind_num;
-		if(!vbo[15]) glGenBuffers(1, &vbo[15]);
+		if (!vbo[15]) glGenBuffers(1, &vbo[15]);
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[15]);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, self->ind_num *
@@ -826,7 +883,7 @@ static void varray_update_buffers(varray_t *self)
 
 	}
 
-	if(self->ind_num)
+	if (self->ind_num)
 	{
 		/* VERTEX BUFFER */
 		update_buffer(&vbo[0], self->pos, N, self->vert_num, 0); glerr();
@@ -846,7 +903,7 @@ static void varray_update_buffers(varray_t *self)
 		/* COLOR BUFFER */
 		update_buffer(&vbo[5], self->col, 3, self->vert_num, 0); glerr();
 
-		/* if(self->mesh->has_skin) */
+		/* if (self->mesh->has_skin) */
 		{
 			/* BONEID BUFFER */
 			update_buffer(&vbo[6], self->bid, 4, self->vert_num, 0); glerr();
@@ -867,9 +924,9 @@ static void varray_update_buffers(varray_t *self)
 
 void varray_update(varray_t *self)
 {
-	if(!self->mesh || self->mesh->locked_read) return;
+	if (!self->mesh || self->mesh->locked_read) return;
 
-	if(self->update_id_ram != self->mesh->update_id)
+	if (self->update_id_ram != self->mesh->update_id)
 	{
 		mesh_lock_write(self->mesh);
 
@@ -905,7 +962,7 @@ static void varray_bind(varray_t *self)
 	/* COLOR BUFFER */
 	bind_buffer(&vbo[5], 5, GL_FLOAT, 3, 0);
 
-	/* if(self->mesh->has_skin) */
+	/* if (self->mesh->has_skin) */
 	{
 		/* BONEID BUFFER */
 		bind_buffer(&vbo[6], 6, GL_FLOAT, 4, 0);
@@ -919,9 +976,9 @@ static void varray_bind(varray_t *self)
 
 static void draw_conf_update_vao(draw_conf_t *self)
 {
-	if(!self->vbo[8]) return;
+	if (!self->vbo[8]) return;
 
-	if(!self->vao) glGenVertexArrays(1, &self->vao);
+	if (!self->vao) glGenVertexArrays(1, &self->vao);
 	glBindVertexArray(self->vao); glerr();
 	varray_bind(self->varray);
 
@@ -942,32 +999,36 @@ static void draw_conf_update_vao(draw_conf_t *self)
 static void draw_conf_update_skin(draw_conf_t *self)
 {
 	skin_t *skin = self->vars.skin;
-	if(!self->skin)
+	if (!self->skin)
 	{
 		glGenBuffers(1, &self->skin); glerr();
 		glBindBuffer(GL_UNIFORM_BUFFER, self->skin); glerr();
 		glBufferData(GL_UNIFORM_BUFFER, sizeof(skin->transforms),
 				&skin->transforms[0], GL_DYNAMIC_DRAW); glerr();
 	}
-	if(self->last_skin_update == skin->update_id) return;
+	if (self->last_skin_update == skin->update_id) return;
 	self->last_skin_update = skin->update_id;
 	glBindBuffer(GL_UNIFORM_BUFFER, self->skin); glerr();
-	void *p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-	memcpy(p, &skin->transforms[0], skin->bones_num * sizeof(mat4_t));
-	glUnmapBuffer(GL_UNIFORM_BUFFER); glerr();
+
+	/* void *p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY); */
+	/* memcpy(p, &skin->transforms[0], skin->bones_num * sizeof(mat4_t)); */
+	/* glUnmapBuffer(GL_UNIFORM_BUFFER); glerr(); */
+	
+
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, skin->bones_num * sizeof(mat4_t),
+	                &skin->transforms[0]);
 }
 
 int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 {
-	if(!self || !self->inst_num) return 0;
+	if (!self || !self->inst_num) return 0;
 #ifndef __EMSCRIPTEN__
 	SDL_SemWait(self->semaphore);
 #endif
 	mesh_t *mesh = self->vars.mesh;
 	/* printf("%d %p %d %s\n", self->vars.transparent, self->vars.mesh, */
 			/* self->vars.xray, self->vars.vs->name); */
-
-	if(!self->varray) self->varray = varray_get(self->vars.mesh);
+	if (!self->varray) self->varray = varray_get(self->vars.mesh);
 
 	varray_update(self->varray);
 
@@ -980,7 +1041,7 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 
 	draw_conf_update_vao(self);
 
-	if(self->vars.skin)
+	if (self->vars.skin)
 	{
 		c_render_device_t *rd = c_render_device(&SYS);
 		draw_conf_update_skin(self);
@@ -990,8 +1051,13 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 
 	shader_t *shader = vs_bind(self->vars.vs);
 
+	if (self->vars.draw_callback)
+	{
+		self->vars.draw_callback(self->vars.usrptr, shader);
+	}
+
 	int32_t cull_was_enabled = glIsEnabled(GL_CULL_FACE);
-	if(mesh->cull)
+	if (mesh->cull)
 	{
 		const uint32_t culls[4] = {0, GL_FRONT, GL_BACK, GL_FRONT_AND_BACK};
 		glCullFace(culls[mesh->cull]);
@@ -1014,10 +1080,10 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	glerr();
 #endif
 
-	if(self->vars.xray) glDepthRange(0, 0.01);
+	if (self->vars.xray) glDepthRange(0, 0.01);
 
 	uint32_t primitive;
-	if(vector_count(mesh->faces))
+	if (vector_count(mesh->faces))
 	{
 		primitive = GL_TRIANGLES;
 		glUniform1i(shader_uniform(shader, "has_normals", NULL), 1);
@@ -1026,13 +1092,20 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	else
 	{
 
-		primitive = GL_LINES;
 		glUniform1i(shader_uniform(shader, "has_normals", NULL), 0);
 		glerr();
+		if (vector_count(mesh->edges))
+		{
+			primitive = GL_LINES;
+		}
+		else
+		{
+			primitive = GL_POINTS;
+		}
 	}
 	if (self->inst_num == 1) instance_id = 0;
 	
-	if(instance_id == -1)
+	if (instance_id == -1)
 	{
 		glDrawElementsInstanced(primitive, self->varray->ind_num, IDTYPE,
 		                        0, self->inst_num); glerr();
@@ -1046,7 +1119,7 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 		/* glDrawArraysOneInstance(primitive, instance_id, self->varray->ind_num, int instance ); */
 		glerr();
 	}
-	if(cull_was_enabled) glEnable(GL_CULL_FACE);
+	if (cull_was_enabled) glEnable(GL_CULL_FACE);
 
 end:
 #ifndef __EMSCRIPTEN__
@@ -1061,7 +1134,7 @@ end:
 
 int32_t drawable_draw(drawable_t *self)
 {
-	/* if(self->conf->vars.scale_dist > 0.0f) */
+	/* if (self->conf->vars.scale_dist > 0.0f) */
 	/* { */
 	/* 	c_node_update_model(node); */
 
@@ -1075,9 +1148,9 @@ int32_t drawable_draw(drawable_t *self)
 
 	int32_t res = 0;
 	uint32_t gid;
-	for(gid = 0; gid < self->grp_num; gid++)
+	for(gid = 0; gid < self->bind_num; gid++)
 	{
-		res |= draw_conf_draw(self->grp[gid].conf, self->grp[gid].instance_id);
+		res |= draw_conf_draw(self->bind[gid].conf, self->bind[gid].instance_id);
 	}
 
 	return res;
@@ -1113,7 +1186,7 @@ static void draw_conf_update_trans(draw_conf_t *self)
 
 static void draw_conf_update_inst_props(draw_conf_t *self, int32_t id)
 {
-	if(self->comps[id]->updates & MASK_PROPS)
+	if (self->comps[id]->updates & MASK_PROPS)
 	{
 		/* PROPERTY BUFFER */
 		update_buffer(&self->vbo[12], &self->props[id], 4, 1, id); glerr();
@@ -1123,7 +1196,7 @@ static void draw_conf_update_inst_props(draw_conf_t *self, int32_t id)
 
 static void draw_conf_update_inst_trans(draw_conf_t *self, int32_t id)
 {
-	if(self->comps[id]->updates & MASK_TRANS)
+	if (self->comps[id]->updates & MASK_TRANS)
 	{
 		/* TRANSFORM BUFFER */
 		update_buffer(&self->vbo[8], &self->inst[id], 16, 1, id); glerr();
@@ -1141,7 +1214,7 @@ int world_frame(void);
 static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 {
 	int frame = world_frame();
-	if(self->inst_num > self->gl_inst_num)
+	if (self->inst_num > self->gl_inst_num)
 	{
 		self->gl_inst_num = self->inst_num;
 
@@ -1158,12 +1231,12 @@ static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 		return;
 	}
 
-	if(id == -1)
+	if (id == -1)
 	{
 		int32_t i;
-		if(self->trans_updates && self->last_update_frame != frame)
+		if (self->trans_updates && self->last_update_frame != frame)
 		{
-			if(self->inst_num > 8 && self->trans_updates > self->inst_num / 2)
+			if (self->inst_num > 8 && self->trans_updates > self->inst_num / 2)
 			{
 				draw_conf_update_trans(self);
 			}
@@ -1174,9 +1247,9 @@ static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 			self->trans_updates = 0;
 			self->last_update_frame = frame;
 		}
-		if(self->props_updates)
+		if (self->props_updates)
 		{
-			if(self->inst_num > 8 && self->props_updates > self->inst_num / 2)
+			if (self->inst_num > 8 && self->props_updates > self->inst_num / 2)
 			{
 				draw_conf_update_props(self);
 			}
@@ -1192,7 +1265,7 @@ static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 		draw_conf_update_inst_props(self, id);
 		self->props_updates = 0;
 
-		if(self->last_update_frame != frame)
+		if (self->last_update_frame != frame)
 		{
 			draw_conf_update_inst_trans(self, id);
 			self->last_update_frame = frame;
@@ -1204,16 +1277,16 @@ static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 void varray_destroy(varray_t *self)
 {
 	int32_t i;
-	for(i = 0; i < 24; i++) if(self->vbo[i]) glDeleteBuffers(1, &self->vbo[i]);
-	if(self->tex) free(self->tex);
-	if(self->nor) free(self->nor);
-	if(self->pos) free(self->pos);
-	if(self->tan) free(self->tan);
-	if(self->col) free(self->col);
-	if(self->id) free(self->id);
-	if(self->bid) free(self->bid);
-	if(self->wei) free(self->wei);
-	if(self->ind) free(self->ind);
+	for(i = 0; i < 24; i++) if (self->vbo[i]) glDeleteBuffers(1, &self->vbo[i]);
+	if (self->tex) free(self->tex);
+	if (self->nor) free(self->nor);
+	if (self->pos) free(self->pos);
+	if (self->tan) free(self->tan);
+	if (self->col) free(self->col);
+	if (self->id) free(self->id);
+	if (self->bid) free(self->bid);
+	if (self->wei) free(self->wei);
+	if (self->ind) free(self->ind);
 
 
 }
@@ -1221,36 +1294,36 @@ void varray_destroy(varray_t *self)
 void draw_conf_destroy(draw_conf_t *self)
 {
 	int32_t i;
-	if(self->vao)
+	if (self->vao)
 	{
 		glDeleteVertexArrays(1, &self->vao);
 	}
 	self->vao = 0;
-	for(i = 0; i < 24; i++) if(self->vbo[i]) glDeleteBuffers(1, &self->vbo[i]);
+	for(i = 0; i < 24; i++) if (self->vbo[i]) glDeleteBuffers(1, &self->vbo[i]);
 #ifdef MESH4
-	if(self->angle4) free(self->angle4);
+	if (self->angle4) free(self->angle4);
 #endif
-	if(self->inst) free(self->inst);
-	if(self->props) free(self->props);
-	if(self->comps) free(self->comps);
+	if (self->inst) free(self->inst);
+	if (self->props) free(self->props);
+	if (self->comps) free(self->comps);
 
-	if(self->varray) varray_destroy(self->varray);
+	if (self->varray) varray_destroy(self->varray);
 
 
 }
 
-static int32_t drawable_position_changed(drawable_t *self, struct draw_grp *grp)
+static int32_t drawable_position_changed(drawable_t *self, struct draw_bind *bind)
 {
-	if(grp->conf)
+	if (bind->conf)
 	{
-		grp->conf->inst[grp->instance_id] = self->transform;
+		bind->conf->inst[bind->instance_id] = self->transform;
 #ifdef MESH4
-		grp->conf->angle4[grp->instance_id] = self->angle4;
+		bind->conf->angle4[bind->instance_id] = self->angle4;
 #endif
-		if(!(grp->conf->comps[grp->instance_id]->updates & MASK_TRANS))
+		if (!(bind->conf->comps[bind->instance_id]->updates & MASK_TRANS))
 		{
-			grp->conf->trans_updates++;
-			grp->conf->comps[grp->instance_id]->updates |= MASK_TRANS;
+			bind->conf->trans_updates++;
+			bind->conf->comps[bind->instance_id]->updates |= MASK_TRANS;
 		}
 	}
 	return CONTINUE;
@@ -1259,24 +1332,24 @@ static int32_t drawable_position_changed(drawable_t *self, struct draw_grp *grp)
 void drawable_destroy(drawable_t *self)
 {
 	uint32_t gid;
-	for(gid = 0; gid < self->grp_num; gid++)
+	for(gid = 0; gid < self->bind_num; gid++)
 	{
-		draw_conf_t *conf = self->grp[gid].conf;
-		draw_conf_remove_instance(conf, self->grp[gid].instance_id);
+		draw_conf_t *conf = self->bind[gid].conf;
+		draw_conf_remove_instance(conf, self->bind[gid].instance_id);
 		/* TODO delete empty configurations */ 
-		/* if(conf->inst_num == 0) draw_conf_destroy(); */
+		/* if (conf->inst_num == 0) draw_conf_destroy(); */
 	}
 }
 
 static int32_t draw_group_draw(draw_group_t *self)
 {
-	if(!self) return 0;
+	if (!self) return 0;
 	int32_t res = 0;
 	khiter_t k;
 
 	for(k = kh_begin(self->configs); k != kh_end(self->configs); ++k)
 	{
-		if(!kh_exist(self->configs, k)) continue;
+		if (!kh_exist(self->configs, k)) continue;
 		draw_conf_t *conf = kh_value(self->configs, k);
 		res |= draw_conf_draw(conf, -1);
 	}

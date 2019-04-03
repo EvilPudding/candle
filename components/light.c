@@ -61,14 +61,14 @@ void c_light_init(c_light_t *self)
 	}
 	self->id = g_lights_num++;
 
-	drawable_init(&self->widget, ref("transparent"), NULL);
+	drawable_init(&self->widget, ref("transparent"));
 	drawable_add_group(&self->widget, ref("selectable"));
 	drawable_set_vs(&self->widget, sprite_vs());
 	drawable_set_mat(&self->widget, g_light_widget->id);
 	drawable_set_entity(&self->widget, c_entity(self));
 	drawable_set_xray(&self->widget, 1);
 
-	drawable_init(&self->draw, self->light_group, NULL);
+	drawable_init(&self->draw, self->light_group);
 	drawable_set_vs(&self->draw, model_vs());
 	drawable_set_mesh(&self->draw, g_light);
 	drawable_set_mat(&self->draw, self->id);
@@ -197,7 +197,7 @@ static int c_light_pre_draw(c_light_t *self)
 			drawable_set_mesh(&self->draw, g_light);
 		}
 		c_node_t *node = c_node(self);
-		vec3_t pos = c_node_local_to_global(node, vec3(0, 0, 0));
+		vec3_t pos = c_node_pos_to_global(node, vec3(0, 0, 0));
 		mat4_t model = mat4_translate(pos);
 		model = mat4_scale_aniso(model, vec3(self->radius * 1.15f));
 

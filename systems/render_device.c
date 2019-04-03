@@ -168,7 +168,7 @@ shader_t *vs_bind(vs_t *vs)
 		glBindBufferBase(GL_UNIFORM_BUFFER, 19, rd->bound_ubos[19]); glerr();
 	}
 
-	if (rd->bound_ubos[21])
+	if (rd->bound_ubos[21] && rd->shader->has_skin)
 	{
 		loc = glGetUniformBlockIndex(rd->shader->program, "skin_t");
 		glUniformBlockBinding(rd->shader->program, loc, 21); glerr();

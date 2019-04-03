@@ -1,8 +1,6 @@
 #ifndef CREST_H
 #define CREST_H
 
-#include <utils/glutil.h>
-
 #include <utils/loader.h>
 #include <systems/sauces.h>
 
@@ -51,8 +49,8 @@ typedef struct candle_t
 	void *ticker_thr;
 	int fps;
 #ifndef __EMSCRIPTEN__
-	SDL_threadID render_id;
-	SDL_sem *sem;
+	uint64_t render_id;
+	void *sem;
 #endif
 	int fps_count;
 	uint64_t last_tick;

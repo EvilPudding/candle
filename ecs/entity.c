@@ -1,3 +1,4 @@
+#include <utils/glutil.h>
 #include "entity.h"
 #include <stdarg.h>
 #include <ecs/ecm.h>
@@ -149,9 +150,11 @@ void _entity_add_post(entity_t self, c_t *comp)
 {
 	--_g_creating_num;
 
-	ct_t *ct = ecm_get(comp->comp_type);
-	component_signal(comp, ct, ref("entity_created"), NULL, NULL);
-
+	if (comp)
+	{
+		ct_t *ct = ecm_get(comp->comp_type);
+		component_signal(comp, ct, ref("entity_created"), NULL, NULL);
+	}
 }
 
 void _entity_add_pre(entity_t entity)

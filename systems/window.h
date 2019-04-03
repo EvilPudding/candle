@@ -21,10 +21,8 @@ typedef struct c_window_t
 	int width, height;
 	int fullscreen;
 
-	SDL_Window *window;
-	SDL_Renderer *display;
-	SDL_RendererInfo info;
-	SDL_GLContext *context;
+	void *window;
+	void *context;
 
 	const unsigned char *key_state;
 
@@ -34,7 +32,7 @@ typedef struct c_window_t
 
 DEF_CASTER("window", c_window, c_window_t)
 
-void c_window_handle_resize(c_window_t *self, const SDL_Event event);
+void c_window_handle_resize(c_window_t *self, const void *event);
 void c_window_toggle_fullscreen(c_window_t *self);
 
 c_window_t *c_window_new(int width, int height);

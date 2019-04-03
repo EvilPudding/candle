@@ -6,11 +6,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#if __has_include (<assimp/cimport.h>)
-#include <assimp/cimport.h>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-#endif
+/* #if __has_include (<assimp/cimport.h>) */
+/* #include <assimp/cimport.h> */
+/* #include <assimp/scene.h> */
+/* #include <assimp/postprocess.h> */
+/* #endif */
 
 static vec3_t mesh_support(mesh_t *self, const vec3_t dir);
 static int mesh_get_pair_edge(mesh_t *self, int e);
@@ -148,7 +148,6 @@ mesh_t *mesh_new()
 	self->cull = 0x2; // CULL_BACK
 	self->smooth_angle = 0.2f;
 	self->transformation = mat4();
-	self->backup = mat4();
 	self->has_texcoords = 1;
 	self->triangulated = 1;
 	self->current_cell = -1;
@@ -542,7 +541,7 @@ int mesh_remove_lone_faces(mesh_t *self)
 		face_t *f = m_face(self, i); if(!f) continue;
 		if(!f_cell(f, self))
 		{
-			mesh_remove_face(self, i);
+			mesh_remove_face(self, i, false);
 			count++;
 		}
 	}
@@ -835,7 +834,7 @@ void mesh_weld(mesh_t *self, geom_t geom)
 			/* { */
 			/* 	mesh_edge_select(self, SEL_EDITING, 1); */
 			/* } */
-			mesh_remove_face(self, f_id);
+			mesh_remove_face(self, f_id, false);
 		}
 	}
 }
@@ -1009,7 +1008,7 @@ static void mesh_1_subdivide(mesh_t *self)
 		mesh_add_triangle(self, i01, Z3, t01,
 								i12, Z3, t12,
 								i20, Z3, t20);
-		mesh_remove_face(self, f_id);
+		mesh_remove_face(self, f_id, false);
 
 		/* mesh_select(self, TMP, MESH_FACE, f0); */
 		/* mesh_select(self, TMP, MESH_FACE, f1); */
@@ -1587,7 +1586,7 @@ void mesh_remove_edge(mesh_t *self, int edge_i)
 
 	if(face)
 	{
-		mesh_remove_face(self, edge->face);
+		mesh_remove_face(self, edge->face, false);
 	}
 	if(pair)
 	{
@@ -1598,7 +1597,7 @@ void mesh_remove_edge(mesh_t *self, int edge_i)
 	mesh_modified(self);
 }
 
-void mesh_remove_face(mesh_t *self, int face_i)
+void mesh_remove_face(mesh_t *self, int face_i, bool_t face_only)
 {
 	int i;
 
@@ -1631,7 +1630,16 @@ void mesh_remove_face(mesh_t *self, int face_i)
 	vector_remove(self->faces, face_i);
 	for(i = 0; i < face->e_size; i++)
 	{
-		mesh_remove_edge(self, face->e[i]);
+		if (face_only)
+		{
+			edge_t *edge = m_edge(self, face->e[i]);
+			if(!edge) continue;
+			edge->face = -1;
+		}
+		else
+		{
+			mesh_remove_edge(self, face->e[i]);
+		}
 	}
 	mesh_modified(self);
 }
@@ -1720,14 +1728,14 @@ void mesh_rotate(mesh_t *self, float angle, int x, int y, int z)
 	self->transformation = new;
 }
 
-void mesh_restore(mesh_t *self)
+void mesh_restore(mesh_t *self, mat4_t saved)
 {
-	self->transformation = self->backup;
+	self->transformation = saved;
 }
 
-void mesh_save(mesh_t *self)
+mat4_t mesh_save(mesh_t *self)
 {
-	self->backup = self->transformation;
+	return self->transformation;
 }
 
 void mesh_translate_uv(mesh_t *self, vec2_t p)
@@ -1793,7 +1801,7 @@ struct int_int mesh_face_triangulate(mesh_t *self, int i, int flip)
 	vec2_t t2 = e2->t;
 	vec2_t t3 = e3->t;
 
-	mesh_remove_face(self, i);
+	mesh_remove_face(self, i, false);
 
 	struct int_int result = 
 
@@ -1869,7 +1877,8 @@ void mesh_triangulate(mesh_t *self)
 	mesh_unlock(self);
 }
 
-void mesh_disk(mesh_t *self, float radius, float inner_radius, int segments, vecN_t dir)
+void mesh_disk(mesh_t *self, float radius, float inner_radius, int segments,
+               vecN_t dir)
 {
 	mesh_lock(self);
 	mesh_circle(self, radius, segments, dir);
@@ -1877,26 +1886,103 @@ void mesh_disk(mesh_t *self, float radius, float inner_radius, int segments, vec
 	mesh_unlock(self);
 }
 
-void mesh_circle(mesh_t *self, float radius, int segments, vecN_t dir)
+void mesh_remove_faces(mesh_t *self)
+{
+	int i;
+	mesh_lock(self);
+	for(i = 0; i < vector_count(self->faces); i++)
+	{
+		face_t *f = m_face(self, i); if(!f) continue;
+		mesh_remove_face(self, i, true);
+	}
+	vector_clear(self->faces);
+	mesh_unlock(self);
+}
+
+void mesh_frame_sphere(mesh_t *self, float radius)
+{
+	mesh_lock(self);
+	mesh_circle(self, radius, 24, VEC3(1.0f, 0.0f, 0.0f));
+	mesh_circle(self, radius, 24, VEC3(0.0f, 1.0f, 0.0f));
+	mesh_circle(self, radius, 24, VEC3(0.0f, 0.0f, 1.0f));
+	mesh_unlock(self);
+}
+
+void mesh_frame_cuboid(mesh_t *self, vec3_t p2, vec3_t p1)
+{
+	mesh_cuboid(self, 1.0f, p2, p1);
+	mesh_remove_faces(self);
+}
+
+void mesh_frame_capsule(mesh_t *self, float radius, vec3_t dir)
+{
+	mesh_lock(self);
+
+	mat4_t saved = mesh_save(self);
+
+	float height = vec3_len(dir);
+	vec4_t q;
+	vec3_t v2 = vec3(0.0f, 0.0f, 1.0f);
+	vec3_t cross = vec3_cross(v2, dir);
+	q.xyz = cross;
+	q.w = vec3_len(dir) + vec3_dot(dir, v2);
+	q = vec4_norm(q);
+
+	self->transformation = mat4_mul(self->transformation, quat_to_mat4(q));
+	mesh_translate(self, vec3(0.0f, 0.0f, -height / 2.0f));
+
+	mesh_circle(self, radius, 24, VEC3(0.0f, 0.0f, 1.0f));
+	mesh_arc(self, radius, 12, VEC3(1.0f, 0.0f, 0.0f), M_PI / 2.0f, M_PI + M_PI / 2.0f, false);
+	mesh_arc(self, radius, 12, VEC3(0.0f, 1.0f, 0.0f), 0.0f, M_PI, false);
+
+	int32_t b0 = mesh_add_vert(self, VEC3( radius,    0.0f,   0.0f));
+	int32_t b1 = mesh_add_vert(self, VEC3(-radius,    0.0f,   0.0f));
+	int32_t b2 = mesh_add_vert(self, VEC3(   0.0f,  radius,   0.0f));
+	int32_t b3 = mesh_add_vert(self, VEC3(   0.0f, -radius,   0.0f));
+	int32_t t0 = mesh_add_vert(self, VEC3( radius,    0.0f, height));
+	int32_t t1 = mesh_add_vert(self, VEC3(-radius,    0.0f, height));
+	int32_t t2 = mesh_add_vert(self, VEC3(   0.0f,  radius, height));
+	int32_t t3 = mesh_add_vert(self, VEC3(   0.0f, -radius, height));
+
+	int32_t e0 = mesh_add_edge_s(self, b0, -1);
+	int32_t e1 = mesh_add_edge_s(self, b1, -1);
+	int32_t e2 = mesh_add_edge_s(self, b2, -1);
+	int32_t e3 = mesh_add_edge_s(self, b3, -1);
+	mesh_add_edge_s(self, t0, e0);
+	mesh_add_edge_s(self, t1, e1);
+	mesh_add_edge_s(self, t2, e2);
+	mesh_add_edge_s(self, t3, e3);
+
+	mesh_translate(self, vec3(0.0f, 0.0f, height));
+	mesh_circle(self, radius, 24, VEC3(0.0f, 0.0f, 1.0f));
+	mesh_arc(self, radius, 12, VEC3(1.0f, 0.0f, 0.0f), -M_PI / 2.0f, M_PI / 2.0f, false);
+	mesh_arc(self, radius, 12, VEC3(0.0f, 1.0f, 0.0f), 0.0f, -M_PI, false);
+
+	mesh_restore(self, saved);
+	mesh_unlock(self);
+}
+
+void mesh_arc(mesh_t *self, float radius, int segments, vecN_t dir,
+              float start, float end, bool_t closed)
 {
 #define DIMS(s, c) \
-	(dir.x ? VEC3(0.0f, c, s) : \
+	(dir.x ? VEC3(0.0f, s, c) : \
 	 dir.z ? VEC3(c, s, 0.0f) : \
-			 VEC3(s, 0.0f, c))
+			 VEC3(c, 0.0f, s))
 
 	mesh_lock(self);
 
 	int prev_e, first_e;
 
 	prev_e = first_e = mesh_add_edge_s(self,
-			mesh_add_vert(self, DIMS(sin(0) * radius, cos(0) * radius)), -1);
+			mesh_add_vert(self, DIMS(sin(-start) * radius, cos(-start) * radius)), -1);
 	mesh_select(self, SEL_EDITING, MESH_EDGE, first_e);
 
-	float inc = (M_PI * 2) / segments;
+	float inc = (end - start) / segments;
 	float a;
 
 	int ai;
-	for(ai = 1, a = inc; ai < segments; a += inc, ai++)
+	for(ai = 1, a = start + inc; ai <= segments - closed; a += inc, ai++)
 	{
 		int e = mesh_add_edge_s(self,
 				mesh_add_vert(self, DIMS(
@@ -1907,17 +1993,22 @@ void mesh_circle(mesh_t *self, float radius, int segments, vecN_t dir)
 	}
 	self->has_texcoords = 0;
 
-	if(prev_e != first_e)
+	if(prev_e != first_e && closed)
 	{
 		m_edge(self, prev_e)->next = first_e;
 		m_edge(self, first_e)->prev = prev_e;
 
-		/* TODO: add a edge_set_next which calls this */
+		/* TODO: add an edge_set_next which calls this */
 		mesh_get_pair_edge(self, prev_e);
 	}
 
 	mesh_unlock(self);
 #undef DIMS
+}
+
+void mesh_circle(mesh_t *self, float radius, int segments, vecN_t dir)
+{
+	mesh_arc(self, radius, segments, dir, 0.0f, M_PI * 2, true);
 }
 
 float mesh_get_selection_radius(mesh_t *self, vecN_t center)
@@ -2542,8 +2633,6 @@ mesh_t *mesh_lathe(mesh_t *mesh, float angle, int segments,
 }
 
 void mesh_cuboid(mesh_t *self, float tex_scale, vec3_t p2, vec3_t p1)
-		/* float x1, float y1, float z1, */
-		/* float x2, float y2, float z2) */
 {
 	mesh_lock(self);
 	int v[8] = {
@@ -2599,6 +2688,31 @@ void mesh_cuboid(mesh_t *self, float tex_scale, vec3_t p2, vec3_t p1)
 	mesh_unlock(self);
 }
 
+static
+void _mesh_point_grid(mesh_t *self, vecN_t start, vecN_t size,
+                      uvecN_t segments, uint32_t dim)
+{
+	if (dim == N)
+	{
+		mesh_add_vert(self, start);
+	}
+	else
+	{
+		vecN_t iter = start;
+		for (uint32_t i = 0; i < segments._[dim]; i++)
+		{
+			iter._[dim] = start._[dim] + size._[dim] * i;
+			_mesh_point_grid(self, iter, size, segments, dim + 1);
+		}
+	}
+}
+
+void mesh_point_grid(mesh_t *self, vecN_t start, vecN_t size, uvecN_t segments)
+{
+	mesh_lock(self);
+	_mesh_point_grid(self, start, size, segments, 0);
+	mesh_unlock(self);
+}
 
 void mesh_cube(mesh_t *self, float size, float tex_scale)
 {
@@ -2612,79 +2726,6 @@ void mesh_wait(mesh_t *self)
 	SDL_SemWait(self->semaphore);
 	SDL_SemPost(self->semaphore);
 }
-
-#if __has_include (<assimp/cimport.h>)
-void mesh_load_scene(mesh_t *self, const void *grp)
-{
-	mesh_lock(self);
-	const struct aiMesh *group = grp;
-	strcpy(self->name, "load_result");
-	/* self->has_texcoords = 0; */
-
-	int offset = vector_count(self->verts);
-	int j;
-
-	if(!group->mTextureCoords[0])
-	{
-		self->has_texcoords = 0;
-	}
-	/* for(j = 0; j < AI_MAX_NUMBER_OF_TEXTURECOORDS; j++) */
-	/* { */
-		/* printf("j %d = %u\n", j, group->mNumUVComponents[j]); */
-	/* } */
-
-
-	for(j = 0; j < group->mNumVertices; j++)
-	{
-		mesh_add_vert(self, VEC3(_vec3(group->mVertices[j])));
-	}
-	struct aiVector3D *normals = group->mNormals;
-	normals = NULL;
-	struct aiVector3D *texcoor = group->mTextureCoords[0];
-	for(j = 0; j < group->mNumFaces; j++)
-	{
-		const struct aiFace *face = &group->mFaces[j];
-		unsigned int *indices = face->mIndices;
-
-		if(face->mNumIndices == 3)
-		{
-			int i0 = indices[0] + offset;
-			int i1 = indices[1] + offset;
-			int i2 = indices[2] + offset;
-			mesh_add_triangle(self,
-					i0, normals?vec3(_vec3(normals[i0])):Z3,
-					texcoor?vec2(_vec2(texcoor[i0])):Z2,
-
-					i1, normals?vec3(_vec3(normals[i1])):Z3,
-					texcoor?vec2(_vec2(texcoor[i1])):Z2,
-
-					i2, normals?vec3(_vec3(normals[i2])):Z3,
-					texcoor?vec2(_vec2(texcoor[i2])):Z2);
-		}
-		else if(face->mNumIndices == 4)
-		{
-			int i0 = indices[0] + offset;
-			int i1 = indices[1] + offset;
-			int i2 = indices[2] + offset;
-			int i3 = indices[3] + offset;
-			mesh_add_quad(self,
-					i0, normals?vec3(_vec3(normals[i0])):Z3,
-					texcoor?vec2(_vec2(texcoor[i0])):Z2,
-
-					i1, normals?vec3(_vec3(normals[i1])):Z3,
-					texcoor?vec2(_vec2(texcoor[i1])):Z2,
-
-					i2, normals?vec3(_vec3(normals[i2])):Z3,
-					texcoor?vec2(_vec2(texcoor[i2])):Z2,
-
-					i3, normals?vec3(_vec3(normals[i3])):Z3,
-					texcoor?vec2(_vec2(texcoor[i3])):Z2);
-		}
-	}
-
-	mesh_unlock(self);
-}
-#endif
 
 void mesh_load(mesh_t *self, const char *filename)
 {

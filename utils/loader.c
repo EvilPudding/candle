@@ -1,3 +1,4 @@
+#include <utils/glutil.h>
 #include "loader.h"
 #include <stdlib.h>
 #include <stdio.h>

@@ -35,7 +35,7 @@ c_node_t *c_node_new()
 extern int g_update_id;
 int c_node_changed(c_node_t *self)
 {
-	uint64_t i;
+	uint32_t i;
 	entity_signal_same(c_entity(self), sig("node_changed"), NULL, NULL);
 	/* if(self->cached) */
 	{
@@ -49,6 +49,23 @@ int c_node_changed(c_node_t *self)
 	return CONTINUE;
 }
 
+int32_t c_node_propagate(c_node_t *self, node_cb cb, void *usrptr)
+{
+	int32_t res = cb(c_entity(self), usrptr);
+	if (res != CONTINUE) return res;
+
+	for(uint32_t i = 0; i < self->children_size; i++)
+	{
+		entity_t child = self->children[i];
+		if (!entity_exists(child)) continue;
+		c_node_t *child_node = c_node(&child);
+		if (!child_node) continue;
+		int32_t res = c_node_propagate(child_node, cb, usrptr);
+		if (res != CONTINUE) return res;
+	}
+	return CONTINUE;
+}
+
 void c_node_pack(c_node_t *self, int packed)
 {
 	self->unpacked = packed;
@@ -58,7 +75,7 @@ void c_node_pack(c_node_t *self, int packed)
 
 entity_t c_node_get_by_name(c_node_t *self, uint32_t hash)
 {
-	uint64_t i;
+	uint32_t i;
 	for(i = 0; i < self->children_size; i++)
 	{
 		entity_t child = self->children[i];
@@ -241,30 +258,42 @@ void c_node_update_model(c_node_t *self)
 	}
 }
 
-vec3_t c_node_global_to_local(c_node_t *self, vec3_t vec)
-{
-	mat4_t inv;
-	c_node_update_model(self);
-	inv = mat4_invert(self->model);
-	return mat4_mul_vec4(inv, vec4(vec.x, vec.y, vec.z, 1.0)).xyz;
-}
-
-vec3_t c_node_local_to_global(c_node_t *self, vec3_t vec)
+vec3_t c_node_pos_to_local(c_node_t *self, vec3_t vec)
 {
 	c_node_update_model(self);
-	return mat4_mul_vec4(self->model, vec4(vec.x, vec.y, vec.z, 1.0)).xyz;
+	mat4_t inv = mat4_invert(self->model);
+	return mat4_mul_vec4(inv, vec4(_vec3(vec), 1.0)).xyz;
 }
 
 vec3_t c_node_dir_to_local(c_node_t *self, vec3_t vec)
 {
-	mat4_t inv;
 	c_node_update_model(self);
-	inv = mat4_invert(self->model);
-	return mat4_mul_vec4(inv, vec4(vec.x, vec.y, vec.z, 0.0)).xyz;
+	mat4_t inv = mat4_invert(self->model);
+	return mat4_mul_vec4(inv, vec4(_vec3(vec), 0.0)).xyz;
+}
+
+vec4_t c_node_rot_to_local(c_node_t *self, vec4_t rot)
+{
+	c_node_update_model(self);
+	vec4_t inv = quat_invert(self->rot);
+	return quat_mul(inv, rot);
+}
+
+vec3_t c_node_pos_to_global(c_node_t *self, vec3_t vec)
+{
+	c_node_update_model(self);
+	return mat4_mul_vec4(self->model, vec4(_vec3(vec), 1.0)).xyz;
 }
 
 vec3_t c_node_dir_to_global(c_node_t *self, vec3_t vec)
 {
 	c_node_update_model(self);
-	return mat4_mul_vec4(self->model, vec4(vec.x, vec.y, vec.z, 0.0)).xyz;
+	return mat4_mul_vec4(self->model, vec4(_vec3(vec), 0.0)).xyz;
 }
+
+vec4_t c_node_rot_to_global(c_node_t *self, vec4_t rot)
+{
+	c_node_update_model(self);
+	return quat_mul(self->rot, rot);
+}
+

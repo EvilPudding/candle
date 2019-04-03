@@ -1,3 +1,4 @@
+#include <utils/glutil.h>
 #include "texture.h"
 #include "file.h"
 #include <candle.h>
@@ -786,20 +787,39 @@ texture_t *texture_new_3D
 	self->target = GL_TEXTURE_3D;
 
 	self->bufs[0].dims = dims;
+	bool_t is_float = false;
+	const uint32_t i = 0;
 	if(dims == 4)
 	{
-		self->bufs[0].format	= GL_RGBA;
-		self->bufs[0].internal = GL_RGBA32F;
+		self->bufs[i].format   = GL_RGBA;
+		self->bufs[i].internal = is_float ? GL_RGBA16F : GL_RGBA8;
+		self->bufs[i].type = is_float ? GL_FLOAT : GL_UNSIGNED_BYTE;
 	}
 	else if(dims == 3)
 	{
-		self->bufs[0].format	= GL_RGB;
-		self->bufs[0].internal = GL_RGB32F;
+		self->bufs[i].format   = GL_RGB;
+		self->bufs[i].internal = is_float ? GL_RGB16F : GL_RGB8;
+		self->bufs[i].type = is_float ? GL_FLOAT : GL_UNSIGNED_BYTE;
 	}
 	else if(dims == 2)
 	{
-		self->bufs[0].format	= GL_RG;
-		self->bufs[0].internal = GL_RG32F;
+		self->bufs[i].format   = GL_RG;
+		self->bufs[i].internal = is_float ? GL_RG16F : GL_RG8;
+		self->bufs[i].type = is_float ? GL_FLOAT : GL_UNSIGNED_BYTE;
+	}
+	else if(dims == 1)
+	{
+		self->bufs[i].format   = GL_RED;
+		self->bufs[i].internal = is_float ? GL_R16F : GL_R8;
+		self->bufs[i].type = is_float ? GL_FLOAT : GL_UNSIGNED_BYTE;
+	}
+	else if(dims == -1)
+	{
+		if(i > 0) perror("Depth component must be added first\n");
+		self->bufs[i].format = GL_DEPTH_COMPONENT;
+		self->bufs[i].internal = GL_DEPTH_COMPONENT16;
+		self->bufs[i].type = GL_UNSIGNED_SHORT;
+		self->depth_buffer = 1;
 	}
 
 	self->width = width;
@@ -807,19 +827,6 @@ texture_t *texture_new_3D
 	self->depth = depth;
 
 	self->bufs[0].data	= calloc(dims * width * height * depth, 1);
-
-	/* float x, y, z; */
-	/* for(x = 0; x < width; x++) */
-	/* { */
-		/* for(y = 0; y < height; y++) */
-		/* { */
-			/* for(z = 0; z < depth; z++) */
-			/* { */
-				/* texture_set_xyz(self, x, y, z, 255, 255, 255, 255); */
-			/* } */
-		/* } */
-	/* } */
-
 
 	loader_push(g_candle->loader, (loader_cb)texture_new_3D_loader, self,
 			NULL);

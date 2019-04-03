@@ -1,7 +1,6 @@
 #ifndef TEXTURE_H
 #define TEXTURE_H
 
-#include "glutil.h"
 #include "macros.h"
 #include "mafs.h"
 
@@ -38,14 +37,14 @@ typedef struct tex_tile
 
 typedef struct
 {
-	GLuint id;
+	uint32_t id;
 	uint32_t fb_ready;
 	int dims;
 	uint32_t format;
 	uint32_t internal;
 	uint32_t type;
 	char *name;
-	GLubyte *data;
+	uint8_t *data;
 	uint32_t ready;
 
 	tex_tile_t *mips[MAX_MIPS];
@@ -128,9 +127,9 @@ uint32_t load_tile(texture_t *self, uint32_t mip, uint32_t x, uint32_t y,
                  uint32_t frame, uint32_t max_loads);
 
 void texture_set_xy(texture_t *self, int32_t x, int32_t y,
-		GLubyte r, GLubyte g, GLubyte b, GLubyte a);
+		uint8_t r, uint8_t g, uint8_t b, uint8_t a);
 void texture_set_xyz(texture_t *self, int32_t x, int32_t y, int32_t z,
-		GLubyte r, GLubyte g, GLubyte b, GLubyte a);
+		uint8_t r, uint8_t g, uint8_t b, uint8_t a);
 void texture_update_gl(texture_t *self);
 
 void texture_update_brightness(texture_t *self);

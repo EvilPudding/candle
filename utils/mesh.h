@@ -1,7 +1,6 @@
 #ifndef MESH_H
 #define MESH_H
 
-#include "glutil.h"
 #include "mafs.h"
 #include "material.h"
 #include "vector.h"
@@ -16,10 +15,12 @@ typedef struct vec3_t(*support_cb)(mesh_t *self, const vec3_t dir);
 #ifdef MESH4
 #	define vecN vec4
 #	define vecN_t vec4_t
+#	define uvecN_t uvec4_t
 #	define VEC3(...) vec4(__VA_ARGS__, 0.0f)
 #	define XYZ(v) v.xyz
 #	define ZN vec4(0.0f)
 #	define _vecN(a) _vec4(a)
+#	define _uvecN(a) _uvec4(a)
 #	define N 4
 
 #	define dN d4
@@ -28,9 +29,10 @@ typedef struct vec3_t(*support_cb)(mesh_t *self, const vec3_t dir);
 #else
 #	define vecN vec3
 #	define vecN_t vec3_t
+#	define uvecN_t uvec3_t
 #	define VEC3(...) vec3(__VA_ARGS__)
 #	define XYZ(v) v
-#	define _vecN(a) _vec(a)
+#	define _uvecN(a) _uvec3(a)
 #	define ZN vec3(0.0f)
 
 #	define dN d3_t
@@ -188,7 +190,6 @@ typedef struct mesh_t
 	int current_surface;
 
 	mat4_t transformation;
-	mat4_t backup;
 
 	support_cb support;
 
@@ -236,17 +237,22 @@ void mesh_assign(mesh_t *self, mesh_t *other);
 void mesh_destroy(mesh_t *self);
 
 void mesh_load(mesh_t *self, const char *filename);
-void mesh_quad(mesh_t *self);
 void mesh_circle(mesh_t *self, float radius, int segments, vecN_t dir);
+void mesh_arc(mesh_t *self, float radius, int segments, vecN_t dir,
+              float start, float end, bool_t closed);
+
+void mesh_frame_cuboid(mesh_t *self, vec3_t p2, vec3_t p1);
+void mesh_frame_capsule(mesh_t *self, float radius, vec3_t dir);
+void mesh_frame_sphere(mesh_t *self, float radius);
+
+void mesh_quad(mesh_t *self);
 mesh_t *mesh_torus(float radius, float inner_radius, int segments,
 		int inner_segments);
 void mesh_disk(mesh_t *self, float radius, float inner_radius, int segments,
 		vecN_t dir);
 void mesh_cube(mesh_t *self, float size, float tex_scale);
 void mesh_ico(mesh_t *self, float size);
-#if __has_include (<assimp/cimport.h>)
-void mesh_load_scene(mesh_t *self, const void *scene);
-#endif
+void mesh_point_grid(mesh_t *self, vecN_t start, vecN_t size, uvecN_t segments);
 
 void mesh_clear(mesh_t *self);
 void mesh_subdivide(mesh_t *mesh, int subdivisions);
@@ -289,7 +295,8 @@ int mesh_add_triangle_s(mesh_t *self, int v0, int v1, int v2);
 void mesh_check_pairs(mesh_t *self);
 int mesh_remove_lone_faces(mesh_t *self);
 int mesh_remove_lone_edges(mesh_t *self);
-void mesh_remove_face(mesh_t *self, int face_i);
+void mesh_remove_faces(mesh_t *self);
+void mesh_remove_face(mesh_t *self, int face_i, bool_t face_only);
 void mesh_remove_edge(mesh_t *self, int edge_i);
 void mesh_remove_vert(mesh_t *self, int vert_i);
 void mesh_select(mesh_t *self, int selection, geom_t geom, int id);
@@ -332,8 +339,8 @@ int mesh_vert_has_face(mesh_t *self, vertex_t *vert, int face_id);
 
 void mesh_translate(mesh_t *self, vec3_t t);
 void mesh_rotate(mesh_t *self, float angle, int x, int y, int z);
-void mesh_save(mesh_t *self);
-void mesh_restore(mesh_t *self);
+mat4_t mesh_save(mesh_t *self);
+void mesh_restore(mesh_t *self, mat4_t saved);
 
 int mesh_update_flips(mesh_t *self);
 vecN_t mesh_get_selection_center(mesh_t *self);

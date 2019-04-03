@@ -22,7 +22,7 @@ vs_t *model_vs()
 {
 	if(!g_model_vs)
 	{
-		g_model_vs = vs_new("model", 1, vertex_modifier_new(
+		g_model_vs = vs_new("model", false, 1, vertex_modifier_new(
 			"	{\n"
 			"#ifdef MESH4\n"
 			"		float Y = cos(ANG4);\n"
@@ -35,9 +35,9 @@ vs_t *model_vs()
 			"		vec3 vertex_tangent   = normalize(MV * vec4(TG, 0.0f)).xyz;\n"
 			"		vec3 vertex_bitangent = cross(vertex_tangent, vertex_normal);\n"
 			"		pos   = (MV * pos);\n"
-			"		vertex_position = pos.xyz;\n"
+			"		$vertex_position = pos.xyz;\n"
 
-			"		TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
+			"		$TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
 
 			"		pos = camera(projection) * pos;\n"
 			"	}\n"
@@ -484,7 +484,7 @@ static void c_model_init(c_model_t *self)
 
 void c_model_init_drawables(c_model_t *self)
 {
-	drawable_init(&self->draw, self->visible_group, NULL);
+	drawable_init(&self->draw, self->visible_group);
 	drawable_add_group(&self->draw, ref("selectable"));
 	drawable_set_entity(&self->draw, c_entity(self));
 	drawable_set_vs(&self->draw, model_vs());
@@ -899,7 +899,8 @@ int c_model_menu(c_model_t *self, void *ctx)
 	if(self->mat && self->mat->name[0] != '_')
 	{
 		changes |= mat_menu(self->mat, ctx);
-		c_model_update_mat(self);
+		if (changes)
+			c_model_update_mat(self);
 	}
 	if(changes)
 	{

@@ -30,20 +30,20 @@ vs_t *sprite_vs()
 {
 	if(!g_sprite_vs)
 	{
-		g_sprite_vs = vs_new("sprite", 1, vertex_modifier_new(
+		g_sprite_vs = vs_new("sprite", false, 1, vertex_modifier_new(
 			"	{\n"
 			"		mat4 MV = camera(view) * M;\n"
 			"		pos = (camera(projection) * MV) * vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
-			"		vertex_position = pos.xyz;\n"
-			"		vec2 size = vec2(P.x * (screen_size.y / screen_size.x), P.y);\n"
+			"		$vertex_position = pos.xyz;\n"
+			"		vec2 size = vec2(P.x * (screen_size.y / screen_size.x), P.y) * 0.5;\n"
 			"		pos = vec4(pos.xy + 0.5 * size, pos.z, pos.w);\n"
 
 			"		vec3 vertex_normal    = (vec4( N, 0.0f)).xyz;\n"
 			"		vec3 vertex_tangent   = (vec4(TG, 0.0f)).xyz;\n"
 			"		vec3 vertex_bitangent = cross(vertex_normal, vertex_tangent);\n"
-			"		texcoord = vec2(UV.x, 1.0f - UV.y);\n"
+			"		$texcoord = vec2(UV.x, 1.0f - UV.y);\n"
 
-			"		TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
+			"		$TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
 			"	}\n"
 		));
 	}
@@ -53,7 +53,7 @@ vs_t *sprite_vs()
 static void c_sprite_init(c_sprite_t *self)
 {
 	sprite_vs();
-	drawable_init(&self->draw, ref("visible"), NULL);
+	drawable_init(&self->draw, ref("visible"));
 	drawable_add_group(&self->draw, ref("selectable"));
 	drawable_set_vs(&self->draw, g_sprite_vs);
 	drawable_set_mesh(&self->draw, g_sprite_mesh);
@@ -70,8 +70,8 @@ void c_sprite_update_mat(c_sprite_t *self)
 			self->mat->transparency.texture ||
 			self->mat->emissive.color.a > 0.0f ||
 			self->mat->emissive.texture;
-		if(self->draw.grp[0].grp == ref("transparent")
-				|| self->draw.grp[0].grp == ref("visible"))
+		if(self->draw.bind[0].grp == ref("transparent")
+				|| self->draw.bind[0].grp == ref("visible"))
 		{
 			drawable_set_group(&self->draw, transp ? ref("transparent") : ref("visible"));
 		}
