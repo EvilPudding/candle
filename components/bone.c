@@ -17,8 +17,8 @@ static void c_bone_init(c_bone_t *self)
 	if(!g_bone)
 	{
 		g_mat = mat_new("m");
-		g_mat->emissive.color = vec4(0.3f, 0.1f, 0.9f, 0.5f);
-		g_mat->albedo.color = vec4(1, 1, 1, 1.0f);
+		mat4f(g_mat, ref("emissive.color"), vec4(0.3f, 0.1f, 0.9f, 0.5f));
+		mat4f(g_mat, ref("albedo.color"), vec4(1, 1, 1, 1.0f));
 
 #ifdef MESH4
 		vec4_t dir = vec4(0.0f, 0.0f, -1.0f, 0.0f);
@@ -52,8 +52,8 @@ static void c_bone_init(c_bone_t *self)
 	drawable_set_xray(&self->draw, true);
 	drawable_set_xray(&self->joint, true);
 
-	drawable_set_mat(&self->draw, g_mat->id);
-	drawable_set_mat(&self->joint, g_mat->id);
+	drawable_set_mat(&self->draw, g_mat);
+	drawable_set_mat(&self->joint, g_mat);
 }
 
 static int c_bone_position_changed(c_bone_t *self)

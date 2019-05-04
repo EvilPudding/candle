@@ -17,7 +17,8 @@ NK_API struct nk_context* nk_can_init(void *win);
 
 void nk_can_render(enum nk_anti_aliasing AA);
 void nk_draw_image_ext(struct nk_command_buffer *b, struct nk_rect r,
-    const struct nk_image *img, struct nk_color col, int no_blending);
+    const struct nk_image *img, struct nk_color col, uint32_t no_blending,
+    uint32_t tile, uint32_t width, uint32_t height);
 
 #define nk_tree_entity_push(ctx, type, title, state, sel) nk_tree_entity_push_hashed(ctx, type, title, state, sel, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),__LINE__)
 #define nk_tree_entity_push_id(ctx, type, title, state, sel, chil, id) nk_tree_entity_push_hashed(ctx, type, title, state, sel, chil, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)

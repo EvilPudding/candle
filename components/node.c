@@ -66,9 +66,9 @@ int32_t c_node_propagate(c_node_t *self, node_cb cb, void *usrptr)
 	return CONTINUE;
 }
 
-void c_node_pack(c_node_t *self, int packed)
+void c_node_pack(c_node_t *self, int unpacked)
 {
-	self->unpacked = packed;
+	self->unpacked = unpacked;
 	c_node_changed(self);
 }
 
@@ -204,14 +204,14 @@ REG()
 	ct_listener(ct, ENTITY, sig("spatial_changed"), c_node_changed);
 }
 
-void c_node_update_model(c_node_t *self)
+bool_t c_node_update_model(c_node_t *self)
 {
-	if(self->cached) return;
+	if(self->cached) return false;
 	self->cached = 1;
 
 	entity_t parent = self->parent;
 	c_spatial_t *sc = c_spatial(self);
-	if(!sc) return;
+	if(!sc) return false;
 
 	c_node_t *parent_node = entity_exists(self->parent) ? c_node(&parent) : NULL;
 	if(parent_node)
@@ -256,6 +256,7 @@ void c_node_update_model(c_node_t *self)
 		self->angle4 = sc->angle4;
 #endif
 	}
+	return true;
 }
 
 vec3_t c_node_pos_to_local(c_node_t *self, vec3_t vec)

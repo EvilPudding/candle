@@ -27,14 +27,15 @@ c_axis_t *c_axis_new(int type, vecN_t dir)
 
 	mat_t *m = mat_new("m");
 
-	m->emissive.color = vec4(_vec3(dir), 0.8f);
+	mat4f(m, ref("emissive.color"), vec4(_vec3(dir), 0.8f));
 #ifdef MESH4
 	if(dir.w)
 	{
-		m->emissive.color = vec4(1.0f, 0.0f, 0.9f, 0.8f);
+		m->emissive.color = ;
+		mat4f(m, ref("emissive.color"), vec4(1.0f, 0.0f, 0.9f, 0.8f));
 	}
 #endif
-	m->albedo.color = vec4(1, 1, 1, 1.0f);
+	mat4f(m, ref("albedo.color"), vec4(1.0f, 1.0f, 1.0f, 1.0f));
 	self->type = type;
 
 	if(type == 0)

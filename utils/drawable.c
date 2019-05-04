@@ -28,7 +28,7 @@ void drawable_init(drawable_t *self, uint32_t group)
 	self->mesh = NULL;
 	self->skin = NULL;
 	self->xray = false;
-	self->mat = 0;
+	self->mat = NULL;
 	self->entity = entity_null;
 	self->draw_callback = NULL;
 	self->usrptr = NULL;
@@ -292,13 +292,23 @@ void drawable_set_xray(drawable_t *self, int32_t xray)
 	}
 }
 
-void drawable_set_mat(drawable_t *self, int32_t id)
+void drawable_set_matid(drawable_t *self, uint32_t matid)
 {
-	if (self->mat != id)
+	if (matid != self->matid || self->mat)
 	{
-		self->mat = id;
+		self->matid = matid;
+		self->mat = NULL;
 		drawable_model_changed(self);
+	}
+}
 
+void drawable_set_mat(drawable_t *self, mat_t *mat)
+{
+	if (self->mat != mat)
+	{
+		self->mat = mat;
+		self->matid = mat->id;
+		drawable_model_changed(self);
 	}
 }
 
@@ -363,7 +373,7 @@ static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
 
 	draw_conf_inst_grow(self);
 
-	self->props[i].x = draw->mat;
+	self->props[i].x = draw->matid;
 	self->props[i].y = 0;/*TODO: use y for something;*/
 	uvec2_t ent = entity_to_uvec2(draw->entity);
 	self->props[i].zw = vec2(_vec2(ent));
@@ -656,10 +666,11 @@ draw_conf_t *drawable_get_conf(drawable_t *self, uint32_t gid)
 	struct conf_vars conf = {
 		.mesh          = self->mesh,
 		.skin          = self->skin,
-		.xray          = self->xray,
 		.vs            = self->vs,
 		.draw_callback = self->draw_callback,
-		.usrptr        = self->usrptr
+		.usrptr        = self->usrptr,
+		.xray          = self->xray,
+		.mat_type      = self->mat ? self->mat->type : 0
 	};
 
 	if (self->bind[gid].grp == 0)
@@ -731,7 +742,7 @@ void drawable_model_changed(drawable_t *self)
 		uvec2_t new_ent = entity_to_uvec2(self->entity);
 
 		vec4_t new_props = vec4(
-				self->mat,
+				self->matid,
 				0 /* TODO use y for something */,
 				new_ent.x,
 				new_ent.y);
@@ -1019,6 +1030,7 @@ static void draw_conf_update_skin(draw_conf_t *self)
 	                &skin->transforms[0]);
 }
 
+extern uint32_t g_mat_ubo;
 int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 {
 	if (!self || !self->inst_num) return 0;
@@ -1041,15 +1053,20 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 
 	draw_conf_update_vao(self);
 
+	c_render_device_t *rd = c_render_device(&SYS);
 	if (self->vars.skin)
 	{
-		c_render_device_t *rd = c_render_device(&SYS);
 		draw_conf_update_skin(self);
 
 		c_render_device_bind_ubo(rd, 21, self->skin);
 	}
+	{
+		c_render_device_bind_ubo(rd, 22, material_get_ubo(self->vars.mat_type));
+	}
 
-	shader_t *shader = vs_bind(self->vars.vs);
+	shader_t *shader = vs_bind(self->vars.vs, self->vars.mat_type);
+	if (!shader)
+		goto end;
 
 	if (self->vars.draw_callback)
 	{
@@ -1126,7 +1143,7 @@ end:
 	SDL_SemPost(self->semaphore);
 #endif
 
-	glDepthRange(0.0, 1.00);
+	glDepthRange(0.0, 1.00); glerr();
 
 	return 1;
 
@@ -1346,6 +1363,7 @@ static int32_t draw_group_draw(draw_group_t *self)
 	if (!self) return 0;
 	int32_t res = 0;
 	khiter_t k;
+	if (!self->configs) return 0;
 
 	for(k = kh_begin(self->configs); k != kh_end(self->configs); ++k)
 	{

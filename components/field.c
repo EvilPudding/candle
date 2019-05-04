@@ -12,8 +12,6 @@ static vs_t *g_field_vs;
 
 static int c_field_position_changed(c_field_t *self);
 
-void world_changed(void);
-
 vs_t *field_vs()
 {
 	if (!g_field_vs)
@@ -40,10 +38,11 @@ void c_field_update_mat(c_field_t *self)
 {
 	if (self->mat)
 	{
-		int transp = self->mat->transparency.color.a > 0.0f ||
-			self->mat->transparency.texture ||
-			self->mat->emissive.color.a > 0.0f ||
-			self->mat->emissive.texture;
+		/* int transp = self->mat->transparency.color.a > 0.0f || */
+		/* 	self->mat->transparency.texture || */
+		/* 	self->mat->emissive.color.a > 0.0f || */
+		/* 	self->mat->emissive.texture; */
+		int transp = 0;
 		if (self->draw.bind[0].grp == ref("transparent")
 				|| self->draw.bind[0].grp == ref("visible"))
 		{
@@ -51,7 +50,7 @@ void c_field_update_mat(c_field_t *self)
 		}
 	}
 
-	drawable_set_mat(&self->draw, self->mat ? self->mat->id : 0);
+	drawable_set_mat(&self->draw, self->mat);
 }
 
 void c_field_set_mat(c_field_t *self, mat_t *mat)
@@ -79,7 +78,6 @@ int c_field_menu(c_field_t *self, void *ctx)
 	if (changes)
 	{
 		drawable_model_changed(&self->draw);
-		world_changed();
 	}
 	return CONTINUE;
 }

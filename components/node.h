@@ -37,7 +37,7 @@ c_node_t *c_node_new(void);
 entity_t c_node_get_by_name(c_node_t *self, uint32_t hash);
 void c_node_add(c_node_t *self, int32_t num, ...);
 int32_t c_node_propagate(c_node_t *self, node_cb cb, void *usrptr);
-void c_node_update_model(c_node_t *self);
+bool_t c_node_update_model(c_node_t *self);
 void c_node_unparent(c_node_t *self, int32_t inherit_transform);
 void c_node_remove(c_node_t *self, entity_t child);
 vec3_t c_node_pos_to_local(c_node_t *self, vec3_t vec);

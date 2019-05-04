@@ -20,26 +20,6 @@ struct light_t
 	float radius;
 };
 
-struct property_t
-{
-	vec4 color;
-	uvec2 size;
-	float blend;
-	float scale;
-	vec3 padding;
-	uint layer;
-};
-
-struct material_t
-{
-	property_t albedo;
-	property_t roughness;
-	property_t metalness;
-	property_t transparency;
-	property_t normal;
-	property_t emissive;
-};
-
 layout(std140) uniform renderer_t
 {
 	camera_t camera;
@@ -47,9 +27,9 @@ layout(std140) uniform renderer_t
 
 layout(std140) uniform scene_t
 {
-	material_t materials[128];
 	light_t lights[62];
-	vec4 test_color;
+	vec3 test_color;
+	float time;
 } scene;
 
 #ifdef HAS_SKIN
@@ -69,7 +49,6 @@ layout(std140) uniform skin_t
 
 /* layout(location = 25) uniform camera_t camera; */
 
-#define mat(prop) (scene.materials[matid].prop)
 #define light(prop) (scene.lights[matid].prop)
 #define camera(prop) (renderer.camera.prop)
 

@@ -124,7 +124,10 @@ int32_t texture_target_sub(texture_t *self,
 
 void texture_destroy(texture_t *self);
 uint32_t load_tile(texture_t *self, uint32_t mip, uint32_t x, uint32_t y,
-                 uint32_t frame, uint32_t max_loads);
+                 uint32_t max_loads);
+uint32_t load_tile_by_id(uint32_t tile, uint32_t max_loads);
+tex_tile_t *texture_get_tile(texture_t *self, uint32_t mip,
+                             uint32_t x, uint32_t y);
 
 void texture_set_xy(texture_t *self, int32_t x, int32_t y,
 		uint8_t r, uint8_t g, uint8_t b, uint8_t a);

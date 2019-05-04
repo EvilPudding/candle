@@ -339,129 +339,58 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 /* 	); */
 }
 
-float wrap(float x)
-{
-	return fmod(1.0f + fmod(x, 1.0f), 1.0f);
-}
-
-bool_t load_mip(prop_t *prop, vec2_t coords, uint32_t mip, uint32_t frame,
-                uint32_t max_loads)
-{
-	uint32_t x = floor((coords.x * prop->texture->sizes[mip].x) / 128.0f);
-	uint32_t y = floor((coords.y * prop->texture->sizes[mip].y) / 128.0f);
-
-	return load_tile(prop->texture, mip, x, y, frame, max_loads);
-}
-
-uint32_t load_prop(prop_t *prop, vec2_t coords, uint32_t mip, uint32_t frame,
-                   uint32_t max_loads)
-{
-	float fmip = ((float)mip) * (8.0f / 255.0f);
-	uint32_t loads = 0;
-	if (prop->texture && prop->texture->bufs[0].ready)
-	{
-		int mip0 = floorf(fmip);
-		int mip1 = ceilf(fmip);
-		if (mip0 > MAX_MIPS) mip0 = MAX_MIPS;
-		if (mip1 > MAX_MIPS) mip1 = MAX_MIPS;
-		if (mip0 < 0) mip0 = 0;
-		if (mip1 < 0) mip1 = 0;
-
-		coords.y = 1.0f - coords.y;
-		coords = vec2_scale(coords, prop->scale);
-
-		coords.x = wrap(coords.x);
-		coords.y = wrap(coords.y);
-
-		/* coords.x *= prop->texture->width; */
-		/* coords.y *= prop->texture->height; */
-
-		loads += load_mip(prop, coords, mip0, frame, max_loads);
-		max_loads -= loads;
-
-		if (mip0 != mip1 && max_loads > 0)
-			loads += load_mip(prop, coords, mip1, frame, max_loads);
-	}
-	return loads;
-}
-
-vec2_t tc_unmap(vec2_t tc)
-{
-
-#define TC_MAX ( 64.0f)
-#define TC_MIN (-64.0f)
-#define NUM_COORDS 65536.0f
-
-	return vec2_add_number(vec2_scale(tc, (TC_MAX - TC_MIN) / NUM_COORDS), TC_MIN);
-}
-
 void *renderer_process_query_mips(renderer_t *self)
 {
 	texture_t *tex = renderer_tex(self, ref("query_mips"));
 	if (!tex->framebuffer_ready) return NULL;
 
 	struct{
-		uint8_t _[4];
-	} *coords = alloca(sizeof(*coords) * tex->width * tex->height);
-
-	struct{
-		uint8_t _[4];
-	} *mips = alloca(sizeof(*mips) * tex->width * tex->height);
-
-	struct{
-		uint8_t _[4];
-	} *mips2 = alloca(sizeof(*mips2) * tex->width * tex->height);
+		uint16_t _[2];
+	} *mips[4] = {
+		alloca(4 * tex->width * tex->height),
+		alloca(4 * tex->width * tex->height),
+		alloca(4 * tex->width * tex->height),
+		alloca(4 * tex->width * tex->height)
+	};
 
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, tex->frame_buffer[0]); glerr();
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1); glerr();
 
 	glReadBuffer(GL_COLOR_ATTACHMENT0); glerr();
 
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1); glerr();
-
 	glReadPixels(0, 0, tex->width, tex->height, tex->bufs[1].format,
-			GL_UNSIGNED_BYTE, coords); glerr();
+			GL_UNSIGNED_BYTE, mips[0]); glerr();
 
 	glReadBuffer(GL_COLOR_ATTACHMENT1); glerr();
 
 	glReadPixels(0, 0, tex->width, tex->height, tex->bufs[2].format,
-			GL_UNSIGNED_BYTE, mips); glerr();
+			GL_UNSIGNED_BYTE, mips[1]); glerr();
 
 	glReadBuffer(GL_COLOR_ATTACHMENT2); glerr();
 
 	glReadPixels(0, 0, tex->width, tex->height, tex->bufs[3].format,
-			GL_UNSIGNED_BYTE, mips2); glerr();
+			GL_UNSIGNED_BYTE, mips[2]); glerr();
+
+	glReadBuffer(GL_COLOR_ATTACHMENT3); glerr();
+
+	glReadPixels(0, 0, tex->width, tex->height, tex->bufs[4].format,
+			GL_UNSIGNED_BYTE, mips[3]); glerr();
 
 	uint32_t max_loads = 64;
 	for (int y = 0; y < tex->height; y++) {
 		for (int x = 0; x < tex->width; x++) {
 			int i = y * tex->width + x;
-			vec2_t rcoords;
-			rcoords.x = 256.0f * ((float)coords[i]._[0]) + ((float)coords[i]._[1]);
-			rcoords.y = 256.0f * ((float)coords[i]._[2]) + ((float)coords[i]._[3]);
-			rcoords = tc_unmap(rcoords);
+			for (int c = 0; c < 4; c++)
+			{
+				if (*((uint32_t*)&mips[c][i]) == 0) continue;
 
-			mat_t *mat = g_mats[mips2[i]._[2]];
-
-			max_loads -= load_prop(&mat->albedo, rcoords, mips[i]._[0],
-			                        self->frame, max_loads);
-			if (max_loads == 0) goto end;
-			max_loads -= load_prop(&mat->roughness, rcoords, mips[i]._[1],
-			                       self->frame, max_loads);
-			if (max_loads == 0) goto end;
-			max_loads -= load_prop(&mat->metalness, rcoords, mips[i]._[2],
-								   self->frame, max_loads);
-			if (max_loads == 0) goto end;
-			max_loads -= load_prop(&mat->transparency, rcoords, mips[i]._[3],
-								   self->frame, max_loads);
-			if (max_loads == 0) goto end;
-			max_loads -= load_prop(&mat->normal, rcoords, mips2[i]._[0],
-								   self->frame, max_loads);
-			if (max_loads == 0) goto end;
-			max_loads -= load_prop(&mat->emissive, rcoords, mips2[i]._[1],
-								   self->frame, max_loads);
-			if (max_loads == 0) goto end;
+				max_loads -= load_tile_by_id(mips[c][i]._[0], max_loads);
+				if (max_loads == 0) goto end;
+				max_loads -= load_tile_by_id(mips[c][i]._[1], max_loads);
+				if (max_loads == 0) goto end;
+			}
 		}
 	}
 
@@ -480,15 +409,17 @@ void renderer_default_pipeline(renderer_t *self)
 	/* ); */
 	_texture_new_2D_pre(0, 0, 0);
 		buffer_new("depth",		true, -1);
-		buffer_new("coords",	false, 4); /* Texcoords, Matid */
-		buffer_new("mips",		false, 4);
-		buffer_new("mips2",		false, 4);
+		buffer_new("tiles0",	false, 4);
+		buffer_new("tiles1",	false, 4);
+		buffer_new("tiles2",	false, 4);
+		buffer_new("tiles3",	false, 4);
 	texture_t *query_mips = _texture_new(0);
 
 	_texture_new_2D_pre(0, 0, 0);
 		buffer_new("depth",		true, -1);
 		buffer_new("albedo",	true, 4);
 		buffer_new("nmr",		true, 4);
+		buffer_new("emissive",	true, 3);
 	texture_t *gbuffer = _texture_new(0);
 	/* texture_t *gbuffer =	texture_new_2D(0, 0, 0, */
 	/* ); */
@@ -515,15 +446,10 @@ void renderer_default_pipeline(renderer_t *self)
 		/* buffer_new("color",	true, 4) */
 	/* ); */
 
-	/* texture_t *selectable =	texture_new_2D(0, 0, 0, */
-	/* 	buffer_new("geomid",	true, 2), */
-	/* 	buffer_new("id",		true, 2), */
-	/* 	buffer_new("depth",		true, -1) */
-	/* ); */
 	_texture_new_2D_pre(0, 0, 0);
 		buffer_new("depth",		true, -1);
-		buffer_new("id",		true, 4);
-		buffer_new("geomid",	true, 4);
+		buffer_new("id",		true, 2);
+		buffer_new("geomid",	true, 2);
 	texture_t *selectable = _texture_new(0);
 
 	renderer_add_tex(self, "query_mips",	0.1f, query_mips);
@@ -544,7 +470,27 @@ void renderer_default_pipeline(renderer_t *self)
 			{CLEAR_DEPTH, .number = 1.0f},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{INT, "transparent", .integer = false},
-			{SKIP, .integer = 8},
+			/* {SKIP, .integer = 8}, */
+			{NONE}
+		}
+	);
+
+	renderer_add_pass(self, "query_mips", "query_mips", ref("transparent"), 0,
+			query_mips, query_mips, 0,
+		(bind_t[]){
+			{INT, "transparent", .integer = true},
+			/* {SKIP, .integer = 8}, */
+			{NONE}
+		}
+	);
+
+
+	renderer_add_pass(self, "svt", NULL, -1, 0,
+			query_mips, query_mips, 0,
+		(bind_t[]){
+			{CALLBACK, .getter = (getter_cb)renderer_process_query_mips, .usrptr = self},
+			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			/* {SKIP, .integer = 8}, */
 			{NONE}
 		}
 	);
@@ -558,27 +504,6 @@ void renderer_default_pipeline(renderer_t *self)
 	/* 		{NONE} */
 	/* 	} */
 	/* ); */
-
-	renderer_add_pass(self, "query_mips", "query_mips", ref("transparent"), 0,
-			query_mips, query_mips, 0,
-		(bind_t[]){
-			{INT, "transparent", .integer = true},
-			{SKIP, .integer = 8},
-			{NONE}
-		}
-	);
-
-
-	renderer_add_pass(self, "svt", NULL, -1, 0,
-			query_mips, query_mips, 0,
-		(bind_t[]){
-			{CALLBACK, .getter = (getter_cb)renderer_process_query_mips, .usrptr = self},
-			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
-			{SKIP, .integer = 8},
-			{NONE}
-		}
-	);
-
 
 	renderer_add_pass(self, "gbuffer", "gbuffer", ref("visible"), 0, gbuffer,
 			gbuffer, 0,
@@ -651,7 +576,7 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_pass(self, "transp_1", "gbuffer", ref("transparent"),
 			0, gbuffer, gbuffer, 0, (bind_t[]){ {NONE} });
 
-	renderer_add_pass(self, "transp", "transparency", ref("transparent"),
+	renderer_add_pass(self, "transp", "gbuffer", ref("transparent"),
 			DEPTH_LOCK | DEPTH_EQUAL, light, gbuffer, 0,
 		(bind_t[]){
 			{TEX, "refr", .buffer = refr},
@@ -811,7 +736,11 @@ int renderer_resize(renderer_t *self, int width, int height)
 static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 {
 	if(!pass->active) return NULL;
-	if(pass->shader_name[0] && !pass->shader) pass->shader = fs_new(pass->shader_name);
+	if (pass->shader_name[0] && !pass->shader)
+	{
+		pass->shader = fs_new(pass->shader_name);
+		if (!pass->shader) return NULL;
+	}
 
 	pass->bound_textures = 0;
 	c_render_device_t *rd = c_render_device(&SYS);

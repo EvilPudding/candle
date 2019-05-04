@@ -15,6 +15,7 @@ typedef uint32_t vertid_t;
 #endif
 
 typedef struct drawable_t drawable_t;
+typedef struct mat mat_t;
 
 typedef void(*draw_cb)(void *usrptr, shader_t *shader);
 
@@ -60,10 +61,10 @@ struct conf_vars
 	mesh_t *mesh;
 	skin_t *skin;
 	vs_t *vs;
-	int32_t xray;
-	int32_t padding;
 	draw_cb draw_callback;
 	void *usrptr;
+	int32_t xray;
+	int32_t mat_type;
 };
 typedef struct draw_conf_t draw_conf_t;
 
@@ -110,7 +111,8 @@ typedef struct drawable_t
 	mesh_t *mesh;
 	skin_t *skin;
 	int32_t xray;
-	int32_t mat;
+	mat_t *mat;
+	uint32_t matid;
 	mat4_t transform;
 #ifdef MESH4
 	float angle4;
@@ -142,7 +144,8 @@ void drawable_remove_group(drawable_t *self, uint32_t group);
 void drawable_set_group(drawable_t *self, uint32_t group);
 void drawable_set_mesh(drawable_t *self, mesh_t *mesh);
 void drawable_set_skin(drawable_t *self, skin_t *skin);
-void drawable_set_mat(drawable_t *self, int32_t mat);
+void drawable_set_mat(drawable_t *self, mat_t *mat);
+void drawable_set_matid(drawable_t *self, uint32_t matid);
 void drawable_set_vs(drawable_t *self, vs_t *vs);
 void drawable_set_xray(drawable_t *self, int32_t xray);
 void drawable_set_entity(drawable_t *self, entity_t entity);

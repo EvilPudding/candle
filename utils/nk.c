@@ -1,5 +1,6 @@
 #include <string.h>
 #include <utils/glutil.h>
+#include <utils/texture.h>
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_STANDARD_VARARGS
@@ -49,9 +50,6 @@ can_default_color_style[NK_COLOR_COUNT] = {
 #undef NK_COLOR
 };
 
-void nk_draw_image_ext(struct nk_command_buffer *b, struct nk_rect r,
-    const struct nk_image *img, struct nk_color col, int no_blending);
-
 #define NK_SHADER_VERSION "#version 300 es\n"
 
 struct nk_can_device {
@@ -65,7 +63,10 @@ struct nk_can_device {
     GLint attrib_uv;
     GLint attrib_col;
     GLint uniform_tex;
+    GLint uniform_indir;
     GLint uniform_scale;
+    GLint uniform_size;
+    GLint uniform_tile;
     GLint uniform_proj;
     GLuint font_tex;
 };
@@ -76,6 +77,12 @@ struct nk_can_vertex {
     nk_byte col[4];
 };
 
+struct img_info
+{
+	uint32_t blending;
+	uint32_t tile;
+	uvec2_t size;
+};
 
 static struct nk_can {
     SDL_Window *win;
@@ -83,6 +90,35 @@ static struct nk_can {
     struct nk_context ctx;
     struct nk_font_atlas atlas;
 } can;
+
+void nk_draw_image_ext(struct nk_command_buffer *b, struct nk_rect r,
+    const struct nk_image *img, struct nk_color col, uint32_t no_blending,
+    uint32_t tile, uint32_t width, uint32_t height)
+{
+    struct nk_command_image *cmd;
+    NK_ASSERT(b);
+    if (!b) return;
+    if (b->use_clipping) {
+        const struct nk_rect *c = &b->clip;
+        if (c->w == 0 || c->h == 0 || !NK_INTERSECT(r.x, r.y, r.w, r.h, c->x, c->y, c->w, c->h))
+            return;
+    }
+
+    cmd = (struct nk_command_image*)
+        nk_command_buffer_push(b, NK_COMMAND_IMAGE, sizeof(*cmd));
+    if (!cmd) return;
+    cmd->x = (short)r.x;
+    cmd->y = (short)r.y;
+    cmd->w = (unsigned short)NK_MAX(0, r.w);
+    cmd->h = (unsigned short)NK_MAX(0, r.h);
+    cmd->img = *img;
+    cmd->col = col;
+	struct img_info *info = malloc(sizeof(struct img_info));
+    cmd->header.userdata.ptr = info;
+	info->blending = !no_blending;
+	info->tile = tile;
+	info->size = uvec2(width, height);
+}
 
 NK_LIB int
 nk_can_panel_begin(struct nk_context *ctx, const char *title, enum nk_panel_type panel_type)
@@ -194,7 +230,8 @@ nk_can_panel_begin(struct nk_context *ctx, const char *title, enum nk_panel_type
 		{
 			nk_push_scissor(out, win->bounds);
 			const struct nk_image *image = &style->window.fixed_background.data.image;
-			nk_draw_image_ext(out, nk_rect(0, 0, image->w, image->h), image, nk_white, 1);
+			nk_draw_image_ext(out, nk_rect(0, 0, image->w, image->h),
+			                  image, nk_white, 1, 0, 0, 0);
 		}
         nk_fill_rect(out, body, 0, style->window.background);
     }
@@ -472,6 +509,28 @@ nk_can_begin_titled(struct nk_context *ctx, const char *name, const char *title,
 #define MAX_ELEMENT_BUFFER (128 * 1024)
 static void *g_vertices;
 static void *g_elements;
+static void checkShaderError(GLuint shader,
+		const char *name, const char *code)
+{
+	GLint success = 0;
+	GLint bufflen;
+
+	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &bufflen);
+	if (bufflen > 1)
+	{
+		GLchar log_string[bufflen + 1];
+		glGetShaderInfoLog(shader, bufflen, 0, log_string);
+		printf("%s\n", code);
+		printf("Log found for '%s':\n%s", name, log_string);
+	}
+
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+	if (success != GL_TRUE)
+	{ 
+		printf("%s\n", name);
+		exit(1);
+	}
+}
 
 NK_API void
 nk_can_device_create(void)
@@ -499,14 +558,69 @@ nk_can_device_create(void)
         NK_SHADER_VERSION
         "precision mediump float;\n"
         "uniform sampler2D Texture;\n"
+        "uniform sampler2D Indir;\n"
+		"#define g_indir_w 256u\n"
+		"#define g_indir_h 256u\n"
+		"#define g_cache_w 64u\n"
+		"#define g_cache_h 32u\n"
+		"float mip_map_scalar(in vec2 texture_coordinate)\n"
+		"{\n"
+		"    vec2 dx_vtc = dFdx(texture_coordinate);\n"
+		"    vec2 dy_vtc = dFdy(texture_coordinate);\n"
+		"    return max(dot(dx_vtc, dx_vtc), dot(dy_vtc, dy_vtc));\n"
+		"}\n"
+		"#define MAX_MIPS 9u\n"
+		"float mip_map_level(in vec2 texture_coordinate) // in texel units\n"
+		"{\n"
+		"	return clamp(0.5 * log2(mip_map_scalar(texture_coordinate)), 0.0, float(MAX_MIPS - 1u));\n"
+		"}\n"
+		"vec4 solveMip(uvec2 size, uint tile, uint mip, vec2 coords)\n"
+		"{\n"
+		"	uint tiles_per_row = uint(ceil(float(size.x) / 128.0));\n"
+		"	uint tiles_per_col = uint(ceil(float(size.y) / 128.0));\n"
+		"	uint offset = tile;\n"
+		"	for (uint i = 0u; i < MAX_MIPS && i < mip; i++)\n"
+		"	{\n"
+		"		offset += tiles_per_row * tiles_per_col;\n"
+		"		tiles_per_row = uint(ceil(0.5 * float(tiles_per_row)));\n"
+		"		tiles_per_col = uint(ceil(0.5 * float(tiles_per_col)));\n"
+		"	}\n"
+		"	uvec2 indir_coords = uvec2(floor(coords / (pow(2.0, float(mip)) * 128.0)));\n"
+		"	uint tex_tile = indir_coords.y * tiles_per_row + indir_coords.x + offset;\n"
+		"	vec3 info = texelFetch(Indir, ivec2(tex_tile % g_indir_w, tex_tile / g_indir_w), 0).rgb * 255.0;\n"
+		"	uint cache_tile = uint(info.r) + uint(info.g * 256.0);\n"
+		"	float actual_mip = info.b;\n"
+		"	uvec2 cache_coords = uvec2(cache_tile % g_cache_w, cache_tile / g_cache_w) * 129u;\n"
+		"	const vec2 g_cache_size = vec2(g_cache_w * 129u, g_cache_h * 129u);\n"
+		"	vec2 actual_coords = coords / pow(2.0, actual_mip);\n"
+		"	vec2 intile_coords = mod(actual_coords, 128.0) + 0.5f;\n"
+		"	return textureLod(Texture,\n"
+		"			(vec2(cache_coords) + intile_coords) / g_cache_size, 0.0);\n"
+		"}\n"
+		"vec4 textureSVT(uvec2 size, uint tile, vec2 coords)\n"
+		"{\n"
+		"	coords.y = 1.0 - coords.y;\n"
+		"	vec2 rcoords = fract(coords) * vec2(size);\n"
+		"	float mip = mip_map_level(coords * vec2(size));\n"
+		"	uint mip0 = uint(floor(mip));\n"
+		"	uint mip1 = uint(ceil(mip));\n"
+		"	return mix(solveMip(size, tile, mip0, rcoords),\n"
+		"	           solveMip(size, tile, mip1, rcoords), fract(mip));\n"
+		"}\n"
 		"uniform vec2 Scale;\n"
+		"uniform uvec2 Size;\n"
+		"uniform uint Tile;\n"
         "in vec2 Frag_UV;\n"
         "in vec4 Frag_Color;\n"
         "out vec4 Out_Color;\n"
+        "#line 1\n"
         "void main(){\n"
-		"	vec2 uv = Frag_UV;\n"
-		"	if(Scale.y < 0.0f) uv.y = 1.0f - uv.y;\n"
-        "   Out_Color = Frag_Color * textureLod(Texture, uv, 3.0);\n"
+		"	vec2 uv = Frag_UV * Scale;\n"
+		"	uv = fract(uv);\n"
+        "   if (Tile > 0u)\n"
+        "       Out_Color = Frag_Color * textureSVT(Size, Tile, uv);\n"
+        "   else\n"
+        "       Out_Color = Frag_Color * textureLod(Texture, uv, 3.0f);\n"
         "}\n";
 
     struct nk_can_device *dev = &can.ogl;
@@ -517,7 +631,9 @@ nk_can_device_create(void)
     glShaderSource(dev->vert_shdr, 1, &vertex_shader, 0);
     glShaderSource(dev->frag_shdr, 1, &fragment_shader, 0);
     glCompileShader(dev->vert_shdr);
+		checkShaderError(dev->vert_shdr, "kek", "code");
     glCompileShader(dev->frag_shdr);
+		checkShaderError(dev->frag_shdr, "kek", "code");
     glGetShaderiv(dev->vert_shdr, GL_COMPILE_STATUS, &status);
     assert(status == GL_TRUE);
     glGetShaderiv(dev->frag_shdr, GL_COMPILE_STATUS, &status);
@@ -529,7 +645,10 @@ nk_can_device_create(void)
     assert(status == GL_TRUE);
 
     dev->uniform_tex = glGetUniformLocation(dev->prog, "Texture");
+    dev->uniform_indir = glGetUniformLocation(dev->prog, "Indir");
     dev->uniform_scale = glGetUniformLocation(dev->prog, "Scale");
+    dev->uniform_size = glGetUniformLocation(dev->prog, "Size");
+    dev->uniform_tile = glGetUniformLocation(dev->prog, "Tile");
     dev->uniform_proj = glGetUniformLocation(dev->prog, "ProjMtx");
     dev->attrib_pos = glGetAttribLocation(dev->prog, "Position");
     dev->attrib_uv = glGetAttribLocation(dev->prog, "TexCoord");
@@ -889,6 +1008,8 @@ nk_tree_entity_image_push_hashed(struct nk_context *ctx, enum nk_tree_type type,
     return nk_tree_entity_base(ctx, type, &img, title, initial_state, selected, has_children, hash, len, seed);
 }
 
+extern texture_t *g_cache;
+extern texture_t *g_indir;
 void nk_can_render(enum nk_anti_aliasing AA)
 {
     struct nk_can_device *dev = &can.ogl;
@@ -917,11 +1038,14 @@ void nk_can_render(enum nk_anti_aliasing AA)
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_SCISSOR_TEST);
-    glActiveTexture(GL_TEXTURE0);
 
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, g_indir->bufs[0].id);
+    glActiveTexture(GL_TEXTURE0);
     /* setup program */
     glUseProgram(dev->prog);
     glUniform1i(dev->uniform_tex, 0);
+    glUniform1i(dev->uniform_indir, 1);
     glUniform2f(dev->uniform_scale, 1, 1);
     glUniformMatrix4fv(dev->uniform_proj, 1, GL_FALSE, &ortho[0][0]);
     {
@@ -982,10 +1106,17 @@ void nk_can_render(enum nk_anti_aliasing AA)
         /* iterate over and execute each draw command */
         nk_draw_foreach(cmd, &can.ctx, &dev->cmds) {
             if (!cmd->elem_count) continue;
-			if(cmd->userdata.ptr == (void*)(unsigned long)1)
+			struct img_info *info = cmd->userdata.ptr;
+			if(cmd->userdata.ptr)
 			{
-				glDisable(GL_BLEND);
-				glUniform2f(dev->uniform_scale, 1, -1);
+				if (!info->blending)
+				{
+					glDisable(GL_BLEND);
+					glUniform2f(dev->uniform_scale, 1, -1);
+					glerr();
+				}
+				glUniform1ui(dev->uniform_tile, info->tile); glerr();
+				glUniform2ui(dev->uniform_size, info->size.x, info->size.y); glerr();
 			}
             glBindTexture(GL_TEXTURE_2D, (GLuint)cmd->texture.id);
             glScissor((GLint)(cmd->clip_rect.x * scale.x),
@@ -994,11 +1125,13 @@ void nk_can_render(enum nk_anti_aliasing AA)
                 (GLint)(cmd->clip_rect.h * scale.y));
             glDrawElements(GL_TRIANGLES, (GLsizei)cmd->elem_count, GL_UNSIGNED_SHORT, offset);
             offset += cmd->elem_count;
-			if(cmd->userdata.ptr == (void*)(unsigned long)1)
+			if(cmd->userdata.ptr)
 			{
 				glEnable(GL_BLEND);
 				glUniform2f(dev->uniform_scale, 1, 1);
+				glUniform1ui(dev->uniform_tile, 0);
 			}
+			glerr();
         }
         nk_clear(&can.ctx);
     }
@@ -1009,29 +1142,6 @@ void nk_can_render(enum nk_anti_aliasing AA)
     glBindVertexArray(0);
     glDisable(GL_BLEND);
     glDisable(GL_SCISSOR_TEST);
-}
-
-void nk_draw_image_ext(struct nk_command_buffer *b, struct nk_rect r,
-    const struct nk_image *img, struct nk_color col, int no_blending)
-{
-    struct nk_command_image *cmd;
-    NK_ASSERT(b);
-    if (!b) return;
-    if (b->use_clipping) {
-        const struct nk_rect *c = &b->clip;
-        if (c->w == 0 || c->h == 0 || !NK_INTERSECT(r.x, r.y, r.w, r.h, c->x, c->y, c->w, c->h))
-            return;
-    }
-
-    cmd = (struct nk_command_image*)
-        nk_command_buffer_push(b, NK_COMMAND_IMAGE, sizeof(*cmd));
-    if (!cmd) return;
-    cmd->x = (short)r.x;
-    cmd->y = (short)r.y;
-    cmd->w = (unsigned short)NK_MAX(0, r.w);
-    cmd->h = (unsigned short)NK_MAX(0, r.h);
-    cmd->img = *img;
-    cmd->col = col;
-    cmd->header.userdata.ptr = (void*)(unsigned long)no_blending;
+	glerr();
 }
 

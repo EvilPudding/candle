@@ -175,7 +175,7 @@ void candle_skip_frame(int frames)
 
 static void render_loop_init(void)
 {
-	g_candle->loader = loader_new();
+	loader_start(g_candle->loader);
 
 	g_candle->last_tick = SDL_GetTicks();
 	g_candle->fps_count = 0;
@@ -227,7 +227,7 @@ static void render_loop_tick(void)
 		g_candle->last_tick = current;
 	}
 	glerr();
-	/* SDL_Delay(16); */
+	/* SDL_Delay(60); */
 	/* SDL_Delay(1); */
 }
 
@@ -444,6 +444,7 @@ __attribute__((constructor (CONSTR_BEFORE_REG)))
 void candle_init(void)
 {
 	g_candle = calloc(1, sizeof *g_candle);
+	g_candle->loader = loader_new();
 	materials_init_vil();
 
 	ecm_init();
@@ -489,7 +490,7 @@ void candle_init2(void)
 #else
 	render_loop_init();
 #endif
-	/* SDL_Delay(500); */
+	SDL_Delay(500);
 
 	/* candle_import_dir(candle, entity_null, "./"); */
 }

@@ -55,23 +55,24 @@ void c_light_init(c_light_t *self)
 		mesh_unlock(g_light);
 
 		g_light_widget = mat_new("light_widget");
-		g_light_widget->albedo.texture = texture_from_memory(bulb_png, bulb_png_len);
-		g_light_widget->albedo.blend = 1.0f;
-		g_light_widget->emissive.color = vec4(1.0);
+		mat1t(g_light_widget, ref("albedo.texture"),
+		      texture_from_memory(bulb_png, bulb_png_len));
+		mat1f(g_light_widget, ref("albedo.blend"), 1.0f);
+		mat4f(g_light_widget, ref("emissive.color"), vec4(1.0));
 	}
 	self->id = g_lights_num++;
 
 	drawable_init(&self->widget, ref("transparent"));
 	drawable_add_group(&self->widget, ref("selectable"));
 	drawable_set_vs(&self->widget, sprite_vs());
-	drawable_set_mat(&self->widget, g_light_widget->id);
+	drawable_set_mat(&self->widget, g_light_widget);
 	drawable_set_entity(&self->widget, c_entity(self));
 	drawable_set_xray(&self->widget, 1);
 
 	drawable_init(&self->draw, self->light_group);
 	drawable_set_vs(&self->draw, model_vs());
 	drawable_set_mesh(&self->draw, g_light);
-	drawable_set_mat(&self->draw, self->id);
+	drawable_set_matid(&self->draw, self->id);
 	drawable_set_entity(&self->draw, c_entity(self));
 
 	c_light_position_changed(self);
@@ -85,7 +86,7 @@ void c_light_set_lod(c_light_t *self, uint32_t lod)
 	if (self->lod != lod)
 	{
 		self->lod = lod;
-		self->frames_passed = -1;
+		self->frames_passed = self->shadow_cooldown;
 	}
 }
 
@@ -147,7 +148,7 @@ void c_light_visible(c_light_t *self, uint32_t visible)
 	drawable_set_mesh(&self->draw, visible ? g_light : NULL);
 	if(!self->visible && visible)
 	{
-		self->frames_passed = -1;
+		self->frames_passed = self->shadow_cooldown;
 		drawable_model_changed(&self->draw);
 	}
 	self->visible = visible;

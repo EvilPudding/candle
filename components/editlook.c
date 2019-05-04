@@ -43,7 +43,7 @@ int c_editlook_mouse_wheel(c_editlook_t *self, mouse_button_data *event)
 
 	c_spatial_set_pos(sc, vec3_mix(edit->mouse_position, sc->pos, inc));
 
-	return CONTINUE;
+	return STOP;
 }
 
 float fake_x;

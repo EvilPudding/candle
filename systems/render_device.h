@@ -2,7 +2,6 @@
 #define RENDER_DEVICE_H
 
 #include <utils/glutil.h>
-#include <utils/material.h>
 #include <utils/texture.h>
 #include <utils/mesh.h>
 #include <utils/shader.h>
@@ -31,16 +30,6 @@ struct gl_property
 	uint32_t layer;
 };
 
-struct gl_material
-{
-	struct gl_property albedo;
-	struct gl_property roughness;
-	struct gl_property metalness;
-	struct gl_property transparency;
-	struct gl_property normal;
-	struct gl_property emissive;
-};
-
 struct gl_pass
 {
 	vec2_t screen_size;
@@ -49,9 +38,9 @@ struct gl_pass
 
 struct gl_scene
 {
-	struct gl_material materials[128];
 	struct gl_light lights[62];
-	vec4_t test_color;
+	vec3_t test_color;
+	float time;
 };
 
 struct gl_bones

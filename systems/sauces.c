@@ -39,33 +39,25 @@ c_sauces_t *c_sauces_new()
 	return self;
 }
 
-resource_t *c_sauces_get_sauce(c_sauces_t *self, const char *name)
+resource_t *c_sauces_get_sauce(c_sauces_t *self, const resource_handle_t *handle)
 {
-	char buffer[64];
-	strncpy(buffer, name, sizeof(buffer));
-	to_lower_case(buffer);
-	char *dot = strrchr(buffer, '.');
-
-	if(dot)
+	if(handle->ext != ~0)
 	{
-		khiter_t k = kh_get(res, self->sauces, ref(buffer));
+		khiter_t k = kh_get(res, self->sauces, handle->name);
 		if(k != kh_end(self->sauces))
 		{
 			return kh_value(self->sauces, k);
 		}
-		*dot = '\0';
 	}
-
+	else
 	{
-		khiter_t k = kh_get(res, self->generic, ref(buffer));
+		khiter_t k = kh_get(res, self->generic, handle->name);
 		if(k != kh_end(self->generic))
 		{
 			return kh_value(self->generic, k);
 		}
-
 	}
 
-	printf("no indexed sauce named %s\n", name);
 	return NULL;
 }
 
@@ -120,6 +112,7 @@ void c_sauces_register(c_sauces_t *self, const char *name, const char *path, voi
 					" Resources should be uniquely named.\n", name);
 			return;
 		}
+		/* printf("Registering name %s\n", name); */
 		k = kh_put(res, self->sauces, key, &ret);
 		kh_value(self->sauces, k) = sauce;
 
@@ -138,23 +131,44 @@ void c_sauces_register(c_sauces_t *self, const char *name, const char *path, voi
 	}
 }
 
-void *c_sauces_get(c_sauces_t *self, const char *name)
+void *c_sauces_get_data(c_sauces_t *self, resource_handle_t *handle)
 {
-	resource_t *sauce = c_sauces_get_sauce(self, name);
+	resource_t *sauce = c_sauces_get_sauce(self, handle);
+
 	if(!sauce) return NULL;
 	if(sauce->data) return sauce->data;
 
 	char *dot = strrchr(sauce->path, '.');
 	if(!dot || dot[1] == '\0') return NULL;
 
-	/* *dot = '\0'; */
-
-	uint32_t ext = ref(dot + 1);
+	if (handle->ext == ~0) handle->ext = ref(dot + 1);
 	
-	sauces_loader_cb cb = c_sauces_get_loader(self, ext);
+	sauces_loader_cb cb = c_sauces_get_loader(self, handle->ext);
 	if(!cb) return NULL;
-	sauce->data = cb(sauce->path, sauce->name, ext);
+	sauce->data = cb(sauce->path, sauce->name, handle->ext);
 	return sauce->data;
+}
+
+resource_handle_t sauce_handle(const char *name)
+{
+	char buffer[64];
+	strncpy(buffer, name, sizeof(buffer));
+	to_lower_case(buffer);
+	char *requested_dot = strrchr(buffer, '.');
+
+	resource_handle_t handle = {.name = ref(buffer), .ext = ~0};
+	if (requested_dot)
+	{
+		*requested_dot = '\0';
+		handle.ext = ref(requested_dot + 1);
+	}
+	return handle;
+}
+
+void *c_sauces_get(c_sauces_t *self, const char *name)
+{
+	resource_handle_t handle = sauce_handle(name);
+	return c_sauces_get_data(self, &handle);
 }
 
 /* #define PNG 4215392736 */

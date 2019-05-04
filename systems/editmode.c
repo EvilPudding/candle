@@ -336,6 +336,7 @@ int32_t rotate_drag(struct edit_rotate *self, vec3_t p, int32_t button, c_editmo
 
 	if(!self->dragging)
 	{
+		self->tool_fade = 1.0f;
 		self->start_screen = p.xy;
 		self->dragging = 1;
 		entity_signal_same(ec->selected, ref("transform_start"), NULL, NULL);
@@ -443,9 +444,8 @@ void c_editmode_init(c_editmode_t *self)
 	{
 		g_sel_mat = mat_new("sel_mat");
 		/* g_sel_mat->albedo.color = vec4(0, 0.1, 0.4, 1); */
-		g_sel_mat->albedo.color = vec4(0.0, 0.0, 0.0, 0.0);
-		g_sel_mat->transparency.color = vec4(0.6, 0.3, 0.1, 0.0f);
-				/* sauces_mat("white"); */
+		mat4f(g_sel_mat, ref("albedo.color"), vec4(0.0, 0.0, 0.0, 0.0));
+		mat4f(g_sel_mat, ref("transparency.color"), vec4(0.6, 0.3, 0.1, 0.0f));
 	}
 }
 
@@ -502,7 +502,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	renderer_add_tex(renderer, "tmp", 1.0f, tmp);
 
 	renderer_add_pass(renderer, "highlights", "highlight", ref("quad"),
-			MUL, renderer_tex(renderer, ref("final")), NULL, 0,
+			ADD, renderer_tex(renderer, ref("final")), NULL, 0,
 		(bind_t[]){
 			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
 			{INT, "mode", (getter_cb)c_editmode_bind_mode, self},
@@ -559,7 +559,7 @@ void c_editmode_activate(c_editmode_t *self)
 	{
 		self->camera = entity_new(
 			c_name_new("Edit Camera"), c_editlook_new(), c_node_new(),
-			c_camera_new(70, 0.1, 100.0, 0, 1, 1, editmode_renderer_new(self))
+			c_camera_new(70, 0.1, 600.0, 0, 1, 1, editmode_renderer_new(self))
 		);
 		c_spatial_t *sc = c_spatial(&self->camera);
 		c_spatial_lock(sc);
@@ -761,7 +761,6 @@ void c_editmode_leave_context(c_editmode_t *self)
 		if(entity_exists(nc->parent))
 		{
 			c_node_pack(nc, 0);
-
 			self->context = nc->parent;
 			c_node_pack(c_node(&self->context), 1);
 
@@ -887,7 +886,15 @@ int32_t c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 		{
 			entity_t result = renderer_entity_at_pixel(renderer,
 					event->x, event->y, NULL);
-
+			if (!entity_exists(result))
+			{
+				entity_t context = self->context;
+				if (entity_exists(context))
+				{
+					c_editmode_leave_context(self);
+					result = context;
+				}
+			}
 			c_editmode_select(self, result);
 		}
 		else if(self->mode != EDIT_OBJECT)
@@ -1075,7 +1082,8 @@ int32_t c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 		total_space.h = h;
 		total_space.y += 85 + 35;
 		/* total_space.h -= 85; */
-		nk_draw_image_ext(canvas, total_space, &im, nk_rgba(255, 255, 255, 255), 1);
+		nk_draw_image_ext(canvas, total_space, &im,
+		                  nk_rgba(255, 255, 255, 255), 1, 0, 0, 0);
 	}
 	nk_end(self->nk);
 	return res;
@@ -1380,7 +1388,7 @@ int32_t c_editmode_update(c_editmode_t *self, float *dt)
 		struct mouse_tool *tool = &self->tools[self->tool];
 		if(tool->update)
 		{
-			tool->update(tool, *dt, self);
+			tool->update(tool->usrptr, *dt, self);
 		}
 	}
 	return CONTINUE;
@@ -1397,7 +1405,10 @@ int32_t c_editmode_draw(c_editmode_t *self)
 		int32_t e;
 		if(self->open_vil)
 		{
-			vitype_gui(self->open_vil, self->nk);
+			if (!vifunc_gui(self->open_vil, self->nk))
+			{
+				self->open_vil = NULL;
+			}
 		}
 
 		for(e = 0; e < self->open_textures_count; e++)

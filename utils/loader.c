@@ -7,14 +7,22 @@
 loader_t *loader_new()
 {
 	loader_t *self = calloc(1, sizeof *self);
+	return self;
+}
+
+void loader_start(loader_t *self)
+{
 	self->threadId = SDL_ThreadID();
 	self->semaphore = SDL_CreateSemaphore(1);
-	return self;
 }
 
 void _loader_push_wait(loader_t *self, loader_cb cb, void *usrptr, c_t *c)
 {
-	if(SDL_ThreadID() == self->threadId)
+	if (!self->semaphore)
+	{
+		printf("Loader not ready for push_wait.\n");
+	}
+	if (SDL_ThreadID() == self->threadId)
 	{
 		if(c)
 		{
@@ -46,7 +54,7 @@ void _loader_push_wait(loader_t *self, loader_cb cb, void *usrptr, c_t *c)
 
 void _loader_push(loader_t *self, loader_cb cb, void *usrptr, c_t *c)
 {
-	int same_thread = SDL_ThreadID() == self->threadId;
+	bool_t same_thread = self->semaphore ? SDL_ThreadID() == self->threadId : true;
 	if(!same_thread) SDL_SemWait(self->semaphore);
 		load_t *load = &self->stack[self->last];
 		load->usrptr = usrptr;

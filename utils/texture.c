@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void world_changed(void);
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_ASSERT(x)
 #include <utils/stb_image.h>
@@ -44,6 +43,7 @@ struct tpair {
 };
 
 texture_t *g_cache;
+uint32_t g_cache_frame;
 texture_t *g_probe_cache;
 tex_tile_t **g_cache_bound;
 texture_t *g_indir;
@@ -51,9 +51,9 @@ tex_tile_t *g_tiles;
 const int g_cache_w = 64;
 const int g_cache_h = 32;
 const int g_indir_w = 256;
-const int g_indir_h = 64;
+const int g_indir_h = 256;
 int g_cache_n = 0;
-int g_indir_n = 0;
+int g_indir_n = 1;
 
 bool_t *g_probe_tiles;
 uint32_t g_min_shadow_tile = 64;
@@ -432,21 +432,21 @@ tex_tile_t *texture_get_tile(texture_t *self, uint32_t mip,
 	return &self->bufs[0].mips[mip][y * tiles_per_row + x];
 }
 
-uint32_t _load_tile(tex_tile_t *tile, uint32_t frame, uint32_t max_loads)
+uint32_t _load_tile(tex_tile_t *tile, uint32_t max_loads)
 {
 	uint32_t loads = 0;
 
-	tile->touched = frame;
+	tile->touched = g_cache_frame;
 
 	if (max_loads == 0) return 0;
 	if (tile->bound) return 0;
 
-	if (tile->location.mip + 1 < MAX_MIPS /*&& self->sizes[mip].x > 1*/)
+	if (tile->location.mip + 1 < MAX_MIPS)
 	{
 		tex_tile_t *mip_tile = texture_get_tile(tile->tex, tile->location.mip + 1,
 		                                        tile->x / 2, tile->y / 2);
 
-		loads += _load_tile(mip_tile, frame, max_loads);
+		loads += _load_tile(mip_tile, max_loads);
 		max_loads -= loads;
 		if (max_loads == 0) return loads;
 
@@ -471,15 +471,28 @@ uint32_t _load_tile(tex_tile_t *tile, uint32_t frame, uint32_t max_loads)
 	set_tile_location(tile, &tile->location);
 
 	glerr();
+	g_cache_frame++;
 	return 1;
 }
 
 uint32_t load_tile(texture_t *self, uint32_t mip, uint32_t x, uint32_t y,
-                 uint32_t frame, uint32_t max_loads)
+                   uint32_t max_loads)
 {
 	assert(mip < MAX_MIPS);
-	return _load_tile(texture_get_tile(self, mip, x, y), frame, max_loads);
+	return _load_tile(texture_get_tile(self, mip, x, y), max_loads);
 }
+
+uint32_t load_tile_by_id(uint32_t tile, uint32_t max_loads)
+{
+	if (tile == 0) return 0;
+	if (tile >= g_indir_n)
+	{
+		printf("could not load tile %d %d\n", tile, g_indir_n);
+		exit(1);
+	}
+	return _load_tile(&g_tiles[tile], max_loads);
+}
+
 
 static int32_t texture_from_file_loader(texture_t *self)
 {
@@ -598,14 +611,6 @@ static int32_t texture_from_file_loader(texture_t *self)
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	glerr();
 
-	/* for (int m = 0; m < MAX_MIPS; m++) */
-	/* { */
-		/* for (int tile = 0; tile < self->bufs[0].num_tiles[m]; tile++) */
-		/* { */
-			/* load_tile(self, &self->bufs[0].mips[m][tile], m, 0); */
-		/* } */
-	/* } */
-
 	/* glGenerateMipmap(self->target); glerr(); */
 	glBindTexture(self->target, 0); glerr();
 
@@ -624,7 +629,11 @@ static int32_t texture_from_file_loader(texture_t *self)
 	self->bufs[0].id = self->bufs[0].indir_n;
 	self->sparse_it = true;
 
-	world_changed();
+/* 	for (int x = 0; x < self->bufs[0].num_tiles_x[0]; x++) */
+/* 	{ */
+/* 		for (int y = 0; y < self->bufs[0].num_tiles_y[0]; y++) */
+/* 			load_tile(self, 0, x, y, 100); */
+/* 	} */
 
 	return 1;
 }

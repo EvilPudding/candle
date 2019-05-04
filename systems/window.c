@@ -266,13 +266,13 @@ int c_window_draw(c_window_t *self)
 	/* glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE); glerr(); */
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); glerr();
 	/* glClear(GL_COLOR_BUFFER_BIT); */
-	glClear(GL_DEPTH_BUFFER_BIT);
+	glClear(GL_DEPTH_BUFFER_BIT); glerr();
 
 	fs_bind(g_quad_fs);
 
 	glViewport(0, 0, self->width, self->height); glerr();
 
-	shader_t *shader = vs_bind(g_quad_vs);
+	shader_t *shader = vs_bind(g_quad_vs, 0);
 	uint32_t uni = shader_uniform(shader, "tex", NULL);
 	glUniform1i(uni, 0);
 	glActiveTexture(GL_TEXTURE0);
@@ -284,8 +284,8 @@ int c_window_draw(c_window_t *self)
 	drawable_draw(&self->draw);
 	glerr();
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glActiveTexture(GL_TEXTURE0); glerr();
+	glBindTexture(GL_TEXTURE_2D, 0); glerr();
 	return CONTINUE;
 }
 

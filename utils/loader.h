@@ -28,6 +28,7 @@ typedef struct
 } loader_t;
 
 loader_t *loader_new(void);
+void loader_start(loader_t *self);
 void loader_push(loader_t *self, loader_cb cb, void *usrptr, c_t *c);
 #define loader_push(s, cb, u, c) _loader_push(s, cb, u, c);
 void loader_push_async(loader_t *self, loader_cb cb, void *usrptr, c_t *c);

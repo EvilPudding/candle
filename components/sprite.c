@@ -13,8 +13,6 @@ static vs_t *g_sprite_vs;
 static int c_sprite_position_changed(c_sprite_t *self);
 static mesh_t *g_sprite_mesh;
 
-void world_changed(void);
-
 mesh_t *sprite_mesh()
 {
 	if(!g_sprite_mesh)
@@ -66,10 +64,11 @@ void c_sprite_update_mat(c_sprite_t *self)
 {
 	if(self->mat)
 	{
-		int transp = self->mat->transparency.color.a > 0.0f ||
-			self->mat->transparency.texture ||
-			self->mat->emissive.color.a > 0.0f ||
-			self->mat->emissive.texture;
+		/* int transp = self->mat->transparency.color.a > 0.0f || */
+		/* 	self->mat->transparency.texture || */
+		/* 	self->mat->emissive.color.a > 0.0f || */
+		/* 	self->mat->emissive.texture; */
+		int transp = false;
 		if(self->draw.bind[0].grp == ref("transparent")
 				|| self->draw.bind[0].grp == ref("visible"))
 		{
@@ -77,7 +76,7 @@ void c_sprite_update_mat(c_sprite_t *self)
 		}
 	}
 
-	drawable_set_mat(&self->draw, self->mat ? self->mat->id : 0);
+	drawable_set_mat(&self->draw, self->mat);
 }
 
 void c_sprite_set_mat(c_sprite_t *self, mat_t *mat)
@@ -105,7 +104,6 @@ int c_sprite_menu(c_sprite_t *self, void *ctx)
 	if(changes)
 	{
 		drawable_model_changed(&self->draw);
-		world_changed();
 	}
 	return CONTINUE;
 }

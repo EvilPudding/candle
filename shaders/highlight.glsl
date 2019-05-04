@@ -54,16 +54,16 @@ void main(void)
 
 	float overp = filtered(c2, over_poly_id);
 
-	const vec3 over_poly_color = vec3(0.1, 0.01, 0.4);
-	const vec3 over_color = vec3(0.08);
+	const vec3 over_poly_color = vec3(0.2, 0.02, 0.5);
+	const vec3 over_color = vec3(0.14);
 
 	if(is_equal(c, zero))
 	{
-	FragColor = vec4(vec3(0.5), 1.0);
+		FragColor = vec4(vec3(0.5), 1.0);
 		return;
 	}
 
-	vec3 final = vec3(1.0);
+	vec3 final = vec3(0.0);
 	/* if(sel_id.x > 0.0 || sel_id.y > 0.0) */
 	/* { */
 	/* 	final -= sel_color * (1.0 - selected); */

@@ -4,28 +4,33 @@
 #include <ecs/ecm.h>
 #include <utils/mafs.h>
 #include <utils/khash.h>
+#include <utils/macros.h>
+#include <utils/macros.h>
 
-typedef struct vitype_t vitype_t;
+typedef struct vifunc_t vifunc_t;
 typedef struct vicall_t vicall_t;
 typedef struct vil_t vil_t;
 
-typedef void(*vitype_gui_cb)(vicall_t *call, void *data, void *nk);
-typedef void(*visolver_cb)(vicall_t *call);
+typedef float(*vifunc_gui_cb)(vicall_t *call, void *data, void *nk);
+typedef void(*vifunc_save_cb)(vicall_t *call, void *data, FILE *fp);
+typedef bool_t(*vifunc_load_cb)(vicall_t *call, void *data, FILE *fp);
+typedef void(*vil_func_cb)(vifunc_t *func, void *usrptr);
 
 enum {
 	V_IN = 0x001,
 	V_OUT = 0x002,
-	V_COL = 0x004,
-	V_ALL = 0x007
+	V_BOTH = V_IN | V_OUT,
+	V_HID = 0x004,
+	V_ALL = 0x007,
+	V_LINKED = 0x008
 } vicall_flags;
 
-KHASH_MAP_INIT_INT(vitype, vitype_t *)
+KHASH_MAP_INIT_INT(vifunc, vifunc_t *)
 
 typedef struct vil_t
 {
-	khash_t(vitype) *types;
+	khash_t(vifunc) *funcs;
 	void *user_data;
-	visolver_cb solver;
 } vil_t;
 
 typedef union
@@ -34,21 +39,118 @@ typedef union
 	uint64_t val;
 } slot_t;
 
-void vil_context_init(vil_t *self);
-vitype_t *vil_add_type(vil_t *ctx, const char *name,
-		vitype_gui_cb builtin_gui, uint32_t builtin_size);
-vitype_t *vil_get(vil_t *ctx, uint32_t ref);
+typedef void(*vil_call_cb)(vicall_t *call, slot_t slot, void *usrptr);
+typedef void(*vil_foreach_input_cb)(vicall_t *root, vicall_t *call, slot_t slot,
+                                    char *data, void *usrptr);
+typedef void(*vil_link_cb)(vifunc_t *func, slot_t to, slot_t from, void *usrptr);
 
-void vicall_link(vicall_t *root, slot_t in_slot, slot_t out_slot,
-		uint32_t field);
+void vil_init(vil_t *self);
+vifunc_t *vil_get(vil_t *ctx, uint32_t ref);
+void vil_iterate(vil_t *self, vil_func_cb callback, void *usrptr);
+void vil_foreach_func(vil_t *self, vil_func_cb callback, void *usrptr);
+
+void vicall_set_arg(vicall_t *call, uint32_t ref, void *value);
+void vicall_link(vicall_t *root, slot_t in_slot, slot_t out_slot);
+void vicall_iterate_dependencies(vicall_t *self, vil_link_cb link,
+                                 vil_call_cb call, void *usrptr);
+vicall_t *vicall_new(vifunc_t *parent, vifunc_t *type,
+		const char *name, vec2_t pos, uint32_t data_offset, uint32_t flags);
+uint32_t vicall_get_size(vicall_t *call);
+void vicall_foreach_unlinked_input(vicall_t *call, vil_foreach_input_cb cb,
+                                    void *usrptr);
+void vifunc_foreach_unlinked_input(vifunc_t *self, vil_foreach_input_cb cb,
+                                   void *usrptr);
 
 const char *vicall_name(const vicall_t *call);
 void vicall_color(vicall_t *self, vec4_t color);
+float vicall_gui(vicall_t *call, void *nk);
 
-uint32_t vitype_gui(vitype_t *type, void *nk);
-vicall_t *vitype_add(vitype_t *parent, vitype_t *type,
-		const char *name, vec2_t pos, uint32_t flags);
-void vitype_add_solver(vitype_t *type, const char *solvespace,
-		visolver_cb solver);
+vifunc_t *vifunc_new(vil_t *ctx, const char *name, vifunc_gui_cb builtin_gui,
+                     uint32_t builtin_size, bool_t is_assignable);
+void vifunc_foreach_call(vifunc_t *self, bool_t recursive, bool_t allow_input,
+                         bool_t allow_output, bool_t skip_linked,
+                         vil_call_cb callback, void *usrptr);
+uint32_t vifunc_gui(vifunc_t *type, void *nk);
+void vicall_watch(vicall_t *self, vil_call_cb callback, void *usrptr);
+vicall_t *vifunc_get(vifunc_t *self, const char *name);
+void vifunc_save(vifunc_t *self, const char *filename);
+bool_t vifunc_load(vifunc_t *self, const char *filename);
+void vifunc_slot_to_name(vifunc_t *func, slot_t slot, char *buffer,
+                         const char *separator, const char *append);
+
+slot_t slot_pop(slot_t slt);
+
+struct vil_link
+{
+	slot_t from;
+	slot_t into;
+};
+
+struct vil_arg
+{
+	slot_t from;
+	slot_t into;
+	void *data;
+	uint32_t data_size;
+	bool_t has_children;
+	float y;
+};
+
+struct vil_ret
+{
+	slot_t from;
+	slot_t into;
+};
+
+typedef struct vicall_t
+{
+	vifunc_t *type;
+	vifunc_t *parent;
+
+	uint32_t id;
+	char name[64];
+	vicall_t *next;
+	vicall_t *prev;
+
+	bool_t is_hidden;
+	bool_t is_input;
+	bool_t is_output;
+	bool_t is_linked;
+	uint32_t data_offset;
+
+	uint32_t color;
+
+	vec4_t bounds;
+
+	struct vil_arg input_args[128];
+	struct vil_ret output_args[128];
+
+	vil_call_cb     watcher;
+	void           *watcher_usrptr;
+	void           *usrptr;
+} vicall_t;
+
+typedef struct vifunc_t
+{
+	char name[32];
+	uint32_t id;
+
+	vicall_t call_buf[32];
+	struct vil_link links[64];
+	vicall_t *begin;
+	vicall_t *end;
+	uint32_t call_count;
+	uint32_t link_count;
+	uint32_t locked;
+
+	uint32_t    	builtin_size;
+	vifunc_gui_cb	builtin_gui;
+	vil_t *ctx;
+
+	uint32_t tmp;
+	void *usrptr;
+	bool_t is_assignable;
+} vifunc_t;
+
 
 #endif /* !VISUAL_LOGIC_H */

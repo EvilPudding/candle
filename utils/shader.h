@@ -12,7 +12,7 @@ typedef struct
 
 typedef struct
 {
-	char *name;
+	char name[32];
 	uint32_t index;
 	vertex_modifier_t vmodifiers[32];
 	vertex_modifier_t gmodifiers[32];
@@ -33,8 +33,15 @@ typedef struct
 
 	shader_t *combinations[32];
 
-	char *filename;
+	char filename[32];
 	uint32_t ready;
+} fs_variation_t;
+
+typedef struct
+{
+	fs_variation_t variations[32];
+	uint32_t variations_num;
+	char filename[32];
 } fs_t;
 
 typedef struct
@@ -48,7 +55,7 @@ typedef struct
 typedef struct light_t light_t;
 typedef struct shader_t
 {
-	fs_t *fs;
+	fs_variation_t *fs;
 	uint32_t index;
 	uint32_t frame_bind;
 
@@ -61,15 +68,18 @@ typedef struct shader_t
 	bool_t has_skin;
 } shader_t;
 
-shader_t *vs_bind(vs_t *vs);
+shader_t *vs_bind(vs_t *vs, uint32_t fs_variation);
 void fs_bind(fs_t *fs);
 
 vs_t *vs_new(const char *name, bool_t has_skin, uint32_t num_modifiers, ...);
 fs_t *fs_new(const char *filename);
+fs_t *fs_get(const char *filename);
+void fs_push_variation(fs_t *self, const char *filename);
+void fs_update_variation(fs_t *self, uint32_t fs_variation);
 vertex_modifier_t vertex_modifier_new(const char *code);
 vertex_modifier_t geometry_modifier_new(const char *code);
 
-shader_t *shader_new(fs_t *fs, vs_t *vs);
+shader_t *shader_new(fs_t *fs, uint32_t fs_variation, vs_t *vs);
 #ifdef MESH4
 void shader_update(shader_t *self, float angle4);
 #endif

@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <assert.h>
+#include <utils/str.h>
 
 static const char default_vs[] = 
 	"#include \"uniforms.glsl\"\n"
@@ -36,6 +38,7 @@ static const char default_vs[] =
 	"flat out uvec2 $poly_id;\n"
 	"flat out vec3 $obj_pos;\n"
 	"flat out mat4 $model;\n"
+	"out float $vertex_distance;\n"
 	"out vec3 $poly_color;\n"
 	"out vec3 $vertex_position;\n"
 	"out vec2 $texcoord;\n"
@@ -49,11 +52,13 @@ static const char default_vs[] =
 	"	$matid = uint(PROPS.x);\n"
 	"	$poly_id = uvec2(ID);\n"
 	"	$id = uvec2(PROPS.zw);\n"
-	"	$texcoord = UV;\n";
+	"	$texcoord = UV;\n"
+	"	$vertex_position = pos.xyz;\n";
 static const char default_vs_end[] = 
 	"\n"
 	"	gl_Position = pos;\n"
-	"	}\n";
+	"	$vertex_distance = length($vertex_position);\n"
+	"}\n";
 
 static const char default_gs[] = 
 	"#version 300 es\n"
@@ -85,13 +90,13 @@ static const char default_gs[] =
 static const char default_gs_end[] = "";
 
 static void checkShaderError(GLuint shader, const char *name, const char *code);
-static char *string_preprocess(const char *src, uint32_t len, bool_t defines,
-                               bool_t has_gshader, bool_t has_skin);
+static char *string_preprocess(const char *src, uint32_t len, const char *filename,
+                               bool_t defines, bool_t has_gshader, bool_t has_skin);
 
 struct source
 {
 	size_t len;
-	char *filename;
+	char filename[32];
 	char *src;
 };
 
@@ -169,7 +174,7 @@ vertex_modifier_t _vertex_modifier_new(bool_t has_skin, const char *code,
 {
 	vertex_modifier_t self;
 	self.type = 0;
-	self.code = string_preprocess(code, strlen(code), defines, has_gshader,
+	self.code = string_preprocess(code, strlen(code), "vmodifier", defines, has_gshader,
 	                              has_skin);
 	return self;
 }
@@ -183,7 +188,7 @@ vertex_modifier_t _geometry_modifier_new(const char *code, bool_t defines)
 {
 	vertex_modifier_t self;
 	self.type = 1;
-	self.code = string_preprocess(code, strlen(code), defines, true,
+	self.code = string_preprocess(code, strlen(code), "gmodifier", defines, true,
 	                              false);
 	return self;
 }
@@ -245,7 +250,7 @@ vs_t *vs_new(const char *name, bool_t has_skin, uint32_t num_modifiers, ...)
 	uint32_t i = g_vs_num++;
 	vs_t *self = &g_vs[i];
 	self->index = i;
-	self->name = strdup(name);
+	strcpy(self->name, name);
 	self->has_skin = has_skin;
 
 	self->ready = 0;
@@ -288,13 +293,29 @@ vs_t *vs_new(const char *name, bool_t has_skin, uint32_t num_modifiers, ...)
 	return self;
 }
 
-void shader_add_source(const char *name, unsigned char data[],
-		uint32_t len)
+void shader_add_source(const char *name, unsigned char data[], uint32_t len)
 {
-	uint32_t i = g_sources_num++;
-	g_sources = realloc(g_sources, (sizeof *g_sources) * g_sources_num);
+	uint32_t i;
+	bool_t found = false;
+	for (i = 0; i < g_sources_num; i++)
+	{
+		if(!strcmp(name, g_sources[i].filename))
+		{
+			found = true;
+			break;
+		}
+	}
+	if (!found)
+	{
+		i = g_sources_num++;
+		g_sources = realloc(g_sources, (sizeof *g_sources) * g_sources_num);
+	}
+	else
+	{
+		free(g_sources[i].src);
+	}
 	g_sources[i].len = len + 1;
-	g_sources[i].filename = strdup(name);
+	strcpy(g_sources[i].filename, name);
 
 	g_sources[i].src = malloc(len + 1);
 	memcpy(g_sources[i].src, data, len);
@@ -343,7 +364,7 @@ static const struct source shader_source(const char *filename)
 	i = g_sources_num++;
 	g_sources = realloc(g_sources, (sizeof *g_sources) * g_sources_num);
 	g_sources[i].len = lsize;
-	g_sources[i].filename = strdup(filename);
+	strcpy(g_sources[i].filename, filename);
 	g_sources[i].src = strdup(buffer);
 
 	return g_sources[i];
@@ -373,8 +394,9 @@ char *replace(char *buffer, long offset, long end_offset,
 	return new_buffer;
 }
 
-static char *string_preprocess(const char *src, bool_t len, bool_t defines,
-                               bool_t has_gshader, bool_t has_skin)
+static char *string_preprocess(const char *src, bool_t len, const char *filename,
+                               bool_t defines, bool_t has_gshader,
+                               bool_t has_skin)
 {
 	size_t lsize = len;
 
@@ -429,7 +451,23 @@ static char *string_preprocess(const char *src, bool_t len, bool_t defines,
 	}
 	strcat(buffer, src);
 
+	const char *line = src;
+	uint32_t line_num = 1u;
+	uint32_t include_lines[128];
+	uint32_t include_lines_num = 0u;
+	while(line)
+	{
+		if (!strncmp(line, "#include", strlen("#include")))
+		{
+			include_lines[include_lines_num++] = line_num;
+		}
+		line_num++;
+		line = strchr(line, '\n');
+		if (line) line++;
+	}
+
 	char *token = NULL;
+	uint32_t include_num = 0;
 	while((token = strstr(buffer, "#include")))
 	{
 		long offset = token - buffer;
@@ -440,18 +478,20 @@ static char *string_preprocess(const char *src, bool_t len, bool_t defines,
 		memcpy(include_name, start, end - start);
 		include_name[end - start] = '\0';
 		const struct source inc = shader_source(include_name);
-		if(!inc.src)
-		{
-			/* printf("Could not find '%s' shader to include in '%s'\n", */
-					/* include_name, source.filename); */
-			break;
-		}
-		else
-		{
-			char *include_buffer = shader_preprocess(inc, false, has_gshader, false);
-			buffer = replace(buffer, offset, end_offset, include_buffer, &lsize);
-			free(include_buffer);
-		}
+		if(!inc.src) break;
+
+		char *include = str_new(64);
+		char *include_buffer = shader_preprocess(inc, false, has_gshader, false);
+		str_catf(&include, "#line 1 \"%s\"\n", include_name,
+		         filename);
+		str_cat(&include, include_buffer);
+		free(include_buffer);
+		str_catf(&include, "\n#line %d \"%s\"\n", include_lines[include_num],
+		         filename);
+		
+		buffer = replace(buffer, offset, end_offset, include, &lsize);
+		str_free(include);
+		include_num++;
 	}
 
 	while((token = strstr(buffer, "$")))
@@ -469,7 +509,8 @@ static char *shader_preprocess(struct source source, bool_t defines,
                                bool_t has_gshader, bool_t has_skin)
 {
 	if(!source.src) return NULL;
-	return string_preprocess(source.src, source.len, defines, has_gshader, has_skin);
+	return string_preprocess(source.src, source.len, source.filename,
+	                         defines, has_gshader, has_skin);
 }
 
 static void checkShaderError(GLuint shader,
@@ -483,8 +524,8 @@ static void checkShaderError(GLuint shader,
 	{
 		GLchar log_string[bufflen + 1];
 		glGetShaderInfoLog(shader, bufflen, 0, log_string);
+
 		printf("Log found for '%s':\n%s", name, log_string);
-		printf("%s\n", code);
 	}
 
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
@@ -543,21 +584,21 @@ static uint32_t shader_new_loader(shader_t *self)
 	return 1;
 }
 
-static uint32_t fs_new_loader(fs_t *self)
+static uint32_t fs_new_loader(fs_variation_t *self)
 {
 	self->program = 0;
 
 	char buffer[256];
 	snprintf(buffer, sizeof(buffer), "%s.glsl", self->filename);
 
-	self->code  = shader_preprocess(shader_source(buffer), true, false, false);
+	printf("fetching %s\n", buffer);
+	self->code = shader_preprocess(shader_source(buffer), true, false, false);
 
 	if(!self->code) exit(1);
 
 	self->program = glCreateShader(GL_FRAGMENT_SHADER); glerr();
 
-	glShaderSource(self->program, 1, (const GLchar**)&self->code, NULL);
-	glerr();
+	glShaderSource(self->program, 1, (const GLchar**)&self->code, NULL); glerr();
 	glCompileShader(self->program); glerr();
 
 	checkShaderError(self->program, self->filename, self->code);
@@ -567,35 +608,73 @@ static uint32_t fs_new_loader(fs_t *self)
 	return 1;
 }
 
+fs_t *fs_get(const char *filename)
+{
+	for(uint32_t i = 0; i < g_fs_num; i++)
+	{
+		if(!strcmp(filename, g_fs[i].filename)) return &g_fs[i];
+	}
+	return NULL;
+}
+
+void fs_update_variation(fs_t *self, uint32_t fs_variation)
+{
+	fs_variation_t *var = &self->variations[fs_variation];
+	for(uint32_t i = 0; i < 32; i++)
+	{
+		if (var->combinations[i])
+		{
+			shader_destroy(var->combinations[i]);
+		}
+		var->combinations[i] = NULL;
+	}
+
+	fs_new_loader(var);
+}
+
+void fs_push_variation(fs_t *self, const char *filename)
+{
+	fs_variation_t *var = &self->variations[self->variations_num];
+	var->program = 0;
+	var->ready = 0;
+	self->variations_num++;
+
+	for(uint32_t i = 0; i < 32; i++)
+	{
+		var->combinations[i] = NULL;
+	}
+
+	strcpy(var->filename, filename);
+
+	loader_push_wait(g_candle->loader, (loader_cb)fs_new_loader, var, NULL);
+}
+
 fs_t *fs_new(const char *filename)
 {
 	if(!filename) return NULL;
-	uint32_t i;
-	for(i = 0; i < g_fs_num; i++)
+	for(uint32_t i = 0; i < g_fs_num; i++)
 	{
 		if(!strcmp(filename, g_fs[i].filename)) return &g_fs[i];
 	}
 
 	fs_t *self = &g_fs[g_fs_num++];
+	self->variations_num = 0;
+	strcpy(self->filename, filename);
 
-	self->program = 0;
-	self->ready = 0;
-
-	for(i = 0; i < 32; i++)
+	if (   strncmp(filename, "gbuffer", strlen("gbuffer"))
+	    && strncmp(filename, "query_mips", strlen("query_mips"))
+	    && strncmp(filename, "depth", strlen("depth")))
 	{
-		self->combinations[i] = NULL;
+		fs_push_variation(self, filename);
 	}
 
-	self->filename = strdup(filename);
-
-	loader_push_wait(g_candle->loader, (loader_cb)fs_new_loader, self, NULL);
 	return self;
 }
 
-shader_t *shader_new(fs_t *fs, vs_t *vs)
+shader_t *shader_new(fs_t *fs, uint32_t fs_variation, vs_t *vs)
 {
 	shader_t *self = calloc(1, sizeof *self);
-	self->fs = fs;
+	self->fs = &fs->variations[fs_variation];
 	self->index = vs->index;
 	self->has_skin = vs->has_skin;
 
@@ -633,13 +712,14 @@ GLuint shader_uniform(shader_t *self, const char *uniform, const char *member)
 
 void fs_destroy(fs_t *self)
 {
-	uint32_t i;
-	for(i = 0; i < g_vs_num; i++)
+	for(uint32_t i = 0; i < self->variations_num; i++)
 	{
-		shader_destroy(self->combinations[i]);
+		for(uint32_t j = 0; j < g_vs_num; j++)
+		{
+			shader_destroy(self->variations[i].combinations[j]);
+		}
+		glDeleteShader(self->variations[i].program); glerr();
 	}
-
-	glDeleteShader(self->program); glerr();
 }
 
 void shader_destroy(shader_t *self)
@@ -648,9 +728,15 @@ void shader_destroy(shader_t *self)
 	uint32_t vprogram = g_vs[self->index].vprogram;
 	uint32_t gprogram = g_vs[self->index].gprogram;
 
-	glDetachShader(self->program, fprogram); glerr();
-	glDetachShader(self->program, vprogram); glerr();
-	if(gprogram)
+	if (fprogram)
+	{
+		glDetachShader(self->program, fprogram); glerr();
+	}
+	if (vprogram)
+	{
+		glDetachShader(self->program, vprogram); glerr();
+	}
+	if (gprogram)
 	{
 		glDetachShader(self->program, gprogram); glerr();
 	}

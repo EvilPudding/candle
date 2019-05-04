@@ -456,7 +456,7 @@ static void c_model_init(c_model_t *self)
 	if(!g_missing_mat)
 	{
 		g_missing_mat = mat_new("missing");
-		g_missing_mat->albedo.color = vec4(0.0, 0.9, 1.0, 1.0);
+		mat4f(g_missing_mat, ref("albedo.color"), vec4(0.0, 0.9, 1.0, 1.0));
 	}
 
 	self->visible_group = ref("visible");
@@ -664,10 +664,11 @@ void c_model_update_mat(c_model_t *self)
 {
 	if(self->mat)
 	{
-		int transp = self->mat->transparency.color.a > 0.0f ||
-			self->mat->transparency.texture ||
-			self->mat->emissive.color.a > 0.0f ||
-			self->mat->emissive.texture;
+		/* int transp = self->mat->transparency.color.a > 0.0f || */
+		/* 	self->mat->transparency.texture || */
+		/* 	self->mat->emissive.color.a > 0.0f || */
+		/* 	self->mat->emissive.texture; */
+		int transp = false;
 		if(transp)
 		{
 			drawable_remove_group(&self->draw, self->visible_group);
@@ -688,7 +689,7 @@ void c_model_update_mat(c_model_t *self)
 		}
 	}
 
-	drawable_set_mat(&self->draw, self->mat ? self->mat->id : 0);
+	drawable_set_mat(&self->draw, self->mat);
 }
 
 void c_model_set_groups(c_model_t *self, uint32_t visible, uint32_t shadow,
@@ -796,7 +797,6 @@ int c_model_tool(c_model_t *self, void *ctx)
 	return CONTINUE;
 }
 
-void world_changed(void);
 int c_model_menu(c_model_t *self, void *ctx)
 {
 	int i;
@@ -905,7 +905,6 @@ int c_model_menu(c_model_t *self, void *ctx)
 	if(changes)
 	{
 		drawable_model_changed(&self->draw);
-		world_changed();
 	}
 
 	/* nk_tree_pop(ctx); */
@@ -929,21 +928,24 @@ static int c_model_position_changed(c_model_t *self)
 
 static int c_model_pre_draw(c_model_t *self)
 {
-	if(self->modified)
+	c_node_t *node = c_node(self);
+	if(!node) return CONTINUE;
+	if (c_node_update_model(node))
 	{
-		self->modified = 0;
-		c_node_t *node = c_node(self);
-		if(!node) return CONTINUE;
-		c_node_update_model(node);
-
-		if(node->unpack_inheritance)
+		if(entity_exists(node->unpack_inheritance) && node->unpack_inheritance != SYS)
 		{
 			drawable_set_entity(&self->draw, node->unpack_inheritance);
 		}
 		else
 		{
-			drawable_set_entity(&self->draw, c_entity(self));
+			drawable_set_entity(&self->draw, entity_null);
 		}
+	}
+
+	if(self->modified)
+	{
+		self->modified = 0;
+
 		drawable_set_transform(&self->draw, node->model);
 
 #ifdef MESH4

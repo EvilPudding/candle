@@ -1,7 +1,6 @@
 #ifndef FRAG_COMMON
 #define FRAG_COMMON
 #include "uniforms.glsl"
-#line 5
 
 
 #define _CAT(a, b) a ## b
@@ -19,14 +18,16 @@ const float c_MinRoughness = 0.04;
 /* uniform sampler3D perlin_map; */
 
 
-flat in vec3 obj_pos;
 flat in uvec2 id;
-flat in mat4 model;
 flat in uint matid;
+flat in vec2 object_id;
 flat in uvec2 poly_id;
+flat in vec3 obj_pos;
+flat in mat4 model;
 
 in vec3 poly_color;
 in vec3 vertex_position;
+in float vertex_distance;
 in vec2 texcoord;
 in mat3 TM;
 
@@ -81,11 +82,12 @@ float mip_map_level(in vec2 texture_coordinate) // in texel units
 #define g_cache_w 64u
 #define g_cache_h 32u
 
-vec4 solveMip(const property_t prop, uint mip, vec2 coords, bool draw)
+vec4 solveMip(uvec2 size, uint base_tile, uint mip, vec2 coords,
+              out uint tile_out)
 {
-	uint tiles_per_row = uint(ceil(float(prop.size.x) / 128.0));
-	uint tiles_per_col = uint(ceil(float(prop.size.y) / 128.0));
-	uint offset = prop.layer;
+	uint tiles_per_row = uint(ceil(float(size.x) / 128.0));
+	uint tiles_per_col = uint(ceil(float(size.y) / 128.0));
+	uint offset = base_tile;
 
 	for (uint i = 0u; i < MAX_MIPS && i < mip; i++)
 	{
@@ -95,9 +97,12 @@ vec4 solveMip(const property_t prop, uint mip, vec2 coords, bool draw)
 	}
 
 	uvec2 indir_coords = uvec2(floor(coords / (pow(2.0, float(mip)) * 128.0)));
-	uint tex_tile = indir_coords.y * tiles_per_row + indir_coords.x + offset;
+	uint indir_tile = indir_coords.y * tiles_per_row + indir_coords.x + offset;
+	tile_out = indir_tile;
 
-	vec3 info = texelFetch(g_indir, ivec2(tex_tile % g_indir_w, tex_tile / g_indir_w), 0).rgb * 255.0;
+	vec3 info = texelFetch(g_indir,
+	                       ivec2(indir_tile % g_indir_w,
+	                             indir_tile / g_indir_w), 0).rgb * 255.0;
 	uint cache_tile = uint(info.r) + uint(info.g * 256.0);
 	float actual_mip = info.b;
 
@@ -110,35 +115,21 @@ vec4 solveMip(const property_t prop, uint mip, vec2 coords, bool draw)
 
 	return textureLod(g_cache,
 			(vec2(cache_coords) + intile_coords) / g_cache_size, 0.0);
-	/* return texelFetch(g_cache, cache_coords + uvec2(floor(intile_coords)), 0); */
 }
 
-vec4 textureSVT(const property_t prop, vec2 coords, bool draw)
+vec4 textureSVT(uvec2 size, uint base_tile, vec2 coords, out uint tile_out,
+                float mip_scale)
 {
 	coords.y = 1.0 - coords.y;
-	coords *= prop.scale;
-	vec2 rcoords = fract(coords) * vec2(prop.size);
-	float mip = mip_map_level(coords * vec2(prop.size));
+	vec2 rcoords = fract(coords) * vec2(size);
+	float mip = mip_map_level(coords * vec2(size) * mip_scale);
 	uint mip0 = uint(floor(mip));
 	uint mip1 = uint(ceil(mip));
 
-	return mix(solveMip(prop, mip0, rcoords, draw),
-	           solveMip(prop, mip1, rcoords, draw), fract(mip));
+	uint ignore;
+	return mix(solveMip(size, base_tile, mip0, rcoords, tile_out),
+	           solveMip(size, base_tile, mip1, rcoords, ignore), fract(mip));
 	/* return solveMip(prop, 0, rcoords, draw); */
-}
-
-vec4 resolveProperty(property_t prop, vec2 coords, bool draw)
-{
-	/* vec3 tex; */
-	if(prop.blend > 0.001)
-	{
-		return mix(
-			prop.color,
-			textureSVT(prop, coords, draw),
-			prop.blend
-		);
-	}
-	return prop.color;
 }
 
 /* float ambient = 0.08; */
@@ -208,11 +199,6 @@ vec3 decode_normal(vec2 enc)
 
 /* ------------------- */
 
-float get_metalness()
-{
-	return resolveProperty(mat(metalness), texcoord, false).r;
-}
-
 vec3 get_position(sampler2D depth)
 {
 	vec2 pos = pixel_pos();
@@ -235,14 +221,13 @@ vec3 get_normal(sampler2D buffer)
 	return decode_normal(texelFetch(buffer, ivec2(gl_FragCoord.x,
 					gl_FragCoord.y), 0).rg);
 }
-vec3 get_normal(vec2 tc)
+vec3 get_normal(vec3 color)
 {
 	vec3 norm;
 	if(has_tex)
 	{
-		vec3 texcolor = resolveProperty(mat(normal), tc, false).rgb * 2.0 - 1.0;
+		vec3 texcolor = color * 2.0 - 1.0;
 		norm = TM * texcolor;
-
 	}
 	else
 	{
@@ -254,10 +239,6 @@ vec3 get_normal(vec2 tc)
 	}
 
 	return normalize(norm);
-}
-vec3 get_normal()
-{
-	return get_normal(texcoord);
 }
 
 float rand(vec2 co)

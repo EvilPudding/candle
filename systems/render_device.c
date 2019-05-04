@@ -15,18 +15,6 @@
 #include <utils/nk.h>
 #include <utils/material.h>
 
-static void copy_prop(prop_t *prop, struct gl_property *glprop)
-{
-	glprop->color = prop->color;
-	glprop->blend = prop->blend;
-	glprop->scale = prop->scale;
-	if(prop->texture)
-	{
-		glprop->layer = prop->texture->bufs[0].id;
-		glprop->size = prop->texture->sizes[0];
-	}
-}
-
 void c_render_device_update_lights(c_render_device_t *self)
 {
 	ct_t *lights = ecm_get(ref("light"));
@@ -44,30 +32,13 @@ void c_render_device_update_lights(c_render_device_t *self)
 	}
 }
 
-void c_render_device_update_materials(c_render_device_t *self)
-{
-
-	int i;
-	for(i = 0; i < g_mats_num; i++)
-	{
-		mat_t *mat = g_mats[i];
-		struct gl_material *glmat = &self->scene.materials[i];
-		copy_prop(&mat->albedo, &glmat->albedo);
-		copy_prop(&mat->roughness, &glmat->roughness);
-		copy_prop(&mat->metalness, &glmat->metalness);
-		copy_prop(&mat->transparency, &glmat->transparency);
-		copy_prop(&mat->normal, &glmat->normal);
-		copy_prop(&mat->emissive, &glmat->emissive);
-	}
-}
-
 int c_render_device_update(c_render_device_t *self)
 {
 	if(self->updates_ram)
 	{
-		c_render_device_update_materials(self);
 		c_render_device_update_lights(self);
-		self->scene.test_color = vec4(0, 1, 0, 1);
+		self->scene.test_color = vec3(0, 1, 0);
+		self->scene.time = ((float)self->frame) * 0.01f;
 		SDL_AtomicSet((SDL_atomic_t*)&self->updates_ubo, 1);
 	}
 	return CONTINUE;
@@ -118,7 +89,7 @@ void c_render_device_bind_ubo(c_render_device_t *self, uint32_t base,
 extern texture_t *g_cache;
 extern texture_t *g_indir;
 extern texture_t *g_probe_cache;
-shader_t *vs_bind(vs_t *vs)
+shader_t *vs_bind(vs_t *vs, uint32_t fs_variation)
 {
 	uint32_t loc;
 	c_render_device_t *rd = c_render_device(&SYS);
@@ -126,9 +97,14 @@ shader_t *vs_bind(vs_t *vs)
 	if(!rd->shader || rd->shader->index != vs->index)
 	{
 		fs_t *fs = rd->frag_bound;
+		if (!fs) return NULL;
 
-		shader_t **sh = &fs->combinations[vs->index];
-		if(!*sh) *sh = shader_new(fs, vs);
+		if (fs_variation >= fs->variations_num)
+		{
+			fs_variation = 0;
+		}
+		shader_t **sh = &fs->variations[fs_variation].combinations[vs->index];
+		if(!*sh) *sh = shader_new(fs, fs_variation, vs);
 		rd->shader = *sh; 
 	}
 
@@ -174,6 +150,17 @@ shader_t *vs_bind(vs_t *vs)
 		glUniformBlockBinding(rd->shader->program, loc, 21); glerr();
 		glBindBufferBase(GL_UNIFORM_BUFFER, 21, rd->bound_ubos[21]); glerr();
 	}
+
+	if (rd->bound_ubos[22])
+	{
+		loc = glGetUniformBlockIndex(rd->shader->program, "cms_t"); glerr();
+		if (loc != ~0)
+		{
+			glUniformBlockBinding(rd->shader->program, loc, 22); glerr();
+			glBindBufferBase(GL_UNIFORM_BUFFER, 22, rd->bound_ubos[22]); glerr();
+		}
+	}
+
 
 	if(rd->shader && rd->bind_function)
 	{

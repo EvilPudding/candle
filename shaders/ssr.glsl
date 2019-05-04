@@ -8,6 +8,7 @@ BUFFER {
 	sampler2D depth;
 	sampler2D albedo;
 	sampler2D nmr;
+	sampler2D emissive;
 } gbuffer;
 
 BUFFER {
@@ -29,6 +30,7 @@ void main(void)
 
 	vec4 normal_metalic_roughness = texelFetch(gbuffer.nmr, fc, 0);
 	vec4 albedo = texelFetch(gbuffer.albedo, fc, 0);
+	vec3 emissive = texelFetch(gbuffer.emissive, fc, 0).rgb;
 	vec3 nor = decode_normal(normal_metalic_roughness.rg);
 
 	vec4 ssred = ssr2(gbuffer.depth, refr.color, albedo,
@@ -41,7 +43,7 @@ void main(void)
     /* cc.rgb *= texelFetch(ssao.occlusion, fc, 0).r; */
 	cc.rgb *= texelFetch(ssao.occlusion, fc, 0).r;
 
-	vec3 final = cc.rgb + ssred.rgb * ssred.a;
+	vec3 final = cc.rgb + ssred.rgb * ssred.a + emissive;
 
 	/* FragColor = vec4(cc.xyz, 1.0); return; */
 	/* FragColor = vec4(ssred.rgb, 1.0); return; */
