@@ -15,6 +15,7 @@ static void draw_conf_update_inst(draw_conf_t *self, int32_t id);
 static int32_t drawable_position_changed(drawable_t *self, struct draw_bind *bind);
 static draw_group_t *get_group(uint32_t ref);
 static void draw_conf_remove_instance(draw_conf_t *self, int32_t id);
+SDL_sem *g_group_semaphore;
 
 #define MASK_TRANS (1 << 0)
 #define MASK_PROPS (1 << 1)
@@ -45,6 +46,7 @@ static draw_group_t *get_group(uint32_t ref)
 	draw_group_t *bind;
 	khiter_t k;
 
+	SDL_SemWait(g_group_semaphore);
 	if (!g_draw_groups) g_draw_groups = kh_init(draw_group);
 	k = kh_get(draw_group, g_draw_groups, ref);
 
@@ -58,6 +60,7 @@ static draw_group_t *get_group(uint32_t ref)
 	{
 		bind = &kh_value(g_draw_groups, k);
 	}
+	SDL_SemPost(g_group_semaphore);
 	return bind;
 }
 
@@ -1365,12 +1368,14 @@ static int32_t draw_group_draw(draw_group_t *self)
 	khiter_t k;
 	if (!self->configs) return 0;
 
+	SDL_SemWait(g_group_semaphore);
 	for(k = kh_begin(self->configs); k != kh_end(self->configs); ++k)
 	{
 		if (!kh_exist(self->configs, k)) continue;
 		draw_conf_t *conf = kh_value(self->configs, k);
 		res |= draw_conf_draw(conf, -1);
 	}
+	SDL_SemPost(g_group_semaphore);
 	return res;
 }
 
@@ -1382,4 +1387,5 @@ void draw_group(uint32_t ref)
 REG()
 {
 	g_varrays = kh_init(varray);
+	g_group_semaphore = SDL_CreateSemaphore(1);
 }

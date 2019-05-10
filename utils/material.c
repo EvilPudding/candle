@@ -206,6 +206,16 @@ static float _vint_gui(vicall_t *call, int32_t *num, void *ctx)
 	return nk_layout_widget_bounds(ctx).h;
 }
 
+static void _number_save(vicall_t *call, float *num, FILE *fp) 
+{
+	fprintf(fp, "%f", *num);
+}
+
+static bool_t _number_load(vicall_t *call, float *num, FILE *fp) 
+{
+	return fscanf(fp, "%f", num) >= 0;
+}
+
 static float _number_gui(vicall_t *call, float *num, void *ctx) 
 {
 	/* if(*num < 20) *num = 20; */
@@ -271,7 +281,7 @@ void materials_reg()
 
 }
 
-void material_foreach_call(vicall_t *call, slot_t slot, char **str)
+void material_foreach_input(vicall_t *call, slot_t slot, char **str)
 {
 	if (call->type->name[0] == '_') return;
 	if (call->type->id == ref("vec4"))
@@ -297,6 +307,34 @@ void material_foreach_call(vicall_t *call, slot_t slot, char **str)
 	else
 	{
 		str_catf(str, "	vil_%s_in_t %s;\n", call->type->name, call->name);
+	}
+}
+void material_foreach_output(vicall_t *call, slot_t slot, char **str)
+{
+	if (call->type->name[0] == '_') return;
+	if (call->type->id == ref("vec4"))
+	{
+		str_catf(str, "	vec4 %s;\n", call->name);
+	}
+	else if (call->type->id == ref("vec3"))
+	{
+		str_catf(str, "	vec3 %s;\n", call->name);
+	}
+	else if (call->type->id == ref("vec2"))
+	{
+		str_catf(str, "	vec2 %s;\n", call->name);
+	}
+	else if (call->type->id == ref("number"))
+	{
+		str_catf(str, "	float %s;\n", call->name);
+	}
+	else if (call->type->id == ref("integer"))
+	{
+		str_catf(str, "	int %s;\n", call->name);
+	}
+	else
+	{
+		str_catf(str, "	vil_%s_out_t %s;\n", call->type->name, call->name);
 	}
 }
 
@@ -413,9 +451,9 @@ void material_generate_struct(vifunc_t *func, char **args)
 	char *inputs = str_new(100);
 	char *outputs = str_new(100);
 	vifunc_foreach_call(func, false, true, false, true,
-	                    (vil_call_cb)material_foreach_call, &inputs);
+	                    (vil_call_cb)material_foreach_input, &inputs);
 	vifunc_foreach_call(func, false, false, true, true,
-	                    (vil_call_cb)material_foreach_call, &outputs);
+	                    (vil_call_cb)material_foreach_output, &outputs);
 
 	str_catf(args, "struct vil_%s_in_t {\n%s};\n", func->name,
 	         str_len(inputs) ? inputs : "	int ignore;\n");
@@ -873,6 +911,8 @@ void materials_init_vil()
 	vifunc_t *tnum = vifunc_new(ctx, "number",
 	                            (vifunc_gui_cb)_number_gui,
 			                    sizeof(float), true);
+	tnum->builtin_load = _number_load;
+	tnum->builtin_save = _number_save;
 
 	vifunc_t *v2 = vifunc_new(ctx, "vec2", NULL, sizeof(vec2_t), true);
 		r = vicall_new(v2, tnum, "x", vec2(40, 10),  offsetof(vec2_t, x), V_BOTH);
@@ -957,6 +997,15 @@ void materials_init_vil()
 		vicall_new(tflip, tint, "columns", vec2(100, 10), ~0, V_IN);
 		vicall_new(tflip, tnum, "frame", vec2(100, 10), ~0, V_IN);
 		vicall_new(tflip, v2, "result", vec2(300, 10), ~0, V_OUT);
+
+	vifunc_t *tprop = vifunc_new(ctx, "property", NULL, 0, false);
+		vicall_new(tprop, ttex, "texture", vec2(100, 10), ~0, V_IN);
+		vicall_new(tprop, v4, "color", vec2(200, 10), ~0, V_IN);
+		vicall_new(tprop, vimix4, "mix", vec2(300, 10), ~0, V_BOTH);
+		vicall_new(tprop, tnum, "blend", vec2(400, 10), ~0, V_IN);
+		vifunc_link(tprop, ref("texture.result"), ref("mix.x"));
+		vifunc_link(tprop, ref("color"), ref("mix.y"));
+		vifunc_link(tprop, ref("blend"), ref("mix.a"));
 
 	vifunc_t *opaque = vifunc_new(ctx, "opaque", NULL, sizeof(struct opaque), false);
 		albedo = vicall_new(opaque, v4, "albedo", vec2(100, 10),

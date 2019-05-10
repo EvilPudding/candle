@@ -33,10 +33,10 @@ typedef struct vil_t
 	void *user_data;
 } vil_t;
 
-typedef union
+typedef struct
 {
-	struct { uint8_t depth; uint8_t _[7]; };
-	uint64_t val;
+	uint32_t depth;
+	uint32_t calls[16];
 } slot_t;
 
 typedef void(*vil_call_cb)(vicall_t *call, slot_t slot, void *usrptr);
@@ -50,7 +50,6 @@ void vil_iterate(vil_t *self, vil_func_cb callback, void *usrptr);
 void vil_foreach_func(vil_t *self, vil_func_cb callback, void *usrptr);
 
 void vicall_set_arg(vicall_t *call, uint32_t ref, void *value);
-void vicall_link(vicall_t *root, slot_t in_slot, slot_t out_slot);
 void vicall_iterate_dependencies(vicall_t *self, vil_link_cb link,
                                  vil_call_cb call, void *usrptr);
 vicall_t *vicall_new(vifunc_t *parent, vifunc_t *type,
@@ -70,6 +69,7 @@ vifunc_t *vifunc_new(vil_t *ctx, const char *name, vifunc_gui_cb builtin_gui,
 void vifunc_foreach_call(vifunc_t *self, bool_t recursive, bool_t allow_input,
                          bool_t allow_output, bool_t skip_linked,
                          vil_call_cb callback, void *usrptr);
+void vifunc_link(vifunc_t *root, uint32_t from, uint32_t into);
 uint32_t vifunc_gui(vifunc_t *type, void *nk);
 void vicall_watch(vicall_t *self, vil_call_cb callback, void *usrptr);
 vicall_t *vifunc_get(vifunc_t *self, const char *name);
@@ -116,6 +116,7 @@ typedef struct vicall_t
 	bool_t is_input;
 	bool_t is_output;
 	bool_t is_linked;
+	bool_t is_locked;
 	uint32_t data_offset;
 
 	uint32_t color;
@@ -145,6 +146,8 @@ typedef struct vifunc_t
 
 	uint32_t    	builtin_size;
 	vifunc_gui_cb	builtin_gui;
+	vifunc_save_cb	builtin_save;
+	vifunc_load_cb	builtin_load;
 	vil_t *ctx;
 
 	uint32_t tmp;
