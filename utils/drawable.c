@@ -1087,9 +1087,10 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 		glDisable(GL_CULL_FACE); glerr();
 	}
 
-	glUniform1i(shader_uniform(shader, "has_tex", NULL), mesh->has_texcoords);
-	glUniform1i(shader_uniform(shader, "receive_shadows", NULL),
-	                           mesh->receive_shadows);
+	glUniform1i(shader_cached_uniform(shader, ref("has_tex")),
+	                                  mesh->has_texcoords);
+	glUniform1i(shader_cached_uniform(shader, ref("receive_shadows")),
+	                                  mesh->receive_shadows);
 
 	glBindVertexArray(self->vao); glerr();
 

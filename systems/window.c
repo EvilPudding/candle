@@ -273,12 +273,12 @@ int c_window_draw(c_window_t *self)
 	glViewport(0, 0, self->width, self->height); glerr();
 
 	shader_t *shader = vs_bind(g_quad_vs, 0);
-	uint32_t uni = shader_uniform(shader, "tex", NULL);
+	uint32_t uni = shader_cached_uniform(shader, ref("tex"));
 	glUniform1i(uni, 0);
 	glActiveTexture(GL_TEXTURE0);
 	texture_bind(tex, tex->draw_id);
 
-	uint32_t ss = shader_uniform(shader, "screen_size", NULL);
+	uint32_t ss = shader_cached_uniform(shader, ref("screen_size"));
 	glUniform2f(ss, self->width, self->height); glerr();
 
 	drawable_draw(&self->draw);

@@ -38,11 +38,7 @@ void c_field_update_mat(c_field_t *self)
 {
 	if (self->mat)
 	{
-		/* int transp = self->mat->transparency.color.a > 0.0f || */
-		/* 	self->mat->transparency.texture || */
-		/* 	self->mat->emissive.color.a > 0.0f || */
-		/* 	self->mat->emissive.texture; */
-		int transp = 0;
+		int transp = mat_is_transparent(self->mat);
 		if (self->draw.bind[0].grp == ref("transparent")
 				|| self->draw.bind[0].grp == ref("visible"))
 		{

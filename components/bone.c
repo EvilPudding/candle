@@ -16,7 +16,7 @@ static void c_bone_init(c_bone_t *self)
 {
 	if(!g_bone)
 	{
-		g_mat = mat_new("m");
+		g_mat = mat_new("m", "default");
 		mat4f(g_mat, ref("emissive.color"), vec4(0.3f, 0.1f, 0.9f, 0.5f));
 		mat4f(g_mat, ref("albedo.color"), vec4(1, 1, 1, 1.0f));
 
@@ -38,8 +38,8 @@ static void c_bone_init(c_bone_t *self)
 		mesh_unlock(g_joint);
 	}
 
-	drawable_init(&self->draw, ref("transparent"));
-	drawable_init(&self->joint, ref("transparent"));
+	drawable_init(&self->draw, ref("visible"));
+	drawable_init(&self->joint, ref("visible"));
 	drawable_add_group(&self->draw, ref("selectable"));
 	drawable_add_group(&self->joint, ref("selectable"));
 
@@ -102,10 +102,17 @@ c_bone_t *c_bone_new(entity_t skin, mat4_t offset)
 	return self;
 }
 
+static void c_bone_destroy(c_bone_t *self)
+{
+	drawable_set_mesh(&self->draw, NULL);
+	drawable_set_mesh(&self->joint, NULL);
+}
+
+
 REG()
 {
-	ct_t *ct = ct_new("bone", sizeof(c_bone_t), c_bone_init, NULL, 1,
-			ref("node"));
+	ct_t *ct = ct_new("bone", sizeof(c_bone_t), c_bone_init,
+	                  c_bone_destroy, 1, ref("node"));
 	ct_listener(ct, ENTITY, sig("node_changed"), c_bone_position_changed);
 }
 

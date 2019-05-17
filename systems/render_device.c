@@ -94,7 +94,8 @@ shader_t *vs_bind(vs_t *vs, uint32_t fs_variation)
 	uint32_t loc;
 	c_render_device_t *rd = c_render_device(&SYS);
 
-	if(!rd->shader || rd->shader->index != vs->index)
+	if(   !rd->shader || rd->shader->index != vs->index
+	   || rd->shader->fs_variation != fs_variation)
 	{
 		fs_t *fs = rd->frag_bound;
 		if (!fs) return NULL;
@@ -104,23 +105,23 @@ shader_t *vs_bind(vs_t *vs, uint32_t fs_variation)
 			fs_variation = 0;
 		}
 		shader_t **sh = &fs->variations[fs_variation].combinations[vs->index];
-		if(!*sh) *sh = shader_new(fs, fs_variation, vs);
+		if (!*sh) *sh = shader_new(fs, fs_variation, vs);
 		rd->shader = *sh; 
 	}
 
 	shader_bind(rd->shader);
 
-	loc = glGetUniformLocation(rd->shader->program, "g_cache");
+	loc = shader_cached_uniform(rd->shader, ref("g_cache"));
 	glUniform1i(loc, 3);
 	glActiveTexture(GL_TEXTURE0 + 3);
 	texture_bind(g_cache, 0);
 
-	loc = glGetUniformLocation(rd->shader->program, "g_indir");
+	loc = shader_cached_uniform(rd->shader, ref("g_indir"));
 	glUniform1i(loc, 4);
 	glActiveTexture(GL_TEXTURE0 + 4);
 	texture_bind(g_indir, 0);
 
-	loc = glGetUniformLocation(rd->shader->program, "g_probes");
+	loc = shader_cached_uniform(rd->shader, ref("g_probes"));
 	glUniform1i(loc, 5);
 	glActiveTexture(GL_TEXTURE0 + 5);
 	texture_bind(g_probe_cache, 1);

@@ -449,7 +449,7 @@ void candle_init(void)
 
 	ecm_init();
 
-	mat_new("default_material");
+	mat_new("default_material", "default");
 	entity_new();
 
 	g_candle->cmds = kh_init(cmd);
@@ -490,7 +490,7 @@ void candle_init2(void)
 #else
 	render_loop_init();
 #endif
-	SDL_Delay(500);
+	/* SDL_Delay(500); */
 
 	/* candle_import_dir(candle, entity_null, "./"); */
 }

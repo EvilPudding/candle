@@ -64,11 +64,7 @@ void c_sprite_update_mat(c_sprite_t *self)
 {
 	if(self->mat)
 	{
-		/* int transp = self->mat->transparency.color.a > 0.0f || */
-		/* 	self->mat->transparency.texture || */
-		/* 	self->mat->emissive.color.a > 0.0f || */
-		/* 	self->mat->emissive.texture; */
-		int transp = false;
+		int transp = mat_is_transparent(self->mat);
 		if(self->draw.bind[0].grp == ref("transparent")
 				|| self->draw.bind[0].grp == ref("visible"))
 		{

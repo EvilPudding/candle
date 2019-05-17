@@ -103,10 +103,10 @@ struct source
 static char *shader_preprocess(struct source source, bool_t defines,
                                bool_t has_gshader, bool_t has_skin);
 
-vs_t g_vs[32];
+vs_t g_vs[64];
 uint32_t g_vs_num = 0;
 
-fs_t g_fs[32];
+fs_t g_fs[64];
 uint32_t g_fs_num = 0;
 
 static struct source *g_sources = NULL;
@@ -581,7 +581,40 @@ static uint32_t shader_new_loader(shader_t *self)
 		printf("GS: %s\n", g_vs[self->index].gcode);
 		exit(1);
 	}
+
+	self->uniforms = kh_init(uniform);
+	int32_t count;
+	/* GET UNNIFORM LOCATIONS */
+	glGetProgramiv(self->program, GL_ACTIVE_UNIFORMS, &count);
+
+	for (uint32_t i = 0; i < count; i++)
+	{
+		int32_t ret;
+		GLint size; // size of the variable
+		GLenum type; // type of the variable (float, vec3 or mat4, etc)
+
+		const GLsizei bufSize = 64; // maximum name length
+		GLchar name[bufSize]; // variable name in GLSL
+		GLsizei length; // name length
+
+		glGetActiveUniform(self->program, i, bufSize, &length, &size, &type, name);
+
+		khiter_t k = kh_put(uniform, self->uniforms, ref(name), &ret);
+		uint32_t *uniform = &kh_value(self->uniforms, k);
+		(*uniform) = glGetUniformLocation(self->program, name);
+	}
+
 	return 1;
+}
+
+uint32_t shader_cached_uniform(shader_t *self, uint32_t ref)
+{
+	khiter_t k = kh_get(uniform, self->uniforms, ref);
+	if (k == kh_end(self->uniforms))
+	{
+		return ~0;
+	}
+	return kh_value(self->uniforms, k);
 }
 
 static uint32_t fs_new_loader(fs_variation_t *self)
@@ -676,6 +709,7 @@ shader_t *shader_new(fs_t *fs, uint32_t fs_variation, vs_t *vs)
 	shader_t *self = calloc(1, sizeof *self);
 	self->fs = &fs->variations[fs_variation];
 	self->index = vs->index;
+	self->fs_variation = fs_variation;
 	self->has_skin = vs->has_skin;
 
 	self->ready = 0;

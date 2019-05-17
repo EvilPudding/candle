@@ -17,10 +17,8 @@ uint32_t g_mats_num;
 static vil_t g_mat_ctx;
 void mat_changed(vicall_t *call, slot_t slot, void *usrptr);
 
-static void init_type(uint32_t tid);
-
-const char *g_type_names[] = {"default"};
 struct mat_type {
+	char name[64];
 	vifunc_t *mat;
 	uint32_t ubo;
 	uint32_t ubo_size;
@@ -33,7 +31,26 @@ struct mat_type {
 };
 
 static struct mat_type g_mat_types[32];
-/* static uint32_t g_mat_types_num; */
+
+static void init_type(uint32_t tid, const char *type_name);
+
+static struct mat_type *get_type(const char *type_name)
+{
+	uint32_t tid;
+	for (tid = 0; g_mat_types[tid].mat; tid++)
+	{
+		if (!strncmp(g_mat_types[tid].name, type_name,
+		             sizeof(g_mat_types[tid].name)))
+		{
+			break;
+		}
+	}
+	if (!g_mat_types[tid].mat)
+	{
+		init_type(tid, type_name);
+	}
+	return &g_mat_types[tid];
+}
 
 uint32_t material_get_ubo(uint32_t mat_type)
 {
@@ -45,42 +62,41 @@ void _mat_changed(mat_t *mat)
 	mat_changed(mat->call, (slot_t){0}, mat);
 }
 
-mat_t *mat_new(const char *name)
+void mat_assign_type(mat_t *self, struct mat_type *type)
 {
-	mat_t *self = calloc(1, sizeof *self);
+	self->type = type - g_mat_types;
 
-	char buffer[256];
-	snprintf(buffer, sizeof(buffer), "_material%d_sandbox", g_mats_num);
-
-	strncpy(self->name, name, sizeof(self->name));
-
-	struct mat_type *type = &g_mat_types[self->type];
-	self->global_id = g_mats_num++;
-	self->type = 0;
-	if (!type->mat)
-	{
-		init_type(self->type);
-	}
 	self->id = type->free_position;
 	type->free_position = type->next_free[type->free_position];
 
 	if (self->id == 128)
 		printf("Too many material instances for type %d\n", self->type);
 
+	if (!self->call)
+	{
+		self->call = vicall_new(self->sandbox, type->mat, "material",
+								vec2(100, 10), ~0, V_BOTH);
+	}
+	vicall_watch(self->call, mat_changed, self);
+	loader_push(g_candle->loader, (loader_cb)_mat_changed, self, NULL);
+}
+
+
+mat_t *mat_new(const char *name, const char *type_name)
+{
+	mat_t *self = calloc(1, sizeof *self);
+	strncpy(self->name, name, sizeof(self->name));
+	self->global_id = g_mats_num++;
 	g_mats[self->global_id] = self;
 
-	char *str = str_new(64);
-	str_catf(&str, "material%d", self->global_id);
-	vifunc_t *sandbox = vifunc_new(&g_mat_ctx, buffer, NULL, 0, false);
-	if (sandbox)
-	{
-		self->call = vicall_new(sandbox, type->mat,
-				str, vec2(100, 10), ~0, V_BOTH);
-		vicall_watch(self->call, mat_changed, self);
-		loader_push(g_candle->loader, (loader_cb)_mat_changed, self, NULL);
-	}
-	str_free(str);
+	char buffer[256];
+	snprintf(buffer, sizeof(buffer), "_material%d_sandbox", self->global_id);
+	self->sandbox = vifunc_new(&g_mat_ctx, buffer, NULL, 0, false);
 
+	if (type_name)
+	{
+		mat_assign_type(self, get_type(type_name));
+	}
 
 	return self;
 }
@@ -100,14 +116,31 @@ vec4_t color_from_hex(const char *hex_str)
 
 mat_t *mat_from_file(const char *filename)
 {
-	mat_t *self = mat_new(filename);
+	const char *file_name = strrchr(filename, '/');
+	if(!file_name)
+	{
+		file_name = filename;
+	}
+	else
+	{
+		file_name += 1;
+	}
 
-	char *file_name = self->name + (strrchr(self->name, '/') - self->name);
-	if(!file_name) file_name = self->name;
+	mat_t *self = mat_new(file_name, NULL);
+	printf("loading %s\n", filename);
 
-	/* if (!vifunc_load(mat, "material.vil")) */
-	/* { */
-	/* } */
+
+	vifunc_load(self->sandbox, filename);
+
+	self->call = vifunc_get(self->sandbox, "material");
+	if (self->call)
+	{
+		mat_assign_type(self, self->call->type->usrptr);
+	}
+	else
+	{
+		printf("Material %s %d corrupt\n", file_name, self->sandbox->call_count);
+	}
 
 	return self;
 }
@@ -130,30 +163,68 @@ typedef struct
 	texture_t *texture;
 } _mat_sampler_t;
 
+static void load_bot_tile(texture_t *tex, float *w, float *h)
+{
+	uint32_t mip = 0;
+	*w = tex->width;
+	*h = tex->height;
+	while (*w > 128.0f || *h > 128.0f)
+	{
+		*w /= 2.0f;
+		*h /= 2.0f;
+		mip++;
+	}
+	if (mip > 0) mip -= 1;
+
+	load_tile(tex, mip, 1, 1, 1);
+}
+
+static bool_t _texture_load(vicall_t *call, _mat_sampler_t *texid, FILE *fp) 
+{
+	char filename[256];
+	int ret = fscanf(fp, "%s", filename);
+	if (ret < 0) return false;
+
+	texid->texture = sauces(filename);
+	if (!texid->texture)
+	{
+		printf("Failed to fetch texture '%s'\n", filename);
+	}
+	for (uint32_t i = 0; !texid->texture->bufs[0].indir_n; i++)
+	{
+		SDL_Delay(100);
+		if (i == 3)
+		{
+			printf("giving up on %s\n", filename);
+			break;
+		}
+	}
+	texid->tile = texid->texture->bufs[0].indir_n;
+	texid->size = vec2(texid->texture->width, texid->texture->height);
+
+	return true;
+}
+
+static void _texture_save(vicall_t *call, _mat_sampler_t *texid, FILE *fp) 
+{
+	fprintf(fp, "%s", texid->texture ? texid->texture->filename : "");
+}
+
 extern texture_t *g_cache;
 static float _tex_previewer_gui(vicall_t *call, _mat_sampler_t *texid, void *ctx) 
 {
 	float call_h = 0;
 	if (texid->texture)
 	{
-		uint32_t mip = 0;
-		float w = texid->texture->width;
-		float h = texid->texture->height;
-		while (w > 128.0f || h > 128.0f)
-		{
-			w /= 2.0f;
-			h /= 2.0f;
-			mip++;
-		}
-		if (mip > 0) mip -= 1;
-		nk_layout_row_static(ctx, h, w, 1);
+		float w;
+		float h;
+		load_bot_tile(texid->texture, &w, &h);
 
-		load_tile(texid->texture, mip, 1, 1, 1);
-
-		uint32_t tid = texid->texture->bufs[0].id;
+		uint32_t tid = texid->texture->bufs[0].indir_n;
 		texid->tile = tid;
 		texid->size = vec2(texid->texture->width, texid->texture->height);
 
+		nk_layout_row_static(ctx, h, w, 1);
 		struct nk_rect bounds;
 		nk_widget(&bounds, ctx);
 
@@ -170,10 +241,15 @@ static float _tex_previewer_gui(vicall_t *call, _mat_sampler_t *texid, void *ctx
 	{
 		char *file = NULL;
 		entity_signal(entity_null, ref("pick_file_load"), "png;tga;jpg", &file);
-		if(file)
+		if (file)
 		{
+			char *name = strrchr(file, '/') + 1;
+			texid->texture = sauces(name);
+			texid->tile = texid->texture->bufs[0].indir_n;
+			texid->size = vec2(texid->texture->width, texid->texture->height);
+			printf("loading '%s' -> '%s'\n", name, texid->texture->filename);
+			free(file);
 		}
-		texid->texture = sauces("flipbook.tga");
 	}
 	call_h += nk_layout_widget_bounds(ctx).h;
 
@@ -221,9 +297,9 @@ static float _number_gui(vicall_t *call, float *num, void *ctx)
 	/* if(*num < 20) *num = 20; */
 	/* nk_layout_row_begin(ctx, NK_DYNAMIC, *num, 2); */
 	nk_layout_row_begin(ctx, NK_DYNAMIC, 20, 2);
-	nk_layout_row_push(ctx, 0.20);
+	nk_layout_row_push(ctx, 0.40);
 	nk_label(ctx, vicall_name(call), NK_TEXT_LEFT);
-	nk_layout_row_push(ctx, 0.80);
+	nk_layout_row_push(ctx, 0.60);
 	*num = nk_propertyf(ctx, "#", -1000.0f, *num, 1000.0f, 0.01, 0.01);
 	nk_layout_row_end(ctx);
 	/* nk_slider_int(ctx, 20, num, 200, 1); */
@@ -232,9 +308,24 @@ static float _number_gui(vicall_t *call, float *num, void *ctx)
 
 int mat_menu(mat_t *self, void *ctx)
 {
+	nk_layout_row_begin(ctx, NK_DYNAMIC, 20, 2);
+	nk_layout_row_push(ctx, 0.70);
 	struct mat_type *type = &g_mat_types[self->type];
-	uint32_t new_tid = nk_combo(ctx, (const char**)g_type_names, 1, self->type, 20,
-	                             nk_vec2(200, 400));
+	uint32_t new_tid = self->type;
+	if (nk_combo_begin_label(ctx, type->name, nk_vec2(200.0f, 400.0f)))
+	{
+		nk_layout_row_dynamic(ctx, 20.0f, 1);
+		for(uint32_t i = 0; g_mat_types[i].mat; i++)
+		{
+			struct mat_type *t = &g_mat_types[i];
+			if (nk_combo_item_label(ctx, t->name, NK_TEXT_LEFT))
+			{
+				new_tid = i;
+			}
+		}
+		nk_combo_end(ctx);
+	}
+
 	if (new_tid != self->type)
 	{
 		struct mat_type *new_type = &g_mat_types[new_tid];
@@ -247,11 +338,14 @@ int mat_menu(mat_t *self, void *ctx)
 		type = new_type;
 	}
 
-	if(nk_button_label(ctx, "vil"))
+	nk_layout_row_push(ctx, 0.30);
+	if(nk_button_label(ctx, "edit"))
 	{
 		c_editmode(&SYS)->open_vil = type->mat;
 	}
-	vicall_gui(self->call, ctx);
+	nk_layout_row_end(ctx);
+
+	vicall_gui(self->call, ctx, true, 0.0f);
 
 	nk_layout_row_begin(ctx, NK_DYNAMIC, 20, 1);
 	nk_layout_row_push(ctx, 1.0f);
@@ -277,7 +371,7 @@ void *mat_loader(const char *path, const char *name, uint32_t ext)
 void materials_reg()
 {
 	sauces_loader(ref("mat"), mat_loader);
-	sauces_register("_default.mat", NULL, mat_new("_default.mat"));
+	sauces_register("_default.mat", NULL, mat_new("_default.mat", "default"));
 
 }
 
@@ -338,10 +432,57 @@ void material_foreach_output(vicall_t *call, slot_t slot, char **str)
 	}
 }
 
+void material_generate_precall(vicall_t *call, slot_t slot, char **args)
+{
+	str_catf(args, "vil_%s_in_t %s_in;\n", call->type->name, call->name);
+	str_catf(args, "vil_%s_out_t %s_out;\n", call->type->name, call->name);
+}
+
+void material_generate_assignments(vifunc_t *func, slot_t to, slot_t from, char **args)
+{
+	char buffer_to[256];
+	char buffer_from[256];
+	vifunc_slot_to_name(func, to, buffer_to, ".", "_in");
+	vifunc_slot_to_name(func, from, buffer_from, ".", "_out");
+
+	str_catf(args, "	%s = %s;\n", buffer_to, buffer_from);
+}
+
+void material_generate_assignments2(vifunc_t *func, slot_t to, slot_t from, char **args)
+{
+	char buffer_to[256];
+	char buffer_from[256];
+	vifunc_slot_to_name(func, to, buffer_to, ".", NULL);
+	vifunc_slot_to_name(func, from, buffer_from, ".", NULL);
+
+	str_catf(args, "	arg_in.%s = arg_out.%s;\n", buffer_to, buffer_from);
+}
+
+
+void material_generate_call(vicall_t *call, slot_t slot, char **args)
+{
+	if (!strcmp(call->type->name, "opaque")) return;
+	if (!strcmp(call->type->name, "transparent")) return;
+	str_catf(args, "	%s_func(%s_in, %s_out, tile_num, tile_array);\n",
+	         call->type->name, call->name, call->name);
+	/* str_catf(args, "%s_func(%s_in, %s_out);\n", */
+	         /* call->type->name, call->name, call->name); */
+}
+
+void material_generate_call2(vicall_t *call, slot_t slot, char **args)
+{
+	if (!strcmp(call->type->name, "opaque")) return;
+	if (!strcmp(call->type->name, "transparent")) return;
+	str_catf(args, "	%s_func(arg_in.%s, arg_out.%s, tile_num, tile_array);\n",
+	         call->type->name, call->name, call->name);
+}
+
+
 void material_generate_func(vifunc_t *func, char **str)
 {
 	if (func->name[0] == '_') return;
 	if (!strcmp(func->name, "opaque")) return;
+	if (!strcmp(func->name, "transparent")) return;
 
 	str_catf(str, "void %s_func(in vil_%s_in_t arg_in, out vil_%s_out_t arg_out,\n"
 	                            "inout uint tile_num, inout uint tile_array[8]) {\n",
@@ -372,6 +513,12 @@ void material_generate_func(vifunc_t *func, char **str)
 	{
 		str_cat(str, "	arg_out.result = sin(arg_in.x);\n");
 	}
+	else if (func->id == ref("range"))
+	{
+		str_cat(str, "	arg_out.result = ((arg_in.x - arg_in.min_in) "
+		             " / (arg_in.max_in - arg_in.min_in))"
+		             " * (arg_in.max_out - arg_in.min_out) + arg_in.min_out;\n");
+	}
 	else if (func->id == ref("mul"))
 	{
 		str_cat(str, "	arg_out.result = arg_in.x * arg_in.y;\n");
@@ -381,7 +528,7 @@ void material_generate_func(vifunc_t *func, char **str)
 	         || func->id == ref("mix_vec3")
 	         || func->id == ref("mix_vec4") )
 	{
-		str_cat(str, "	arg_out.result = mix(arg_in.x, arg_in.y, arg_in.a);\n");
+		str_cat(str, "	arg_out.result = mix(arg_in.y, arg_in.x, arg_in.a);\n");
 	}
 	else if (func->id == ref("add"))
 	{
@@ -412,7 +559,8 @@ void material_generate_func(vifunc_t *func, char **str)
 	}
 	else
 	{
-
+		vifunc_iterate_dependencies(func, (vil_link_cb)material_generate_assignments2,
+									(vil_call_cb)material_generate_call2, str);
 	}
 	str_cat(str, "}\n");
 }
@@ -452,7 +600,7 @@ void material_generate_struct(vifunc_t *func, char **args)
 	char *outputs = str_new(100);
 	vifunc_foreach_call(func, false, true, false, true,
 	                    (vil_call_cb)material_foreach_input, &inputs);
-	vifunc_foreach_call(func, false, false, true, true,
+	vifunc_foreach_call(func, false, true, true, true,
 	                    (vil_call_cb)material_foreach_output, &outputs);
 
 	str_catf(args, "struct vil_%s_in_t {\n%s};\n", func->name,
@@ -464,38 +612,12 @@ void material_generate_struct(vifunc_t *func, char **args)
 	str_free(outputs);
 }
 
-void material_generate_precall(vicall_t *call, slot_t slot, char **args)
-{
-	str_catf(args, "vil_%s_in_t %s_in;\n", call->type->name, call->name);
-	str_catf(args, "vil_%s_out_t %s_out;\n", call->type->name, call->name);
-}
-
-void material_generate_assignments(vifunc_t *func, slot_t to, slot_t from, char **args)
-{
-	char buffer_to[256];
-	char buffer_from[256];
-	vifunc_slot_to_name(func, to, buffer_to, ".", "_in");
-	vifunc_slot_to_name(func, from, buffer_from, ".", "_out");
-
-	str_catf(args, "%s = %s;\n", buffer_to, buffer_from);
-}
-
-void material_generate_call(vicall_t *call, slot_t slot, char **args)
-{
-	if (!strcmp(call->type->name, "opaque")) return;
-	str_catf(args, "%s_func(%s_in, %s_out, tile_num, tile_array);\n",
-	         call->type->name, call->name, call->name);
-	/* str_catf(args, "%s_func(%s_in, %s_out);\n", */
-	         /* call->type->name, call->name, call->name); */
-}
-
 struct transparent
 {
-	vec4_t albedo;
+	vec4_t absorve;
 	vec3_t normal;
 	vec3_t emissive;
 	float roughness;
-	vec4_t absorve;
 };
 
 struct opaque
@@ -505,11 +627,10 @@ struct opaque
 	vec3_t emissive;
 	float roughness;
 	float metalness;
-	vec3_t padding;
 };
 
 static void _generate_uniform(vicall_t *root, vicall_t *call, slot_t slot,
-                        char *data, void *usrptr)
+                        uint8_t *data, void *usrptr)
 {
 	char **args = usrptr;
 	char buffer[256];
@@ -518,7 +639,7 @@ static void _generate_uniform(vicall_t *root, vicall_t *call, slot_t slot,
 }
 
 static void _generate_uniform_assigment(vicall_t *root, vicall_t *call, slot_t slot,
-                        char *data, void *usrptr)
+                        uint8_t *data, void *usrptr)
 {
 	char **args = usrptr;
 	char buffer[256];
@@ -530,7 +651,7 @@ static void _generate_uniform_assigment(vicall_t *root, vicall_t *call, slot_t s
 }
 
 static void _generate_uniform_data(vicall_t *root, vicall_t *call, slot_t slot,
-                        char *data, void *usrptr)
+                        uint8_t *data, void *usrptr)
 {
 	char **output = usrptr;
 	if (data)
@@ -542,25 +663,35 @@ static void _generate_uniform_data(vicall_t *root, vicall_t *call, slot_t slot,
 
 void mat_changed(vicall_t *call, slot_t slot, void *usrptr)
 {
-	uint32_t size = ceilf(((float)vicall_get_size(call)) / 16) * 16;
+	uint32_t unpadded = vicall_get_size(call);
+	uint32_t size = ceilf(((float)unpadded) / 16) * 16;
 
 	mat_t *self = usrptr;
-	char *data = alloca(size);
-	char *end = data;
+	uint8_t *data = alloca(size);
+	uint8_t *end = data;
 	vicall_foreach_unlinked_input(call, _generate_uniform_data, &end);
 	
 	struct mat_type *type = &g_mat_types[self->type];
-	glBindBuffer(GL_UNIFORM_BUFFER, type->ubo); glerr();
-	glBufferSubData(GL_UNIFORM_BUFFER, size * self->id, size, data); glerr();
+	if (type->ubo)
+	{
+		glBindBuffer(GL_UNIFORM_BUFFER, type->ubo); glerr();
+		glBufferSubData(GL_UNIFORM_BUFFER, size * self->id, unpadded, data); glerr();
+	}
 }
 
-uint32_t mat_get_group(mat_t *mat)
+uint32_t mat_get_group(mat_t *self)
 {
-	return vifunc_get(mat->call->type, "result")->type->id;
+	return vifunc_get(self->call->type, "pbr")->type->id;
 }
 
-void mat_type_changed(vicall_t *call, slot_t slot, void *usrptr)
+bool_t mat_is_transparent(mat_t *self)
 {
+	return mat_get_group(self) == ref("transparent");
+}
+
+void mat_type_changed(vifunc_t *func, void *usrptr)
+{
+	vicall_t *call = vifunc_get(func, "pbr");
 	struct mat_type *type = usrptr;
 
 	uint32_t size = ceilf(((float)vicall_get_size(type->tmp_material_instance)) / 16) * 16;
@@ -632,14 +763,14 @@ void mat_type_changed(vicall_t *call, slot_t slot, void *usrptr)
 		"	uint tile_num = 0u;\n"
 	);
 
-	vifunc_foreach_call(call->parent, false, true, true, false,
+	vifunc_foreach_call(func, false, true, true, false,
 	                    (vil_call_cb)material_generate_precall, &gbuffer);
 
 	if (group == ref("transparent"))
 	{
 		str_cat(&gbuffer,
 			"#ifdef QUERY_PASS\n"
-			"	if (transparent && (((int(gl_FragCoord.x) + int(gl_FragCoord.y)) & 1) == 0))\n"
+			"	if (((int(gl_FragCoord.x) + int(gl_FragCoord.y)) & 1) == 0)\n"
 			"		discard;\n"
 			"#endif\n"
 		);
@@ -699,39 +830,37 @@ void mat_type_changed(vicall_t *call, slot_t slot, void *usrptr)
 		if (group == ref("opaque"))
 		{
 			str_cat(&gbuffer,
-				"	vec3 norm = get_normal(result_in.normal);\n");
+				"	vec3 norm = get_normal(pbr_in.normal);\n");
 		}
 		else if (group == ref("decal"))
 		{
 			str_cat(&gbuffer,
-				"	vec3 norm = ((camera(view) * model) * vec4(result_in.normal, 0.0)).xyz;\n");
+				"	vec3 norm = ((camera(view) * model) * vec4(pbr_in.normal, 0.0)).xyz;\n");
 		}
 
 		str_cat(&gbuffer,
-			/* "	if (result_in.albedo.a < 0.7) discard;\n" */
-			"	Alb = vec4(result_in.albedo.rgb, receive_shadows ? 1.0 : 0.5);\n"
+			"	if (pbr_in.albedo.a < 0.7) discard;\n"
+			"	Alb = vec4(pbr_in.albedo.rgb, receive_shadows ? 1.0 : 0.5);\n"
 			"	NMR.rg = encode_normal(norm);\n"
-			"	NMR.b = result_in.metalness;\n"
-			"	NMR.a = result_in.roughness;\n"
-			"	Emi = result_in.emissive;\n");
+			"	NMR.b = pbr_in.metalness;\n"
+			"	NMR.a = pbr_in.roughness;\n"
+			"	Emi = pbr_in.emissive;\n");
 	}
 	else if(group == ref("transparent"))
 	{
 		str_cat(&gbuffer,
 			"	vec2 pp = pixel_pos();\n"
-			"	vec4 emit = resolveProperty(mat(emissive), texcoord, false);\n"
-			"	vec4 final = result_in.albedo;\n"
-			"	if (result_in.roughness > 0.0) {\n"
-			"		vec3 nor = get_normal(result_in.normal);\n"
-			"		vec2 coord = pp + nor.xy * (result_in.roughness * 0.03);\n"
-			"		float mip = clamp(result_in.roughness * 3.0, 0.0, 3.0);\n"
+			"	vec4 final = vec4(1.0);\n"
+			"	if (pbr_in.roughness > 0.0) {\n"
+			"		vec3 nor = get_normal(pbr_in.normal);\n"
+			"		vec2 coord = pp + nor.xy * (pbr_in.roughness * 0.03);\n"
+			"		float mip = clamp(pbr_in.roughness * 3.0, 0.0, 3.0);\n"
 			"		vec3 refracted = textureLod(refr.color, coord.xy, mip).rgb;\n"
-			"		refracted = refracted * (1.0 - result_in.absorve);\n"
+			"		refracted = refracted * (1.0 - pbr_in.absorve);\n"
 			"		final = vec4(mix(final.rgb, refracted, final.a), 1.0);\n"
 			"	} else {\n"
-			"		final = result_in.albedo;\n"
 			"	}\n"
-			"	final.rgb += result_in.emit;\n"
+			"	final.rgb += pbr_in.emissive;\n"
 			"	FragColor = final;\n");
 	}
 
@@ -739,25 +868,25 @@ void mat_type_changed(vicall_t *call, slot_t slot, void *usrptr)
 		"#endif\n"
 		"}\n");
 
-	{
-		const char *line = gbuffer;
-		uint32_t line_num = 1u;
-		while (true)
-		{
-			char *next_line = strchr(line, '\n');
-			if (next_line)
-			{
-				printf("%d	%.*s\n", line_num, (int)(next_line - line), line);
-				line = next_line+1;
-			}
-			else
-			{
-				printf("%d	%s\n", line_num, line);
-				break;
-			}
-			line_num++;
-		}
-	}
+	/* { */
+	/* 	const char *line = gbuffer; */
+	/* 	uint32_t line_num = 1u; */
+	/* 	while (true) */
+	/* 	{ */
+	/* 		char *next_line = strchr(line, '\n'); */
+	/* 		if (next_line) */
+	/* 		{ */
+	/* 			printf("%d	%.*s\n", line_num, (int)(next_line - line), line); */
+	/* 			line = next_line+1; */
+	/* 		} */
+	/* 		else */
+	/* 		{ */
+	/* 			printf("%d	%s\n", line_num, line); */
+	/* 			break; */
+	/* 		} */
+	/* 		line_num++; */
+	/* 	} */
+	/* } */
 
 	c_render_device(&SYS)->shader = NULL;
 	c_render_device(&SYS)->frag_bound = NULL;
@@ -776,7 +905,6 @@ void mat_type_changed(vicall_t *call, slot_t slot, void *usrptr)
 	char *depth = str_new(64);
 	str_cat(&depth, "#define SHADOW_PASS\n");
 	str_cat(&depth, gbuffer);
-
 
 	uint32_t id = type - g_mat_types;
 	str_catf(&d_name, "depth#%d", id);
@@ -840,19 +968,21 @@ void mat_type_changed(vicall_t *call, slot_t slot, void *usrptr)
 
 void _mat_type_changed(struct mat_type *type)
 {
-	vicall_t *opaque = vifunc_get(type->mat, "result");
-	mat_type_changed(opaque, (slot_t){0}, type);
+	mat_type_changed(type->mat, type);
 }
 
-static void init_type(uint32_t tid)
+static void init_type(uint32_t tid, const char *type_name)
 {
+	char buffer[256];
 	if (!g_mat_ctx.funcs)
 		materials_init_vil();
 
 	struct mat_type *type = &g_mat_types[tid];
+	strncpy(type->name, type_name, sizeof(type->name));
 
-	type->mat = vifunc_new(&g_mat_ctx, "material", NULL,
-	                       sizeof(uint32_t), false);
+	snprintf(buffer, sizeof(buffer), "_%s", type->name);
+
+	type->mat = vifunc_new(&g_mat_ctx, buffer, NULL, sizeof(uint32_t), false);
 	for (uint32_t i = 0; i < 128; i++)
 	{
 		type->next_free[i] = i + 1;
@@ -860,16 +990,18 @@ static void init_type(uint32_t tid)
 	type->free_position = 0;
 
 	vifunc_t *mat = type->mat;
-	if (!vifunc_load(mat, "material.vil"))
+	mat->usrptr = type;
+	snprintf(buffer, sizeof(buffer), "%s.vil", type->name);
+	if (!vifunc_load(mat, buffer))
 	{
 		float y = 0.0f;
 		float inc = 100.0f;
-		printf("FAILED TO LOAD\n");
+		printf("FAILED TO LOAD %s\n", buffer);
 		vifunc_t *v2 = vil_get(&g_mat_ctx, ref("vec2"));
 		vifunc_t *tnum = vil_get(&g_mat_ctx, ref("number"));
 		vifunc_t *v3 = vil_get(&g_mat_ctx, ref("vec3"));
 		vifunc_t *opaque = vil_get(&g_mat_ctx, ref("opaque"));
-		vicall_new(mat, opaque, "result", vec2(600, 10), ~0, V_IN);
+		vicall_new(mat, opaque, "pbr", vec2(600, 10), ~0, V_IN);
 		vicall_new(mat, v2, "tex_space", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
 		vicall_new(mat, tnum, "time", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
 		vicall_new(mat, v2, "screen_space", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
@@ -878,16 +1010,16 @@ static void init_type(uint32_t tid)
 		vicall_new(mat, v3, "vertex_normal", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
 		vicall_new(mat, v3, "obj_pos", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
 	}
-	vicall_t *result = vifunc_get(mat, "result");
-	vicall_watch(result, mat_type_changed, type);
+	vifunc_watch(mat, mat_type_changed, type);
 
-	vifunc_t *placeholder = vifunc_new(&g_mat_ctx, "_placeholder", NULL, 0,
-	                                   false);
+	snprintf(buffer, sizeof(buffer), "_placeholder_%s", type->name);
+
+	vifunc_t *placeholder = vifunc_new(&g_mat_ctx, buffer, NULL, 0, false);
 	if (placeholder)
 	{
 		placeholder->usrptr = type;
 		type->tmp_material_instance = vicall_new(placeholder, mat,
-												 g_type_names[tid],
+												 type->name,
 												 vec2(100, 10), ~0, V_BOTH);
 
 		loader_push(g_candle->loader, (loader_cb)_mat_type_changed, type, NULL);
@@ -899,20 +1031,18 @@ void materials_init_vil()
 {
 	if (g_mat_ctx.funcs)
 	    return;
-	vicall_t *r, *g, *b, *a, *normal, *albedo;
+	vicall_t *r, *g, *b, *a, *normal, *albedo, *roughn, *color;
 	vil_t *ctx = &g_mat_ctx;
 
 	vil_init(ctx);
 
-	vifunc_t *tint = vifunc_new(ctx, "integer",
-	                            (vifunc_gui_cb)_vint_gui,
+	vifunc_t *tint = vifunc_new(ctx, "integer", (vifunc_gui_cb)_vint_gui,
 			                    sizeof(int32_t), true);
 
-	vifunc_t *tnum = vifunc_new(ctx, "number",
-	                            (vifunc_gui_cb)_number_gui,
+	vifunc_t *tnum = vifunc_new(ctx, "number", (vifunc_gui_cb)_number_gui,
 			                    sizeof(float), true);
-	tnum->builtin_load = _number_load;
-	tnum->builtin_save = _number_save;
+	tnum->builtin_load = (vifunc_load_cb)_number_load;
+	tnum->builtin_save = (vifunc_save_cb)_number_save;
 
 	vifunc_t *v2 = vifunc_new(ctx, "vec2", NULL, sizeof(vec2_t), true);
 		r = vicall_new(v2, tnum, "x", vec2(40, 10),  offsetof(vec2_t, x), V_BOTH);
@@ -946,10 +1076,23 @@ void materials_init_vil()
 		vicall_new(visin, tnum, "x", vec2(40, 10),  ~0, V_IN);
 		vicall_new(visin, tnum, "result", vec2(40, 360), ~0, V_OUT);
 
+	vifunc_t *virange = vifunc_new(ctx, "range", NULL, 0, false);
+		vicall_new(virange, tnum, "x", vec2(40, 10),  ~0, V_IN);
+		vicall_t *mini = vicall_new(virange, tnum, "min_in", vec2(40, 10),  ~0, V_IN);
+		vicall_t *maxi = vicall_new(virange, tnum, "max_in", vec2(40, 10),  ~0, V_IN);
+		vicall_t *mino = vicall_new(virange, tnum, "min_out", vec2(40, 10),  ~0, V_IN);
+		vicall_t *maxo = vicall_new(virange, tnum, "max_out", vec2(40, 10),  ~0, V_IN);
+		vicall_new(virange, tnum, "result", vec2(40, 360), ~0, V_OUT);
+		vicall_set_arg(mini, ref("min_in"), &((float){-1.0f}));
+		vicall_set_arg(maxi, ref("max_in"), &((float){1.0f}));
+		vicall_set_arg(mino, ref("min_out"), &((float){0.0f}));
+		vicall_set_arg(maxo, ref("max_out"), &((float){1.0f}));
+
 	vifunc_t *vimul = vifunc_new(ctx, "mul", NULL, 0, false);
 		vicall_new(vimul, tnum, "x", vec2(40, 10),  ~0, V_IN);
-		vicall_new(vimul, tnum, "y", vec2(40, 10),  ~0, V_IN);
+		r = vicall_new(vimul, tnum, "y", vec2(40, 10),  ~0, V_IN);
 		vicall_new(vimul, tnum, "result", vec2(40, 360), ~0, V_OUT);
+		vicall_set_arg(r, ref("y"), &((float){1.0f}));
 
 	vifunc_t *vimix = vifunc_new(ctx, "mix_num", NULL, 0, false);
 		vicall_new(vimix, tnum, "x", vec2(40, 10),  ~0, V_IN);
@@ -990,6 +1133,8 @@ void materials_init_vil()
 		vicall_new(ttex, tint, "tile", vec2(100, 10), offsetof(_mat_sampler_t, tile), V_IN | V_HID);
 		vicall_new(ttex, v2, "size", vec2(100, 10), offsetof(_mat_sampler_t, size), V_IN | V_HID);
 		vicall_new(ttex, v4, "result", vec2(300, 10), offsetof(_mat_sampler_t, result), V_OUT);
+	ttex->builtin_load = (vifunc_load_cb)_texture_load;
+	ttex->builtin_save = (vifunc_save_cb)_texture_save;
 
 	vifunc_t *tflip = vifunc_new(ctx, "flipbook", NULL, 0, false);
 		vicall_new(tflip, v2, "coord", vec2(100, 10), ~0, V_IN);
@@ -998,32 +1143,65 @@ void materials_init_vil()
 		vicall_new(tflip, tnum, "frame", vec2(100, 10), ~0, V_IN);
 		vicall_new(tflip, v2, "result", vec2(300, 10), ~0, V_OUT);
 
-	vifunc_t *tprop = vifunc_new(ctx, "property", NULL, 0, false);
+	vifunc_t *tprop = vifunc_new(ctx, "property4", NULL, 0, false);
 		vicall_new(tprop, ttex, "texture", vec2(100, 10), ~0, V_IN);
-		vicall_new(tprop, v4, "color", vec2(200, 10), ~0, V_IN);
+		color = vicall_new(tprop, v4, "color", vec2(200, 10), ~0, V_IN);
 		vicall_new(tprop, vimix4, "mix", vec2(300, 10), ~0, V_BOTH);
 		vicall_new(tprop, tnum, "blend", vec2(400, 10), ~0, V_IN);
 		vifunc_link(tprop, ref("texture.result"), ref("mix.x"));
 		vifunc_link(tprop, ref("color"), ref("mix.y"));
 		vifunc_link(tprop, ref("blend"), ref("mix.a"));
+		vicall_set_arg(color, ref("color"), &((vec4_t){.x = 0.5f, .y = 0.5f, .z = 0.5f, .w = 1.0f}));
+
+	tprop = vifunc_new(ctx, "property3", NULL, 0, false);
+		vicall_new(tprop, ttex, "texture", vec2(100, 10), ~0, V_IN);
+		color = vicall_new(tprop, v3, "color", vec2(200, 10), ~0, V_IN);
+		vicall_new(tprop, vimix3, "mix", vec2(300, 10), ~0, V_BOTH);
+		vicall_new(tprop, tnum, "blend", vec2(400, 10), ~0, V_IN);
+		vifunc_link(tprop, ref("texture.result.x"), ref("mix.x.x"));
+		vifunc_link(tprop, ref("texture.result.y"), ref("mix.x.y"));
+		vifunc_link(tprop, ref("texture.result.z"), ref("mix.x.z"));
+		vifunc_link(tprop, ref("color"), ref("mix.y"));
+		vifunc_link(tprop, ref("blend"), ref("mix.a"));
+		vicall_set_arg(color, ref("color"), &((vec3_t){.x = 0.0f, .y = 0.0f, .z = 0.0f}));
+
+	tprop = vifunc_new(ctx, "property2", NULL, 0, false);
+		vicall_new(tprop, ttex, "texture", vec2(100, 10), ~0, V_IN);
+		color = vicall_new(tprop, v2, "color", vec2(200, 10), ~0, V_IN);
+		vicall_new(tprop, vimix2, "mix", vec2(300, 10), ~0, V_BOTH);
+		vicall_new(tprop, tnum, "blend", vec2(400, 10), ~0, V_IN);
+		vifunc_link(tprop, ref("texture.result.x"), ref("mix.x.x"));
+		vifunc_link(tprop, ref("texture.result.y"), ref("mix.x.y"));
+		vifunc_link(tprop, ref("color"), ref("mix.y"));
+		vifunc_link(tprop, ref("blend"), ref("mix.a"));
+		vicall_set_arg(color, ref("color"), &((vec2_t){.x = 0.0f, .y = 0.0f}));
+
+	tprop = vifunc_new(ctx, "property1", NULL, 0, false);
+		vicall_new(tprop, ttex, "texture", vec2(100, 10), ~0, V_IN);
+		color = vicall_new(tprop, tnum, "value", vec2(200, 10), ~0, V_IN);
+		vicall_new(tprop, vimix, "mix", vec2(300, 10), ~0, V_BOTH);
+		vicall_new(tprop, tnum, "blend", vec2(400, 10), ~0, V_IN);
+		vifunc_link(tprop, ref("texture.result.x"), ref("mix.x"));
+		vifunc_link(tprop, ref("value"), ref("mix.y"));
+		vifunc_link(tprop, ref("blend"), ref("mix.a"));
+		vicall_set_arg(color, ref("color"), &((float){0.0f}));
 
 	vifunc_t *opaque = vifunc_new(ctx, "opaque", NULL, sizeof(struct opaque), false);
 		albedo = vicall_new(opaque, v4, "albedo", vec2(100, 10),
 		                    offsetof(struct opaque, albedo), V_IN);
 		normal = vicall_new(opaque, v3, "normal", vec2(200, 10),
 		                    offsetof(struct opaque, normal), V_IN);
-		vicall_new(opaque, tnum, "roughness", vec2(300, 10),
-		           offsetof(struct opaque, roughness), V_IN);
+		roughn = vicall_new(opaque, tnum, "roughness", vec2(300, 10),
+		                    offsetof(struct opaque, roughness), V_IN);
 		vicall_new(opaque, tnum, "metalness", vec2(400, 10),
 		           offsetof(struct opaque, metalness), V_IN);
 		vicall_new(opaque, v3, "emissive", vec2(500, 10),
 		           offsetof(struct opaque, emissive), V_IN);
 		vicall_set_arg(albedo, ref("albedo"), &((vec4_t){.x = 0.5f, .y = 0.5f, .z = 0.5f, .w = 1.0f}));
 		vicall_set_arg(normal, ref("normal"), &((vec3_t){.x = 0.5f, .y = 0.5f, .z = 1.0f}));
+		vicall_set_arg(roughn, ref("roughness"), &((float){0.5f}));
 
 	vifunc_t *transparent = vifunc_new(ctx, "transparent", NULL, sizeof(struct transparent), false);
-		vicall_new(transparent, v4, "albedo", vec2(100, 10),
-		           offsetof(struct transparent, albedo), V_IN);
 		vicall_new(transparent, v3, "absorve", vec2(200, 10),
 		           offsetof(struct transparent, absorve), V_IN);
 		vicall_new(transparent, v3, "normal", vec2(200, 10),
@@ -1061,9 +1239,19 @@ void mat4f(mat_t *self, uint32_t ref, vec4_t value)
 
 void mat1t(mat_t *self, uint32_t ref, texture_t *value)
 {
+	for (uint32_t i = 0; !value->bufs[0].indir_n; i++)
+	{
+		SDL_Delay(100);
+		if (i == 3)
+		{
+			printf("giving up on %s\n", value->filename);
+			break;
+		}
+	}
 	_mat_sampler_t sampler;
 	sampler.texture = value;
 	sampler.size.x = value->width;
 	sampler.size.y = value->height;
+	sampler.tile = value->bufs[0].indir_n;
 	vicall_set_arg(self->call, ref, &sampler);
 }

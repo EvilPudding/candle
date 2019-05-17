@@ -34,7 +34,7 @@ static void pass_unbind_textures(pass_t *pass)
 
 static int pass_bind_buffer(pass_t *pass, bind_t *bind, shader_t *shader)
 {
-	shader_bind_t *sb = &bind->vs_uniforms[shader->index];
+	hash_bind_t *sb = &bind->vs_uniforms;
 
 	texture_t *buffer = bind->buffer;
 
@@ -47,21 +47,18 @@ static int pass_bind_buffer(pass_t *pass, bind_t *bind, shader_t *shader)
 			if(buffer->bufs[t].ready)
 			{
 				int i = pass->bound_textures++;
-				/* if (i == 0) printf("%s binding id %d %s\n", pass->name, */
-				/*                    buffer->bufs[t].id, */
-				/*                    buffer->bufs[t].name); */
 				glActiveTexture(GL_TEXTURE0 + FIRST_TEX + i);
 				texture_bind(buffer, t);
-				glUniform1i(sb->buffer.u_tex[t], FIRST_TEX + i);
+				glUniform1i(shader_cached_uniform(shader, sb->buffer.u_tex[t]),
+				            FIRST_TEX + i);
 				glerr();
 			}
-			/* glUniform1i(sb->buffer.u_tex[t], buffer->bufs[t].id); glerr(); */
 		}
 	}
 	return 1;
 }
 
-void bind_get_uniforms(bind_t *bind, shader_bind_t *sb, shader_t *shader)
+void bind_get_uniforms(bind_t *bind, hash_bind_t *sb)
 {
 	int t;
 	switch(bind->type)
@@ -72,21 +69,23 @@ void bind_get_uniforms(bind_t *bind, shader_bind_t *sb, shader_t *shader)
 		case TEX:
 			for(t = 0; t < bind->buffer->bufs_size; t++)
 			{
-				sb->buffer.u_tex[t] = shader_uniform(shader, bind->name,
-						bind->buffer->bufs[t].name);
+				char buffer[256];
+				snprintf(buffer, sizeof(buffer), "%s.%s", bind->name,
+				         bind->buffer->bufs[t].name);
+				sb->buffer.u_tex[t] = ref(buffer);
 			}
 			break;
 		default:
-			sb->number.u = shader_uniform(shader, bind->name, NULL);
-			if(sb->number.u >= 4294967295) { }
+			sb->number.u = ref(bind->name);
 			break;
 	}
-	sb->cached = 1;
+	sb->cached = true;
 
 }
 
 static void bind_pass(pass_t *pass, shader_t *shader)
 {
+	/* this function allows null shader for CALLBACK only */
 	int i;
 
 	if (!pass) return;
@@ -98,30 +97,27 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 	{
 		if (pass->output->target != GL_TEXTURE_2D)
 		{
-			glUniform2f(shader_uniform(shader, "screen_size", NULL),
-			            pass->output->width, pass->output->height);
+			glUniform2f(shader_cached_uniform(shader, ref("screen_size")),
+					pass->output->width, pass->output->height);
 		}
 		else
 		{
 			uvec2_t size = pass->output->sizes[pass->framebuffer_id];
-			glUniform2f(shader_uniform(shader, "screen_size", NULL),
-			            size.x, size.y);
+			glUniform2f(shader_cached_uniform(shader, ref("screen_size")),
+					size.x, size.y);
 		}
 	}
 
 	glerr();
+	pass->bound_textures = 0;
 
 	for(i = 0; i < pass->binds_size; i++)
 	{
 		bind_t *bind = &pass->binds[i];
-		shader_bind_t *sb = NULL;
-		if (shader)
+		hash_bind_t *sb = &bind->vs_uniforms;
+		if (!sb->cached && shader)
 		{
-			sb =  &bind->vs_uniforms[shader->index];
-			if (!sb->cached)
-			{
-				bind_get_uniforms(bind, sb, shader);
-			}
+			bind_get_uniforms(bind, sb);
 		}
 
 		switch(bind->type)
@@ -135,7 +131,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			{
 				bind->number = ((number_getter)bind->getter)(bind->usrptr);
 			}
-			glUniform1f(sb->number.u, bind->number); glerr();
+			glUniform1f(shader_cached_uniform(shader, sb->number.u), bind->number); glerr();
 			glerr();
 			break;
 		case INT:
@@ -143,7 +139,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			{
 				bind->integer = ((integer_getter)bind->getter)(bind->usrptr);
 			}
-			glUniform1i(sb->integer.u, bind->integer); glerr();
+			glUniform1i(shader_cached_uniform(shader, sb->integer.u), bind->integer); glerr();
 			glerr();
 			break;
 		case VEC2:
@@ -151,7 +147,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			{
 				bind->vec2 = ((vec2_getter)bind->getter)(bind->usrptr);
 			}
-			glUniform2f(sb->vec2.u, bind->vec2.x, bind->vec2.y);
+			glUniform2f(shader_cached_uniform(shader, sb->vec2.u), bind->vec2.x, bind->vec2.y);
 			glerr();
 			break;
 		case VEC3:
@@ -159,7 +155,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			{
 				bind->vec3 = ((vec3_getter)bind->getter)(bind->usrptr);
 			}
-			glUniform3f(sb->vec3.u, _vec3(bind->vec3));
+			glUniform3f(shader_cached_uniform(shader, sb->vec3.u), _vec3(bind->vec3));
 			glerr();
 			break;
 		case VEC4:
@@ -167,7 +163,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			{
 				bind->vec4 = ((vec4_getter)bind->getter)(bind->usrptr);
 			}
-			glUniform4f(sb->vec4.u, _vec4(bind->vec4));
+			glUniform4f(shader_cached_uniform(shader, sb->vec4.u), _vec4(bind->vec4));
 			glerr();
 			break;
 		case CALLBACK:
@@ -469,8 +465,6 @@ void renderer_default_pipeline(renderer_t *self)
 		(bind_t[]){
 			{CLEAR_DEPTH, .number = 1.0f},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
-			{INT, "transparent", .integer = false},
-			/* {SKIP, .integer = 8}, */
 			{NONE}
 		}
 	);
@@ -478,8 +472,6 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_pass(self, "query_mips", "query_mips", ref("transparent"), 0,
 			query_mips, query_mips, 0,
 		(bind_t[]){
-			{INT, "transparent", .integer = true},
-			/* {SKIP, .integer = 8}, */
 			{NONE}
 		}
 	);
@@ -489,8 +481,6 @@ void renderer_default_pipeline(renderer_t *self)
 			query_mips, query_mips, 0,
 		(bind_t[]){
 			{CALLBACK, .getter = (getter_cb)renderer_process_query_mips, .usrptr = self},
-			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
-			/* {SKIP, .integer = 8}, */
 			{NONE}
 		}
 	);
@@ -1100,7 +1090,6 @@ void renderer_add_pass(
 
 	pass->draw_every = 1;
 	pass->binds = malloc(sizeof(bind_t) * bind_count);
-	int j;
 	pass->binds_size = 0;
 	for(i = 0; i < bind_count; i++)
 	{
@@ -1130,18 +1119,15 @@ void renderer_add_pass(
 		bind_t *bind = &pass->binds[pass->binds_size++];
 		*bind = binds[i];
 
-		for(j = 0; j < 16; j++)
-		{
-			shader_bind_t *sb = &bind->vs_uniforms[j];
+		hash_bind_t *sb = &bind->vs_uniforms;
 
-			sb->cached = 0;
-			int t;
-			for(t = 0; t < 16; t++)
-			{
-				sb->buffer.u_tex[t] = -1;
-			}
-			bind->hash = ref(bind->name);
+		sb->cached = false;
+		int t;
+		for(t = 0; t < 16; t++)
+		{
+			sb->buffer.u_tex[t] = -1;
 		}
+		bind->hash = ref(bind->name);
 	}
 	pass->binds = realloc(pass->binds, sizeof(bind_t) * pass->binds_size);
 	self->ready = 0;

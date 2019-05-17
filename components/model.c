@@ -455,7 +455,7 @@ static void c_model_init(c_model_t *self)
 {
 	if(!g_missing_mat)
 	{
-		g_missing_mat = mat_new("missing");
+		g_missing_mat = mat_new("missing", "default");
 		mat4f(g_missing_mat, ref("albedo.color"), vec4(0.0, 0.9, 1.0, 1.0));
 	}
 
@@ -664,11 +664,7 @@ void c_model_update_mat(c_model_t *self)
 {
 	if(self->mat)
 	{
-		/* int transp = self->mat->transparency.color.a > 0.0f || */
-		/* 	self->mat->transparency.texture || */
-		/* 	self->mat->emissive.color.a > 0.0f || */
-		/* 	self->mat->emissive.texture; */
-		int transp = false;
+		int transp = mat_is_transparent(self->mat);
 		if(transp)
 		{
 			drawable_remove_group(&self->draw, self->visible_group);
@@ -787,7 +783,7 @@ int c_model_tool(c_model_t *self, void *ctx)
 		{
 			if(nk_button_label(ctx, tool->name))
 			{
-				entity_t ent = entity_new(c_model_new(NULL, mat_new("k"), 1, 1));
+				entity_t ent = entity_new(c_model_new(NULL, mat_new("k", "default"), 1, 1));
 				c_editmode_select(c_editmode(&SYS), ent);
 				c_model_edit(c_model(&ent), i, MESH_FACE);
 				return STOP;

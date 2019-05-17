@@ -55,7 +55,7 @@ void main(void)
 	float overp = filtered(c2, over_poly_id);
 
 	const vec3 over_poly_color = vec3(0.2, 0.02, 0.5);
-	const vec3 over_color = vec3(0.14);
+	const vec3 over_color = vec3(0.06);
 
 	if(is_equal(c, zero))
 	{

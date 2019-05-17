@@ -25,17 +25,19 @@ c_axis_t *c_axis_new(int type, vecN_t dir)
 {
 	c_axis_t *self = component_new("axis");
 
-	mat_t *m = mat_new("m");
+	mat_t *m = mat_new("m", "default");
 
 	mat4f(m, ref("emissive.color"), vec4(_vec3(dir), 0.8f));
+	mat4f(m, ref("albedo.color"), vec4(_vec3(dir), 0.8f));
 #ifdef MESH4
 	if(dir.w)
 	{
 		m->emissive.color = ;
 		mat4f(m, ref("emissive.color"), vec4(1.0f, 0.0f, 0.9f, 0.8f));
+		mat4f(m, ref("albedo.color"), vec4(1.0f, 0.0f, 0.9f, 0.8f));
 	}
 #endif
-	mat4f(m, ref("albedo.color"), vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	/* mat4f(m, ref("albedo.color"), vec4(1.0f, 1.0f, 1.0f, 1.0f)); */
 	self->type = type;
 
 	if(type == 0)

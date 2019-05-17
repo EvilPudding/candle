@@ -41,7 +41,7 @@ typedef struct
 
 typedef void(*vil_call_cb)(vicall_t *call, slot_t slot, void *usrptr);
 typedef void(*vil_foreach_input_cb)(vicall_t *root, vicall_t *call, slot_t slot,
-                                    char *data, void *usrptr);
+                                    uint8_t *data, void *usrptr);
 typedef void(*vil_link_cb)(vifunc_t *func, slot_t to, slot_t from, void *usrptr);
 
 void vil_init(vil_t *self);
@@ -62,7 +62,8 @@ void vifunc_foreach_unlinked_input(vifunc_t *self, vil_foreach_input_cb cb,
 
 const char *vicall_name(const vicall_t *call);
 void vicall_color(vicall_t *self, vec4_t color);
-float vicall_gui(vicall_t *call, void *nk);
+float vicall_gui(vicall_t *call, void *nk, bool_t collapsible, float yb);
+void vicall_watch(vicall_t *self, vil_call_cb callback, void *usrptr);
 
 vifunc_t *vifunc_new(vil_t *ctx, const char *name, vifunc_gui_cb builtin_gui,
                      uint32_t builtin_size, bool_t is_assignable);
@@ -71,12 +72,14 @@ void vifunc_foreach_call(vifunc_t *self, bool_t recursive, bool_t allow_input,
                          vil_call_cb callback, void *usrptr);
 void vifunc_link(vifunc_t *root, uint32_t from, uint32_t into);
 uint32_t vifunc_gui(vifunc_t *type, void *nk);
-void vicall_watch(vicall_t *self, vil_call_cb callback, void *usrptr);
+void vifunc_watch(vifunc_t *self, vil_func_cb callback, void *usrptr);
 vicall_t *vifunc_get(vifunc_t *self, const char *name);
 void vifunc_save(vifunc_t *self, const char *filename);
 bool_t vifunc_load(vifunc_t *self, const char *filename);
 void vifunc_slot_to_name(vifunc_t *func, slot_t slot, char *buffer,
                          const char *separator, const char *append);
+void vifunc_iterate_dependencies(vifunc_t *self, vil_link_cb link,
+                                 vil_call_cb call, void *usrptr);
 
 slot_t slot_pop(slot_t slt);
 
@@ -90,16 +93,19 @@ struct vil_arg
 {
 	slot_t from;
 	slot_t into;
-	void *data;
+	uint8_t *data;
+	uint8_t *previous_data;
 	uint32_t data_size;
 	bool_t has_children;
 	float y;
+	bool_t initialized;
 };
 
 struct vil_ret
 {
 	slot_t from;
 	slot_t into;
+	float y;
 };
 
 typedef struct vicall_t
@@ -123,8 +129,8 @@ typedef struct vicall_t
 
 	vec4_t bounds;
 
-	struct vil_arg input_args[128];
-	struct vil_ret output_args[128];
+	struct vil_arg input_args[256];
+	struct vil_ret output_args[256];
 
 	vil_call_cb     watcher;
 	void           *watcher_usrptr;
@@ -149,6 +155,9 @@ typedef struct vifunc_t
 	vifunc_save_cb	builtin_save;
 	vifunc_load_cb	builtin_load;
 	vil_t *ctx;
+
+	vil_func_cb     watcher;
+	void           *watcher_usrptr;
 
 	uint32_t tmp;
 	void *usrptr;

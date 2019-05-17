@@ -66,7 +66,7 @@ typedef struct
 
 typedef struct
 {
-	int cached;
+	bool_t cached;
 	union
 	{
 		struct {
@@ -89,7 +89,7 @@ typedef struct
 			uint32_t u;
 		} integer;
 	};
-} shader_bind_t;
+} hash_bind_t;
 
 typedef struct
 {
@@ -108,7 +108,7 @@ typedef struct
 		int integer;
 	};
 	unsigned int hash;
-	shader_bind_t vs_uniforms[16];
+	hash_bind_t vs_uniforms;
 } bind_t;
 
 typedef void(*bind_cb)(uniform_t *self, shader_t *shader);

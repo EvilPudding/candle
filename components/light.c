@@ -54,7 +54,7 @@ void c_light_init(c_light_t *self)
 		mesh_spherize(g_light, 1.0f);
 		mesh_unlock(g_light);
 
-		g_light_widget = mat_new("light_widget");
+		g_light_widget = mat_new("light_widget", "default");
 		mat1t(g_light_widget, ref("albedo.texture"),
 		      texture_from_memory(bulb_png, bulb_png_len));
 		mat1f(g_light_widget, ref("albedo.blend"), 1.0f);
@@ -62,7 +62,7 @@ void c_light_init(c_light_t *self)
 	}
 	self->id = g_lights_num++;
 
-	drawable_init(&self->widget, ref("transparent"));
+	drawable_init(&self->widget, ref("visible"));
 	drawable_add_group(&self->widget, ref("selectable"));
 	drawable_set_vs(&self->widget, sprite_vs());
 	drawable_set_mat(&self->widget, g_light_widget);

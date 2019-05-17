@@ -3,6 +3,7 @@
 
 #include "texture.h"
 #include <ecs/ecm.h>
+#include <utils/khash.h>
 
 typedef struct
 {
@@ -52,11 +53,14 @@ typedef struct
 	uint32_t color;
 } u_prop_t;
 
+KHASH_MAP_INIT_INT(uniform, uint32_t)
+
 typedef struct light_t light_t;
 typedef struct shader_t
 {
 	fs_variation_t *fs;
 	uint32_t index;
+	uint32_t fs_variation;
 	uint32_t frame_bind;
 
 	uint32_t program;
@@ -66,6 +70,8 @@ typedef struct shader_t
 	bool_t ready;
 
 	bool_t has_skin;
+
+	khash_t(uniform) *uniforms;
 } shader_t;
 
 shader_t *vs_bind(vs_t *vs, uint32_t fs_variation);
@@ -90,9 +96,10 @@ void shader_destroy(shader_t *self);
 void shader_add_source(const char *name, unsigned char data[],
 		uint32_t len);
 void shaders_reg(void);
+uint32_t shader_cached_uniform(shader_t *self, uint32_t ref);
 
 /* TODO this should not be shared */
-extern vs_t g_vs[32];
-extern fs_t g_fs[32];
+extern vs_t g_vs[64];
+extern fs_t g_fs[64];
 
 #endif /* !SHADER_H */
