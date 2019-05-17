@@ -361,7 +361,6 @@ void *renderer_process_query_mips(renderer_t *self)
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[4].pbo); glerr();
 		glBufferData(GL_PIXEL_PACK_BUFFER, size, 0, GL_STREAM_DRAW);
 
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0); glerr();
 		glerr();
 	}
 
@@ -442,10 +441,8 @@ void *renderer_process_query_mips(renderer_t *self)
 	}
 	svt_stage = !svt_stage;
 
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0); glerr();
-
 end:
-	glerr();
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0); glerr();
 	return NULL;
 }
 
