@@ -246,21 +246,6 @@ float rand(vec2 co)
     return fract(sin(dot(co.xy, vec2(12.9898,78.233))) * 43758.5453);
 }
 
-vec2 fTaps_Poisson[] = vec2[](
-	vec2(-.326,-.406),
-	vec2(-.840,-.074),
-	vec2(-.696, .457),
-	vec2(-.203, .621),
-	vec2( .962,-.195),
-	vec2( .473,-.480),
-	vec2( .519, .767),
-	vec2( .185,-.893),
-	vec2( .507, .064),
-	vec2( .896, .412),
-	vec2(-.322,-.933),
-	vec2(-.792,-.598)
-);
-
 float shadow_at_dist_no_tan(vec3 vec, float i)
 {
 	/* vec3 rnd = (vec3(rand(vec.xy), rand(vec.yz), rand(vec.xz)) - 0.5) * i; */
@@ -317,11 +302,11 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)
 
 float doAmbientOcclusion(sampler2D depth, vec2 tcoord, vec2 uv, vec3 p, vec3 cnorm)
 {
-    float scale = 1.2, bias = 0.01, intensity = 5.0; 
+    float scale = 1.2, bias = 0.45, intensity = 5.0; 
     vec3 diff = get_position(depth, tcoord + uv) - p;
     vec3 v = normalize(diff);
 	float dist = length(diff);
-	/* if(dist > 0.7) return 0.0; */
+	if(dist > 0.75 * scale) return 0.0;
 
     float d = dist * scale;
     return max(0.0, (dot(cnorm, v) - bias) * (1.0 / (1.0 + d)) * intensity);
@@ -340,6 +325,21 @@ vec3 ppp[] = vec3[](
 		vec3(0.043770034870918025, -0.979515190833735, -0.19655578081895841),
 		vec3(0.14642092069816068, 0.5859713297143408, -0.7969934220147054),
 		vec3(0.968975404819239, -0.07683527155447646, 0.234910633860074));
+
+vec2 fTaps_Poisson[] = vec2[](
+	vec2(-.326,-.406),
+	vec2(-.840,-.074),
+	vec2(-.696, .457),
+	vec2(-.203, .621),
+	vec2( .962,-.195),
+	vec2( .473,-.480),
+	vec2( .519, .767),
+	vec2( .185,-.893),
+	vec2( .507, .064),
+	vec2( .896, .412),
+	vec2(-.322,-.933),
+	vec2(-.792,-.598)
+);
 
 float ambientOcclusion(sampler2D depth, vec3 p, vec3 n, float dist_to_eye)
 {
@@ -363,17 +363,17 @@ float ambientOcclusion(sampler2D depth, vec3 p, vec3 n, float dist_to_eye)
 	uint iterations = 12u;
 	for (uint j = 0u; j < iterations; ++j)
 	{
-		vec2 coord1 = reflect(fTaps_Poisson[j], rnd) * rad;
-		vec2 coord2 = vec2(coord1.x * 0.707 - coord1.y * 0.707,
-				coord1.x * 0.707 + coord1.y * 0.707);
+		vec2 coord1 = reflect(fTaps_Poisson[j] * rad, rnd);
+		vec2 coord2 = reflect(fTaps_Poisson[j] * rad, vec2(rnd.y, rnd.x));
 
 		ao += doAmbientOcclusion(depth, texcoord, coord1 * 0.25, p, n);
-		ao += doAmbientOcclusion(depth, texcoord, coord2 * 0.5, p, n);
 		ao += doAmbientOcclusion(depth, texcoord, coord1 * 0.75, p, n);
-		ao += doAmbientOcclusion(depth, texcoord, coord2, p, n);
+
+		ao += doAmbientOcclusion(depth, texcoord, coord2 * 0.25, p, n);
+		ao += doAmbientOcclusion(depth, texcoord, coord2 * 0.75, p, n);
 	}
 	ao /= float(iterations);
-	ao = 1.0 - ao * 0.05;
+	ao = 1.0 - ao * 0.25;
 	return clamp(ao, 0.0, 1.0); 
 }
 

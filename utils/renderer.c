@@ -335,63 +335,116 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 /* 	); */
 }
 
+bool_t svt_stage;
 void *renderer_process_query_mips(renderer_t *self)
 {
 	texture_t *tex = renderer_tex(self, ref("query_mips"));
 	if (!tex->framebuffer_ready) return NULL;
 
-	struct{
-		uint16_t _[2];
-	} *mips[4] = {
-		alloca(4 * tex->width * tex->height),
-		alloca(4 * tex->width * tex->height),
-		alloca(4 * tex->width * tex->height),
-		alloca(4 * tex->width * tex->height)
-	};
+	uint32_t size = tex->width * tex->height * 4;
+	if (!tex->bufs[1].pbo)
+	{
+		glGenBuffers(1, &tex->bufs[1].pbo);
+		glGenBuffers(1, &tex->bufs[2].pbo);
+		glGenBuffers(1, &tex->bufs[3].pbo);
+		glGenBuffers(1, &tex->bufs[4].pbo);
+
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[1].pbo); glerr();
+		glBufferData(GL_PIXEL_PACK_BUFFER, size, 0, GL_STREAM_DRAW);
+
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[2].pbo); glerr();
+		glBufferData(GL_PIXEL_PACK_BUFFER, size, 0, GL_STREAM_DRAW);
+
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[3].pbo); glerr();
+		glBufferData(GL_PIXEL_PACK_BUFFER, size, 0, GL_STREAM_DRAW);
+
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[4].pbo); glerr();
+		glBufferData(GL_PIXEL_PACK_BUFFER, size, 0, GL_STREAM_DRAW);
+
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0); glerr();
+		glerr();
+	}
+
+	if (!svt_stage)
+	{
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, tex->frame_buffer[0]); glerr();
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1); glerr();
+
+		glReadBuffer(GL_COLOR_ATTACHMENT0); glerr();
+
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[1].pbo); glerr();
+		glReadPixels(0, 0, tex->width, tex->height, tex->bufs[1].format,
+				GL_UNSIGNED_BYTE, NULL); glerr();
+
+		glReadBuffer(GL_COLOR_ATTACHMENT1); glerr();
+
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[2].pbo);
+		glReadPixels(0, 0, tex->width, tex->height, tex->bufs[2].format,
+				GL_UNSIGNED_BYTE, NULL); glerr();
+
+		glReadBuffer(GL_COLOR_ATTACHMENT2); glerr();
+
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[3].pbo);
+		glReadPixels(0, 0, tex->width, tex->height, tex->bufs[3].format,
+				GL_UNSIGNED_BYTE, NULL); glerr();
+
+		glReadBuffer(GL_COLOR_ATTACHMENT3); glerr();
+
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[4].pbo);
+		glReadPixels(0, 0, tex->width, tex->height, tex->bufs[4].format,
+				GL_UNSIGNED_BYTE, NULL); glerr();
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+	}
+	else
+	{
+		struct{
+			uint16_t _[2];
+		} *mips[4] = {
+			alloca(size),
+			alloca(size),
+			alloca(size),
+			alloca(size)
+		};
+
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[1].pbo);
+		glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0,
+		                   size, mips[0]);
+
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[2].pbo);
+		glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0,
+		                 size, mips[1]);
+
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[3].pbo);
+		glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0,
+		                 size, mips[2]);
+
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[4].pbo);
+		glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0,
+		                 size, mips[3]);
 
 
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, tex->frame_buffer[0]); glerr();
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1); glerr();
+		uint32_t max_loads = 64;
+		for (int y = 0; y < tex->height; y++) {
+			for (int x = 0; x < tex->width; x++) {
+				int i = y * tex->width + x;
+				for (int c = 0; c < 4; c++)
+				{
+					if (*((uint32_t*)&mips[c][i]) == 0) continue;
 
-	glReadBuffer(GL_COLOR_ATTACHMENT0); glerr();
-
-	glReadPixels(0, 0, tex->width, tex->height, tex->bufs[1].format,
-			GL_UNSIGNED_BYTE, mips[0]); glerr();
-
-	glReadBuffer(GL_COLOR_ATTACHMENT1); glerr();
-
-	glReadPixels(0, 0, tex->width, tex->height, tex->bufs[2].format,
-			GL_UNSIGNED_BYTE, mips[1]); glerr();
-
-	glReadBuffer(GL_COLOR_ATTACHMENT2); glerr();
-
-	glReadPixels(0, 0, tex->width, tex->height, tex->bufs[3].format,
-			GL_UNSIGNED_BYTE, mips[2]); glerr();
-
-	glReadBuffer(GL_COLOR_ATTACHMENT3); glerr();
-
-	glReadPixels(0, 0, tex->width, tex->height, tex->bufs[4].format,
-			GL_UNSIGNED_BYTE, mips[3]); glerr();
-
-	uint32_t max_loads = 64;
-	for (int y = 0; y < tex->height; y++) {
-		for (int x = 0; x < tex->width; x++) {
-			int i = y * tex->width + x;
-			for (int c = 0; c < 4; c++)
-			{
-				if (*((uint32_t*)&mips[c][i]) == 0) continue;
-
-				max_loads -= load_tile_by_id(mips[c][i]._[0], max_loads);
-				if (max_loads == 0) goto end;
-				max_loads -= load_tile_by_id(mips[c][i]._[1], max_loads);
-				if (max_loads == 0) goto end;
+					max_loads -= load_tile_by_id(mips[c][i]._[0], max_loads);
+					if (max_loads == 0) goto end;
+					max_loads -= load_tile_by_id(mips[c][i]._[1], max_loads);
+					if (max_loads == 0) goto end;
+				}
 			}
 		}
 	}
+	svt_stage = !svt_stage;
+
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0); glerr();
 
 end:
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	glerr();
 	return NULL;
 }
@@ -465,6 +518,7 @@ void renderer_default_pipeline(renderer_t *self)
 		(bind_t[]){
 			{CLEAR_DEPTH, .number = 1.0f},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{SKIP, .integer = 8},
 			{NONE}
 		}
 	);
@@ -472,6 +526,7 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_pass(self, "query_mips", "query_mips", ref("transparent"), 0,
 			query_mips, query_mips, 0,
 		(bind_t[]){
+			{SKIP, .integer = 8},
 			{NONE}
 		}
 	);
@@ -481,6 +536,7 @@ void renderer_default_pipeline(renderer_t *self)
 			query_mips, query_mips, 0,
 		(bind_t[]){
 			{CALLBACK, .getter = (getter_cb)renderer_process_query_mips, .usrptr = self},
+			{SKIP, .integer = 4},
 			{NONE}
 		}
 	);

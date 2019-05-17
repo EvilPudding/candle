@@ -625,7 +625,6 @@ static int32_t texture_from_file_loader(texture_t *self)
 
 int32_t buffer_new(const char *name, int32_t is_float, int32_t dims)
 {
-	is_float = false;
 #ifdef __EMSCRIPTEN__
 	is_float = false;
 #endif

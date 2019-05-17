@@ -40,8 +40,7 @@ void main(void)
 
     /* FragColor = vec4(vec3(texelFetch(portal.depth, fc, 0).r), 1.0); return; */
 
-    /* cc.rgb *= texelFetch(ssao.occlusion, fc, 0).r; */
-	cc.rgb *= texelFetch(ssao.occlusion, fc, 0).r;
+    cc.rgb *= texelFetch(ssao.occlusion, fc, 0).r;
 
 	vec3 final = cc.rgb + ssred.rgb * ssred.a + emissive;
 

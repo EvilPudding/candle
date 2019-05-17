@@ -46,6 +46,7 @@ typedef struct
 	char *name;
 	uint8_t *data;
 	uint32_t ready;
+	uint32_t pbo;
 
 	tex_tile_t *mips[MAX_MIPS];
 	uint32_t num_tiles_x[MAX_MIPS];
