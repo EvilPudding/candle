@@ -307,7 +307,7 @@ void drawable_set_matid(drawable_t *self, uint32_t matid)
 
 void drawable_set_mat(drawable_t *self, mat_t *mat)
 {
-	if (self->mat != mat)
+	if (self->mat != mat || self->matid != mat->id)
 	{
 		self->mat = mat;
 		self->matid = mat->id;

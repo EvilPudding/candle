@@ -109,7 +109,7 @@ vec4_t color_from_hex(const char *hex_str)
 	self.r = (float)((hex >> 16) & 0xFF) / 255.0f;
 	self.g = (float)((hex >> 8) & 0xFF) / 255.0f;
 	self.b = (float)((hex >> 0) & 0XFF) / 255.0f;
-	if(self.a == 0.0f) self.a = 1.0f;
+	if (self.a == 0.0f) self.a = 1.0f;
 
 	return self;
 }
@@ -117,7 +117,7 @@ vec4_t color_from_hex(const char *hex_str)
 mat_t *mat_from_file(const char *filename)
 {
 	const char *file_name = strrchr(filename, '/');
-	if(!file_name)
+	if (!file_name)
 	{
 		file_name = filename;
 	}
@@ -270,7 +270,7 @@ static float _color_gui(vicall_t *call, struct nk_colorf *color, void *ctx)
 
 static float _vint_gui(vicall_t *call, int32_t *num, void *ctx) 
 {
-	/* if(*num < 20) *num = 20; */
+	/* if (*num < 20) *num = 20; */
 	/* nk_layout_row_begin(ctx, NK_DYNAMIC, *num, 2); */
 	nk_layout_row_begin(ctx, NK_DYNAMIC, 20, 2);
 	nk_layout_row_push(ctx, 0.20);
@@ -294,7 +294,7 @@ static bool_t _number_load(vicall_t *call, float *num, FILE *fp)
 
 static float _number_gui(vicall_t *call, float *num, void *ctx) 
 {
-	/* if(*num < 20) *num = 20; */
+	/* if (*num < 20) *num = 20; */
 	/* nk_layout_row_begin(ctx, NK_DYNAMIC, *num, 2); */
 	nk_layout_row_begin(ctx, NK_DYNAMIC, 20, 2);
 	nk_layout_row_push(ctx, 0.40);
@@ -326,20 +326,31 @@ int mat_menu(mat_t *self, void *ctx)
 		nk_combo_end(ctx);
 	}
 
+	bool_t ret = false;
 	if (new_tid != self->type)
 	{
-		struct mat_type *new_type = &g_mat_types[new_tid];
 		type->next_free[self->id] = type->free_position;
 		type->free_position = self->id;
-		self->type = new_tid;
 
-		self->id = new_type->free_position;
-		new_type->free_position = new_type->next_free[new_type->free_position];
-		type = new_type;
+		if (self->call)
+		{
+			vicall_unwatch(self->call);
+		}
+		if (self->sandbox)
+		{
+			/* vifunc_destroy(self->sandbox); */
+		}
+		char buffer[256];
+		snprintf(buffer, sizeof(buffer), "_material%d_%s", self->global_id,
+		         g_mat_types[new_tid].name);
+		self->sandbox = vifunc_new(&g_mat_ctx, buffer, NULL, 0, false);
+		self->call = NULL;
+		mat_assign_type(self, &g_mat_types[new_tid]);
+		ret = true;
 	}
 
 	nk_layout_row_push(ctx, 0.30);
-	if(nk_button_label(ctx, "edit"))
+	if (nk_button_label(ctx, "edit"))
 	{
 		c_editmode(&SYS)->open_vil = type->mat;
 	}
@@ -349,7 +360,7 @@ int mat_menu(mat_t *self, void *ctx)
 
 	nk_layout_row_begin(ctx, NK_DYNAMIC, 20, 1);
 	nk_layout_row_push(ctx, 1.0f);
-	if(nk_button_label(ctx, "save"))
+	if (nk_button_label(ctx, "save"))
 	{
 		char *output = NULL;
 		entity_signal(entity_null, ref("pick_file_save"), "vil", &output);
@@ -360,7 +371,7 @@ int mat_menu(mat_t *self, void *ctx)
 		}
 	}
 	nk_layout_row_end(ctx);
-	return 0;
+	return ret;
 }
 
 void *mat_loader(const char *path, const char *name, uint32_t ext)
@@ -372,7 +383,6 @@ void materials_reg()
 {
 	sauces_loader(ref("mat"), mat_loader);
 	sauces_register("_default.mat", NULL, mat_new("_default.mat", "default"));
-
 }
 
 void material_foreach_input(vicall_t *call, slot_t slot, char **str)
@@ -780,11 +790,11 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	{
 		str_cat(&gbuffer,
 			"	float depth = textureLod(gbuffer.depth, pixel_pos(), 0.0).r;\n"
-			"	if(depth > gl_FragCoord.z) discard;\n"
+			"	if (depth > gl_FragCoord.z) discard;\n"
 			"	vec4 w_pos = (camera(model)*vec4(get_position(gbuffer.depth), 1.0));\n"
 			"	vec3 m_pos = (inverse(model) * w_pos).xyz;\n"
 			"	vec3 diff = abs(m_pos);\n"
-			"	if(diff.x > 0.5 || diff.y > 0.5 || diff.z > 0.5) discard;\n"
+			"	if (diff.x > 0.5 || diff.y > 0.5 || diff.z > 0.5) discard;\n"
 			"	tex_space_in = m_pos.xy - 0.5;\n"
 		);
 	}
@@ -846,7 +856,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 			"	NMR.a = pbr_in.roughness;\n"
 			"	Emi = pbr_in.emissive;\n");
 	}
-	else if(group == ref("transparent"))
+	else if (group == ref("transparent"))
 	{
 		str_cat(&gbuffer,
 			"	vec2 pp = pixel_pos();\n"
@@ -982,7 +992,7 @@ static void init_type(uint32_t tid, const char *type_name)
 
 	snprintf(buffer, sizeof(buffer), "_%s", type->name);
 
-	type->mat = vifunc_new(&g_mat_ctx, buffer, NULL, sizeof(uint32_t), false);
+	type->mat = vifunc_new(&g_mat_ctx, buffer, NULL, 0, false);
 	for (uint32_t i = 0; i < 128; i++)
 	{
 		type->next_free[i] = i + 1;
@@ -1210,6 +1220,9 @@ void materials_init_vil()
 		           offsetof(struct transparent, roughness), V_IN);
 		vicall_new(transparent, v3, "emissive", vec2(500, 10),
 		           offsetof(struct transparent, emissive), V_IN);
+
+	init_type(0, "default");
+	init_type(1, "transparent");
 }
 
 void mat1i(mat_t *self, uint32_t ref, int32_t value)

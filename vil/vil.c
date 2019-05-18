@@ -1314,6 +1314,13 @@ void vifunc_watch(vifunc_t *self, vil_func_cb callback, void *usrptr)
 	self->watcher_usrptr = usrptr;
 }
 
+void vicall_unwatch(vicall_t *self)
+{
+	if (!self) return;
+	self->watcher = NULL;
+	self->watcher_usrptr = NULL;
+}
+
 void vicall_watch(vicall_t *self, vil_call_cb callback, void *usrptr)
 {
 	if (!self) return;

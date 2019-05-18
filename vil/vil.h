@@ -64,6 +64,7 @@ const char *vicall_name(const vicall_t *call);
 void vicall_color(vicall_t *self, vec4_t color);
 float vicall_gui(vicall_t *call, void *nk, bool_t collapsible, float yb);
 void vicall_watch(vicall_t *self, vil_call_cb callback, void *usrptr);
+void vicall_unwatch(vicall_t *self);
 
 vifunc_t *vifunc_new(vil_t *ctx, const char *name, vifunc_gui_cb builtin_gui,
                      uint32_t builtin_size, bool_t is_assignable);
