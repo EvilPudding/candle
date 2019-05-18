@@ -71,6 +71,10 @@ typedef struct shader_t
 
 	bool_t has_skin;
 
+	uint32_t scene_ubi;
+	uint32_t renderer_ubi;
+	uint32_t skin_ubi;
+	uint32_t cms_ubi;
 	khash_t(uniform) *uniforms;
 } shader_t;
 
@@ -90,8 +94,8 @@ shader_t *shader_new(fs_t *fs, uint32_t fs_variation, vs_t *vs);
 void shader_update(shader_t *self, float angle4);
 #endif
 void shader_bind(shader_t *self);
-uint32_t shader_uniform(shader_t *self, const char *uniform, const char *member);
-uint32_t _shader_uniform(shader_t *self, const char *uniform, const char *member);
+/* uint32_t shader_uniform(shader_t *self, const char *uniform, const char *member); */
+/* uint32_t _shader_uniform(shader_t *self, const char *uniform, const char *member); */
 void shader_destroy(shader_t *self);
 void shader_add_source(const char *name, unsigned char data[],
 		uint32_t len);

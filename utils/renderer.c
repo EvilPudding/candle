@@ -364,65 +364,62 @@ void *renderer_process_query_mips(renderer_t *self)
 		glerr();
 	}
 
-	if (!svt_stage)
+	struct{
+		uint16_t _[2];
+	} *mips[4];
+
+	mips[0] = alloca(size);
+	mips[1] = alloca(size);
+	mips[2] = alloca(size);
+	mips[3] = alloca(size);
+
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, tex->frame_buffer[0]); glerr();
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1); glerr();
+
+	glReadBuffer(GL_COLOR_ATTACHMENT0); glerr();
+
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[1].pbo); glerr();
+	if (svt_stage)
 	{
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, tex->frame_buffer[0]); glerr();
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1); glerr();
-
-		glReadBuffer(GL_COLOR_ATTACHMENT0); glerr();
-
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[1].pbo); glerr();
-		glReadPixels(0, 0, tex->width, tex->height, tex->bufs[1].format,
-				GL_UNSIGNED_BYTE, NULL); glerr();
-
-		glReadBuffer(GL_COLOR_ATTACHMENT1); glerr();
-
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[2].pbo);
-		glReadPixels(0, 0, tex->width, tex->height, tex->bufs[2].format,
-				GL_UNSIGNED_BYTE, NULL); glerr();
-
-		glReadBuffer(GL_COLOR_ATTACHMENT2); glerr();
-
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[3].pbo);
-		glReadPixels(0, 0, tex->width, tex->height, tex->bufs[3].format,
-				GL_UNSIGNED_BYTE, NULL); glerr();
-
-		glReadBuffer(GL_COLOR_ATTACHMENT3); glerr();
-
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[4].pbo);
-		glReadPixels(0, 0, tex->width, tex->height, tex->bufs[4].format,
-				GL_UNSIGNED_BYTE, NULL); glerr();
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+		glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0, size, mips[0]);
 	}
-	else
+	glReadPixels(0, 0, tex->width, tex->height, tex->bufs[1].format,
+			GL_UNSIGNED_BYTE, NULL); glerr();
+
+	glReadBuffer(GL_COLOR_ATTACHMENT1); glerr();
+
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[2].pbo);
+	if (svt_stage)
 	{
-		struct{
-			uint16_t _[2];
-		} *mips[4] = {
-			alloca(size),
-			alloca(size),
-			alloca(size),
-			alloca(size)
-		};
+		glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0, size, mips[1]);
+	}
+	glReadPixels(0, 0, tex->width, tex->height, tex->bufs[2].format,
+			GL_UNSIGNED_BYTE, NULL); glerr();
 
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[1].pbo);
-		glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0,
-		                   size, mips[0]);
+	glReadBuffer(GL_COLOR_ATTACHMENT2); glerr();
 
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[2].pbo);
-		glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0,
-		                 size, mips[1]);
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[3].pbo);
+	if (svt_stage)
+	{
+		glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0, size, mips[2]);
+	}
+	glReadPixels(0, 0, tex->width, tex->height, tex->bufs[3].format,
+			GL_UNSIGNED_BYTE, NULL); glerr();
 
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[3].pbo);
-		glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0,
-		                 size, mips[2]);
+	glReadBuffer(GL_COLOR_ATTACHMENT3); glerr();
 
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[4].pbo);
-		glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0,
-		                 size, mips[3]);
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[4].pbo);
+	if (svt_stage)
+	{
+		glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0, size, mips[3]);
+	}
+	glReadPixels(0, 0, tex->width, tex->height, tex->bufs[4].format,
+			GL_UNSIGNED_BYTE, NULL); glerr();
 
-
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+	if (svt_stage)
+	{
 		uint32_t max_loads = 64;
 		for (int y = 0; y < tex->height; y++) {
 			for (int x = 0; x < tex->width; x++) {
@@ -439,7 +436,7 @@ void *renderer_process_query_mips(renderer_t *self)
 			}
 		}
 	}
-	svt_stage = !svt_stage;
+	svt_stage = true;
 
 end:
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0); glerr();
@@ -515,7 +512,7 @@ void renderer_default_pipeline(renderer_t *self)
 		(bind_t[]){
 			{CLEAR_DEPTH, .number = 1.0f},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
-			{SKIP, .integer = 8},
+			{SKIP, .integer = 4},
 			{NONE}
 		}
 	);
@@ -523,7 +520,7 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_pass(self, "query_mips", "query_mips", ref("transparent"), 0,
 			query_mips, query_mips, 0,
 		(bind_t[]){
-			{SKIP, .integer = 8},
+			{SKIP, .integer = 4},
 			{NONE}
 		}
 	);

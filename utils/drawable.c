@@ -1107,13 +1107,13 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	if (vector_count(mesh->faces))
 	{
 		primitive = GL_TRIANGLES;
-		glUniform1i(shader_uniform(shader, "has_normals", NULL), 1);
+		glUniform1i(shader_cached_uniform(shader, ref("has_normals")), 1);
 		glerr();
 	}
 	else
 	{
 
-		glUniform1i(shader_uniform(shader, "has_normals", NULL), 0);
+		glUniform1i(shader_cached_uniform(shader, ref("has_normals")), 0);
 		glerr();
 		if (vector_count(mesh->edges))
 		{

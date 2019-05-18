@@ -603,6 +603,11 @@ static uint32_t shader_new_loader(shader_t *self)
 		uint32_t *uniform = &kh_value(self->uniforms, k);
 		(*uniform) = glGetUniformLocation(self->program, name);
 	}
+	self->scene_ubi = glGetUniformBlockIndex(self->program, "scene_t");
+	self->renderer_ubi = glGetUniformBlockIndex(self->program, "renderer_t");
+	self->skin_ubi = glGetUniformBlockIndex(self->program, "skin_t");
+	self->cms_ubi = glGetUniformBlockIndex(self->program, "cms_t");
+	glerr();
 
 	return 1;
 }
@@ -722,27 +727,27 @@ void shader_bind(shader_t *self)
 	glUseProgram(self->program); glerr();
 }
 
-GLuint _shader_uniform(shader_t *self, const char *uniform, const char *member)
-{
-	if(member)
-	{
-		char buffer[256];
-		snprintf(buffer, sizeof(buffer), "%s_%s", uniform, member);
-		return glGetUniformLocation(self->program, buffer); glerr();
-	}
-	return glGetUniformLocation(self->program, uniform); glerr();
-}
+/* GLuint _shader_uniform(shader_t *self, const char *uniform, const char *member) */
+/* { */
+/* 	if(member) */
+/* 	{ */
+/* 		char buffer[256]; */
+/* 		snprintf(buffer, sizeof(buffer), "%s_%s", uniform, member); */
+/* 		return glGetUniformLocation(self->program, buffer); glerr(); */
+/* 	} */
+/* 	return glGetUniformLocation(self->program, uniform); glerr(); */
+/* } */
 
-GLuint shader_uniform(shader_t *self, const char *uniform, const char *member)
-{
-	if(member)
-	{
-		char buffer[256];
-		snprintf(buffer, sizeof(buffer), "%s.%s", uniform, member);
-		return glGetUniformLocation(self->program, buffer); glerr();
-	}
-	return glGetUniformLocation(self->program, uniform); glerr();
-}
+/* GLuint shader_uniform(shader_t *self, const char *uniform, const char *member) */
+/* { */
+/* 	if(member) */
+/* 	{ */
+/* 		char buffer[256]; */
+/* 		snprintf(buffer, sizeof(buffer), "%s.%s", uniform, member); */
+/* 		return glGetUniformLocation(self->program, buffer); glerr(); */
+/* 	} */
+/* 	return glGetUniformLocation(self->program, uniform); glerr(); */
+/* } */
 
 void fs_destroy(fs_t *self)
 {

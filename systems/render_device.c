@@ -127,39 +127,28 @@ shader_t *vs_bind(vs_t *vs, uint32_t fs_variation)
 	texture_bind(g_probe_cache, 1);
 	glerr();
 
-
-	/* GLint size; */
-	if (rd->bound_ubos[20])
+	if (rd->bound_ubos[20] && rd->shader->scene_ubi != ~0)
 	{
-		loc = glGetUniformBlockIndex(rd->shader->program, "scene_t");
-		glUniformBlockBinding(rd->shader->program, loc, 20); glerr();
-		/* glGetActiveUniformBlockiv(rd->shader->program, loc, GL_UNIFORM_BLOCK_DATA_SIZE, &size); */
+		glUniformBlockBinding(rd->shader->program, rd->shader->scene_ubi, 20); glerr();
 		glBindBufferBase(GL_UNIFORM_BUFFER, 20, rd->bound_ubos[20]); glerr();
 	}
 
-	if (rd->bound_ubos[19])
+	if (rd->bound_ubos[19] && rd->shader->renderer_ubi != ~0)
 	{
-		loc = glGetUniformBlockIndex(rd->shader->program, "renderer_t");
-		glUniformBlockBinding(rd->shader->program, loc, 19); glerr();
-		/* glGetActiveUniformBlockiv(rd->shader->program, loc, GL_UNIFORM_BLOCK_DATA_SIZE, &size); */
+		glUniformBlockBinding(rd->shader->program, rd->shader->renderer_ubi, 19); glerr();
 		glBindBufferBase(GL_UNIFORM_BUFFER, 19, rd->bound_ubos[19]); glerr();
 	}
 
-	if (rd->bound_ubos[21] && rd->shader->has_skin)
+	if (rd->bound_ubos[21] && rd->shader->has_skin && rd->shader->skin_ubi != ~0)
 	{
-		loc = glGetUniformBlockIndex(rd->shader->program, "skin_t");
-		glUniformBlockBinding(rd->shader->program, loc, 21); glerr();
+		glUniformBlockBinding(rd->shader->program, rd->shader->skin_ubi, 21); glerr();
 		glBindBufferBase(GL_UNIFORM_BUFFER, 21, rd->bound_ubos[21]); glerr();
 	}
 
-	if (rd->bound_ubos[22])
+	if (rd->bound_ubos[22] && rd->shader->cms_ubi != ~0)
 	{
-		loc = glGetUniformBlockIndex(rd->shader->program, "cms_t"); glerr();
-		if (loc != ~0)
-		{
-			glUniformBlockBinding(rd->shader->program, loc, 22); glerr();
-			glBindBufferBase(GL_UNIFORM_BUFFER, 22, rd->bound_ubos[22]); glerr();
-		}
+		glUniformBlockBinding(rd->shader->program, rd->shader->cms_ubi, 22); glerr();
+		glBindBufferBase(GL_UNIFORM_BUFFER, 22, rd->bound_ubos[22]); glerr();
 	}
 
 

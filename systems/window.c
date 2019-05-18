@@ -227,6 +227,7 @@ int c_window_created(c_window_t *self)
 	drawable_set_entity(&self->draw, c_entity(self));
 	drawable_set_mesh(&self->draw, g_quad_mesh);
 	drawable_set_vs(&self->draw, g_quad_vs);
+	SDL_GL_SetSwapInterval(0);
 
 /* 	entity_signal(entity_null, sig("window_resize"), */
 /* 			&(window_resize_data){ */

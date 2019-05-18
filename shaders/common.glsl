@@ -364,13 +364,9 @@ float ambientOcclusion(sampler2D depth, vec3 p, vec3 n, float dist_to_eye)
 	for (uint j = 0u; j < iterations; ++j)
 	{
 		vec2 coord1 = reflect(fTaps_Poisson[j] * rad, rnd);
-		vec2 coord2 = reflect(fTaps_Poisson[j] * rad, vec2(rnd.y, rnd.x));
 
 		ao += doAmbientOcclusion(depth, texcoord, coord1 * 0.25, p, n);
 		ao += doAmbientOcclusion(depth, texcoord, coord1 * 0.75, p, n);
-
-		ao += doAmbientOcclusion(depth, texcoord, coord2 * 0.25, p, n);
-		ao += doAmbientOcclusion(depth, texcoord, coord2 * 0.75, p, n);
 	}
 	ao /= float(iterations);
 	ao = 1.0 - ao * 0.25;

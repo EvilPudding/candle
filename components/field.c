@@ -81,7 +81,7 @@ int c_field_menu(c_field_t *self, void *ctx)
 void c_field_pre_draw(c_field_t *self, shader_t *shader)
 {
 
-	uint32_t loc = glGetUniformLocation(shader->program, "values");
+	uint32_t loc = shader_cached_uniform(shader, ref("values"));
 	glUniform1i(loc, 6);
 	glActiveTexture(GL_TEXTURE0 + 6);
 	texture_bind(self->values, 0);
