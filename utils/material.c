@@ -338,7 +338,8 @@ int mat_menu(mat_t *self, void *ctx)
 		}
 		if (self->sandbox)
 		{
-			/* vifunc_destroy(self->sandbox); */
+			vifunc_destroy(self->sandbox);
+			self->sandbox = NULL;
 		}
 		char buffer[256];
 		snprintf(buffer, sizeof(buffer), "_material%d_%s", self->global_id,

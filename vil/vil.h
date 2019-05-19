@@ -68,6 +68,7 @@ void vicall_unwatch(vicall_t *self);
 
 vifunc_t *vifunc_new(vil_t *ctx, const char *name, vifunc_gui_cb builtin_gui,
                      uint32_t builtin_size, bool_t is_assignable);
+void vifunc_destroy(vifunc_t *self);
 void vifunc_foreach_call(vifunc_t *self, bool_t recursive, bool_t allow_input,
                          bool_t allow_output, bool_t skip_linked,
                          vil_call_cb callback, void *usrptr);
@@ -100,6 +101,7 @@ struct vil_arg
 	bool_t has_children;
 	float y;
 	bool_t initialized;
+	bool_t alloc_head;
 };
 
 struct vil_ret

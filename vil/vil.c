@@ -580,6 +580,33 @@ void vil_add_domain(vil_t *self, const char *name, vec4_t color)
 
 }
 
+void vicall_destroy(vicall_t *self)
+{
+	for (uint32_t a = 0; a < 256; a++)
+	{
+		struct vil_arg *it_arg = &self->input_args[a];
+		if (it_arg->into.depth == 0) break;
+		if (it_arg->data && it_arg->alloc_head)
+		{
+			free(it_arg->data);
+		}
+		if (it_arg->previous_data)
+		{
+			free(it_arg->previous_data);
+		}
+	}
+}
+
+void vifunc_destroy(vifunc_t *self)
+{
+	for (vicall_t *it = self->begin; it; it = it->next)
+	{
+		vicall_destroy(it);
+	}
+	khiter_t k = kh_get(vifunc, self->ctx->funcs, self->id);
+	kh_del(vifunc, self->ctx->funcs, k);
+}
+
 vifunc_t *vifunc_new(vil_t *ctx, const char *name,
 		vifunc_gui_cb builtin_gui,
 		uint32_t builtin_size, bool_t is_assignable)
@@ -588,7 +615,7 @@ vifunc_t *vifunc_new(vil_t *ctx, const char *name,
 	int32_t ret = 0;
 	uint32_t id = ref(name);
 	khiter_t k = kh_put(vifunc, ctx->funcs, id, &ret);
-	if(ret != 1) exit(1);
+	if(ret == -1) exit(1);
 	vifunc_t **type = &kh_value(ctx->funcs, k);
 	*type = malloc(sizeof(vifunc_t));
 	**type = (vifunc_t){
@@ -700,6 +727,7 @@ void propagate_data(vicall_t *root, vicall_t *call, slot_t parent_slot,
 	if (!arg->data && call->type->builtin_size)
 	{
 		arg->data = calloc(1, call->type->builtin_size);
+		arg->alloc_head = true;
 		arg->initialized = false;
 	}
 	if (!arg->previous_data && call->type->builtin_size)
