@@ -138,6 +138,7 @@ typedef struct
 	uint32_t selectable_group;
 	bool_t xray;
 
+	uint32_t mat_update_id;
 	drawable_t draw;
 	/* drawable_t select; */
 	bool_t modified;

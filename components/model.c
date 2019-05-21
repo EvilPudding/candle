@@ -34,10 +34,12 @@ vs_t *model_vs()
 			"		vec3 vertex_normal    = normalize(MV * vec4( N, 0.0f)).xyz;\n"
 			"		vec3 vertex_tangent   = normalize(MV * vec4(TG, 0.0f)).xyz;\n"
 			"		vec3 vertex_bitangent = cross(vertex_tangent, vertex_normal);\n"
-			"		pos   = (MV * pos);\n"
-			"		$vertex_position = pos.xyz;\n"
-
 			"		$TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
+
+			"		pos = M * pos;\n"
+			"		$vertex_world_position = pos.xyz;\n"
+			"		pos = camera(view) * pos;\n"
+			"		$vertex_position = pos.xyz;\n"
 
 			"		pos = camera(projection) * pos;\n"
 			"	}\n"
@@ -662,7 +664,7 @@ c_model_t *c_model_wireframe(c_model_t *self, bool_t wireframe)
 
 void c_model_update_mat(c_model_t *self)
 {
-	if(self->mat)
+	if (self->mat)
 	{
 		int transp = mat_is_transparent(self->mat);
 		if(transp)
@@ -683,6 +685,7 @@ void c_model_update_mat(c_model_t *self)
 		{
 			drawable_add_group(&self->draw, self->shadow_group);
 		}
+		self->mat_update_id = self->mat->update_id;
 	}
 
 	drawable_set_mat(&self->draw, self->mat);
@@ -895,8 +898,6 @@ int c_model_menu(c_model_t *self, void *ctx)
 	if(self->mat && self->mat->name[0] != '_')
 	{
 		changes |= mat_menu(self->mat, ctx);
-		if (changes)
-			c_model_update_mat(self);
 	}
 	if(changes)
 	{
@@ -936,6 +937,10 @@ static int c_model_pre_draw(c_model_t *self)
 		{
 			drawable_set_entity(&self->draw, entity_null);
 		}
+	}
+	if (self->mat && self->mat_update_id != self->mat->update_id)
+	{
+		c_model_update_mat(self);
 	}
 
 	if(self->modified)

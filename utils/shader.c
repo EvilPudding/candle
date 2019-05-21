@@ -41,6 +41,7 @@ static const char default_vs[] =
 	"out float $vertex_distance;\n"
 	"out vec3 $poly_color;\n"
 	"out vec3 $vertex_position;\n"
+	"out vec3 $vertex_world_position;\n"
 	"out vec2 $texcoord;\n"
 	"out mat3 $TM;\n"
 	"void main()\n"

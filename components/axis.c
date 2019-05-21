@@ -32,7 +32,6 @@ c_axis_t *c_axis_new(int type, vecN_t dir)
 #ifdef MESH4
 	if(dir.w)
 	{
-		m->emissive.color = ;
 		mat4f(m, ref("emissive.color"), vec4(1.0f, 0.0f, 0.9f, 0.8f));
 		mat4f(m, ref("albedo.color"), vec4(1.0f, 0.0f, 0.9f, 0.8f));
 	}

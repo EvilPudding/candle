@@ -27,6 +27,7 @@ flat in mat4 model;
 
 in vec3 poly_color;
 in vec3 vertex_position;
+in vec3 vertex_world_position;
 in float vertex_distance;
 in vec2 texcoord;
 in mat3 TM;

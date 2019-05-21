@@ -30,18 +30,20 @@ vs_t *sprite_vs()
 	{
 		g_sprite_vs = vs_new("sprite", false, 1, vertex_modifier_new(
 			"	{\n"
-			"		mat4 MV = camera(view) * M;\n"
-			"		pos = (camera(projection) * MV) * vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
+			"		pos = M * vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
+			"		$vertex_world_position = pos.xyz;\n"
+			"		pos = camera(view) * pos;\n"
 			"		$vertex_position = pos.xyz;\n"
+			"		pos = camera(projection) * pos;\n"
 			"		vec2 size = vec2(P.x * (screen_size.y / screen_size.x), P.y) * 0.5;\n"
 			"		pos = vec4(pos.xy + 0.5 * size, pos.z, pos.w);\n"
 
 			"		vec3 vertex_normal    = (vec4( N, 0.0f)).xyz;\n"
 			"		vec3 vertex_tangent   = (vec4(TG, 0.0f)).xyz;\n"
 			"		vec3 vertex_bitangent = cross(vertex_normal, vertex_tangent);\n"
+			"		$TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
 			"		$texcoord = vec2(UV.x, 1.0f - UV.y);\n"
 
-			"		$TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
 			"	}\n"
 		));
 	}

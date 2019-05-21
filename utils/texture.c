@@ -1116,6 +1116,11 @@ int32_t texture_2D_resize(texture_t *self, int32_t width, int32_t height)
 		{
 			glDeleteTextures(1, &self->bufs[i].id);
 			self->bufs[i].id = 0;
+			if (self->bufs[i].pbo)
+			{
+				glDeleteBuffers(1, &self->bufs[i].pbo);
+			}
+			self->bufs[i].pbo = 0;
 			self->bufs[i].ready = 0;
 		}
 

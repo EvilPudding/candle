@@ -15,6 +15,7 @@ typedef struct mat
 	uint32_t type;
 	uint32_t global_id;
 	uint32_t id;
+	uint32_t update_id;
 	struct vifunc_t *sandbox;
 	struct vicall_t *call;
 } mat_t;

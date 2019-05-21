@@ -10,6 +10,7 @@ vicall_t *g_dragging;
 vicall_t *g_renaming;
 char g_renaming_buffer[64];
 bool_t g_create_dialogue;
+vifunc_t *g_create_template;
 char g_create_buffer[64];
 
 vicall_t *g_over_context;
@@ -293,7 +294,7 @@ void vicall_set_arg(vicall_t *call, uint32_t ref, void *value)
 		if (arg->into.depth == 0) break;
 		vifunc_slot_to_name(call->type, slot_pop(arg->into), buffer, ".", NULL);
 		uint32_t arg_ref = ref(buffer);
-		if (ref == arg_ref)
+		if (ref == arg_ref || (ref == ~0 && buffer[0] == '\0'))
 		{
 			memcpy(arg->data, value, arg->data_size);
 			break;
@@ -758,8 +759,7 @@ void vicall_copy_defaults(vicall_t *call)
 			{
 				call_arg->data_size = it_arg->data_size;
 				call_arg->data = calloc(1, it_arg->data_size);
-				call_arg->initialized = true;
-				/* call_arg->initialized = false; */
+				call_arg->previous_data = calloc(1, it_arg->data_size);
 			}
 
 			assert(!call_arg->data_size || call_arg->data);
@@ -767,7 +767,9 @@ void vicall_copy_defaults(vicall_t *call)
 
 			if (it_arg->data_size && !call_arg->initialized)
 			{
+				/* printf("%f\n", *((float*)it_arg->data)); */
 				memcpy(call_arg->data, it_arg->data, it_arg->data_size);
+				memcpy(call_arg->previous_data, it_arg->data, it_arg->data_size);
 			}
 		}
 	}
@@ -795,9 +797,6 @@ vicall_t *vicall_new(vifunc_t *parent, vifunc_t *type, const char *name,
 	call->is_hidden = !!(flags & V_HID);
 	call->is_output = !!(flags & V_OUT);
 	call->is_linked = !!(flags & V_LINKED);
-	/* call->input_count = type_count_inputs(call->type); */
-	/* call->output_count = 0; */
-	/* call->output_count = type_count_outputs(call->type); */
 
 	strncpy(call->name, name, sizeof(call->name));
 	type_push(parent, call);
@@ -1335,6 +1334,56 @@ void vil_foreach_func(vil_t *self, vil_func_cb callback, void *usrptr)
 	}
 }
 
+void vifunc_copy(vifunc_t *dst, vifunc_t *src)
+{
+	for (vicall_t *it = src->begin; it; it = it->next)
+	{
+		uint32_t flags =   it->is_linked * V_LINKED | it->is_hidden * V_HID
+						 | it->is_output * V_OUT | it->is_input * V_IN;
+		vicall_t *copy = vicall_new(dst, it->type,
+				it->name, it->bounds.xy, it->data_offset, flags);
+		copy->color = it->color;
+		for (uint32_t i = 0; i < 256; i++)
+		{
+			struct vil_arg *it_arg = &it->input_args[i];
+			struct vil_arg *cp_arg = &copy->input_args[i];
+			if (it_arg->into.depth == 0) break;
+			if (it_arg->data)
+			{
+				assert(cp_arg->data_size == it_arg->data_size);
+				memcpy(cp_arg->data, it_arg->data, it_arg->data_size);
+				memcpy(cp_arg->previous_data, it_arg->data, it_arg->data_size);
+				cp_arg->initialized = it_arg->initialized;
+			}
+		}
+		vicall_update_initialized(copy);
+	}
+	for (uint32_t i = 0; i < src->link_count; i++)
+	{
+		struct vil_link *link = &src->links[i];
+
+		char into[256];
+		char from[256];
+
+		vifunc_slot_to_name(src, link->into, into, ".", NULL);
+		vifunc_slot_to_name(src, link->from, from, ".", NULL);
+		vifunc_link(dst, ref(from), ref(into));
+	}
+}
+
+void _create_func(vil_t *ctx)
+{
+	char buffer[64] = "_";
+	strncat(buffer, g_create_buffer, sizeof(buffer) - 1);
+	vifunc_t *new_func = vifunc_new(ctx, buffer, NULL, 0, false);
+	if (g_create_template)
+	{
+		vifunc_copy(new_func, g_create_template);
+		g_create_template = NULL;
+	}
+	c_editmode(&SYS)->open_vil = new_func;
+}
+
 void vifunc_watch(vifunc_t *self, vil_func_cb callback, void *usrptr)
 {
 	if (!self) return;
@@ -1375,7 +1424,7 @@ uint32_t vifunc_gui(vifunc_t *self, void *nk)
 	{
 		/* allocate complete window space */
 		total_space = nk_window_get_content_region(nk);
-		nk_layout_row_begin(nk, NK_STATIC, 20, 4);
+		nk_layout_row_begin(nk, NK_STATIC, 20, 10);
 
 		nk_layout_row_push(nk, 100);
 		if (nk_combo_begin_label(nk, self->name, nk_vec2(100.0f, 500.0f)))
@@ -1385,7 +1434,7 @@ uint32_t vifunc_gui(vifunc_t *self, void *nk)
 			{
 				if(!kh_exist(ctx->funcs, k)) continue;
 				vifunc_t *t = kh_value(ctx->funcs, k);
-				if (t->name[0] == '_') continue;
+				if (t->name[0] == '_' || t->name[0] == '$') continue;
 				if (nk_combo_item_label(nk, t->name, NK_TEXT_LEFT))
 				{
 					c_editmode(&SYS)->open_vil = t;
@@ -1394,11 +1443,28 @@ uint32_t vifunc_gui(vifunc_t *self, void *nk)
 			nk_combo_end(nk);
 		}
 
-		nk_layout_row_push(nk, 100);
-		if (nk_button_label(nk, "create"))
+		nk_layout_row_push(nk, 140);
+		if (nk_button_label(nk, "new empty"))
 		{
 			g_create_buffer[0] = '\0';
 			g_create_dialogue = true;
+			g_create_template = NULL;
+		}
+		for (khiter_t k = kh_begin(ctx->funcs); k != kh_end(ctx->funcs); ++k)
+		{
+			if(!kh_exist(ctx->funcs, k)) continue;
+			vifunc_t *t = kh_value(ctx->funcs, k);
+			if (t->name[0] != '$') continue;
+
+			nk_layout_row_push(nk, 100);
+			char buffer[256];
+			snprintf(buffer, sizeof(buffer), "new %s", t->name + 1);
+			if (nk_button_label(nk, buffer))
+			{
+				g_create_buffer[0] = '\0';
+				g_create_dialogue = true;
+				g_create_template = t;
+			}
 		}
 		nk_layout_row_push(nk, 100);
 		if (nk_button_label(nk, "save"))
@@ -1422,9 +1488,8 @@ uint32_t vifunc_gui(vifunc_t *self, void *nk)
 			struct nk_panel *call = 0;
 
 			/* draw each link */
-			uint32_t n;
 			struct nk_command_buffer *canvas = nk_window_get_canvas(nk);
-			for (n = 0; n < self->link_count; ++n)
+			for (uint32_t n = 0; n < self->link_count; ++n)
 			{
 				struct vil_link *link = &self->links[n];
 
@@ -1628,7 +1693,7 @@ uint32_t vifunc_gui(vifunc_t *self, void *nk)
 						if(!kh_exist(ctx->funcs, k)) continue;
 						vifunc_t *t = kh_value(ctx->funcs, k);
 						if (t == self) continue;
-						if(t->name[0] == '_') continue;
+						if(t->name[0] == '_' || t->name[0] == '$') continue;
 						if(nk_contextual_item_label(nk, t->name, NK_TEXT_CENTERED))
 						{
 							char name[64];
@@ -1690,15 +1755,14 @@ uint32_t vifunc_gui(vifunc_t *self, void *nk)
 			{
 				if (strlen(g_create_buffer) > 0)
 				{
-					c_editmode(&SYS)->open_vil = vifunc_new(ctx, g_create_buffer, NULL, 0, false);
+					_create_func(ctx);
 				}
 				g_create_dialogue = false;
 			}
 			if (nk_button_label(nk, "create"))
 			{
-				c_editmode(&SYS)->open_vil = vifunc_new(ctx, g_create_buffer, NULL, 0, false);
+				_create_func(ctx);
 				g_create_dialogue = false;
-				
 			}
 		}
 		else
