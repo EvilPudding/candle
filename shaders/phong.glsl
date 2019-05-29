@@ -14,6 +14,7 @@ void main(void)
 {
 	/* float depth = textureLod(gbuffer.depth, pixel_pos(), 0.0).r; */
 	/* if (depth > gl_FragCoord.z) discard; */
+	/* FragColor = vec4(texcoord - gl_FragCoord.xy / screen_size, 0, 1); return; */
 
 	ivec2 fc = ivec2(gl_FragCoord.xy);
 	vec4 dif = texelFetch(gbuffer.albedo, fc, 0);
@@ -30,13 +31,12 @@ void main(void)
 	float dist_to_eye = length(c_pos);
 
 	vec3 color = vec3(0.0);
-	/* FragColor = vec4(texcoord - gl_FragCoord.xy / screen_size, 0, 1); return; */
 
 	if(light(radius) < 0.0)
 	{
-		color = light(color.rgb) * light(color.a) * dif.xyz;
+		color = light(color.rgb) * dif.xyz;
 	}
-	else if(light(color.a) > 0.01)
+	else if(light(color).r > 0.01 || light(color).g > 0.01 || light(color).b > 0.01)
 	{
 		/* if(dist_to_eye > length(vertex_position)) discard; */
 
@@ -65,7 +65,6 @@ void main(void)
 		if(sd < 0.95)
 		{
 			vec3 eye_dir = normalize(-c_pos);
-			vec3 lcolor = light(color.rgb) * light(color.a);
 
 			float l = point_to_light / light(radius);
 			/* float attenuation = clamp(1.0 - pow(l, 0.3), 0.0, 1.0); */

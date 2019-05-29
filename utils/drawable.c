@@ -1080,7 +1080,8 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	if (mesh->cull)
 	{
 		const uint32_t culls[4] = {0, GL_FRONT, GL_BACK, GL_FRONT_AND_BACK};
-		glCullFace(culls[mesh->cull]);
+		
+		glCullFace(culls[mesh->cull ^ (rd->cull_invert ? 3 : 0)]); glerr();
 	}
 	else
 	{

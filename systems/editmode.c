@@ -445,7 +445,6 @@ void c_editmode_init(c_editmode_t *self)
 		g_sel_mat = mat_new("sel_mat", "default");
 		/* g_sel_mat->albedo.color = vec4(0, 0.1, 0.4, 1); */
 		mat4f(g_sel_mat, ref("albedo.color"), vec4(0.0, 0.0, 0.0, 0.0));
-		mat4f(g_sel_mat, ref("transparency.color"), vec4(0.6, 0.3, 0.1, 0.0f));
 	}
 }
 

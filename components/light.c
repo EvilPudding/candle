@@ -28,6 +28,7 @@ c_light_t *c_light_new(float radius, vec4_t color, uint32_t shadow_size)
 	self->color = color;
 	self->shadow_size = shadow_size;
 	self->radius = radius;
+	self->volumetric_intensity = 0.0f;
 
 	return self;
 }
@@ -37,6 +38,7 @@ void c_light_init(c_light_t *self)
 	self->color = vec4(1.0f);
 	self->shadow_size = 512;
 	self->radius = 5.0f;
+	self->volumetric_intensity = 0.0f;
 	self->visible = 1;
 	self->shadow_cooldown = 1;
 
@@ -67,7 +69,7 @@ void c_light_init(c_light_t *self)
 	drawable_set_vs(&self->widget, sprite_vs());
 	drawable_set_mat(&self->widget, g_light_widget);
 	drawable_set_entity(&self->widget, c_entity(self));
-	drawable_set_xray(&self->widget, 1);
+	drawable_set_xray(&self->widget, true);
 
 	drawable_init(&self->draw, self->light_group);
 	drawable_set_vs(&self->draw, model_vs());
@@ -98,7 +100,7 @@ static void c_light_create_renderer(c_light_t *self)
 {
 	renderer_t *renderer = renderer_new(1.0f);
 
-	self->tile = get_free_tile(1, &self->lod);
+	self->tile = get_free_tile(0, &self->lod);
 
 	texture_t *output =	g_probe_cache;
 
@@ -223,6 +225,8 @@ int c_light_menu(c_light_t *self, void *ctx)
 	if(!ambient)
 	{
 		float rad = self->radius;
+		if (rad < 0.0f) rad = 0.0f;
+		float volum = self->volumetric_intensity;
 		if(self->radius < 0.0f) self->radius = 0.01;
 		nk_property_float(ctx, "radius:", 0.01, &rad, 1000, 0.1, 0.05);
 		if(rad != self->radius)
@@ -231,6 +235,13 @@ int c_light_menu(c_light_t *self, void *ctx)
 			c_light_position_changed(self);
 			world_changed();
 		}
+		nk_property_float(ctx, "volumetric:", -1.0, &volum, 1.0, 0.1, 0.05);
+		if(volum != self->volumetric_intensity)
+		{
+			self->volumetric_intensity = volum;
+			world_changed();
+		}
+
 	}
 	else
 	{
@@ -251,17 +262,6 @@ int c_light_menu(c_light_t *self, void *ctx)
 
 	return CONTINUE;
 }
-
-/* static int c_light_draw(c_light_t *self) */
-/* { */
-/* 	if(self->visible && self->renderer && self->radius > 0 && */
-/* 			self->visible_group && self->frames_passed <= 0) */
-/* 	{ */
-/* 		printf("redrawing light %d\n", self->id); */
-/* 		renderer_draw(self->renderer); */
-/* 	} */
-/* 	return CONTINUE; */
-/* } */
 
 static void c_light_destroy(c_light_t *self)
 {
@@ -296,7 +296,6 @@ REG()
 
 	ct_listener(ct, WORLD, sig("editmode_toggle"), c_light_editmode_toggle);
 	ct_listener(ct, WORLD, sig("component_menu"), c_light_menu);
-	/* ct_listener(ct, WORLD | 51, sig("world_draw"), c_light_draw); */
 	ct_listener(ct, WORLD, sig("world_pre_draw"), c_light_pre_draw);
 	ct_listener(ct, ENTITY, sig("node_changed"), c_light_position_changed);
 }

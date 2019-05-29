@@ -15,7 +15,7 @@
 
 #define CAN_COLOR_MAP(NK_COLOR)\
     NK_COLOR(NK_COLOR_TEXT,                     175,175,175,255) \
-    NK_COLOR(NK_COLOR_WINDOW,                   14, 20, 30, 89) \
+    NK_COLOR(NK_COLOR_WINDOW,                   50, 50, 50, 170) \
     NK_COLOR(NK_COLOR_HEADER,                   0, 0, 0, 100) \
     NK_COLOR(NK_COLOR_BORDER,                   65, 65, 65, 0) \
     NK_COLOR(NK_COLOR_BUTTON,                   50, 50, 50, 50) \

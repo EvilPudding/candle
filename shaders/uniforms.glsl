@@ -14,7 +14,8 @@ struct camera_t
 
 struct light_t
 {
-	vec4 color;
+	vec3 color;
+	float volumetric;
 	uvec2 pos;
 	int lod;
 	float radius;

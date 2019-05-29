@@ -1000,7 +1000,7 @@ REG()
 
 	ct_listener(ct, WORLD, sig("component_menu"), c_model_menu);
 	ct_listener(ct, WORLD, sig("component_tool"), c_model_tool);
-	ct_listener(ct, WORLD, sig("world_pre_draw"), c_model_pre_draw);
+	ct_listener(ct, WORLD | 100, sig("world_pre_draw"), c_model_pre_draw);
 
 	ct_listener(ct, ENTITY, sig("node_changed"), c_model_position_changed);
 

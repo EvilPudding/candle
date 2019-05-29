@@ -462,7 +462,7 @@ void renderer_default_pipeline(renderer_t *self)
 		buffer_new("depth",		true, -1);
 		buffer_new("albedo",	true, 4);
 		buffer_new("nmr",		true, 4);
-		buffer_new("emissive",	true, 3);
+		buffer_new("emissive",	false, 3);
 	texture_t *gbuffer = _texture_new(0);
 	/* texture_t *gbuffer =	texture_new_2D(0, 0, 0, */
 	/* ); */
@@ -470,6 +470,12 @@ void renderer_default_pipeline(renderer_t *self)
 	texture_t *ssao =		texture_new_2D(0, 0, 0,
 		buffer_new("occlusion",	true, 1)
 	);
+	texture_t *volum =	texture_new_2D(0, 0, TEX_INTERPOLATE,
+		buffer_new("color",	false, 4)
+	);
+	/* texture_t *volum_tmp =	texture_new_2D(0, 0, TEX_INTERPOLATE, */
+	/* 	buffer_new("color",	false, 4) */
+	/* ); */
 	texture_t *light =	texture_new_2D(0, 0, 0,
 		buffer_new("color",	true, 4)
 	);
@@ -499,6 +505,8 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_tex(self, "gbuffer",		1.0f, gbuffer);
 	renderer_add_tex(self, "ssao",			1.0f, ssao);
 	renderer_add_tex(self, "light",			1.0f, light);
+	renderer_add_tex(self, "volum",			0.6f, volum);
+	/* renderer_add_tex(self, "volum_tmp",		1.0f, volum_tmp); */
 	renderer_add_tex(self, "refr",			1.0f, refr);
 	renderer_add_tex(self, "tmp",			1.0f, tmp);
 	renderer_add_tex(self, "final",			1.0f, final);
@@ -512,7 +520,7 @@ void renderer_default_pipeline(renderer_t *self)
 		(bind_t[]){
 			{CLEAR_DEPTH, .number = 1.0f},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
-			{SKIP, .integer = 4},
+			/* {SKIP, .integer = 4}, */
 			{NONE}
 		}
 	);
@@ -520,7 +528,7 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_pass(self, "query_mips", "query_mips", ref("transparent"), 0,
 			query_mips, query_mips, 0,
 		(bind_t[]){
-			{SKIP, .integer = 4},
+			/* {SKIP, .integer = 4}, */
 			{NONE}
 		}
 	);
@@ -530,7 +538,7 @@ void renderer_default_pipeline(renderer_t *self)
 			query_mips, query_mips, 0,
 		(bind_t[]){
 			{CALLBACK, .getter = (getter_cb)renderer_process_query_mips, .usrptr = self},
-			{SKIP, .integer = 4},
+			/* {SKIP, .integer = 4}, */
 			{NONE}
 		}
 	);
@@ -599,6 +607,16 @@ void renderer_default_pipeline(renderer_t *self)
 		}
 	);
 
+	renderer_add_pass(self, "volum_pass", "volum", ref("light"),
+			ADD | CULL_DISABLE, volum, NULL, 0,
+		(bind_t[]){
+			{TEX, "gbuffer", .buffer = gbuffer},
+			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{NONE}
+		}
+	);
+	/* renderer_add_kawase(self, volum, volum_tmp, 0, 0); */
+
 
 	renderer_add_pass(self, "refraction", "copy", ref("quad"), 0,
 			refr, NULL, 0,
@@ -642,6 +660,7 @@ void renderer_default_pipeline(renderer_t *self)
 			{TEX, "light", .buffer = light},
 			{TEX, "refr", .buffer = refr},
 			{TEX, "ssao", .buffer = ssao},
+			{TEX, "volum", .buffer = volum},
 			{NONE}
 		}
 	);
@@ -823,6 +842,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 	{
 		glDisable(GL_DEPTH_TEST); glerr();
 	}
+	rd->cull_invert = pass->cull_invert;
 
 	glDepthMask(pass->depth_update); glerr();
 
@@ -900,6 +920,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 	}
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
+	rd->cull_invert = false;
 
 	return pass->output;
 }
@@ -1132,6 +1153,7 @@ void renderer_add_pass(
 	pass->additive = flags & ADD;
 	pass->multiply = flags & MUL;
 	pass->cull = !(flags & CULL_DISABLE);
+	pass->cull_invert = !!(flags & CULL_INVERT);
 	pass->clear_depth = 1.0f;
 	strncpy(pass->name, buffer, sizeof(pass->name));
 

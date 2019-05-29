@@ -489,7 +489,7 @@ uint32_t load_tile_by_id(uint32_t tile, uint32_t max_loads)
 	if (tile == 0) return 0;
 	if (tile >= g_indir_n)
 	{
-		printf("could not load tile %d %d\n", tile, g_indir_n);
+		/* printf("could not load tile %d %d\n", tile, g_indir_n); */
 		return 0;
 		exit(1);
 	}
@@ -668,7 +668,7 @@ int32_t buffer_new(const char *name, int32_t is_float, int32_t dims)
 	{
 		if(i > 0) perror("Depth component must be added first\n");
 		texture->bufs[i].format = GL_DEPTH_COMPONENT;
-		texture->bufs[i].internal = GL_DEPTH_COMPONENT16;
+		texture->bufs[i].internal = GL_DEPTH_COMPONENT32;
 		texture->bufs[i].type = GL_UNSIGNED_SHORT;
 		texture->depth_buffer = 1;
 	}

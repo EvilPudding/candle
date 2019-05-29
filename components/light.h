@@ -15,6 +15,7 @@ typedef struct
 	vec4_t color;
 	uint32_t shadow_size;
 	float radius;
+	float volumetric_intensity;
 
 	uint32_t id;
 	probe_tile_t tile;

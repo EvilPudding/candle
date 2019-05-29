@@ -26,10 +26,11 @@ enum pass_options
 	DEPTH_EQUAL		= 1 << 6,
 	DEPTH_DISABLE	= 1 << 7,
 	CULL_DISABLE	= 1 << 8,
-	ADD				= 1 << 9,
-	MUL				= 1 << 10,
-	GEN_MIP			= 1 << 11,
-	TRACK_BRIGHT	= 1 << 12
+	CULL_INVERT		= 1 << 9,
+	ADD				= 1 << 10,
+	MUL				= 1 << 11,
+	GEN_MIP			= 1 << 12,
+	TRACK_BRIGHT	= 1 << 13
 };
 
 enum bind_type
@@ -130,6 +131,7 @@ typedef struct pass_t
 	int32_t multiply;
 	int32_t depth_update;
 	int32_t cull;
+	int32_t cull_invert;
 	uint32_t depth_func;
 	unsigned int clear;
 	uint32_t draw_signal;

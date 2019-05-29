@@ -790,7 +790,7 @@ vicall_t *vicall_new(vifunc_t *parent, vifunc_t *type, const char *name,
 	call->bounds.w = 20;
 	call->type = type;
 	call->parent = parent;
-	call->color = nk_color_u32(nk_rgb(50, 50, 50));
+	call->color = nk_color_u32(nk_rgb(10, 10, 10));
 
 	call->data_offset = data_offset;
 	call->is_input = !!(flags & V_IN);
@@ -912,7 +912,7 @@ static float call_outputs(vicall_t *root,
 		/* start linking process */
 		if (g_dragging == NULL)
 		{
-			if (nk_input_has_mouse_click_down_in_rect(in,
+			if (nk_input_is_mouse_click_down_in_rect(in,
 						NK_BUTTON_LEFT, bound, nk_true))
 			{
 				linking = slot;
@@ -927,7 +927,7 @@ static float call_outputs(vicall_t *root,
 			struct nk_vec2 l1 = in->mouse.pos;
 
 			nk_stroke_curve(canvas, l0.x, l0.y, l0.x + 50.0f, l0.y,
-					l1.x - 50.0f, l1.y, l1.x, l1.y, 2.0f, nk_rgb(40, 40, 40));
+					l1.x - 50.0f, l1.y, l1.x, l1.y, 2.0f, nk_rgb(10, 10, 10));
 		}
 		y += 20;
 		circle.y -= 4.0f;
@@ -1006,7 +1006,7 @@ static void call_inputs(vicall_t *root,
 
 		if(is_linked)
 		{
-			if (nk_input_has_mouse_click_down_in_rect(in,
+			if (nk_input_is_mouse_click_down_in_rect(in,
 						NK_BUTTON_LEFT, bound, nk_true))
 			{
 				linking = arg->from;
@@ -1500,11 +1500,11 @@ uint32_t vifunc_gui(vifunc_t *self, void *nk)
 				struct nk_vec2 l1 = nk_layout_space_to_screen(nk, pi);
 
 				l0.x -= scrolling.x;
-				l0.y -= scrolling.y + 45.0f;
+				l0.y = po.y - scrolling.y + 15.0f;
 				l1.x -= scrolling.x;
 				l1.y -= scrolling.y + 55.0f;
 				nk_stroke_curve(canvas, l0.x, l0.y, l0.x + 50.0f, l0.y,
-						l1.x - 50.0f, l1.y, l1.x, l1.y, 2.0f, nk_rgb(50, 50, 50));
+						l1.x - 50.0f, l1.y, l1.x, l1.y, 2.0f, nk_rgb(10, 10, 10));
 			}
 
 
@@ -1589,10 +1589,14 @@ uint32_t vifunc_gui(vifunc_t *self, void *nk)
 				{
 					slot_t sl = {0};
 					/* output connector */
-					call_outputs(it, it, sl, it->bounds.x, it->bounds.y + 80.0f, nk, true);
+
+					struct nk_vec2 i0 = nk_layout_space_to_screen(nk, nk_vec2(it->bounds.x, it->bounds.y));
+					struct nk_vec2 o1 = nk_vec2(i0.x, i0.y - it->bounds.y);
+
+					call_outputs(it, it, sl, i0.x - 5.0f, i0.y + 20.0f, nk, true);
 
 					/* input connector */
-					call_inputs(it, it, sl, it->bounds.x, 0.0f, nk, false);
+					call_inputs(it, it, sl, o1.x - 5.0f, o1.y - 60.0f, nk, false);
 				}
 				if(g_dragging)
 				{

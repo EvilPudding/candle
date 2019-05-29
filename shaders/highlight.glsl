@@ -55,11 +55,11 @@ void main(void)
 	float overp = filtered(c2, over_poly_id);
 
 	const vec3 over_poly_color = vec3(0.2, 0.02, 0.5);
-	const vec3 over_color = vec3(0.06);
+	const vec3 over_color = vec3(0.02);
 
 	if(is_equal(c, zero))
 	{
-		FragColor = vec4(vec3(0.5), 1.0);
+		FragColor = vec4(vec3(0.1), 1.0);
 		return;
 	}
 

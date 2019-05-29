@@ -135,6 +135,7 @@ void shaders_border_glsl_reg(void);
 void shaders_marching_glsl_reg(void);
 
 void shaders_phong_glsl_reg(void);
+void shaders_volum_glsl_reg(void);
 void shaders_ssao_glsl_reg(void);
 void shaders_transparency_glsl_reg(void);
 void shaders_highlight_glsl_reg(void);
@@ -160,6 +161,7 @@ void shaders_reg()
 	shaders_editmode_glsl_reg();
 	shaders_highlight_glsl_reg();
 	shaders_phong_glsl_reg();
+	shaders_volum_glsl_reg();
 	shaders_marching_glsl_reg();
 	shaders_quad_glsl_reg();
 	shaders_select_glsl_reg();

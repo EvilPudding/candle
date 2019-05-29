@@ -818,7 +818,13 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		        );
 	}
 
-	str_cat(&gbuffer, "time_in = scene.time;\n");
+	str_cat(&gbuffer,
+	        "#ifdef QUERY_PASS\n"
+	        "time_in = scene.time + 10.0 * 0.01;\n"
+	        "#else\n"
+	        "time_in = scene.time;\n"
+	        "#endif\n"
+	        );
 	vicall_foreach_unlinked_input(type->tmp_material_instance,
 	                              _generate_uniform_assigment, &gbuffer);
 	vicall_iterate_dependencies(call, (vil_link_cb)material_generate_assignments,

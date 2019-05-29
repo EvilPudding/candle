@@ -14,7 +14,8 @@ typedef struct uniform_t uniform_t;
 
 struct gl_light
 {
-	vec4_t color;
+	vec3_t color;
+	float volumetric;
 	ivec2_t pos;
 	uint32_t lod;
 	float radius;
@@ -62,6 +63,7 @@ typedef struct c_render_device_t
 	int32_t updates_ram;
 	int32_t updates_ubo;
 	int32_t frame;
+	bool_t cull_invert;
 	uint32_t bound_ubos[32];
 } c_render_device_t;
 

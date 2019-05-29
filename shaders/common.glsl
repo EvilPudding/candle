@@ -137,11 +137,11 @@ vec4 textureSVT(uvec2 size, uint base_tile, vec2 coords, out uint tile_out,
 /* float ambient = 1.00; */
 float linearize(float depth)
 {
-    return 2.0 * 0.1 * 100.0 / (100.0 + 0.1 - (2.0 * depth - 1.0) * (100.0 - 0.1));
+    return 2.0 * 0.1 * 600.0 / (600.0 + 0.1 - (2.0 * depth - 1.0) * (600.0 - 0.1));
 }
 float unlinearize(float depth)
 {
-	return 100.0 * (1.0 - (0.1 / depth)) / (100.0 - 0.1);
+	return 600.0 * (1.0 - (0.1 / depth)) / (600.0 - 0.1);
 }
 
 const vec4 bitSh = vec4(256. * 256. * 256., 256. * 256., 256., 1.);
@@ -181,6 +181,21 @@ float lookup(vec3 coord)
 /* SPHEREMAP TRANSFORM */
 /* https://aras-p.info/texts/CompactNormalStorage.html */
 
+/* vec2 encode_normal(vec3 n) */
+/* { */
+/*     vec2 enc = normalize(n.xy) * (sqrt(-n.z*0.5+0.5)); */
+/*     enc = enc*0.5+0.5; */
+/*     return enc; */
+/* } */
+/* vec3 decode_normal(vec2 enc) */
+/* { */
+/*     vec4 nn = vec4(enc, 0.0, 0.0) * vec4(2.0, 2.0, 0.0, 0.0) + vec4(-1.0, -1.0, 1.0, -1.0); */
+/*     float l = dot(nn.xyz, -nn.xyw); */
+/*     nn.z = l; */
+/*     nn.xy *= sqrt(l); */
+/*     return nn.xyz * 2.0 + vec3(0.0, 0.0, -1.0); */
+/* } */
+
 vec2 encode_normal(vec3 n)
 {
     float p = sqrt(n.z * 8.0 + 8.0);
@@ -209,12 +224,17 @@ vec3 get_position(sampler2D depth)
 	return view_pos.xyz / view_pos.w;
 }
 
-vec3 get_position(sampler2D depth, vec2 pos)
+vec3 get_position(float depth, vec2 pos)
 {
-	vec3 raw_pos = vec3(pos, textureLod(depth, pos, 0.0).r);
+	vec3 raw_pos = vec3(pos, depth);
 	vec4 clip_pos = vec4(raw_pos * 2.0 - 1.0, 1.0);
 	vec4 view_pos = camera(inv_projection) * clip_pos;
 	return view_pos.xyz / view_pos.w;
+}
+
+vec3 get_position(sampler2D depth, vec2 pos)
+{
+	return get_position(textureLod(depth, pos, 0.0).r, pos);
 }
 
 vec3 get_normal(sampler2D buffer)
@@ -268,9 +288,16 @@ float shadow_at_dist_no_tan(vec3 vec, float i)
 	return 0.0;
 }
 
+float ditherPattern[16] = float[16](0.0f, 0.5f, 0.125f, 0.625f,
+									0.75f, 0.22f, 0.875f, 0.375f,
+									0.1875f, 0.6875f, 0.0625f, 0.5625,
+									0.9375f, 0.4375f, 0.8125f, 0.3125);
+
+
 float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)
 {
 	float ocluder_to_light = lookup_single(-vec);
+	float ditherValue = ditherPattern[(int(gl_FragCoord.x) % 4) * 4 + (int(gl_FragCoord.y) % 4)];
 
 	float sd = ((ocluder_to_light - point_to_light) > -0.01) ? 0.0 : 1.0;
 	if(sd > 0.5)
@@ -278,39 +305,27 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)
 
 		/* sd = 0.5; */
 		float shadow_len = min(0.8 * (point_to_light / ocluder_to_light - 1.0), 10.0);
-		float p = 0.01 * linearize(depth);
+		float p = 0.02 * linearize(depth);
 		if(shadow_len > 0.001)
 		{
-			float i;
 
-			float count = 1.0;
-			float inc = p;
-			float iters = 1.0 + min(round(shadow_len / inc), 20.0);
-			inc = shadow_len / iters;
+			uint count = 1u;
+			uint iters = 1u + clamp(uint(round(shadow_len / p)), 3u, 10u);
+			float inc = shadow_len / float(iters);
+			float i = inc + inc * ditherValue;
 
-			for (i = inc; count < iters && count < 20.0; i += inc)
+			for (uint j = 1u; j < 10u && count < iters; j++)
 			{
 				if(shadow_at_dist_no_tan(vec, i) > 0.5) break;
 
 				count++;
+				i += inc;
 			}
-			if(count == 1.0) return 0.0;
-			return (count / iters);
+			if(count == 1u) return 0.0;
+			return float(count) / float(iters);
 		}
 	}
 	return 0.0;
-}
-
-float doAmbientOcclusion(sampler2D depth, vec2 tcoord, vec2 uv, vec3 p, vec3 cnorm)
-{
-    float scale = 1.2, bias = 0.45, intensity = 5.0; 
-    vec3 diff = get_position(depth, tcoord + uv) - p;
-    vec3 v = normalize(diff);
-	float dist = length(diff);
-	if(dist > 0.75 * scale) return 0.0;
-
-    float d = dist * scale;
-    return max(0.0, (dot(cnorm, v) - bias) * (1.0 / (1.0 + d)) * intensity);
 }
 
 vec3 ppp[] = vec3[](
@@ -327,6 +342,7 @@ vec3 ppp[] = vec3[](
 		vec3(0.14642092069816068, 0.5859713297143408, -0.7969934220147054),
 		vec3(0.968975404819239, -0.07683527155447646, 0.234910633860074));
 
+
 vec2 fTaps_Poisson[] = vec2[](
 	vec2(-.326,-.406),
 	vec2(-.840,-.074),
@@ -341,38 +357,6 @@ vec2 fTaps_Poisson[] = vec2[](
 	vec2(-.322,-.933),
 	vec2(-.792,-.598)
 );
-
-float ambientOcclusion(sampler2D depth, vec3 p, vec3 n, float dist_to_eye)
-{
-	vec2 rnd = normalize(vec2(rand(p.xy), rand(n.xy)));
-
-	float ao = 0.0;
-	float rad = 0.4 / dist_to_eye;
-
-	/* vec2 vec[8]; */ 
-	/* vec2 vec[4]; */ 
-	/* vec[0] = vec2(1.0, 0.0); */ 
-	/* vec[1] = vec2(-1.0, 0.0); */ 
-	/* vec[2] = vec2(0.0, 1.0); */ 
-	/* vec[3] = vec2(0.0, -1.0); */
-
-	/* vec[4] = vec2(1.0, 1.0); */ 
-	/* vec[5] = vec2(-1.0, 1.0); */ 
-	/* vec[6] = vec2(-1.0, 1.0); */ 
-	/* vec[7] = vec2(-1.0, -1.0); */
-
-	uint iterations = 12u;
-	for (uint j = 0u; j < iterations; ++j)
-	{
-		vec2 coord1 = reflect(fTaps_Poisson[j] * rad, rnd);
-
-		ao += doAmbientOcclusion(depth, texcoord, coord1 * 0.25, p, n);
-		ao += doAmbientOcclusion(depth, texcoord, coord1 * 0.75, p, n);
-	}
-	ao /= float(iterations);
-	ao = 1.0 - ao * 0.25;
-	return clamp(ao, 0.0, 1.0); 
-}
 
 
 // Consts should help improve performance
@@ -627,7 +611,7 @@ float microfacetDistribution(PBRInfo pbrInputs)
 }
 
 vec4 pbr(vec4 base_color, vec2 metallic_roughness,
-		vec4 light_color, vec3 light_dir, vec3 c_pos,
+		vec3 light_color, vec3 light_dir, vec3 c_pos,
 		vec3 c_nor)
 {
     // Metallic and Roughness material properties are packed together
@@ -683,7 +667,7 @@ vec4 pbr(vec4 base_color, vec2 metallic_roughness,
     vec3 diffuseContrib = (1.0 - F) * diffuse(pbrInputs);
     vec3 specContrib = F * G * D / (4.0 * NdotL * NdotV);
     // Obtain final intensity as reflectance (BRDF) scaled by the energy of the light (cosine law)
-    vec3 color = NdotL * light_color.xyz * (diffuseContrib + specContrib);
+    vec3 color = NdotL * light_color * (diffuseContrib + specContrib);
 
     return vec4(pow(color,vec3(1.0/2.2)), base_color.a);
 }
