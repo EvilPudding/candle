@@ -18,6 +18,8 @@ vec2 hemicircle[] = vec2[](
 	vec2(-0.92388, 0.38268)
 );
 
+uniform float power;
+
 float ambientOcclusion(sampler2D depth, vec3 p, vec3 n)
 {
 	float ao = 0.0;
@@ -73,7 +75,7 @@ float ambientOcclusion(sampler2D depth, vec3 p, vec3 n)
 			{
 				float falloff = (1.0 + max(abs(c1), abs(c2)));
 				/* ao += clamp((angle1 + angle2) / falloff, 0.0, 1.0) * 3.0; */
-				ao += clamp(sin(angle) / falloff, 0.0, 1.0) * 2.0;
+				ao += clamp(sin(angle) / falloff, 0.0, 1.0) * power;
 			}
 		}
 	}

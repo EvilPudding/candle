@@ -335,13 +335,14 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 /* 	); */
 }
 
-bool_t svt_stage;
+/* bool_t svt_stage; */
 void *renderer_process_query_mips(renderer_t *self)
 {
 	texture_t *tex = renderer_tex(self, ref("query_mips"));
 	if (!tex->framebuffer_ready) return NULL;
 
 	uint32_t size = tex->width * tex->height * 4;
+	bool_t svt_stage = true;
 	if (!tex->bufs[1].pbo)
 	{
 		glGenBuffers(1, &tex->bufs[1].pbo);
@@ -362,6 +363,7 @@ void *renderer_process_query_mips(renderer_t *self)
 		glBufferData(GL_PIXEL_PACK_BUFFER, size, 0, GL_STREAM_DRAW);
 
 		glerr();
+		svt_stage = false;
 	}
 
 	struct{
@@ -533,7 +535,6 @@ void renderer_default_pipeline(renderer_t *self)
 		}
 	);
 
-
 	renderer_add_pass(self, "svt", NULL, -1, 0,
 			query_mips, query_mips, 0,
 		(bind_t[]){
@@ -543,16 +544,6 @@ void renderer_default_pipeline(renderer_t *self)
 		}
 	);
 
-	/* renderer_add_pass(self, "query_mips", "query_mips", ref("decals"), */
-	/* 		DEPTH_LOCK | DEPTH_EQUAL | DEPTH_GREATER, query_mips, query_mips, 0, */
-	/* 	(bind_t[]){ */
-	/* 		{TEX, "gbuffer", .buffer = gbuffer}, */
-	/* 		{INT, "transparent", .integer = false}, */
-	/* 		{SKIP, .integer = 8}, */
-	/* 		{NONE} */
-	/* 	} */
-	/* ); */
-
 	renderer_add_pass(self, "gbuffer", "gbuffer", ref("visible"), 0, gbuffer,
 			gbuffer, 0,
 		(bind_t[]){
@@ -561,16 +552,6 @@ void renderer_default_pipeline(renderer_t *self)
 			{NONE}
 		}
 	);
-	
-	/* FIELD PASS */
-	/* renderer_add_pass(self, "field_pass", "marching", ref("field"), 0, */
-	/* 		gbuffer, gbuffer, 0, */
-	/* 	(bind_t[]){ */
-	/* 		{NUM, "iso_level", .buffer = 0.5}, */
-	/* 		{NONE} */
-	/* 	} */
-	/* ); */
-
 
 	renderer_add_pass(self, "selectable", "select", ref("selectable"),
 			0, selectable, selectable, 0,
@@ -646,6 +627,7 @@ void renderer_default_pipeline(renderer_t *self)
 			ssao, NULL, 0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
+			{NUM, "power", .number = 1.0},
 			{NONE}
 		}
 	);

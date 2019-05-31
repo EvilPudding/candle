@@ -236,7 +236,6 @@ void c_spatial_set_pos(c_spatial_t *self, vec3_t pos)
 	self->modified = 1;
 	self->update_id++;
 	c_spatial_unlock(self);
-
 }
 
 int c_spatial_menu(c_spatial_t *self, void *ctx)

@@ -490,7 +490,7 @@ void candle_init2(void)
 #else
 	render_loop_init();
 #endif
-	/* SDL_Delay(500); */
+	SDL_Delay(30);
 
 	/* candle_import_dir(candle, entity_null, "./"); */
 }
