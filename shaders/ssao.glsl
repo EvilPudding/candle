@@ -20,11 +20,11 @@ vec2 hemicircle[] = vec2[](
 
 uniform float power;
 
-float ambientOcclusion(sampler2D depth, vec3 p, vec3 n)
+float ambientOcclusion(vec3 n)
 {
 	float ao = 0.0;
 
-	float d0 = linearize(textureLod(depth, texcoord, 0.0).r);
+	float d0 = linearize(textureLod(gbuffer.depth, texcoord, 0.0).r);
 
 	float ditherValue = ditherPattern[(int(gl_FragCoord.x) % 4) * 4 + (int(gl_FragCoord.y) % 4)];
 	/* ditherValue = 0.0; */
@@ -55,8 +55,8 @@ float ambientOcclusion(sampler2D depth, vec3 p, vec3 n)
 			float c0 = pow((i + ditherValue) / (iterations - 1.0), 2.0) + 0.0001;
 			vec2 coord1 = offset * c0;
 
-			float d1 = linearize(textureLod(depth, texcoord + coord1, 0.0).r);
-			float d2 = linearize(textureLod(depth, texcoord - coord1, 0.0).r);
+			float d1 = linearize(textureLod(gbuffer.depth, texcoord + coord1, 0.0).r);
+			float d2 = linearize(textureLod(gbuffer.depth, texcoord - coord1, 0.0).r);
 			float c1 = d0 - d1;
 			float c2 = d0 - d2;
 			if (abs(c1) < 1.0)
@@ -86,10 +86,8 @@ float ambientOcclusion(sampler2D depth, vec3 p, vec3 n)
 
 void main(void)
 {
-	vec3 c_pos_o = get_position(gbuffer.depth);
 	vec3 c_nor = get_normal(gbuffer.nmr);
-	FragColor.r = ambientOcclusion(gbuffer.depth,
-			c_pos_o, c_nor);
+	FragColor.r = ambientOcclusion(c_nor);
 	/* float dep; */
 	/* FragColor.r = GTAO(texcoord, 8, 3, dep).w; */
 }

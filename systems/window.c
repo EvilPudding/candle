@@ -266,7 +266,6 @@ int c_window_draw(c_window_t *self)
 
 	/* glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE); glerr(); */
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); glerr();
-	/* glClear(GL_COLOR_BUFFER_BIT); */
 	glClear(GL_DEPTH_BUFFER_BIT); glerr();
 
 	fs_bind(g_quad_fs);

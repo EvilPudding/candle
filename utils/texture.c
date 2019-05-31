@@ -51,7 +51,7 @@ tex_tile_t *g_tiles;
 const int g_cache_w = 64;
 const int g_cache_h = 32;
 const int g_indir_w = 256;
-const int g_indir_h = 256;
+const int g_indir_h = 64;
 int g_cache_n = 0;
 int g_indir_n = 1;
 
@@ -223,7 +223,7 @@ uint32_t texture_get_pixel(texture_t *self, int32_t buffer, int32_t x, int32_t y
 {
 	if(!self->framebuffer_ready) return 0;
 	uint32_t data = 0;
-	y = self->height - y;
+	y = self->height - y - 1;
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, self->frame_buffer[0]); glerr();
@@ -238,15 +238,15 @@ uint32_t texture_get_pixel(texture_t *self, int32_t buffer, int32_t x, int32_t y
 	}
 	if(depth)
 	{
-		float fetch_depth = 0.988937f;
-#ifndef __EMSCRIPTEN__
+		/* float fetch_depth = 0.988937f; */
+/* #ifndef __EMSCRIPTEN__ */
 
 		/* glReadBuffer(GL_NONE); glerr(); */
 
-		glReadPixels(x, y, 1, 1, self->bufs[0].format, GL_FLOAT, &fetch_depth); glerr();
-#endif
+		/* glReadPixels(x, y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &fetch_depth); glerr(); */
+/* #endif */
 
-		*depth = fetch_depth;
+		/* *depth = fetch_depth; */
 	}
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
@@ -499,10 +499,16 @@ uint32_t load_tile_by_id(uint32_t tile, uint32_t max_loads)
 
 static int32_t texture_from_file_loader(texture_t *self)
 {
+	if (self->target != GL_TEXTURE_2D)
+	{
+		printf("PROBLEM '%s'\n", self->filename);
+		return 0;
+	}
 	glActiveTexture(GL_TEXTURE0 + ID_2D);
 	const uint32_t format = self->bufs[0].format;
 	const uint32_t type = self->bufs[0].type;
 
+	self->mipmaped = true;
 	glGenTextures(1, &self->bufs[0].id); glerr();
 	glBindTexture(self->target, self->bufs[0].id); glerr();
 	glerr();
@@ -531,12 +537,22 @@ static int32_t texture_from_file_loader(texture_t *self)
 
 	texture_target(self, NULL, 0); glerr();
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0); glerr();
+	if (self->target != GL_TEXTURE_2D)
+	{
+		printf("PROBLEM '%s'\n", self->filename);
+		return 0;
+	}
 
 	int tiles_x = ceilf(((float)self->width) / 128);
 	int tiles_y = ceilf(((float)self->height) / 128);
 	uint32_t tile_i = self->bufs[0].indir_n;
 	for (int m = 0; m < MAX_MIPS; m++)
 	{
+
+		if (self->frame_buffer[m] > 200)
+		{
+			continue;
+		}
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, self->frame_buffer[m]); glerr();
 		glReadBuffer(GL_COLOR_ATTACHMENT0); glerr();
@@ -591,34 +607,30 @@ static int32_t texture_from_file_loader(texture_t *self)
 		}
 		tiles_x = ceilf(0.5f * tiles_x);
 		tiles_y = ceilf(0.5f * tiles_y);
-
 	}
 	glPixelStorei(GL_PACK_ROW_LENGTH, 0);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	glerr();
 
-	/* glGenerateMipmap(self->target); glerr(); */
+	if (self->target != GL_TEXTURE_2D)
+	{
+		printf("PROBLEM '%s'\n", self->filename);
+		return 0;
+	}
+
 	glBindTexture(self->target, 0); glerr();
 
 	stbi_image_free(self->bufs[0].data);
+
+	glDeleteFramebuffers(MAX_MIPS, self->frame_buffer);
+
 	for(int i = 0; i < self->bufs_size; i++)
 	{
 		if(self->bufs[i].id) glDeleteTextures(1, &self->bufs[i].id);
 	}
-	if(self->frame_buffer[0]) /* TEX2D */
-	{
-		int32_t levels = self->mipmaped ? MAX_MIPS : 1;
-		glDeleteFramebuffers(levels, &self->frame_buffer[0]);
-	}
 
-/* 	for (int x = 0; x < self->bufs[0].num_tiles_x[0]; x++) */
-/* 	{ */
-/* 		for (int y = 0; y < self->bufs[0].num_tiles_y[0]; y++) */
-/* 			load_tile(self, 0, x, y, 100); */
-/* 	} */
 	self->bufs[0].ready = 1;
-
 
 	return 1;
 }
@@ -668,8 +680,13 @@ int32_t buffer_new(const char *name, int32_t is_float, int32_t dims)
 	{
 		if(i > 0) perror("Depth component must be added first\n");
 		texture->bufs[i].format = GL_DEPTH_COMPONENT;
-		texture->bufs[i].internal = GL_DEPTH_COMPONENT32;
-		texture->bufs[i].type = GL_UNSIGNED_SHORT;
+/* #ifdef __EMSCRIPTEN__ */
+		/* texture->bufs[i].internal = GL_DEPTH_COMPONENT16; */
+		/* texture->bufs[i].type = GL_UNSIGNED_SHORT; */
+/* #else */
+		texture->bufs[i].internal = GL_DEPTH_COMPONENT32F;
+		texture->bufs[i].type = GL_FLOAT;
+/* #endif */
 		texture->depth_buffer = 1;
 	}
 

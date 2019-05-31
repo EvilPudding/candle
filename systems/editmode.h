@@ -87,6 +87,8 @@ typedef struct c_editmode_t
 	/* TOOL VARIABLES */
 
 	vec3_t mouse_screen_pos;
+	ivec2_t mouse_iposition;
+	texture_t *mouse_depth;
 
 	void *nk;
 	vec2_t spawn_pos;

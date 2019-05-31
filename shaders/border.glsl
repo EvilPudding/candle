@@ -31,8 +31,7 @@ bool is_equal(vec2 a, vec2 b)
 
 BUFFER {
 	sampler2D depth;
-	sampler2D id;
-	sampler2D geomid;
+	sampler2D ids;
 } sbuffer;
 
 BUFFER {
@@ -41,7 +40,7 @@ BUFFER {
 
 float is_selected(ivec2 coord)
 {
-	vec2 t = texelFetch(sbuffer.id, coord, 0).rg;
+	vec2 t = texelFetch(sbuffer.ids, coord, 0).rg;
 	float selected = filtered(t, sel_id);
 	if(is_equal(sel_id, t))
 	{
