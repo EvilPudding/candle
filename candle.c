@@ -21,6 +21,36 @@
 
 candle_t *g_candle;
 
+
+entity_t candle_run_command_args(entity_t root, int argc, char **argv,
+                                 bool_t *handled)
+{
+	entity_t instance = root;
+	uint32_t hash = ref(argv[0]);
+	khiter_t k = kh_get(cmd, g_candle->cmds, hash);
+	if(k != kh_end(g_candle->cmds))
+	{
+		cmd_t *cmd = &kh_value(g_candle->cmds, k);
+
+		instance = cmd->cb(instance, argc, argv);
+		if (handled) *handled = true;
+	}
+	if (handled) *handled = false;
+	return instance;
+}
+
+bool_t candle_utility(int argc, char **argv)
+{
+	bool_t handled = false;
+	argc--;
+	argv++;
+	if (argc > 0)
+	{
+		candle_run_command_args(entity_null, argc, argv, &handled);
+	}
+	return handled;
+}
+
 void candle_reset_dir()
 {
 #ifdef WIN32
@@ -330,7 +360,6 @@ void candle_reg_cmd(const char *key, cmd_cb cb)
 	strncpy(cmd->key, key, sizeof(cmd->key) - 1);
 }
 
-
 entity_t candle_run_command(entity_t root, const char *command)
 {
 	if(command[0] == '\0') return root;
@@ -353,15 +382,8 @@ entity_t candle_run_command(entity_t root, const char *command)
 		argv[argc++] = strdup(p);
 	}
 
-	uint32_t hash = ref(argv[0]);
-	khiter_t k = kh_get(cmd, g_candle->cmds, hash);
-	if(k != kh_end(g_candle->cmds))
-	{
-		cmd_t *cmd = &kh_value(g_candle->cmds, k);
+	instance = candle_run_command_args(root, argc, argv, NULL);
 
-		instance = cmd->cb(instance, argc, argv);
-
-	}
 	for(i = 0; i < argc; i++) free(argv[i]);
 	free(copy);
 
@@ -445,6 +467,10 @@ void candle_init(void)
 {
 	g_candle = calloc(1, sizeof *g_candle);
 	g_candle->loader = loader_new();
+
+	g_candle->firstDir = SDL_GetBasePath();
+	candle_reset_dir();
+
 	materials_init_vil();
 
 	ecm_init();
@@ -453,9 +479,6 @@ void candle_init(void)
 	entity_new();
 
 	g_candle->cmds = kh_init(cmd);
-
-	g_candle->firstDir = SDL_GetBasePath();
-	candle_reset_dir();
 
 	shaders_reg();
 

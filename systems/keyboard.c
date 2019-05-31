@@ -1,6 +1,4 @@
 #include "keyboard.h"
-#include <SDL2/SDL.h>
-
 
 c_keyboard_t *c_keyboard_new()
 {

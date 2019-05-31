@@ -60,6 +60,7 @@ typedef struct candle_t
 void candle_wait(void);
 void candle_reset_dir(void);
 
+bool_t candle_utility(int argc, char **argv);
 void candle_reg_cmd(const char *key, cmd_cb cb);
 int candle_import(entity_t root, const char *map_name);
 int candle_run(entity_t root, const char *map_name);

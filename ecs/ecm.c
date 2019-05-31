@@ -4,6 +4,7 @@
 #include <string.h>
 #include "ecm.h"
 #include <stdarg.h>
+#define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 
 #include "candle.h"

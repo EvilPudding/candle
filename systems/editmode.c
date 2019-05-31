@@ -603,10 +603,6 @@ static int32_t c_editmode_activate_loader(c_editmode_t *self)
 	return CONTINUE;
 }
 
-static float decode( vec4_t rgba ) {
-  return vec4_dot( rgba, vec4(1.0, 1.0/255.0, 1.0/65025.0, 1.0/16581375.0) );
-}
-
 void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 {
 	c_camera_t *cam = c_camera(&self->camera);
