@@ -130,6 +130,7 @@ void shaders_blur_glsl_reg(void);
 void shaders_kawase_glsl_reg(void);
 void shaders_motion_glsl_reg(void);
 void shaders_downsample_glsl_reg(void);
+void shaders_extract_depth_glsl_reg(void);
 void shaders_upsample_glsl_reg(void);
 void shaders_border_glsl_reg(void);
 void shaders_marching_glsl_reg(void);
@@ -149,6 +150,7 @@ void shaders_reg()
 	shaders_kawase_glsl_reg();
 	shaders_motion_glsl_reg();
 	shaders_downsample_glsl_reg();
+	shaders_extract_depth_glsl_reg();
 	shaders_upsample_glsl_reg();
 	shaders_border_glsl_reg();
 	shaders_bright_glsl_reg();
@@ -485,12 +487,19 @@ static char *string_preprocess(const char *src, bool_t len, const char *filename
 
 		char *include = str_new(64);
 		char *include_buffer = shader_preprocess(inc, false, has_gshader, false);
-		str_catf(&include, "#line 1 \"%s\"\n", include_name,
-		         filename);
+#ifndef __EMSCRIPTEN__
+		str_catf(&include, "#line 1 \"%s\"\n", include_name);
+#else
+		str_catf(&include, "#line 1\n", include_name);
+#endif
 		str_cat(&include, include_buffer);
 		free(include_buffer);
+#ifndef __EMSCRIPTEN__
 		str_catf(&include, "\n#line %d \"%s\"\n", include_lines[include_num],
 		         filename);
+#else
+		str_catf(&include, "\n#line %d\n", include_lines[include_num]);
+#endif
 		
 		buffer = replace(buffer, offset, end_offset, include, &lsize);
 		str_free(include);

@@ -12,17 +12,21 @@ loader_t *loader_new()
 
 void loader_start(loader_t *self)
 {
+#ifndef __EMSCRIPTEN__
 	self->threadId = SDL_ThreadID();
 	self->semaphore = SDL_CreateSemaphore(1);
+#endif
 }
 
 void _loader_push_wait(loader_t *self, loader_cb cb, void *usrptr, c_t *c)
 {
+#ifndef __EMSCRIPTEN__
 	if (!self->semaphore)
 	{
 		printf("Loader not ready for push_wait.\n");
 	}
-	if (SDL_ThreadID() == self->threadId)
+#endif
+	if (!self->semaphore || SDL_ThreadID() == self->threadId)
 	{
 		if(c)
 		{

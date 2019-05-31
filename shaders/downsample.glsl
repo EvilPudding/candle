@@ -1,6 +1,4 @@
-
 #include "common.glsl"
-#line 4
 
 layout (location = 0) out vec4 FragColor;
 

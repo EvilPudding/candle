@@ -461,6 +461,11 @@ vec2_t c_editmode_bind_over_poly(c_editmode_t *self)
 {
 	return entity_to_vec2(self->over_poly);
 }
+vec2_t c_editmode_bind_mouse_position(c_editmode_t *self)
+{
+	return vec2(_vec2(self->mouse_iposition));
+}
+
 
 vec3_t c_editmode_bind_selected_pos(c_editmode_t *self)
 {
@@ -496,9 +501,22 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	renderer_t *renderer = renderer_new(1.00f);
 	renderer_default_pipeline(renderer);
 
+	self->mouse_depth = texture_new_2D(1, 1, 0,
+		buffer_new("color",	false, 4));
+
 	texture_t *tmp = texture_new_2D(0, 0, TEX_INTERPOLATE,
-		buffer_new("color",	1, 4));
+		buffer_new("color",	true, 4));
 	renderer_add_tex(renderer, "tmp", 1.0f, tmp);
+
+	renderer_add_pass(renderer, "mouse_depth", "extract_depth", ref("quad"),
+			0, self->mouse_depth, NULL, 0,
+		(bind_t[]){
+			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{TEX, "gbuffer", .buffer = renderer_tex(renderer, ref("gbuffer"))},
+			{VEC2, "position", (getter_cb)c_editmode_bind_mouse_position, self},
+			{NONE}
+		}
+	);
 
 	renderer_add_pass(renderer, "highlights", "highlight", ref("quad"),
 			ADD, renderer_tex(renderer, ref("final")), NULL, 0,
@@ -558,7 +576,7 @@ void c_editmode_activate(c_editmode_t *self)
 	{
 		self->camera = entity_new(
 			c_name_new("Edit Camera"), c_editlook_new(), c_node_new(),
-			c_camera_new(70, 0.1, 600.0, 0, 1, 1, editmode_renderer_new(self))
+			c_camera_new(70, 0.1, 100.0, 0, 1, 1, editmode_renderer_new(self))
 		);
 		c_spatial_t *sc = c_spatial(&self->camera);
 		c_spatial_lock(sc);
@@ -585,16 +603,24 @@ static int32_t c_editmode_activate_loader(c_editmode_t *self)
 	return CONTINUE;
 }
 
+static float decode( vec4_t rgba ) {
+  return vec4_dot( rgba, vec4(1.0, 1.0/255.0, 1.0/65025.0, 1.0/16581375.0) );
+}
+
 void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 {
 	c_camera_t *cam = c_camera(&self->camera);
 	renderer_t *renderer = cam->renderer;
 	float px = x / renderer->width;
 	float py = 1.0f - y / renderer->height;
+	self->mouse_iposition = ivec2(x, renderer->height - y - 1);
 	self->mouse_screen_pos.x = px;
 	self->mouse_screen_pos.y = py;
 	entity_t result = renderer_entity_at_pixel(renderer,
-			x, y, &self->mouse_screen_pos.z);
+			x, y, NULL);
+	uint32_t imouse_depth = texture_get_pixel(self->mouse_depth, 0, 0, 0, NULL);
+	self->mouse_screen_pos.z = ((float)imouse_depth) / 65535.0f;
+	/* self->mouse_screen_pos.z = 0.988937; */
 
 	vec3_t pos = c_camera_real_pos(cam, self->mouse_screen_pos.z, vec2(px, py));
 	self->mouse_position = pos;
@@ -605,9 +631,10 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 	}
 	else
 	{
+		return;
 		if(entity_exists(self->selected) && result == self->selected)
 		{
-			entity_t result = renderer_geom_at_pixel(renderer, x, y,
+			uint32_t result = renderer_geom_at_pixel(renderer, x, y,
 					&self->mouse_screen_pos.z);
 			self->over_poly = result;
 			/* printf("%lu\n", result); */
@@ -685,15 +712,14 @@ int32_t c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 	if(!entity_exists(self->camera)) return CONTINUE;
 	renderer_t *renderer = c_camera(&self->camera)->renderer;
 
-	float depth;
-	entity_t ent = renderer_entity_at_pixel(renderer, event->x, event->y, &depth);
-	uint32_t geom = renderer_geom_at_pixel(renderer, event->x, event->y, &depth);
+	entity_t ent = renderer_entity_at_pixel(renderer, event->x, event->y, NULL);
+	uint32_t geom = renderer_geom_at_pixel(renderer, event->x, event->y, NULL);
 
 	if(ent)
 	{
 		model_button_data ev = {
 			.x = event->x, .y = event->y, .direction = event->direction,
-			.depth = depth, .geom = geom, .button = event->button
+			.depth = self->mouse_screen_pos.z, .geom = geom, .button = event->button
 		};
 		int32_t res = entity_signal_same(ent, ref("model_press"), &ev, NULL);
 		if(res == STOP) return CONTINUE;
@@ -822,17 +848,16 @@ int32_t c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 	{
 		self->pressing_r = 0;
 	}
-	float depth;
 	entity_t ent = renderer_entity_at_pixel(renderer, event->x, event->y,
-			&depth);
+			NULL);
 	if(ent)
 	{
 		uint32_t geom = renderer_geom_at_pixel(renderer, event->x,
-				event->y, &depth);
+				event->y, NULL);
 
 		model_button_data ev = {
 			.x = event->x, .y = event->y, .direction = event->direction,
-			.depth = depth, .geom = geom, .button = event->button
+			.depth = self->mouse_screen_pos.z, .geom = geom, .button = event->button
 		};
 		int32_t res = entity_signal_same(ent, ref("model_release"), &ev, NULL);
 		if(res == STOP) return CONTINUE;

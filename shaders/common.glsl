@@ -137,11 +137,11 @@ vec4 textureSVT(uvec2 size, uint base_tile, vec2 coords, out uint tile_out,
 /* float ambient = 1.00; */
 float linearize(float depth)
 {
-    return 2.0 * 0.1 * 600.0 / (600.0 + 0.1 - (2.0 * depth - 1.0) * (600.0 - 0.1));
+    return 2.0 * 0.1 * 100.0 / (100.0 + 0.1 - (2.0 * depth - 1.0) * (100.0 - 0.1));
 }
 float unlinearize(float depth)
 {
-	return 600.0 * (1.0 - (0.1 / depth)) / (600.0 - 0.1);
+	return 100.0 * (1.0 - (0.1 / depth)) / (100.0 - 0.1);
 }
 
 const vec4 bitSh = vec4(256. * 256. * 256., 256. * 256., 256., 1.);

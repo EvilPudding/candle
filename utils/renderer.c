@@ -83,6 +83,16 @@ void bind_get_uniforms(bind_t *bind, hash_bind_t *sb)
 
 }
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+void glGetBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, GLvoid *data)
+{
+	EM_ASM_(
+	{
+		Module.ctx.getBufferSubData(Module.ctx.PIXEL_PACK_BUFFER, 0, HEAPU8.subarray($0, $0 + $1));
+	}, data, size);
+}
+#endif
 static void bind_pass(pass_t *pass, shader_t *shader)
 {
 	/* this function allows null shader for CALLBACK only */
@@ -350,16 +360,16 @@ void *renderer_process_query_mips(renderer_t *self)
 		glGenBuffers(1, &tex->bufs[4].pbo);
 
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[1].pbo); glerr();
-		glBufferData(GL_PIXEL_PACK_BUFFER, size, 0, GL_STREAM_DRAW);
+		glBufferData(GL_PIXEL_PACK_BUFFER, size, 0, GL_STREAM_READ);
 
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[2].pbo); glerr();
-		glBufferData(GL_PIXEL_PACK_BUFFER, size, 0, GL_STREAM_DRAW);
+		glBufferData(GL_PIXEL_PACK_BUFFER, size, 0, GL_STREAM_READ);
 
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[3].pbo); glerr();
-		glBufferData(GL_PIXEL_PACK_BUFFER, size, 0, GL_STREAM_DRAW);
+		glBufferData(GL_PIXEL_PACK_BUFFER, size, 0, GL_STREAM_READ);
 
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[4].pbo); glerr();
-		glBufferData(GL_PIXEL_PACK_BUFFER, size, 0, GL_STREAM_DRAW);
+		glBufferData(GL_PIXEL_PACK_BUFFER, size, 0, GL_STREAM_READ);
 
 		glerr();
 	}
@@ -497,8 +507,7 @@ void renderer_default_pipeline(renderer_t *self)
 
 	_texture_new_2D_pre(0, 0, 0);
 		buffer_new("depth",		true, -1);
-		buffer_new("id",		true, 2);
-		buffer_new("geomid",	true, 2);
+		buffer_new("ids",		false, 4);
 	texture_t *selectable = _texture_new(0);
 
 	renderer_add_tex(self, "query_mips",	0.1f, query_mips);
@@ -520,7 +529,7 @@ void renderer_default_pipeline(renderer_t *self)
 		(bind_t[]){
 			{CLEAR_DEPTH, .number = 1.0f},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
-			/* {SKIP, .integer = 4}, */
+			{SKIP, .integer = 128},
 			{NONE}
 		}
 	);
@@ -528,7 +537,7 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_pass(self, "query_mips", "query_mips", ref("transparent"), 0,
 			query_mips, query_mips, 0,
 		(bind_t[]){
-			/* {SKIP, .integer = 4}, */
+			{SKIP, .integer = 128},
 			{NONE}
 		}
 	);
@@ -538,7 +547,7 @@ void renderer_default_pipeline(renderer_t *self)
 			query_mips, query_mips, 0,
 		(bind_t[]){
 			{CALLBACK, .getter = (getter_cb)renderer_process_query_mips, .usrptr = self},
-			/* {SKIP, .integer = 4}, */
+			{SKIP, .integer = 128},
 			{NONE}
 		}
 	);
@@ -622,6 +631,7 @@ void renderer_default_pipeline(renderer_t *self)
 			refr, NULL, 0,
 		(bind_t[]){
 			{TEX, "buf", .buffer = light},
+			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{INT, "level", .integer = 0},
 			{NONE}
 		}
@@ -646,6 +656,7 @@ void renderer_default_pipeline(renderer_t *self)
 			ssao, NULL, 0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
+			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{NONE}
 		}
 	);
@@ -982,12 +993,14 @@ renderer_t *renderer_new(float resolution)
 unsigned int renderer_geom_at_pixel(renderer_t *self, int x, int y,
 		float *depth)
 {
-	entity_t result;
+	uint32_t result;
 	texture_t *tex = renderer_tex(self, ref("selectable"));
 	if(!tex) return entity_null;
 
-	unsigned int res = texture_get_pixel(tex, 1,
-			x * self->resolution, y * self->resolution, depth) & 0xFFFF;
+	uint32_t res = texture_get_pixel(tex, 0,
+			x * self->resolution, y * self->resolution, depth);
+	res >>= 16;
+	res &= 0xFF;
 	result = res - 1;
 	return result;
 }
@@ -1001,6 +1014,7 @@ entity_t renderer_entity_at_pixel(renderer_t *self, int x, int y,
 
 	uint32_t pos = texture_get_pixel(tex, 0,
 			x * self->resolution, y * self->resolution, depth);
+	pos &= 0xFF;
 	struct { uint32_t pos, uid; } *cast = (void*)&result;
 
 	cast->pos = pos;

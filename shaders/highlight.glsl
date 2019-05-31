@@ -38,8 +38,7 @@ bool is_equal(vec2 a, vec2 b)
 }
 
 BUFFER {
-	sampler2D id;
-	sampler2D geomid;
+	sampler2D ids;
 } sbuffer;
 
 void main(void)
@@ -47,8 +46,9 @@ void main(void)
 	vec2 c;
 	vec2 c2;
 
-	c = textureLod(sbuffer.id, pixel_pos(), 0.0).rg;
-	c2 = textureLod(sbuffer.geomid, pixel_pos(), 0.0).rg;
+	vec4 both = textureLod(sbuffer.ids, pixel_pos(), 0.0);
+	c = both.rg;
+	c2 = both.ba;
 
 	float over = filtered(c, over_id);
 
