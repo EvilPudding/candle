@@ -531,7 +531,7 @@ void renderer_default_pipeline(renderer_t *self)
 		(bind_t[]){
 			{CLEAR_DEPTH, .number = 1.0f},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
-			{SKIP, .integer = 128},
+			{SKIP, .integer = 16},
 			{NONE}
 		}
 	);
@@ -539,7 +539,7 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_pass(self, "query_mips", "query_mips", ref("transparent"), 0,
 			query_mips, query_mips, 0,
 		(bind_t[]){
-			{SKIP, .integer = 128},
+			{SKIP, .integer = 16},
 			{NONE}
 		}
 	);
@@ -548,7 +548,7 @@ void renderer_default_pipeline(renderer_t *self)
 			query_mips, query_mips, 0,
 		(bind_t[]){
 			{CALLBACK, .getter = (getter_cb)renderer_process_query_mips, .usrptr = self},
-			{SKIP, .integer = 128},
+			{SKIP, .integer = 16},
 			{NONE}
 		}
 	);

@@ -35,7 +35,6 @@ entity_t candle_run_command_args(entity_t root, int argc, char **argv,
 		instance = cmd->cb(instance, argc, argv);
 		if (handled) *handled = true;
 	}
-	if (handled) *handled = false;
 	return instance;
 }
 
@@ -462,9 +461,17 @@ void candle_grab_mouse(entity_t ent, int visibility)
 	SDL_SetRelativeMouseMode(!visibility);
 }
 
+static
+entity_t _c_new(entity_t root, int argc, char **argv)
+{
+	printf("CREATING NEW COMPONENT %s\n", argv[1]);
+	return entity_null;
+}
+
 __attribute__((constructor (CONSTR_BEFORE_REG)))
 void candle_init(void)
 {
+	 SDL_SetMainReady();
 	g_candle = calloc(1, sizeof *g_candle);
 	g_candle->loader = loader_new();
 
@@ -479,6 +486,7 @@ void candle_init(void)
 	entity_new();
 
 	g_candle->cmds = kh_init(cmd);
+	candle_reg_cmd("c_new", (cmd_cb)_c_new);
 
 	shaders_reg();
 
@@ -513,7 +521,6 @@ void candle_init2(void)
 #else
 	render_loop_init();
 #endif
-	SDL_Delay(30);
 
 	/* candle_import_dir(candle, entity_null, "./"); */
 }

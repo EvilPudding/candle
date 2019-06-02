@@ -483,9 +483,7 @@ bool_t vifunc_load(vifunc_t *self, const char *filename)
 	/* TODO: clear self */
 
 	FILE *fp = fopen(filename, "r");
-	printf("opening %s\n", filename);
 	if (!fp) return false;
-	printf("opened %s\n", filename);
 
 	self->locked++;
 	while (!feof(fp))
@@ -648,7 +646,6 @@ vifunc_t *vil_get(vil_t *ctx, uint32_t ref)
 	khiter_t k = kh_get(vifunc, ctx->funcs, ref);
 	if(k == kh_end(ctx->funcs))
 	{
-		printf("Type does not exist\n");
 		return NULL;
 	}
 
