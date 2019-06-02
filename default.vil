@@ -1,0 +1,32 @@
+pbr opaque 600.000000 10.000000 ff0a0a0a 1 0 0 0 0 -1
+tex_space vec2 0.000000 100.000000 ff0a0a0a 0 1 1 0 0 -1
+time number 0.000000 200.000000 ff0a0a0a 0 1 1 0 0 -1
+screen_space vec2 0.000000 300.000000 ff0a0a0a 0 1 1 0 0 -1
+world_space vec3 0.000000 400.000000 ff0a0a0a 0 1 1 0 0 -1
+view_space vec3 0.000000 500.000000 ff0a0a0a 0 1 1 0 0 -1
+vertex_normal vec3 0.000000 600.000000 ff0a0a0a 0 1 1 0 0 -1
+obj_pos vec3 0.000000 700.000000 ff0a0a0a 0 1 1 0 0 -1
+albedo property4 208.000000 40.000000 ff0a0a0a 1 1 0 0 0 -1
+emissive property3 368.000000 352.000000 ff0a0a0a 1 1 0 0 0 -1
+roughness property1 193.000000 305.000000 ff0a0a0a 1 1 0 0 0 -1
+metalness property1 190.000000 440.000000 ff0a0a0a 1 1 0 0 0 -1
+normal property3 364.000000 90.000000 ff0a0a0a 1 1 0 0 0 -1
+normal.color.x = 0.500000
+normal.color.y = 0.500000
+normal.color.z = 1.000000
+roughness.value = 0.200000
+metalness.value = 0.000000
+albedo.color.x = 0.500000
+albedo.color.y = 0.500000
+albedo.color.z = 0.500000
+albedo.color.w = 1.000000
+tex_space -> normal.texture.coord
+normal.mix.result -> pbr.normal
+emissive.mix.result -> pbr.emissive
+roughness.mix.result -> pbr.roughness
+tex_space -> emissive.texture.coord
+metalness.mix.result -> pbr.metalness
+tex_space -> metalness.texture.coord
+albedo.mix.result -> pbr.albedo
+tex_space -> albedo.texture.coord
+tex_space -> roughness.texture.coord
