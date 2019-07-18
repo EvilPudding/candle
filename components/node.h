@@ -15,7 +15,7 @@ typedef struct
 #ifdef MESH4
 	float angle4;
 #endif
-	int32_t cached;
+	bool_t cached;
 	int32_t ghost_inheritance;
 	entity_t unpack_inheritance;
 
@@ -25,10 +25,11 @@ typedef struct
 	entity_t parent;
 	int32_t inherit_scale;
 
-	int32_t ghost;
-	int32_t has_shadows;
-	int32_t visible;
-	int32_t unpacked;
+	bool_t ghost;
+	bool_t has_shadows;
+	bool_t visible;
+	bool_t unpacked;
+	bool_t inherit_transform;
 } c_node_t;
 
 DEF_CASTER("node", c_node, c_node_t)
@@ -46,6 +47,7 @@ vec3_t c_node_dir_to_local(c_node_t *self, vec3_t vec);
 vec3_t c_node_dir_to_global(c_node_t *self, vec3_t vec);
 vec4_t c_node_rot_to_local(c_node_t *self, vec4_t vec);
 vec4_t c_node_rot_to_global(c_node_t *self, vec4_t vec);
+void c_node_disable_inherit_transform(c_node_t *self);
 void c_node_pack(c_node_t *self, int32_t packed);
 int c_node_changed(c_node_t *self);
 

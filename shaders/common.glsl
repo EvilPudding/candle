@@ -3,8 +3,6 @@
 #include "uniforms.glsl"
 
 
-#define _CAT(a, b) a ## b
-#define CAT(a, b) _CAT(a,b)
 #define BUFFER uniform struct 
 
 const float M_PI = 3.141592653589793;
@@ -133,8 +131,6 @@ vec4 textureSVT(uvec2 size, uint base_tile, vec2 coords, out uint tile_out,
 	/* return solveMip(prop, 0, rcoords, draw); */
 }
 
-/* float ambient = 0.08; */
-/* float ambient = 1.00; */
 float linearize(float depth)
 {
     return 2.0 * 0.1 * 100.0 / (100.0 + 0.1 - (2.0 * depth - 1.0) * (100.0 - 0.1));

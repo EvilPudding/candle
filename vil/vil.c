@@ -234,6 +234,7 @@ void vifunc_save(vifunc_t *self, const char *filename)
 
 slot_t vifunc_ref_to_slot(vifunc_t *self, uint32_t ref)
 {
+	if (ref == ~0) return (slot_t){0};
 	for(vicall_t *it = self->begin; it; it = it->next)
 	{
 		for (uint32_t i = 0; i < 256; i++)
@@ -1042,9 +1043,10 @@ static void call_inputs(vicall_t *root,
 	}
 }
 
-void _vicall_iterate_dependencies(vicall_t *self, bool_t *iterated,
-                                  vil_link_cb link,
-                                  vil_call_cb call,
+void _vicall_iterate_dependencies(vicall_t *self,
+                                  bool_t *iterated,
+                                  slot_t include, slot_t exclude,
+                                  vil_link_cb link, vil_call_cb call,
                                   void *usrptr)
 {
 	iterated[self->id] = true;
@@ -1052,35 +1054,71 @@ void _vicall_iterate_dependencies(vicall_t *self, bool_t *iterated,
 	{
 		struct vil_arg *input = &self->input_args[i];
 		if (input->from.depth == 0) continue;
+		const bool_t included = !include.depth || slot_equal(include, slot_pop(input->into));
 		vicall_t *output = vifunc_get_call(self->parent, input->from, 0, 1);
 		if (!iterated[output->id])
 		{
-			_vicall_iterate_dependencies(output, iterated, link, call, usrptr);
+			if (exclude.depth && slot_equal(exclude, input->into)) continue;
+			if (included)
+			{
+				_vicall_iterate_dependencies(output, iterated,
+				                             (slot_t){0}, (slot_t){0},
+				                             link, call, usrptr);
+			}
 		}
-		if (link) link(self->parent, input->into, input->from, usrptr);
+
+		if (included)
+		{
+			if (link) link(self->parent, input->into, input->from, usrptr);
+			if (include.depth) break;
+		}
 	}
-	if (call) call(self, (slot_t){.depth = 1, .calls = {self->id}}, usrptr);
+	if (!include.depth && call)
+	{
+		call(self, (slot_t){.depth = 1, .calls = {self->id}}, usrptr);
+	}
 }
 
-void vicall_iterate_dependencies(vicall_t *self, vil_link_cb link,
-                                 vil_call_cb call, void *usrptr)
+void vicall_iterate_dependencies(vicall_t *self,
+                                 uint32_t include, uint32_t exclude, 
+								 vil_link_cb link, vil_call_cb call,
+								 void *usrptr)
 {
 	bool_t *iterated = alloca(sizeof(bool_t) * self->parent->call_count);
 	memset(iterated, false, sizeof(bool_t) * self->parent->call_count);
 
-	_vicall_iterate_dependencies(self, iterated, link, call, usrptr);
+	printf("%d\n", vifunc_ref_to_slot(self->type, include).depth);
+	_vicall_iterate_dependencies(self, iterated,
+	                             vifunc_ref_to_slot(self->type, include),
+	                             vifunc_ref_to_slot(self->type, exclude),
+	                             link, call, usrptr);
 }
 
-void vifunc_iterate_dependencies(vifunc_t *self, vil_link_cb link,
-                                 vil_call_cb call, void *usrptr)
+void vifunc_iterate_dependencies(vifunc_t *self,
+                                 uint32_t include, uint32_t exclude, 
+                                 vil_link_cb link, vil_call_cb call,
+                                 void *usrptr)
 {
+	slot_t include_slot = vifunc_ref_to_slot(self, include);
+	slot_t exclude_slot = vifunc_ref_to_slot(self, exclude);
+
 	bool_t *iterated = alloca(sizeof(bool_t) * self->call_count);
 	memset(iterated, false, sizeof(bool_t) * self->call_count);
 
 	for (vicall_t *it = self->begin; it; it = it->next)
 	{
 		if (iterated[it->id]) continue;
-		_vicall_iterate_dependencies(it, iterated, link, call, usrptr);
+		if (exclude != ~0 && it->id == exclude_slot.calls[0])
+		{
+			iterated[it->id] = true;
+			continue;
+		}
+		if (include == ~0 || it->id == include_slot.calls[0])
+		{
+			_vicall_iterate_dependencies(it, iterated, (slot_t){0}, (slot_t){0},
+			                             link, call, usrptr);
+			if (include != ~0) break;
+		}
 	}
 }
 

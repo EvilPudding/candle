@@ -30,12 +30,13 @@ vs_t *sprite_vs()
 	{
 		g_sprite_vs = vs_new("sprite", false, 1, vertex_modifier_new(
 			"	{\n"
+			"		vec2 scale = vec2(length(M[0].xyz), length(M[1].xyz));\n"
 			"		pos = M * vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
 			"		$vertex_world_position = pos.xyz;\n"
 			"		pos = camera(view) * pos;\n"
 			"		$vertex_position = pos.xyz;\n"
 			"		pos = camera(projection) * pos;\n"
-			"		vec2 size = vec2(P.x * (screen_size.y / screen_size.x), P.y) * 0.5;\n"
+			"		vec2 size = vec2(P.x * (screen_size.y / screen_size.x), P.y) * 0.5 * scale;\n"
 			"		pos = vec4(pos.xy + 0.5 * size, pos.z, pos.w);\n"
 
 			"		vec3 vertex_normal    = (vec4( N, 0.0f)).xyz;\n"

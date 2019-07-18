@@ -95,6 +95,8 @@ typedef struct c_editmode_t
 	entity_t selected;
 	entity_t over;
 	entity_t context;
+	entity_t context_queued;
+	float context_enter_phase;
 	int32_t selected_poly;
 	int32_t over_poly;
 

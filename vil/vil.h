@@ -50,15 +50,19 @@ void vil_iterate(vil_t *self, vil_func_cb callback, void *usrptr);
 void vil_foreach_func(vil_t *self, vil_func_cb callback, void *usrptr);
 
 void vicall_set_arg(vicall_t *call, uint32_t ref, void *value);
-void vicall_iterate_dependencies(vicall_t *self, vil_link_cb link,
-                                 vil_call_cb call, void *usrptr);
+void vifunc_iterate_dependencies(vifunc_t *self,
+                                 uint32_t include, uint32_t exclude, 
+                                 vil_link_cb link, vil_call_cb call,
+                                 void *usrptr);
 vicall_t *vicall_new(vifunc_t *parent, vifunc_t *type,
 		const char *name, vec2_t pos, uint32_t data_offset, uint32_t flags);
 uint32_t vicall_get_size(vicall_t *call);
 void vicall_foreach_unlinked_input(vicall_t *call, vil_foreach_input_cb cb,
                                     void *usrptr);
-void vifunc_foreach_unlinked_input(vifunc_t *self, vil_foreach_input_cb cb,
-                                   void *usrptr);
+void vicall_iterate_dependencies(vicall_t *self,
+                                 uint32_t include, uint32_t exclude, 
+								 vil_link_cb link, vil_call_cb call,
+								 void *usrptr);
 
 const char *vicall_name(const vicall_t *call);
 void vicall_color(vicall_t *self, vec4_t color);
@@ -80,8 +84,8 @@ void vifunc_save(vifunc_t *self, const char *filename);
 bool_t vifunc_load(vifunc_t *self, const char *filename);
 void vifunc_slot_to_name(vifunc_t *func, slot_t slot, char *buffer,
                          const char *separator, const char *append);
-void vifunc_iterate_dependencies(vifunc_t *self, vil_link_cb link,
-                                 vil_call_cb call, void *usrptr);
+void vifunc_foreach_unlinked_input(vifunc_t *self, vil_foreach_input_cb cb,
+                                   void *usrptr);
 
 slot_t slot_pop(slot_t slt);
 

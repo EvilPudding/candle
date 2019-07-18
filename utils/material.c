@@ -394,6 +394,7 @@ void materials_reg()
 {
 	sauces_loader(ref("mat"), mat_loader);
 	sauces_register("_default.mat", NULL, mat_new("_default.mat", "default"));
+	sauces_register("_parallax.mat", NULL, mat_new("_parallax.mat", "parallax"));
 }
 
 void material_foreach_input(vicall_t *call, slot_t slot, char **str)
@@ -580,8 +581,9 @@ void material_generate_func(vifunc_t *func, char **str)
 	}
 	else
 	{
-		vifunc_iterate_dependencies(func, (vil_link_cb)material_generate_assignments2,
-									(vil_call_cb)material_generate_call2, str);
+		vifunc_iterate_dependencies(func, ~0, ~0,
+		                            (vil_link_cb)material_generate_assignments2,
+		                            (vil_call_cb)material_generate_call2, str);
 	}
 	str_cat(str, "}\n");
 }
@@ -637,17 +639,27 @@ struct transparent
 {
 	vec4_t absorve;
 	vec3_t normal;
-	vec3_t emissive;
 	float roughness;
+	vec3_t emissive;
 };
 
 struct opaque
 {
 	vec4_t albedo;
 	vec3_t normal;
-	vec3_t emissive;
 	float roughness;
+	vec3_t emissive;
 	float metalness;
+};
+
+struct parallax
+{
+	vec4_t albedo;
+	vec3_t normal;
+	float roughness;
+	vec3_t emissive;
+	float metalness;
+	float height;
 };
 
 static void _generate_uniform(vicall_t *root, vicall_t *call, slot_t slot,
@@ -749,12 +761,15 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		"layout (location = 1) out vec4 TILES1;\n"
 		"layout (location = 2) out vec4 TILES2;\n"
 		"layout (location = 3) out vec4 TILES3;\n"
+		"#elif defined(SELECT_PASS)\n"
+		"layout (location = 0) out vec4 IDS;\n"
+		"layout (location = 1) out vec2 GeomID;\n"
 		"#elif defined(SHADOW_PASS)\n"
 		"layout (location = 0) out vec4 Depth;\n"
 		"#else\n");
 	uint32_t group = call->type->id;
 
-	if (group == ref("opaque") || group == ref("decal"))
+	if (group == ref("opaque") || group == ref("parallax") || group == ref("decal"))
 	{
 		str_cat(&gbuffer,
 			"layout (location = 0) out vec4 Alb;\n"
@@ -811,8 +826,17 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	}
 	else
 	{
+		if (group == ref("parallax"))
+		{
+			str_cat(&gbuffer,
+			        "tex_space_in = texcoord;\n"
+			        );
+		}
+		else
+		{
+			str_cat(&gbuffer, "tex_space_in = texcoord;\n");
+		}
 		str_cat(&gbuffer,
-		        "tex_space_in = texcoord;\n"
 		        "world_space_in = vertex_world_position;\n"
 		        "view_space_in = vertex_position;\n"
 		        );
@@ -825,9 +849,31 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	        "time_in = scene.time;\n"
 	        "#endif\n"
 	        );
+
 	vicall_foreach_unlinked_input(type->tmp_material_instance,
 	                              _generate_uniform_assigment, &gbuffer);
-	vicall_iterate_dependencies(call, (vil_link_cb)material_generate_assignments,
+
+	if (group == ref("parallax"))
+	{
+		str_cat(&gbuffer, "/* HEIGHT PRECOMPUTATION */\n");
+		vicall_iterate_dependencies(call, ref("height"), ~0,
+		                            (vil_link_cb)material_generate_assignments,
+		                            (vil_call_cb)material_generate_call, &gbuffer);
+		str_cat(&gbuffer, "/* --------------------- */\n");
+		str_cat(&gbuffer,
+				"float scl = ((1.0 - pbr_in.height) * .05);\n"
+				"vec3 newpoint = (normalize(view_space_in) * scl)\n;"
+				"vec3 flatnorm = (newpoint * TM);\n"
+				"flatnorm.y = -flatnorm.y;\n"
+		        "tex_space_in += flatnorm.xy;\n"
+		        "view_space_in += flatnorm;\n"
+				"vec4 proj = camera(projection) * vec4(view_space_in, 1.0);\n"
+				"gl_FragDepth = (proj.z / proj.w) * 0.5 + 0.5;\n"
+		        );
+	}
+
+	vicall_iterate_dependencies(call, ~0, ~0,
+	                            (vil_link_cb)material_generate_assignments,
 	                            (vil_call_cb)material_generate_call, &gbuffer);
 
 	str_cat(&gbuffer,
@@ -852,21 +898,24 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		"	TILES1 /= 255.0;\n"
 		"	TILES2 /= 255.0;\n"
 		"	TILES3 /= 255.0;\n"
+		"#elif defined(SELECT_PASS)\n"
+		"	IDS.xy = vec2(float(id.x) / 255.0, float(id.y) / 255.0);\n"
+		"	IDS.zw = vec2(poly_id);\n"
 		"#elif defined(SHADOW_PASS)\n"
 		"	Depth = encode_float_rgba(vertex_distance);\n"
 		"#else\n");
 
-	if (group == ref("opaque") || group == ref("decal"))
+	if (group == ref("opaque") || group == ref("parallax") || group == ref("decal"))
 	{
-		if (group == ref("opaque"))
-		{
-			str_cat(&gbuffer,
-				"	vec3 norm = get_normal(pbr_in.normal);\n");
-		}
-		else if (group == ref("decal"))
+		if (group == ref("decal"))
 		{
 			str_cat(&gbuffer,
 				"	vec3 norm = ((camera(view) * model) * vec4(pbr_in.normal, 0.0)).xyz;\n");
+		}
+		else
+		{
+			str_cat(&gbuffer,
+				"	vec3 norm = get_normal(pbr_in.normal);\n");
 		}
 
 		str_cat(&gbuffer,
@@ -899,25 +948,26 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		"#endif\n"
 		"}\n");
 
-	/* { */
-	/* 	const char *line = gbuffer; */
-	/* 	uint32_t line_num = 1u; */
-	/* 	while (true) */
-	/* 	{ */
-	/* 		char *next_line = strchr(line, '\n'); */
-	/* 		if (next_line) */
-	/* 		{ */
-	/* 			printf("%d	%.*s\n", line_num, (int)(next_line - line), line); */
-	/* 			line = next_line+1; */
-	/* 		} */
-	/* 		else */
-	/* 		{ */
-	/* 			printf("%d	%s\n", line_num, line); */
-	/* 			break; */
-	/* 		} */
-	/* 		line_num++; */
-	/* 	} */
-	/* } */
+	if (group == ref("parallax"))
+	{
+		const char *line = gbuffer;
+		uint32_t line_num = 1u;
+		while (true)
+		{
+			char *next_line = strchr(line, '\n');
+			if (next_line)
+			{
+				printf("%d	%.*s\n", line_num, (int)(next_line - line), line);
+				line = next_line+1;
+			}
+			else
+			{
+				printf("%d	%s\n", line_num, line);
+				break;
+			}
+			line_num++;
+		}
+	}
 
 	c_render_device(&SYS)->shader = NULL;
 	c_render_device(&SYS)->frag_bound = NULL;
@@ -926,8 +976,14 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	char *name2 = str_new(64);
 	char *q_name = str_new(64);
 	char *q_name2 = str_new(64);
+	char *s_name = str_new(64);
+	char *s_name2 = str_new(64);
 	char *d_name = str_new(64);
 	char *d_name2 = str_new(64);
+
+	char *select = str_new(64);
+	str_cat(&select, "#define SELECT_PASS\n");
+	str_cat(&select, gbuffer);
 
 	char *query = str_new(64);
 	str_cat(&query, "#define QUERY_PASS\n");
@@ -942,6 +998,8 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	str_catf(&d_name2, "depth#%d.glsl", id);
 	str_catf(&q_name, "query_mips#%d", id);
 	str_catf(&q_name2, "query_mips#%d.glsl", id);
+	str_catf(&s_name, "select#%d", id);
+	str_catf(&s_name2, "select#%d.glsl", id);
 	str_catf(&name, "gbuffer#%d", id);
 	str_catf(&name2, "gbuffer#%d.glsl", id);
 
@@ -952,6 +1010,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 			shader_add_source(name2, (unsigned char*)gbuffer, str_len(gbuffer));
 			shader_add_source(q_name2, (unsigned char*)query, str_len(query));
 			shader_add_source(d_name2, (unsigned char*)depth, str_len(depth));
+			shader_add_source(s_name2, (unsigned char*)select, str_len(select));
 
 			str_free(type->src);
 			type->src = gbuffer;
@@ -962,6 +1021,9 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 			fs_update_variation(fs, id);
 
 			fs = fs_new("depth");
+			fs_update_variation(fs, id);
+
+			fs = fs_new("select");
 			fs_update_variation(fs, id);
 		}
 		else
@@ -975,6 +1037,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		shader_add_source(name2, (unsigned char*)gbuffer, str_len(gbuffer));
 		shader_add_source(q_name2, (unsigned char*)query, str_len(query));
 		shader_add_source(d_name2, (unsigned char*)depth, str_len(depth));
+		shader_add_source(s_name2, (unsigned char*)select, str_len(select));
 
 		type->src = gbuffer;
 		fs_t *fs = fs_new("gbuffer");
@@ -985,11 +1048,17 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 
 		fs = fs_new("depth");
 		fs_push_variation(fs, d_name);
+
+		fs = fs_new("select");
+		fs_push_variation(fs, s_name);
 	}
 
 	str_free(query);
 	str_free(q_name);
 	str_free(q_name2);
+	str_free(select);
+	str_free(s_name);
+	str_free(s_name2);
 	str_free(depth);
 	str_free(d_name);
 	str_free(d_name2);
@@ -1224,6 +1293,24 @@ void materials_init_vil()
 		vicall_set_arg(albedo, ~0, &((vec4_t){.x = 0.5f, .y = 0.5f, .z = 0.5f, .w = 1.0f}));
 		vicall_set_arg(normal, ~0, &((vec3_t){.x = 0.5f, .y = 0.5f, .z = 1.0f}));
 		vicall_set_arg(roughn, ~0, &((float){0.5f}));
+
+	vifunc_t *parallax = vifunc_new(ctx, "parallax", NULL, sizeof(struct parallax), false);
+		albedo = vicall_new(parallax, v4, "albedo", vec2(100, 10),
+		                    offsetof(struct parallax, albedo), V_IN);
+		normal = vicall_new(parallax, v3, "normal", vec2(200, 10),
+		                    offsetof(struct parallax, normal), V_IN);
+		roughn = vicall_new(parallax, tnum, "roughness", vec2(300, 10),
+		                    offsetof(struct parallax, roughness), V_IN);
+		vicall_new(parallax, tnum, "metalness", vec2(400, 10),
+		           offsetof(struct parallax, metalness), V_IN);
+		vicall_new(parallax, v3, "emissive", vec2(500, 10),
+		           offsetof(struct parallax, emissive), V_IN);
+		vicall_new(parallax, tnum, "height", vec2(600, 10),
+		           offsetof(struct parallax, height), V_IN);
+		vicall_set_arg(albedo, ~0, &((vec4_t){.x = 0.5f, .y = 0.5f, .z = 0.5f, .w = 1.0f}));
+		vicall_set_arg(normal, ~0, &((vec3_t){.x = 0.5f, .y = 0.5f, .z = 1.0f}));
+		vicall_set_arg(roughn, ~0, &((float){0.5f}));
+
 
 	vifunc_t *transparent = vifunc_new(ctx, "transparent", NULL, sizeof(struct transparent), false);
 		vicall_new(transparent, v3, "absorve", vec2(200, 10),

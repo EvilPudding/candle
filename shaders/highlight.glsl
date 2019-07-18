@@ -9,6 +9,8 @@ uniform vec2 sel_id;
 uniform vec2 over_poly_id;
 uniform vec2 context_id;
 uniform int mode;
+uniform vec3 context_pos;
+uniform float context_phase;
 
 #define EDIT_VERT	0
 #define EDIT_EDGE	1
@@ -16,18 +18,6 @@ uniform int mode;
 #define EDIT_OBJECT	3
 
 const vec2 zero = vec2(0.003922, 0.000000);
-
-float filtered(vec2 c, vec2 fil)
-{
-	fil = round(fil * 255.0); 
-	c = round(c * 255.0); 
-
-	if(c.x != fil.x || c.y != fil.y)
-	{
-		return 0.0;
-	}
-	return 1.0;
-}
 
 bool is_equal(vec2 a, vec2 b)
 {
@@ -41,43 +31,41 @@ BUFFER {
 	sampler2D ids;
 } sbuffer;
 
+BUFFER {
+	sampler2D occlusion;
+} ssao;
+
 void main(void)
 {
 	vec2 c;
 	vec2 c2;
 
+	float occlusion = textureLod(ssao.occlusion, pixel_pos(), 0.0).r;
 	vec4 both = textureLod(sbuffer.ids, pixel_pos(), 0.0);
 	c = both.rg;
 	c2 = both.ba;
 
-	float over = filtered(c, over_id);
-
-	float overp = filtered(c2, over_poly_id);
-
 	const vec3 over_poly_color = vec3(0.2, 0.02, 0.5);
-	const vec3 over_color = vec3(0.02);
-
-	if(is_equal(c, zero))
-	{
-		FragColor = vec4(vec3(0.1), 1.0);
-		return;
-	}
+	const vec3 over_color = vec3(0.05);
 
 	vec3 final = vec3(0.0);
 	/* if(sel_id.x > 0.0 || sel_id.y > 0.0) */
 	/* { */
 	/* 	final -= sel_color * (1.0 - selected); */
 	/* } */
-	if(is_equal(sel_id, c))
+	if(is_equal(over_id, c))
 	{
 		if(mode != EDIT_OBJECT)
 		{
-			final += (over_poly_color * overp);
+			final += over_poly_color;
+		}
+		else
+		{
+			final += over_color;
 		}
 	}
 	else
 	{
-		final += over_color * over;
 	}
 
 	FragColor = vec4(final, 1.0);

@@ -796,6 +796,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 
 	pass->bound_textures = 0;
 	c_render_device_t *rd = c_render_device(&SYS);
+	if (!rd) return NULL;
 	c_render_device_rebind(rd, (void*)bind_pass, pass);
 	if (pass->binds && pass->binds[0].type == CALLBACK)
 	{

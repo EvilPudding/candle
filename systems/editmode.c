@@ -117,6 +117,7 @@ int32_t rotate_init(struct edit_rotate *self, c_editmode_t *ec)
 				{VEC2, "mouse_pos", (getter_cb)bind_mouse_pos, self},
 				{NUM, "start_radius", (getter_cb)bind_start_radius, self},
 				{NUM, "tool_fade", (getter_cb)bind_tool_fade, self},
+				{NUM, "tool_fade", (getter_cb)bind_tool_fade, self},
 				{VEC3, "selected_pos", (getter_cb)bind_obj_pos, self},
 				{NONE}
 			}
@@ -479,6 +480,19 @@ vec2_t c_editmode_bind_context(c_editmode_t *self)
 {
 	return entity_to_vec2(self->context);
 }
+vec3_t c_editmode_bind_context_pos(c_editmode_t *self)
+{
+	if (!entity_exists(self->context))
+		return vec3(0.0f);
+	c_node_t *node = c_node(&self->context);
+	if (!node)
+		return vec3(0.0f);
+	return c_node_pos_to_global(node, vec3(0.0f));
+}
+float c_editmode_bind_context_phase(c_editmode_t *self)
+{
+	return self->context_enter_phase;
+}
 vec2_t c_editmode_bind_selected(c_editmode_t *self)
 {
 	return entity_to_vec2(self->selected);
@@ -518,7 +532,23 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 		}
 	);
 
-	renderer_add_pass(renderer, "highlights", "highlight", ref("quad"),
+	renderer_add_pass(renderer, "context", "context", ref("quad"),
+			0, renderer_tex(renderer, ref("final")), NULL, 0,
+		(bind_t[]){
+			{TEX, "gbuffer", .buffer = renderer_tex(renderer, ref("gbuffer"))},
+			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
+			{TEX, "ssao", .buffer = renderer_tex(renderer, ref("ssao"))},
+			{VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
+			{VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
+			{VEC2, "context_id", (getter_cb)c_editmode_bind_context, self},
+			{VEC2, "sel_id", (getter_cb)c_editmode_bind_sel, self},
+			{VEC3, "context_pos", (getter_cb)c_editmode_bind_context_pos, self},
+			{NUM, "context_phase", (getter_cb)c_editmode_bind_context_phase, self},
+			{NONE}
+		}
+	);
+
+	renderer_add_pass(renderer, "highlight", "highlight", ref("quad"),
 			ADD, renderer_tex(renderer, ref("final")), NULL, 0,
 		(bind_t[]){
 			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
@@ -530,6 +560,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 			{NONE}
 		}
 	);
+
 
 	renderer_add_pass(renderer, "highlights_0", "border", ref("quad"),
 			0, tmp, NULL, 0,
@@ -773,6 +804,22 @@ void c_editmode_open_entity(c_editmode_t *self, entity_t ent)
 	self->open_entities[self->open_entities_count++] = ent;
 }
 
+void c_editmode_leave_context_effective(c_editmode_t *self)
+{
+	if(entity_exists(self->context))
+	{
+		c_node_t *nc = c_node(&self->context);
+		if(entity_exists(nc->parent))
+		{
+			c_node_pack(nc, 0);
+			self->context = self->context_queued;
+			c_node_pack(c_node(&self->context), 1);
+
+			/* c_editmode_select(self, context); */
+		}
+	}
+}
+
 void c_editmode_leave_context(c_editmode_t *self)
 {
 	entity_t context = self->context;
@@ -781,15 +828,12 @@ void c_editmode_leave_context(c_editmode_t *self)
 		c_node_t *nc = c_node(&context);
 		if(entity_exists(nc->parent))
 		{
-			c_node_pack(nc, 0);
-			self->context = nc->parent;
-			c_node_pack(c_node(&self->context), 1);
-
-			/* c_editmode_select(self, context); */
+			self->context_queued = nc->parent;
 		}
 	}
 }
-void c_editmode_enter_context(c_editmode_t *self)
+
+void c_editmode_enter_context_effective(c_editmode_t *self)
 {
 	if(entity_exists(self->context))
 	{
@@ -797,8 +841,9 @@ void c_editmode_enter_context(c_editmode_t *self)
 		c_node_pack(nc, 0);
 	}
 
-	if(entity_exists(self->selected))
+	if(entity_exists(self->context_queued))
 	{
+		self->context = self->context_queued;
 		c_node_t *nc = c_node(&self->selected);
 		if(nc)
 		{
@@ -806,6 +851,13 @@ void c_editmode_enter_context(c_editmode_t *self)
 			c_editmode_select(self, entity_null);
 			c_node_pack(nc, 1);
 		}
+	}
+}
+void c_editmode_enter_context(c_editmode_t *self)
+{
+	if(entity_exists(self->selected))
+	{
+		self->context_queued = self->selected;
 	}
 }
 
@@ -1403,6 +1455,26 @@ int32_t c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 
 int32_t c_editmode_update(c_editmode_t *self, float *dt)
 {
+	if (self->context != self->context_queued
+	    && entity_exists(self->context) && self->context != SYS
+	    && self->context_enter_phase > 0.0f)
+	{
+		self->context_enter_phase = fmax(self->context_enter_phase - *dt, 0.0);
+		if (self->context_enter_phase == 0.0f
+			&& (!entity_exists(self->context_queued) || self->context_queued == SYS))
+		{
+			c_editmode_leave_context_effective(self);
+		}
+	}
+	else if (self->context_enter_phase < 1.0f && (entity_exists(self->context_queued) && self->context_queued != SYS))
+	{
+		if (self->context_enter_phase == 0.0f)
+		{
+			c_editmode_enter_context_effective(self);
+		}
+		self->context_enter_phase = fmin(self->context_enter_phase + *dt, 1.0);
+	}
+
 	if(self->tool > -1)
 	{
 		struct mouse_tool *tool = &self->tools[self->tool];

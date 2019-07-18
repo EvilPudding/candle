@@ -11,9 +11,10 @@ static void c_node_init(c_node_t *self)
 	self->children = NULL;
 	self->children_size = 0;
 	self->model = mat4();
-	self->cached = 0;
-	self->inherit_scale = 1;
+	self->cached = false;
+	self->inherit_scale = true;
 	self->parent = entity_null;
+	self->inherit_transform = true;
 }
 
 int32_t c_node_created(c_node_t *self)
@@ -39,7 +40,7 @@ int c_node_changed(c_node_t *self)
 	entity_signal_same(c_entity(self), sig("node_changed"), NULL, NULL);
 	/* if(self->cached) */
 	{
-		self->cached = 0;
+		self->cached = false;
 		for(i = 0; i < self->children_size; i++)
 		{
 			c_node_changed(c_node(&self->children[i]));
@@ -108,8 +109,8 @@ void c_node_unparent(c_node_t *self, int inherit_transform)
 		if(inherit_transform)
 		{
 			int prev_inheritance = self->inherit_scale;
-			self->inherit_scale = 0;
-			self->cached = 0;
+			self->inherit_scale = false;
+			self->cached = false;
 			c_node_update_model(self);
 
 			c_spatial_set_model(c_spatial(self), self->model);
@@ -128,7 +129,7 @@ void c_node_remove(c_node_t *self, entity_t child)
 		{
 			if(!entity_exists(self->children[i])) continue;
 			c_node_t *cn = c_node(&child);
-			cn->cached = 0;
+			cn->cached = false;
 			cn->parent = entity_null;
 			if(--self->children_size)
 			{
@@ -181,7 +182,7 @@ static void c_node_destroy(c_node_t *self)
 		entity_t child = self->children[i];
 		c_node_t *child_node = c_node(&child);
 		child_node->parent = entity_null;
-		child_node->cached = 0;
+		child_node->cached = false;
 		self->children[i] = entity_null;
 		if(!child_node->ghost)
 		{
@@ -190,6 +191,10 @@ static void c_node_destroy(c_node_t *self)
 	}
 	self->children_size = 0;
 	free(self->children);
+}
+
+void c_node_disable_inherit_transform(c_node_t *self)
+{
 }
 
 REG()
@@ -207,14 +212,14 @@ REG()
 bool_t c_node_update_model(c_node_t *self)
 {
 	if(self->cached) return false;
-	self->cached = 1;
+	self->cached = true;
 
 	entity_t parent = self->parent;
 	c_spatial_t *sc = c_spatial(self);
 	if(!sc) return false;
 
 	c_node_t *parent_node = entity_exists(self->parent) ? c_node(&parent) : NULL;
-	if(parent_node)
+	if(self->inherit_transform && parent_node)
 	{
 
 		c_node_update_model(parent_node);
