@@ -93,6 +93,7 @@ void c_light_set_lod(c_light_t *self, uint32_t lod)
 }
 
 probe_tile_t get_free_tile(uint32_t level, uint32_t *result_level);
+void release_tile(probe_tile_t tile);
 uint32_t get_level_size(uint32_t level);
 
 extern texture_t *g_probe_cache;
@@ -265,6 +266,7 @@ int c_light_menu(c_light_t *self, void *ctx)
 
 static void c_light_destroy(c_light_t *self)
 {
+	release_tile(self->tile);
 	drawable_set_mesh(&self->draw, NULL);
 	drawable_set_mesh(&self->widget, NULL);
 	if(self->renderer)

@@ -7,6 +7,7 @@
 #define MAX_MIPS 9
 typedef struct
 {
+	uint32_t id;
 	ivec2_t pos;
 	uvec2_t size;
 } probe_tile_t;
