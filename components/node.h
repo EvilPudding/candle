@@ -29,6 +29,7 @@ typedef struct
 	bool_t has_shadows;
 	bool_t visible;
 	bool_t unpacked;
+
 	bool_t inherit_transform;
 } c_node_t;
 

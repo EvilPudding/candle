@@ -862,7 +862,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		str_cat(&gbuffer, "/* --------------------- */\n");
 		str_cat(&gbuffer,
 				"float scl = ((1.0 - pbr_in.height) * .05);\n"
-				"vec3 newpoint = (normalize(view_space_in) * scl)\n;"
+				"vec3 newpoint = (normalize(view_space_in) * scl);\n"
 				"vec3 flatnorm = (newpoint * TM);\n"
 				"flatnorm.y = -flatnorm.y;\n"
 		        "tex_space_in += flatnorm.xy;\n"
@@ -907,6 +907,10 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 
 	if (group == ref("opaque") || group == ref("parallax") || group == ref("decal"))
 	{
+		str_cat(&gbuffer,
+			"	if (pbr_in.albedo.a < 0.7) discard;\n"
+			"	Alb = vec4(pbr_in.albedo.rgb, receive_shadows ? 1.0 : 0.5);\n");
+
 		if (group == ref("decal"))
 		{
 			str_cat(&gbuffer,
@@ -919,8 +923,6 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		}
 
 		str_cat(&gbuffer,
-			"	if (pbr_in.albedo.a < 0.7) discard;\n"
-			"	Alb = vec4(pbr_in.albedo.rgb, receive_shadows ? 1.0 : 0.5);\n"
 			"	NMR.rg = encode_normal(norm);\n"
 			"	NMR.b = pbr_in.metalness;\n"
 			"	NMR.a = pbr_in.roughness;\n"
@@ -1390,7 +1392,7 @@ void mat1t(mat_t *self, uint32_t ref, texture_t *value)
 	for (uint32_t i = 0; !value->bufs[0].indir_n; i++)
 	{
 		SDL_Delay(100);
-		if (i == 3)
+		if (i == 16)
 		{
 			printf("giving up on %s\n", value->filename);
 			break;

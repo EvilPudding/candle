@@ -19,7 +19,7 @@ static void c_node_init(c_node_t *self)
 
 int32_t c_node_created(c_node_t *self)
 {
-	if(c_entity(self) != SYS)
+	if (c_entity(self) != SYS)
 	{
 		c_node_add(c_node(&SYS), 1, c_entity(self));
 	}
@@ -38,7 +38,7 @@ int c_node_changed(c_node_t *self)
 {
 	uint32_t i;
 	entity_signal_same(c_entity(self), sig("node_changed"), NULL, NULL);
-	/* if(self->cached) */
+	/* if (self->cached) */
 	{
 		self->cached = false;
 		for(i = 0; i < self->children_size; i++)
@@ -83,16 +83,16 @@ entity_t c_node_get_by_name(c_node_t *self, uint32_t hash)
 		c_name_t *child_name = c_name(&child);
 		c_node_t *child_node;
 
-		if(child_name && child_name->hash == hash)
+		if (child_name && child_name->hash == hash)
 		{
 			return child;
 		}
 
 		child_node = c_node(&child);
-		if(child_node)
+		if (child_node)
 		{
 			entity_t response = c_node_get_by_name(child_node, hash);
-			if(entity_exists(response))
+			if (entity_exists(response))
 			{
 				return response;
 			}
@@ -103,10 +103,10 @@ entity_t c_node_get_by_name(c_node_t *self, uint32_t hash)
 
 void c_node_unparent(c_node_t *self, int inherit_transform)
 {
-	if(entity_exists(self->parent))
+	if (entity_exists(self->parent))
 	{
 		c_node_t *parent = c_node(&self->parent);
-		if(inherit_transform)
+		if (inherit_transform)
 		{
 			int prev_inheritance = self->inherit_scale;
 			self->inherit_scale = false;
@@ -125,13 +125,13 @@ void c_node_remove(c_node_t *self, entity_t child)
 	int i;
 	for(i = 0; i < self->children_size; i++)
 	{
-		if(self->children[i] == child)
+		if (self->children[i] == child)
 		{
-			if(!entity_exists(self->children[i])) continue;
+			if (!entity_exists(self->children[i])) continue;
 			c_node_t *cn = c_node(&child);
 			cn->cached = false;
 			cn->parent = entity_null;
-			if(--self->children_size)
+			if (--self->children_size)
 			{
 				self->children[i] = self->children[self->children_size];
 			}
@@ -148,14 +148,14 @@ void c_node_add(c_node_t *self, int num, ...)
 	{
 		entity_t child = va_arg(children, entity_t);
 		c_node_t *child_node = c_node(&child);
-		if(!child_node)
+		if (!child_node)
 		{
 			entity_add_component(child, c_node_new());
 			child_node = c_node(&child);
 		}
-		else if(entity_exists(child_node->parent))
+		else if (entity_exists(child_node->parent))
 		{
-			if(child_node->parent == c_entity(self))
+			if (child_node->parent == c_entity(self))
 			{
 				continue;
 			}
@@ -177,14 +177,14 @@ static void c_node_destroy(c_node_t *self)
 {
 	int i;
 	c_node_unparent(self, 0);
-	for(i = 0; i < self->children_size; i++)
+	for (i = 0; i < self->children_size; i++)
 	{
 		entity_t child = self->children[i];
 		c_node_t *child_node = c_node(&child);
 		child_node->parent = entity_null;
 		child_node->cached = false;
 		self->children[i] = entity_null;
-		if(!child_node->ghost)
+		if (!child_node->ghost)
 		{
 			entity_destroy(child);
 		}
@@ -195,6 +195,18 @@ static void c_node_destroy(c_node_t *self)
 
 void c_node_disable_inherit_transform(c_node_t *self)
 {
+	c_node_t *parent_node = entity_exists(self->parent) ? c_node(&self->parent) : NULL;
+	if (!parent_node) return;
+	c_node_update_model(parent_node);
+	c_spatial_t *sc = c_spatial(self);
+	c_spatial_lock(sc);
+	self->inherit_transform = false;
+	self->cached = false;
+
+	sc->pos = mat4_mul_vec4(parent_node->model, vec4(_vec3(sc->pos), 1.0f)).xyz;
+	sc->rot_quat = quat_mul(parent_node->rot, sc->rot_quat);
+
+	c_spatial_unlock(sc);
 }
 
 REG()
@@ -211,23 +223,21 @@ REG()
 
 bool_t c_node_update_model(c_node_t *self)
 {
-	if(self->cached) return false;
+	if (self->cached) return false;
 	self->cached = true;
 
-	entity_t parent = self->parent;
 	c_spatial_t *sc = c_spatial(self);
-	if(!sc) return false;
+	if (!sc) return false;
 
-	c_node_t *parent_node = entity_exists(self->parent) ? c_node(&parent) : NULL;
-	if(self->inherit_transform && parent_node)
+	c_node_t *parent_node = entity_exists(self->parent) ? c_node(&self->parent) : NULL;
+	if (parent_node && self->inherit_transform)
 	{
-
 		c_node_update_model(parent_node);
 		self->ghost_inheritance = self->ghost || parent_node->ghost_inheritance;
 
 		self->unpack_inheritance = parent_node->unpacked ? c_entity(self) :
 			parent_node->unpack_inheritance;
-		if(self->ghost_inheritance)
+		if (self->ghost_inheritance)
 		{
 			self->unpack_inheritance = c_entity(self);
 		}
@@ -237,7 +247,7 @@ bool_t c_node_update_model(c_node_t *self)
 		self->angle4 = parent_node->angle4 + sc->angle4;
 #endif
 
-		if(self->inherit_scale)
+		if (self->inherit_scale)
 		{
 			self->model = mat4_mul(parent_node->model, sc->model_matrix);
 		}
