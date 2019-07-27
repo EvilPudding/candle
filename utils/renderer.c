@@ -16,8 +16,6 @@
 #include <utils/nk.h>
 #include <utils/material.h>
 
-static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass);
-
 static int renderer_update_screen_texture(renderer_t *self);
 
 static void bind_pass(pass_t *pass, shader_t *shader);
@@ -470,7 +468,7 @@ void renderer_default_pipeline(renderer_t *self)
 		buffer_new("tiles3",	false, 4);
 	texture_t *query_mips = _texture_new(0);
 
-	_texture_new_2D_pre(0, 0, 0);
+	_texture_new_2D_pre(0, 0, TEX_INTERPOLATE);
 		buffer_new("depth",		true, -1);
 		buffer_new("albedo",	true, 4);
 		buffer_new("nmr",		true, 4);
@@ -514,7 +512,7 @@ void renderer_default_pipeline(renderer_t *self)
 
 	renderer_add_tex(self, "query_mips",	0.1f, query_mips);
 	renderer_add_tex(self, "gbuffer",		1.0f, gbuffer);
-	renderer_add_tex(self, "ssao",			1.0f, ssao);
+	renderer_add_tex(self, "ssao",			0.6f, ssao);
 	renderer_add_tex(self, "light",			1.0f, light);
 	renderer_add_tex(self, "volum",			0.6f, volum);
 	/* renderer_add_tex(self, "volum_tmp",		1.0f, volum_tmp); */
@@ -785,7 +783,8 @@ int renderer_resize(renderer_t *self, int width, int height)
 	return CONTINUE;
 }
 
-static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
+static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
+                                     uint32_t *profile)
 {
 	if(!pass->active) return NULL;
 	if (pass->shader_name[0] && !pass->shader)
@@ -807,6 +806,12 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 	if(pass->shader)
 	{
 		fs_bind(pass->shader);
+	}
+
+	if (profile)
+	{
+		*profile = SDL_GetTicks();
+		glFinish(); glerr();
 	}
 
 	if(pass->additive)
@@ -915,6 +920,12 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
 	rd->cull_invert = false;
+
+	if (profile)
+	{
+		glFinish(); glerr();
+		*profile = SDL_GetTicks() - (*profile);
+	}
 
 	return pass->output;
 }
@@ -1247,7 +1258,14 @@ int renderer_draw(renderer_t *self)
 
 	for(i = 0; i < self->passes_size; i++)
 	{
-		renderer_draw_pass(self, &self->passes[i]);
+		uint32_t timer;
+		const bool_t profile = self->frame % 64 == 0;
+		const texture_t *output = renderer_draw_pass(self, &self->passes[i],
+		                                             profile ? &timer : NULL);
+		if (profile && output)
+		{
+			printf("%s: %u\n", self->passes[i].name, timer);
+		}
 	}
 	c_render_device_rebind(c_render_device(&SYS), NULL, NULL);
 

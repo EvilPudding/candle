@@ -81,37 +81,48 @@ float mip_map_level(in vec2 texture_coordinate) // in texel units
 #define g_cache_w 64u
 #define g_cache_h 32u
 
+uint round_power_of_two(uint v)
+{
+	v--;
+	v |= v >> 1u;
+	v |= v >> 2u;
+	v |= v >> 4u;
+	v |= v >> 8u;
+	v |= v >> 16u;
+	return v + 1u;
+}
+
 vec4 solveMip(uvec2 size, uint base_tile, uint mip, vec2 coords,
               out uint tile_out)
 {
-	uint tiles_per_row = uint(ceil(float(size.x) / 128.0));
-	uint tiles_per_col = uint(ceil(float(size.y) / 128.0));
-	uint offset = base_tile;
+	uint max_dim = uint(ceil(float(max(size.x, size.y)) / 128.0));
+	uint tiles_per_row = round_power_of_two(max_dim);
+	float max_mips = log2(float(tiles_per_row));
+	float mm = min(max_mips, float(mip));
 
-	for (uint i = 0u; i < MAX_MIPS && i < mip; i++)
-	{
-		offset += tiles_per_row * tiles_per_col;
-		tiles_per_row = uint(ceil(0.5 * float(tiles_per_row)));
-		tiles_per_col = uint(ceil(0.5 * float(tiles_per_col)));
-	}
+	uint map_tiles = uint(exp2(2. * (max_mips + 1. - mm)) * (exp2(mm * 2.) - 1.)) / 3u;
+	map_tiles += uint(max(0., float(mip) - max_mips));
 
-	uvec2 indir_coords = uvec2(floor(coords / (pow(2.0, float(mip)) * 128.0)));
+	uint offset = base_tile + map_tiles;
+	tiles_per_row >>= mip;
+
+	uvec2 indir_coords = uvec2(floor(coords / (exp2(float(mip)) * 128.0)));
 	uint indir_tile = indir_coords.y * tiles_per_row + indir_coords.x + offset;
 	tile_out = indir_tile;
 
 	vec3 info = texelFetch(g_indir,
 	                       ivec2(indir_tile % g_indir_w,
 	                             indir_tile / g_indir_w), 0).rgb * 255.0;
-	uint cache_tile = uint(info.r) + uint(info.g * 256.0);
 	float actual_mip = info.b;
 
-	uvec2 cache_coords = uvec2(cache_tile % g_cache_w, cache_tile / g_cache_w) * 129u;
+	uvec2 cache_coords = uvec2(info.xy) * 129u;
 
 	const vec2 g_cache_size = vec2(g_cache_w * 129u, g_cache_h * 129u);
 
-	vec2 actual_coords = coords / pow(2.0, actual_mip);
+	vec2 actual_coords = coords / exp2(actual_mip);
 	vec2 intile_coords = mod(actual_coords, 128.0) + 0.5f;
 
+	/* return vec4((vec2(cache_coords) + intile_coords) / g_cache_size, 0.0, 1.0); */
 	return textureLod(g_cache,
 			(vec2(cache_coords) + intile_coords) / g_cache_size, 0.0);
 }
