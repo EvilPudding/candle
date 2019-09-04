@@ -21,16 +21,16 @@ typedef struct uniform_t uniform_t;
 
 enum pass_options
 {
-	DEPTH_LOCK		= 1 << 4,
-	DEPTH_GREATER	= 1 << 5,
-	DEPTH_EQUAL		= 1 << 6,
-	DEPTH_DISABLE	= 1 << 7,
-	CULL_DISABLE	= 1 << 8,
-	CULL_INVERT		= 1 << 9,
-	ADD				= 1 << 10,
-	MUL				= 1 << 11,
-	GEN_MIP			= 1 << 12,
-	TRACK_BRIGHT	= 1 << 13
+	DEPTH_LOCK		= 1 << 0,
+	DEPTH_GREATER	= 1 << 1,
+	DEPTH_EQUAL		= 1 << 2,
+	DEPTH_DISABLE	= 1 << 3,
+	CULL_DISABLE	= 1 << 4,
+	CULL_INVERT		= 1 << 5,
+	ADD				= 1 << 6,
+	MUL				= 1 << 7,
+	GEN_MIP			= 1 << 8,
+	TRACK_BRIGHT	= 1 << 9
 };
 
 enum bind_type

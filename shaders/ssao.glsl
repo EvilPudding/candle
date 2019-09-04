@@ -5,7 +5,7 @@ BUFFER {
 	sampler2D nmr;
 } gbuffer;
 
-layout (location = 0) out vec4 FragColor;
+layout (location = 0) out float FragColor;
 
 vec2 hemicircle[] = vec2[](
 	vec2(1.0, 0.0),
@@ -20,13 +20,14 @@ vec2 hemicircle[] = vec2[](
 
 uniform float power;
 
-float ambientOcclusion()
+void main(void)
 {
 	float ao = 0.0;
 
 	vec2 tc = texcoord;
 	vec3 n = decode_normal(textureLod(gbuffer.nmr, tc, 0.0).rg);
-	float d0 = linearize(textureLod(gbuffer.depth, tc, 0.0).r);
+	float D = texelFetch(gbuffer.depth, ivec2(gl_FragCoord.xy), 0).r;
+	float d0 = linearize(D);
 
 	float ditherValue = ditherPattern[(int(gl_FragCoord.x) % 4) * 4 + (int(gl_FragCoord.y) % 4)];
 	/* ditherValue = 0.0; */
@@ -54,7 +55,7 @@ float ambientOcclusion()
 
 		for (float i = 0.0; i < iterations; ++i)
 		{
-			float c0 = pow((i + ditherValue) / (iterations - 1.0), 2.0) + 0.002;
+			float c0 = pow((i + ditherValue) / (iterations - 1.0), 2.0) + 0.001;
 			vec2 coord1 = offset * c0;
 
 			float d1 = linearize(textureLod(gbuffer.depth, tc + coord1, 0.0).r);
@@ -83,12 +84,7 @@ float ambientOcclusion()
 	}
 	ao /= float(taps) * iterations;
 	ao = 1.0 - ao * power;
-	return clamp(ao, 0.0, 1.0); 
-}
-
-void main(void)
-{
-	FragColor.r = ambientOcclusion();
+	FragColor = clamp(ao, 0.0, 1.0); 
 }
 
 // vim: set ft=c:

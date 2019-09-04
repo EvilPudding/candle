@@ -258,7 +258,7 @@ void texture_update_brightness(texture_t *self)
 {
 	texture_bind(self, 0);
 
-	uint8_t data[4];
+	float data[4];
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, self->frame_buffer[MAX_MIPS - 1]); glerr();
@@ -266,13 +266,13 @@ void texture_update_brightness(texture_t *self)
 
 	/* glGetTexImage(self->target, 9, self->bufs[0].format, GL_UNSIGNED_BYTE, */
 			/* data); */
-	glReadPixels(0, 0, 1, 1, self->bufs[0].format, GL_UNSIGNED_BYTE, data); glerr();
+	glReadPixels(0, 0, 1, 1, self->bufs[0].format, GL_FLOAT, data); glerr();
 
-	uint8_t r = data[0];
-	uint8_t g = data[1];
-	uint8_t b = data[2];
-	self->brightness = ((float)(r + g + b)) / (255.0f * 3.0f);
-	if(self->brightness <= 0) self->brightness = 1;
+	float r = data[0];
+	float g = data[1];
+	float b = data[2];
+	self->brightness = ((float)(r + g + b)) / (3.0f);
+	if(self->brightness <= 0) self->brightness = 1.0;
 }
 
 static void texture_update_sizes(texture_t *self)

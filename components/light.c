@@ -108,7 +108,7 @@ static void c_light_create_renderer(c_light_t *self)
 			CULL_DISABLE, output, output, 0,
 			(bind_t[]){
 				{CLEAR_DEPTH, .number = 1.0f},
-				{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 1.0f)},
+				{CLEAR_COLOR, .vec4 = vec4(0.343750, 0.996094, 0.996094, 0.000000)},
 				{NONE}
 			}
 	);
@@ -235,7 +235,7 @@ int c_light_menu(c_light_t *self, void *ctx)
 			c_light_position_changed(self);
 			world_changed();
 		}
-		nk_property_float(ctx, "volumetric:", -1.0, &volum, 1.0, 0.1, 0.05);
+		nk_property_float(ctx, "volumetric:", -1.0, &volum, 10.0, 0.1, 0.05);
 		if(volum != self->volumetric_intensity)
 		{
 			self->volumetric_intensity = volum;

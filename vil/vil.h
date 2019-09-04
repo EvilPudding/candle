@@ -12,8 +12,10 @@ typedef struct vicall_t vicall_t;
 typedef struct vil_t vil_t;
 
 typedef float(*vifunc_gui_cb)(vicall_t *call, void *data, void *nk);
-typedef void(*vifunc_save_cb)(vicall_t *call, void *data, FILE *fp);
-typedef bool_t(*vifunc_load_cb)(vicall_t *call, void *data, FILE *fp);
+typedef void  (*vicall_save_cb)(vicall_t *call, void *data, FILE *fp);
+typedef bool_t(*vicall_load_cb)(vicall_t *call, void *data, FILE *fp);
+typedef void  (*vifunc_save_cb)(vifunc_t *func, FILE *fp);
+typedef bool_t(*vifunc_load_cb)(vifunc_t *func, FILE *fp);
 typedef void(*vil_func_cb)(vifunc_t *func, void *usrptr);
 
 enum {
@@ -31,6 +33,8 @@ typedef struct vil_t
 {
 	khash_t(vifunc) *funcs;
 	void *user_data;
+	vifunc_save_cb	builtin_save_func;
+	vifunc_load_cb	builtin_load_func;
 } vil_t;
 
 typedef struct
@@ -159,8 +163,8 @@ typedef struct vifunc_t
 
 	uint32_t    	builtin_size;
 	vifunc_gui_cb	builtin_gui;
-	vifunc_save_cb	builtin_save;
-	vifunc_load_cb	builtin_load;
+	vicall_save_cb	builtin_save_call;
+	vicall_load_cb	builtin_load_call;
 	vil_t *ctx;
 
 	vil_func_cb     watcher;

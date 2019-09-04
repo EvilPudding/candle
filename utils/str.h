@@ -18,6 +18,7 @@
 
 char *str_new(size_t);
 void str_cat(char **, const char *);
+void str_ncat(char **str1, const char *str2, size_t n);
 void str_catf(char **, const char *, ...);
 char *str_dup(const char *);
 char *str_new_copy(const char *);

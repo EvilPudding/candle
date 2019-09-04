@@ -30,7 +30,7 @@ in float vertex_distance;
 in vec2 texcoord;
 in mat3 TM;
 
-vec2 sampleCube(const vec3 v, out uint faceIndex)
+vec2 sampleCube(const vec3 v, out uint faceIndex, out float z)
 {
 	vec3 vAbs = abs(v);
 	float ma;
@@ -40,18 +40,21 @@ vec2 sampleCube(const vec3 v, out uint faceIndex)
 		faceIndex = v.z < 0.0 ? 5u : 4u;
 		ma = 0.5 / vAbs.z;
 		uv = vec2(v.z < 0.0 ? -v.x : v.x, -v.y);
+		z = vAbs.z;
 	}
 	else if(vAbs.y >= vAbs.x)
 	{
 		faceIndex = v.y < 0.0 ? 3u : 2u;
 		ma = 0.5 / vAbs.y;
 		uv = vec2(v.x, v.y < 0.0 ? -v.z : v.z);
+		z = vAbs.y;
 	}
 	else
 	{
 		faceIndex = v.x < 0.0 ? 1u : 0u;
 		ma = 0.5 / vAbs.x;
 		uv = vec2(v.x < 0.0 ? v.z : -v.z, -v.y);
+		z = vAbs.x;
 	}
 	return uv * ma + 0.5;
 }
@@ -92,11 +95,9 @@ uint round_power_of_two(uint v)
 	return v + 1u;
 }
 
-vec4 solveMip(uvec2 size, uint base_tile, uint mip, vec2 coords,
+vec4 solveMip(uint tiles_per_row, uint base_tile, uint mip, vec2 coords,
               out uint tile_out)
 {
-	uint max_dim = uint(ceil(float(max(size.x, size.y)) / 128.0));
-	uint tiles_per_row = round_power_of_two(max_dim);
 	float max_mips = log2(float(tiles_per_row));
 	float mm = min(max_mips, float(mip));
 
@@ -104,10 +105,10 @@ vec4 solveMip(uvec2 size, uint base_tile, uint mip, vec2 coords,
 	map_tiles += uint(max(0., float(mip) - max_mips));
 
 	uint offset = base_tile + map_tiles;
-	tiles_per_row >>= mip;
+	uint mip_tpr = tiles_per_row >> mip;
 
 	uvec2 indir_coords = uvec2(floor(coords / (exp2(float(mip)) * 128.0)));
-	uint indir_tile = indir_coords.y * tiles_per_row + indir_coords.x + offset;
+	uint indir_tile = indir_coords.y * mip_tpr + indir_coords.x + offset;
 	tile_out = indir_tile;
 
 	vec3 info = texelFetch(g_indir,
@@ -115,16 +116,14 @@ vec4 solveMip(uvec2 size, uint base_tile, uint mip, vec2 coords,
 	                             indir_tile / g_indir_w), 0).rgb * 255.0;
 	float actual_mip = info.b;
 
-	uvec2 cache_coords = uvec2(info.xy) * 129u;
-
-	const vec2 g_cache_size = vec2(g_cache_w * 129u, g_cache_h * 129u);
+	const vec2 g_cache_size = vec2(g_cache_w, g_cache_h);
 
 	vec2 actual_coords = coords / exp2(actual_mip);
 	vec2 intile_coords = mod(actual_coords, 128.0) + 0.5f;
+	/* vec2 intile_coords = fract(coords * exp2(float(mip_tpr))) * 128. + 0.5; */
 
-	/* return vec4((vec2(cache_coords) + intile_coords) / g_cache_size, 0.0, 1.0); */
 	return textureLod(g_cache,
-			(vec2(cache_coords) + intile_coords) / g_cache_size, 0.0);
+			(info.xy + intile_coords / 129.) / g_cache_size, 0.0);
 }
 
 vec4 textureSVT(uvec2 size, uint base_tile, vec2 coords, out uint tile_out,
@@ -132,28 +131,47 @@ vec4 textureSVT(uvec2 size, uint base_tile, vec2 coords, out uint tile_out,
 {
 	coords.y = 1.0 - coords.y;
 	vec2 rcoords = fract(coords) * vec2(size);
+
+	uint max_dim = uint(ceil(float(max(size.x, size.y)) / 128.0));
+	uint tiles_per_row = round_power_of_two(max_dim);
+	/* rcoords *= vec2(size) / vec2(tiles_per_row * 128u); */
+
 	float mip = mip_map_level(coords * vec2(size) * mip_scale);
 	uint mip0 = uint(floor(mip));
 	uint mip1 = uint(ceil(mip));
 
 	uint ignore;
-	return mix(solveMip(size, base_tile, mip0, rcoords, tile_out),
-	           solveMip(size, base_tile, mip1, rcoords, ignore), fract(mip));
+	return mix(solveMip(tiles_per_row, base_tile, mip0, rcoords, tile_out),
+	           solveMip(tiles_per_row, base_tile, mip1, rcoords, ignore), fract(mip));
 	/* return solveMip(prop, 0, rcoords, draw); */
 }
 
+#define NEAR 0.1
+#define FAR 100.0
 float linearize(float depth)
 {
-    return 2.0 * 0.1 * 100.0 / (100.0 + 0.1 - (2.0 * depth - 1.0) * (100.0 - 0.1));
+    return (2.0 * NEAR * FAR) / ((FAR + NEAR) - (2.0 * depth - 1.0) * (FAR - NEAR));
 }
+
 float unlinearize(float depth)
 {
-	return 100.0 * (1.0 - (0.1 / depth)) / (100.0 - 0.1);
+	return FAR * (1.0 - (NEAR / depth)) / (FAR - NEAR);
 }
 
 const vec4 bitSh = vec4(256. * 256. * 256., 256. * 256., 256., 1.);
 const vec4 bitMsk = vec4(0.,vec3(1./256.0));
 const vec4 bitShifts = vec4(1.) / bitSh;
+
+vec4 encode_float_rgba_unit( float v ) {
+	vec4 enc = vec4(1.0, 255.0, 65025.0, 16581375.0) * v;
+	enc = fract(enc);
+	enc -= enc.yzww * vec4(1.0 / 255.0, 1.0 / 255.0, 1.0 / 255.0, 0.0);
+	return enc;
+}
+
+float decode_float_rgba_unit( vec4 rgba ) {
+	return dot(rgba, vec4(1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 16581375.0) );
+}
 
 vec4 encode_float_rgba (float value) {
 	value /= 256.0;
@@ -167,22 +185,23 @@ float decode_float_rgba (vec4 color) {
 }
 /* -------------------------------------------------------------------------- */
 
-float lookup_single(vec3 shadowCoord)
+float lookup_single(vec3 shadowCoord, out float z)
 {
 	uint size = 1024u / uint(pow(2.0, float(light(lod))));
 	uint cube_layer;
-	uvec2 tc = uvec2(floor(sampleCube(shadowCoord, cube_layer) * float(size)));
+	uvec2 tc = uvec2(floor(sampleCube(shadowCoord, cube_layer, z) * float(size)));
 	uvec2 pos = uvec2(cube_layer % 2u, cube_layer / 2u) * size;
 	vec4 distance = texelFetch(g_probes, ivec2(tc + pos + light(pos)), 0);
-	return decode_float_rgba(distance);
+	return linearize(decode_float_rgba(distance));
 }
 
 /* float prec = 0.05; */
 float lookup(vec3 coord)
 {
-	float dist = length(coord);
-	float dist2 = lookup_single(coord) - dist;
-	return (dist2 > -0.01) ? 1.0 : 0.0;
+	/* float dist = length(coord); */
+	float z;
+	float dist = lookup_single(coord, z);
+	return (dist > z - 0.08) ? 1.0 : 0.0;
 }
 
 /* SPHEREMAP TRANSFORM */
@@ -303,7 +322,9 @@ float ditherPattern[16] = float[16](0.0f, 0.5f, 0.125f, 0.625f,
 
 float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)
 {
-	float ocluder_to_light = lookup_single(-vec);
+	float z;
+	float ocluder_to_light = lookup_single(-vec, z);
+	ocluder_to_light = min(z, ocluder_to_light);
 	float ditherValue = ditherPattern[(int(gl_FragCoord.x) % 4) * 4 + (int(gl_FragCoord.y) % 4)];
 
 	float sd = ((ocluder_to_light - point_to_light) > -0.01) ? 0.0 : 1.0;
@@ -422,21 +443,22 @@ vec3 RayCast(sampler2D depth, vec3 dir, inout vec3 hitCoord)
     return vec3(0.0);
 }
 
-float roughnessToSpecularPower(float r)
-{
-  return (2.0 / (pow(r, 4.0)) - 2.0);
-}
-
 #define CNST_1DIVPI 0.31830988618
 #define CNST_MAX_SPECULAR_EXP 64.0
 
+
+float roughnessToSpecularPower(float r)
+{
+  return pow(1.0 - r, 2.0);
+  /* return 2.0 / pow(r, 4.0) - 2.0; */
+}
 float specularPowerToConeAngle(float specularPower)
 {
     // based on phong distribution model
-    if(specularPower >= exp2(CNST_MAX_SPECULAR_EXP))
-    {
-        return 0.0;
-    }
+    /* if(specularPower >= exp2(CNST_MAX_SPECULAR_EXP)) */
+    /* { */
+        /* return 0.0; */
+    /* } */
     const float xi = 0.244;
     float exponent = 1.0 / (specularPower + 1.0);
     return acos(pow(xi, exponent));
@@ -454,15 +476,6 @@ vec3 fresnelSchlick(vec3 F0, float cosTheta)
 	return F0 + (vec3(1.0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
-#define saturate(val) (clamp(val, 0.0, 1.0))
-
-vec4 coneSampleWeightedColor(sampler2D screen, vec2 samplePos,
-		float mipChannel, float gloss)
-{
-    vec3 sampleColor = textureLod(screen, samplePos, mipChannel).rgb;
-    return vec4(sampleColor * gloss, gloss);
-}
-
 vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
 		vec2 metallic_roughness, vec3 nor)
 {
@@ -478,6 +491,7 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
 
     float gloss = 1.0 - perceptualRoughness;
     float specularPower = roughnessToSpecularPower(perceptualRoughness);
+	perceptualRoughness *= 0.3;
 
 	vec3 w_pos = (camera(model) * vec4(pos, 1.0)).xyz;
 	vec3 w_nor = (camera(model) * vec4(nor, 0.0)).xyz;
@@ -500,8 +514,6 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
 	vec3 fallback_color = vec3(0.0);
 	/* vec3 fallback_color = texture(ambient_map, reflect(eye_dir, nor)).rgb / (mipChannel+1); */
 
-    float coneTheta = specularPowerToConeAngle(specularPower) * 0.5;
-
     // P1 = pos, P2 = raySS, adjacent length = ||P2 - P1||
     vec2 deltaP = coords.xy - texcoord;
     float adjacentLength = length(deltaP);
@@ -509,33 +521,26 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
 
 	uint numMips = MAX_MIPS;
     vec4 reflect_color = vec4(0.0);
-    float remainingAlpha = 1.0;
     float maxMipLevel = 3.0;
     float glossMult = gloss;
 
     // cone-tracing using an isosceles triangle to approximate a cone in screen space
-    for(uint i = 0u; i < 1u; ++i)
+    for(int i = -4; i <= 4; ++i)
     {
-        float oppositeLength = 2.0 * tan(coneTheta) * adjacentLength;
-        float incircleSize = isoscelesTriangleInRadius(oppositeLength, adjacentLength);
-        vec2 samplePos = texcoord + adjacentUnit * (adjacentLength - incircleSize);
-		float mipChannel = clamp(log2(incircleSize), 0.0, maxMipLevel);
+		float len = adjacentLength * (float(i) / 4.0) * perceptualRoughness * 0.3;
+        vec2 samplePos = coords.xy + vec2(adjacentUnit.y, -adjacentUnit.x) * len;
+		float mipChannel = perceptualRoughness * adjacentLength * 40.0;
 
-        vec4 newColor = coneSampleWeightedColor(screen, samplePos, mipChannel, glossMult);
+		glossMult = 1.0;
+		vec4 newColor = textureLod(screen, samplePos, mipChannel).rgba;
 
-        remainingAlpha -= newColor.a;
-        if(remainingAlpha < 0.0)
-        {
-            newColor.rgb *= (1.0 - abs(remainingAlpha));
-        }
-        reflect_color += newColor;
+        reflect_color += clamp(newColor / 15.0, 0.0, 1.0);
 
-        if(reflect_color.a >= 1.0)
-        {
-            break;
-        }
+        /* if(reflect_color.a >= 1.0) */
+        /* { */
+            /* break; */
+        /* } */
 
-        adjacentLength = adjacentLength - (incircleSize * 2.0);
         glossMult *= gloss;
     }
 	vec3 f0 = vec3(0.04);
@@ -549,7 +554,7 @@ vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,
     specularColor = fresnelSchlick(vec3(reflectance), NdotL) * CNST_1DIVPI;
     /* float fadeOnRoughness = saturate(gloss * 4.0); */
     float fadeOnRoughness = 1.0;
-	float fade = screenEdgefactor * fadeOnRoughness * (1.0 - saturate(remainingAlpha));
+	float fade = screenEdgefactor * fadeOnRoughness;
 
 	return vec4(mix(fallback_color,
 				reflect_color.xyz * specularColor, fade), 1.0);

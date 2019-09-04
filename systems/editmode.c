@@ -607,7 +607,7 @@ void c_editmode_activate(c_editmode_t *self)
 	{
 		self->camera = entity_new(
 			c_name_new("Edit Camera"), c_editlook_new(), c_node_new(),
-			c_camera_new(70, 0.1, 100.0, 0, 1, 1, editmode_renderer_new(self))
+			c_camera_new(70, 0.1, 100.0, true, true, true, editmode_renderer_new(self))
 		);
 		c_spatial_t *sc = c_spatial(&self->camera);
 		c_spatial_lock(sc);

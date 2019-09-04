@@ -42,10 +42,12 @@ void main(void)
 		attenuation = clamp(attenuation, 0.0, 1.0);
 		if (attenuation > 0.0) {
 			passed = true;
-			bool in_light = lookup_single(dif) >= len;
+			float z;
+			float Z = lookup_single(dif, z);
+			bool in_light = Z >= z;
 			in_light = inverted ? !in_light : in_light;
-			/* color += (in_light ? attenuation : 0.0) * (1.0f - dot(norm_dir, dif / len)); */
 
+			/* color += (in_light ? attenuation : 0.0) * (1.0f - dot(norm_dir, dif / len)); */
 			color += in_light ? attenuation * (1.0f - dot(norm_dir, dif / len)) : 0.0;
 			/* if (!in_light) break; */
 		}

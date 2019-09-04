@@ -204,6 +204,11 @@ void vifunc_save(vifunc_t *self, const char *filename)
 	FILE *fp = fopen(filename, "w");
 	if (!fp) return;
 
+	if (self->ctx->builtin_save_func)
+	{
+		self->ctx->builtin_save_func(self, fp);
+	}
+
 	for (uint32_t i = 0; i < self->call_count; i++)
 	{
 		vicall_t *call = &self->call_buf[i];
@@ -224,11 +229,11 @@ void vifunc_save(vifunc_t *self, const char *filename)
 												  arg->into.depth);
 
 				if (!vicall_is_linked(call->type, arg->into))
-				if (child->type->builtin_save && arg->initialized)
+				if (child->type->builtin_save_call && arg->initialized)
 				{
 					vifunc_slot_to_name(self, arg->into, buffer, ".", NULL);
 					fprintf(fp, "%s = ", buffer);
-					child->type->builtin_save(child, arg->data, fp);
+					child->type->builtin_save_call(child, arg->data, fp);
 					fprintf(fp, "\n");
 				}
 			}
@@ -501,6 +506,11 @@ bool_t vifunc_load(vifunc_t *self, const char *filename)
 	FILE *fp = fopen(filename, "r");
 	if (!fp) return false;
 
+	if (self->ctx->builtin_load_func)
+	{
+		self->ctx->builtin_load_func(self, fp);
+	}
+
 	self->locked++;
 	while (!feof(fp))
 	{
@@ -530,9 +540,9 @@ bool_t vifunc_load(vifunc_t *self, const char *filename)
 			if (!strncmp(oper, "=", 8))
 			{
 				struct vil_arg *arg = vicall_get_arg(root, slot);
-				if (call->type->builtin_load)
+				if (call->type->builtin_load_call)
 				{
-					call->type->builtin_load(call, arg->data, fp);
+					call->type->builtin_load_call(call, arg->data, fp);
 					ret = fscanf(fp, "\n");
 					if (ret < 0) goto fail;
 				}
