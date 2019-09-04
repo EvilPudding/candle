@@ -17,6 +17,10 @@ uint32_t g_mats_num;
 static vil_t g_mat_ctx;
 void mat_changed(vicall_t *call, slot_t slot, void *usrptr);
 
+struct mat_vil_type {
+	char *builtin_execute;
+};
+
 struct mat_type {
 	char name[64];
 	vifunc_t *mat;
@@ -28,6 +32,7 @@ struct mat_type {
 	vicall_t *tmp_material_instance;
 	uint32_t next_free[128];
 	uint32_t free_position;
+	char *code;
 };
 
 static struct mat_type g_mat_types[32];
@@ -128,7 +133,6 @@ mat_t *mat_from_file(const char *filename)
 
 	mat_t *self = mat_new(file_name, NULL);
 	printf("loading %s\n", filename);
-
 
 	vifunc_load(self->sandbox, filename);
 
@@ -266,6 +270,56 @@ static float _color_gui(vicall_t *call, struct nk_colorf *color, void *ctx)
 		nk_combo_end(ctx);
 	}
 	return nk_layout_widget_bounds(ctx).h;
+}
+
+static void _code_save(vifunc_t *func, FILE *fp) 
+{
+	/* fprintf(fp, "%%{\n%s}%%", code->string); */
+}
+
+static bool_t _code_load(vifunc_t *func, FILE *fp) 
+{
+	char buffer[1024];
+
+	if (!func->usrptr)
+	{
+		return true;
+	}
+	struct mat_type *type = func->usrptr;
+	type->code = str_new(64);
+
+	buffer[1024 - 1] = '\0';
+	if (!fgets(buffer, 3, fp))
+	{
+		return true;
+	}
+	if (strncmp(buffer, "%{", 2))
+	{
+		rewind(fp);
+		return true;
+	}
+
+	while (fgets(buffer, sizeof(buffer) - 1, fp))
+	{
+		char *end = strstr(buffer, "}%");
+		if (end) *end = '\0';
+
+		str_cat(&type->code, buffer);
+
+		if (end) break;
+	}
+
+	return true;
+}
+
+static void _int_save(vicall_t *call, int *num, FILE *fp) 
+{
+	fprintf(fp, "%d", *num);
+}
+
+static bool_t _int_load(vicall_t *call, int *num, FILE *fp) 
+{
+	return fscanf(fp, "%d", num) >= 0;
 }
 
 static float _vint_gui(vicall_t *call, int32_t *num, void *ctx) 
@@ -722,10 +776,66 @@ bool_t mat_is_transparent(mat_t *self)
 	return mat_get_group(self) == ref("transparent");
 }
 
+void mat_type_inputs(vifunc_t *func)
+{
+	vicall_t *resolution = vifunc_get(func, "resolution");
+	vicall_t *tex_space = vifunc_get(func, "tex_space");
+	vicall_t *time = vifunc_get(func, "time");
+	vicall_t *screen_space = vifunc_get(func, "screen_space");
+	vicall_t *world_space = vifunc_get(func, "world_space");
+	vicall_t *view_space = vifunc_get(func, "view_space");
+	vicall_t *vertex_normal = vifunc_get(func, "vertex_normal");
+	vicall_t *obj_pos = vifunc_get(func, "obj_pos");
+	float y = 100.0f;
+	float inc = 100.0f;
+	if (!resolution)
+	{
+		vicall_new(func, vil_get(&g_mat_ctx, ref("vec2")),
+		           "resolution", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
+	}
+	if (!tex_space)
+	{
+		vicall_new(func, vil_get(&g_mat_ctx, ref("vec2")),
+		           "tex_space", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
+	}
+	if (!time)
+	{
+		vicall_new(func, vil_get(&g_mat_ctx, ref("number")),
+		           "time", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
+	}
+	if (!screen_space)
+	{
+		vicall_new(func, vil_get(&g_mat_ctx, ref("vec2")),
+		           "screen_space", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
+	}
+	if (!world_space)
+	{
+		vicall_new(func, vil_get(&g_mat_ctx, ref("vec3")),
+		           "world_space", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
+	}
+	if (!view_space)
+	{
+		vicall_new(func, vil_get(&g_mat_ctx, ref("vec3")),
+		           "view_space", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
+	}
+	if (!vertex_normal)
+	{
+		vicall_new(func, vil_get(&g_mat_ctx, ref("vec3")),
+		           "vertex_normal", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
+	}
+	if (!obj_pos)
+	{
+		vicall_new(func, vil_get(&g_mat_ctx, ref("vec3")),
+		           "obj_pos", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
+	}
+}
+
 void mat_type_changed(vifunc_t *func, void *usrptr)
 {
 	vicall_t *call = vifunc_get(func, "pbr");
 	struct mat_type *type = usrptr;
+
+	mat_type_inputs(func);
 
 	uint32_t size = ceilf(((float)vicall_get_size(type->tmp_material_instance)) / 16) * 16;
 	if (!type->ubo)
@@ -826,23 +936,15 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	}
 	else
 	{
-		if (group == ref("parallax"))
-		{
-			str_cat(&gbuffer,
-			        "tex_space_in = texcoord;\n"
-			        );
-		}
-		else
-		{
-			str_cat(&gbuffer, "tex_space_in = texcoord;\n");
-		}
 		str_cat(&gbuffer,
+				"tex_space_in = texcoord;\n"
 		        "world_space_in = vertex_world_position;\n"
 		        "view_space_in = vertex_position;\n"
 		        );
 	}
 
 	str_cat(&gbuffer,
+	        "resolution_in = screen_size;\n"
 	        "#ifdef QUERY_PASS\n"
 	        "time_in = scene.time + 10.0 * 0.01;\n"
 	        "#else\n"
@@ -852,7 +954,6 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 
 	vicall_foreach_unlinked_input(type->tmp_material_instance,
 	                              _generate_uniform_assigment, &gbuffer);
-
 	if (group == ref("parallax"))
 	{
 		str_cat(&gbuffer, "/* HEIGHT PRECOMPUTATION */\n");
@@ -872,9 +973,23 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		        );
 	}
 
+	/* RUN BODY */
 	vicall_iterate_dependencies(call, ~0, ~0,
 	                            (vil_link_cb)material_generate_assignments,
 	                            (vil_call_cb)material_generate_call, &gbuffer);
+	if (type->code)
+	{
+		str_cat(&gbuffer, type->code);
+	}
+
+
+	if (group == ref("opaque") || group == ref("parallax") || group == ref("decal"))
+	{
+		str_cat(&gbuffer,
+				"#if defined(SELECT_PASS) || defined(SHADOW_PASS)\n"
+				"	if (pbr_in.albedo.a < 0.7) discard;\n"
+				"#endif\n");
+	}
 
 	str_cat(&gbuffer,
 		"#ifdef QUERY_PASS\n"
@@ -902,7 +1017,8 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		"	IDS.xy = vec2(float(id.x) / 255.0, float(id.y) / 255.0);\n"
 		"	IDS.zw = vec2(poly_id);\n"
 		"#elif defined(SHADOW_PASS)\n"
-		"	Depth = encode_float_rgba(vertex_distance);\n"
+		"	Depth = encode_float_rgba(gl_FragCoord.z);\n"
+		/* "	Depth = encode_float_rgba(vertex_distance / 4.0);\n" */
 		"#else\n");
 
 	if (group == ref("opaque") || group == ref("parallax") || group == ref("decal"))
@@ -926,7 +1042,8 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 			"	NMR.rg = encode_normal(norm);\n"
 			"	NMR.b = pbr_in.metalness;\n"
 			"	NMR.a = pbr_in.roughness;\n"
-			"	Emi = pbr_in.emissive;\n");
+			"	Emi = pbr_in.emissive;\n"
+		);
 	}
 	else if (group == ref("transparent"))
 	{
@@ -950,7 +1067,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		"#endif\n"
 		"}\n");
 
-	if (group == ref("parallax"))
+	if (group == ref("opaque"))
 	{
 		const char *line = gbuffer;
 		uint32_t line_num = 1u;
@@ -1131,13 +1248,18 @@ void materials_init_vil()
 
 	vil_init(ctx);
 
+	ctx->builtin_load_func = (vifunc_load_cb)_code_load;
+	ctx->builtin_save_func = (vifunc_save_cb)_code_save;
+
 	vifunc_t *tint = vifunc_new(ctx, "integer", (vifunc_gui_cb)_vint_gui,
 			                    sizeof(int32_t), true);
+	tint->builtin_load_call = (vicall_load_cb)_int_load;
+	tint->builtin_save_call = (vicall_save_cb)_int_save;
 
 	vifunc_t *tnum = vifunc_new(ctx, "number", (vifunc_gui_cb)_number_gui,
 			                    sizeof(float), true);
-	tnum->builtin_load = (vifunc_load_cb)_number_load;
-	tnum->builtin_save = (vifunc_save_cb)_number_save;
+	tnum->builtin_load_call = (vicall_load_cb)_number_load;
+	tnum->builtin_save_call = (vicall_save_cb)_number_save;
 
 	vifunc_t *v2 = vifunc_new(ctx, "vec2", NULL, sizeof(vec2_t), true);
 		r = vicall_new(v2, tnum, "x", vec2(40, 10),  offsetof(vec2_t, x), V_BOTH);
@@ -1228,8 +1350,8 @@ void materials_init_vil()
 		vicall_new(ttex, tint, "tile", vec2(100, 10), offsetof(_mat_sampler_t, tile), V_IN | V_HID);
 		vicall_new(ttex, v2, "size", vec2(100, 10), offsetof(_mat_sampler_t, size), V_IN | V_HID);
 		vicall_new(ttex, v4, "result", vec2(300, 10), offsetof(_mat_sampler_t, result), V_OUT);
-	ttex->builtin_load = (vifunc_load_cb)_texture_load;
-	ttex->builtin_save = (vifunc_save_cb)_texture_save;
+	ttex->builtin_load_call = (vicall_load_cb)_texture_load;
+	ttex->builtin_save_call = (vicall_save_cb)_texture_save;
 
 	vifunc_t *tflip = vifunc_new(ctx, "flipbook", NULL, 0, false);
 		vicall_new(tflip, v2, "coord", vec2(100, 10), ~0, V_IN);
@@ -1323,43 +1445,6 @@ void materials_init_vil()
 		           offsetof(struct transparent, roughness), V_IN);
 		vicall_new(transparent, v3, "emissive", vec2(500, 10),
 		           offsetof(struct transparent, emissive), V_IN);
-
-	{
-		vifunc_t *template = vifunc_new(ctx, "$opaque", NULL, 0, false);
-		float y = 0.0f;
-		float inc = 100.0f;
-		vifunc_t *v2 = vil_get(&g_mat_ctx, ref("vec2"));
-		vifunc_t *tnum = vil_get(&g_mat_ctx, ref("number"));
-		vifunc_t *v3 = vil_get(&g_mat_ctx, ref("vec3"));
-		vifunc_t *opaque = vil_get(&g_mat_ctx, ref("opaque"));
-		vicall_new(template, opaque, "pbr", vec2(600, 10), ~0, V_IN);
-		vicall_new(template, v2, "tex_space", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
-		vicall_new(template, tnum, "time", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
-		vicall_new(template, v2, "screen_space", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
-		vicall_new(template, v3, "world_space", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
-		vicall_new(template, v3, "view_space", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
-		vicall_new(template, v3, "vertex_normal", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
-		vicall_new(template, v3, "obj_pos", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
-	}
-	{
-		vifunc_t *template = vifunc_new(ctx, "$transparent", NULL, 0, false);
-		float y = 0.0f;
-		float inc = 100.0f;
-		vifunc_t *v2 = vil_get(&g_mat_ctx, ref("vec2"));
-		vifunc_t *tnum = vil_get(&g_mat_ctx, ref("number"));
-		vifunc_t *v3 = vil_get(&g_mat_ctx, ref("vec3"));
-		vifunc_t *transp = vil_get(&g_mat_ctx, ref("transparent"));
-		vicall_new(template, transp, "pbr", vec2(600, 10), ~0, V_IN);
-		vicall_new(template, v2, "tex_space", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
-		vicall_new(template, tnum, "time", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
-		vicall_new(template, v2, "screen_space", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
-		vicall_new(template, v3, "world_space", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
-		vicall_new(template, v3, "view_space", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
-		vicall_new(template, v3, "vertex_normal", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
-		vicall_new(template, v3, "obj_pos", vec2(0, y += inc), ~0, V_OUT | V_LINKED);
-	}
-	init_type(0, "default");
-	init_type(1, "transparent");
 }
 
 void mat1i(mat_t *self, uint32_t ref, int32_t value)
@@ -1385,6 +1470,13 @@ void mat3f(mat_t *self, uint32_t ref, vec3_t value)
 void mat4f(mat_t *self, uint32_t ref, vec4_t value)
 {
 	vicall_set_arg(self->call, ref, &value);
+}
+
+void mat1s(mat_t *self, uint32_t ref, const char *value)
+{
+	char *string = str_new(64);
+	str_cat(&string, value);
+	vicall_set_arg(self->call, ref, &string);
 }
 
 void mat1t(mat_t *self, uint32_t ref, texture_t *value)

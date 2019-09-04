@@ -110,17 +110,16 @@ int c_camera_update(c_camera_t *self, float *dt)
 {
 	if(self->auto_exposure && self->renderer && self->renderer->output)
 	{
-		float brightness = self->renderer->output->brightness * 2.5f + 0.05;
-		float targetExposure = 0.1 + 1.0f / brightness;
-		if(targetExposure > 5) targetExposure = 5;
-		if(targetExposure < 0.1) targetExposure = 0.1;
+		float brightness = (self->renderer->output->brightness - 0.5) * 2.0;
+		float targetExposure = -brightness * 2.0f;
+		if(targetExposure > 5.0) targetExposure = 5.0;
+		if(targetExposure < -4.0) targetExposure = -4.0;
 
 		float step = (targetExposure - self->exposure) / 30;
 		if(step > 0.3f) step = 0.3f;
 		if(step < -0.3f) step = -0.3f;
 		self->exposure += step;
 		self->renderer->glvars[0].exposure = self->exposure;
-		/* printf("%f %f\n", targetExposure, self->exposure); */
 	}
 	return CONTINUE;
 }

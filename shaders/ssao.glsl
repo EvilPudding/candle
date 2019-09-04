@@ -5,7 +5,7 @@ BUFFER {
 	sampler2D nmr;
 } gbuffer;
 
-layout (location = 0) out vec4 FragColor;
+layout (location = 0) out float FragColor;
 
 vec2 hemicircle[] = vec2[](
 	vec2(1.0, 0.0),
@@ -20,16 +20,19 @@ vec2 hemicircle[] = vec2[](
 
 uniform float power;
 
-float ambientOcclusion(vec3 n)
+void main(void)
 {
 	float ao = 0.0;
 
-	float d0 = linearize(textureLod(gbuffer.depth, texcoord, 0.0).r);
+	vec2 tc = texcoord;
+	vec3 n = decode_normal(textureLod(gbuffer.nmr, tc, 0.0).rg);
+	float D = texelFetch(gbuffer.depth, ivec2(gl_FragCoord.xy), 0).r;
+	float d0 = linearize(D);
 
 	float ditherValue = ditherPattern[(int(gl_FragCoord.x) % 4) * 4 + (int(gl_FragCoord.y) % 4)];
 	/* ditherValue = 0.0; */
 	float rad = (0.8 / d0);
-	vec2 rnd = normalize(vec2(rand(texcoord), ditherValue));
+	vec2 rnd = normalize(vec2(rand(tc), ditherValue));
 	float z = clamp((n.z + 0.5), 0.0, 1.0);
 
 	uint taps = 8u;
@@ -52,11 +55,11 @@ float ambientOcclusion(vec3 n)
 
 		for (float i = 0.0; i < iterations; ++i)
 		{
-			float c0 = pow((i + ditherValue) / (iterations - 1.0), 2.0) + 0.0001;
+			float c0 = pow((i + ditherValue) / (iterations - 1.0), 2.0) + 0.001;
 			vec2 coord1 = offset * c0;
 
-			float d1 = linearize(textureLod(gbuffer.depth, texcoord + coord1, 0.0).r);
-			float d2 = linearize(textureLod(gbuffer.depth, texcoord - coord1, 0.0).r);
+			float d1 = linearize(textureLod(gbuffer.depth, tc + coord1, 0.0).r);
+			float d2 = linearize(textureLod(gbuffer.depth, tc - coord1, 0.0).r);
 			float c1 = d0 - d1;
 			float c2 = d0 - d2;
 			if (abs(c1) < 1.0)
@@ -75,21 +78,13 @@ float ambientOcclusion(vec3 n)
 			{
 				float falloff = (1.0 + max(abs(c1), abs(c2)));
 				/* ao += clamp((angle1 + angle2) / falloff, 0.0, 1.0) * 3.0; */
-				ao += clamp(sin(angle) / falloff, 0.0, 1.0) * power;
+				ao += clamp(sin(angle) / falloff - 0.1, 0.0, 1.0);
 			}
 		}
 	}
 	ao /= float(taps) * iterations;
-	ao = 1.0 - ao;
-	return clamp(ao, 0.0, 1.0); 
-}
-
-void main(void)
-{
-	vec3 c_nor = get_normal(gbuffer.nmr);
-	FragColor.r = ambientOcclusion(c_nor);
-	/* float dep; */
-	/* FragColor.r = GTAO(texcoord, 8, 3, dep).w; */
+	ao = 1.0 - ao * power;
+	FragColor = clamp(ao, 0.0, 1.0); 
 }
 
 // vim: set ft=c:

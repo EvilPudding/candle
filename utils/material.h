@@ -34,6 +34,7 @@ void mat2f(mat_t *self, uint32_t ref, vec2_t value);
 void mat3f(mat_t *self, uint32_t ref, vec3_t value);
 void mat4f(mat_t *self, uint32_t ref, vec4_t value);
 void mat1t(mat_t *self, uint32_t ref, texture_t *value);
+void mat1s(mat_t *self, uint32_t ref, const char *value);
 int mat_menu(mat_t *self, void *ctx);
 
 void materials_init_vil(void);

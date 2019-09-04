@@ -16,8 +16,6 @@
 #include <utils/nk.h>
 #include <utils/material.h>
 
-static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass);
-
 static int renderer_update_screen_texture(renderer_t *self);
 
 static void bind_pass(pass_t *pass, shader_t *shader);
@@ -476,6 +474,14 @@ void renderer_default_pipeline(renderer_t *self)
 		buffer_new("nmr",		true, 4);
 		buffer_new("emissive",	false, 3);
 	texture_t *gbuffer = _texture_new(0);
+
+	_texture_new_2D_pre(0, 0, 0);
+		buffer_new("depth",		true, -1);
+		buffer_new("albedo",	true, 4);
+		buffer_new("nmr",		true, 4);
+		buffer_new("emissive",	false, 3);
+	texture_t *smol = _texture_new(0);
+
 	/* texture_t *gbuffer =	texture_new_2D(0, 0, 0, */
 	/* ); */
 
@@ -497,7 +503,7 @@ void renderer_default_pipeline(renderer_t *self)
 	texture_t *tmp =		texture_new_2D(0, 0, TEX_MIPMAP,
 		buffer_new("color",	true, 4)
 	);
-	texture_t *final =		texture_new_2D(0, 0, TEX_INTERPOLATE,
+	texture_t *final =		texture_new_2D(0, 0, TEX_INTERPOLATE | TEX_MIPMAP,
 		buffer_new("color",	true, 4)
 	);
 	/* texture_t *bloom =		texture_new_2D(0, 0, TEX_INTERPOLATE, */
@@ -514,9 +520,10 @@ void renderer_default_pipeline(renderer_t *self)
 
 	renderer_add_tex(self, "query_mips",	0.1f, query_mips);
 	renderer_add_tex(self, "gbuffer",		1.0f, gbuffer);
-	renderer_add_tex(self, "ssao",			1.0f, ssao);
+	renderer_add_tex(self, "gbuffer_smol",	1.0f / 2.0f, smol);
+	renderer_add_tex(self, "ssao",			1.0f / 2.0f, ssao);
 	renderer_add_tex(self, "light",			1.0f, light);
-	renderer_add_tex(self, "volum",			0.6f, volum);
+	renderer_add_tex(self, "volum",			1.0f / 2.0f, volum);
 	/* renderer_add_tex(self, "volum_tmp",		1.0f, volum_tmp); */
 	renderer_add_tex(self, "refr",			1.0f, refr);
 	renderer_add_tex(self, "tmp",			1.0f, tmp);
@@ -561,6 +568,15 @@ void renderer_default_pipeline(renderer_t *self)
 			{NONE}
 		}
 	);
+	renderer_add_pass(self, "smol", "gbuffer", ref("visible"), 0, smol,
+			smol, 0,
+		(bind_t[]){
+			{CLEAR_DEPTH, .number = 1.0f},
+			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{NONE}
+		}
+	);
+
 
 	renderer_add_pass(self, "selectable", "select", ref("selectable"),
 			0, selectable, selectable, 0,
@@ -607,6 +623,13 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 	/* renderer_add_kawase(self, volum, volum_tmp, 0, 0); */
 
+	renderer_add_pass(self, "sea", "sea", ref("quad"), 0, light,
+			NULL, 0,
+		(bind_t[]){
+			{TEX, "gbuffer", .buffer = gbuffer},
+			{NONE}
+		}
+	);
 
 	renderer_add_pass(self, "refraction", "copy", ref("quad"), 0,
 			refr, NULL, 0,
@@ -636,7 +659,7 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_pass(self, "ssao_pass", "ssao", ref("quad"), 0,
 			ssao, NULL, 0,
 		(bind_t[]){
-			{TEX, "gbuffer", .buffer = gbuffer},
+			{TEX, "gbuffer", .buffer = smol},
 			{NUM, "power", .number = 1.0},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{NONE}
@@ -644,8 +667,8 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 	/* renderer_add_kawase(self, ssao, tmp, 0, 0); */
 
-	/* renderer_tex(self, ref(light))->mipmaped = 1; */
-	renderer_add_pass(self, "final", "ssr", ref("quad"), 0, final,
+
+	renderer_add_pass(self, "final", "ssr", ref("quad"), TRACK_BRIGHT, final,
 			NULL, 0,
 		(bind_t[]){
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
@@ -653,6 +676,7 @@ void renderer_default_pipeline(renderer_t *self)
 			{TEX, "light", .buffer = light},
 			{TEX, "refr", .buffer = refr},
 			{TEX, "ssao", .buffer = ssao},
+			{TEX, "gbuffer_smol", .buffer = smol},
 			{TEX, "volum", .buffer = volum},
 			{NONE}
 		}
@@ -695,6 +719,7 @@ void renderer_default_pipeline(renderer_t *self)
 
 	/* renderer_tex(self, ref(light))->mipmaped = 1; */
 
+	/* self->output = ssao; */
 	self->output = final;
 }
 
@@ -785,7 +810,8 @@ int renderer_resize(renderer_t *self, int width, int height)
 	return CONTINUE;
 }
 
-static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
+static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
+                                     uint32_t *profile)
 {
 	if(!pass->active) return NULL;
 	if (pass->shader_name[0] && !pass->shader)
@@ -807,6 +833,12 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 	if(pass->shader)
 	{
 		fs_bind(pass->shader);
+	}
+
+	if (profile)
+	{
+		*profile = SDL_GetTicks();
+		glFinish(); glerr();
 	}
 
 	if(pass->additive)
@@ -903,7 +935,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 		gen_mip = 1;
 	}
 
-	if(pass->track_brightness && self->frame % 20 == 0)
+	if(pass->track_brightness && self->frame % 4 == 0)
 	{
 		if(!gen_mip)
 		{
@@ -915,6 +947,12 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass)
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
 	rd->cull_invert = false;
+
+	if (profile)
+	{
+		glFinish(); glerr();
+		*profile = SDL_GetTicks() - (*profile);
+	}
 
 	return pass->output;
 }
@@ -1147,8 +1185,8 @@ void renderer_add_pass(
 	}
 
 	pass->draw_signal = draw_signal;
-	pass->additive = flags & ADD;
-	pass->multiply = flags & MUL;
+	pass->additive = !!(flags & ADD);
+	pass->multiply = !!(flags & MUL);
 	pass->cull = !(flags & CULL_DISABLE);
 	pass->cull_invert = !!(flags & CULL_INVERT);
 	pass->clear_depth = 1.0f;
@@ -1247,7 +1285,15 @@ int renderer_draw(renderer_t *self)
 
 	for(i = 0; i < self->passes_size; i++)
 	{
-		renderer_draw_pass(self, &self->passes[i]);
+		uint32_t timer;
+		const bool_t profile = false;
+		/* const bool_t profile = self->frame % 64 == 0; */
+		const texture_t *output = renderer_draw_pass(self, &self->passes[i],
+		                                             profile ? &timer : NULL);
+		if (profile && output)
+		{
+			printf("%s: %u\n", self->passes[i].name, timer);
+		}
 	}
 	c_render_device_rebind(c_render_device(&SYS), NULL, NULL);
 

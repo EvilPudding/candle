@@ -14,7 +14,8 @@ typedef struct
 
 typedef struct
 {
-	uint16_t cache_tile;
+	uint8_t x;
+	uint8_t y;
 	uint8_t mip;
 } tex_cache_location_t;
 
@@ -50,8 +51,7 @@ typedef struct
 	uint32_t pbo;
 
 	tex_tile_t *mips[MAX_MIPS];
-	uint32_t num_tiles_x[MAX_MIPS];
-	uint32_t num_tiles_y[MAX_MIPS];
+	uint32_t num_tiles[MAX_MIPS];
 	tex_tile_t *tiles;
 	int indir_n;
 } buffer_t;

@@ -61,10 +61,9 @@ char *str_new(size_t chunk)
 	return str_new_size(0, chunk);
 }
 
-void str_cat(char **str1, const char *str2)
+static void _str_cat(char **str1, const char *str2, size_t len2)
 {
 	size_t len1 = str_len(*str1);
-	size_t len2 = strlen(str2);
 
 	size_t final_len = len1 + len2;
 
@@ -80,9 +79,23 @@ void str_cat(char **str1, const char *str2)
 
 	}
 
-	memcpy((*str1) + len1, str2, len2+1);
+	memcpy((*str1) + len1, str2, len2 + 1);
+	/* (*str1)[final_len] = '\0'; */
 	_str_head_ptr(*str1)->length = final_len;
 
+}
+
+void str_ncat(char **str1, const char *str2, size_t n)
+{
+	char *end = memchr(str2, '\0', n);
+	const size_t len2 = end ? end - str2 : n;
+	_str_cat(str1, str2, len2);
+}
+
+void str_cat(char **str1, const char *str2)
+{
+	const size_t len2 = strlen(str2);
+	_str_cat(str1, str2, len2);
 }
 
 void str_catf( char **str, const char * format, ... )
