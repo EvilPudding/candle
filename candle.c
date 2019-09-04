@@ -253,6 +253,7 @@ static void render_loop_tick(void)
 	{
 		g_candle->fps = g_candle->fps_count;
 		g_candle->fps_count = 0;
+		printf("%d\n", g_candle->fps);
 		g_candle->last_tick = current;
 	}
 	glerr();

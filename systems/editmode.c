@@ -1009,7 +1009,7 @@ int32_t c_editmode_key_up(c_editmode_t *self, char *key)
 			cam->active = 0;
 			c_window(self)->renderer = self->backup_renderer;
 			self->control = 0;
-			g_candle->exit = 1;
+			/* g_candle->exit = 1; */
 		}
 		entity_signal(entity_null, ref("editmode_toggle"), NULL, NULL);
 	}

@@ -193,10 +193,10 @@ static bool_t _texture_load(vicall_t *call, _mat_sampler_t *texid, FILE *fp)
 	for (uint32_t i = 0; !texid->texture->bufs[0].indir_n; i++)
 	{
 		SDL_Delay(100);
-		if (i == 3)
+		/* if (i == 3) */
 		{
-			printf("giving up on %s\n", filename);
-			break;
+			/* printf("giving up on %s\n", filename); */
+			/* break; */
 		}
 	}
 	texid->tile = texid->texture->bufs[0].indir_n;
