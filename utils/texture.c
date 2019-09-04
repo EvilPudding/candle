@@ -119,6 +119,7 @@ probe_tile_t get_free_tile(uint32_t level, uint32_t *result_level)
 				g_probe_tiles[first_tile + i] = true;
 				if (result_level)
 					*result_level = level;
+				result.id = first_tile + i + 1;
 				result.pos = ivec2(2 * size * i, y);
 				result.size = uvec2(size, size);
 				return result;
@@ -133,6 +134,12 @@ probe_tile_t get_free_tile(uint32_t level, uint32_t *result_level)
 	} while(true);
 
 	return result;
+}
+
+void release_tile(probe_tile_t tile)
+{
+	if (tile.id > 0)
+		g_probe_tiles[tile.id - 1] = false;
 }
 
 void svp_destroy()
