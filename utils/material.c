@@ -247,11 +247,21 @@ static float _tex_previewer_gui(vicall_t *call, _mat_sampler_t *texid, void *ctx
 		entity_signal(entity_null, ref("pick_file_load"), "png;tga;jpg", &file);
 		if (file)
 		{
-			char *name = strrchr(file, '/') + 1;
+			char *name = strrchr(file, '/');
+			if (name)
+			{
+				name += 1;
+			}
+			else
+			{
+				name = file;
+			}
 			texid->texture = sauces(name);
-			texid->tile = texid->texture->bufs[0].indir_n;
-			texid->size = vec2(texid->texture->width, texid->texture->height);
-			printf("loading '%s' -> '%s'\n", name, texid->texture->filename);
+			if (texid->texture)
+			{
+				texid->tile = texid->texture->bufs[0].indir_n;
+				texid->size = vec2(texid->texture->width, texid->texture->height);
+			}
 			free(file);
 		}
 	}
