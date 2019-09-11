@@ -460,27 +460,24 @@ void renderer_default_pipeline(renderer_t *self)
 	/* 	buffer_new("coords",	true, 3), /1* Texcoords, Matid *1/ */
 	/* 	buffer_new("depth",		true, -1) */
 	/* ); */
-	_texture_new_2D_pre(0, 0, 0);
-		buffer_new("depth",		true, -1);
-		buffer_new("tiles0",	false, 4);
-		buffer_new("tiles1",	false, 4);
-		buffer_new("tiles2",	false, 4);
-		buffer_new("tiles3",	false, 4);
-	texture_t *query_mips = _texture_new(0);
+	texture_t *query_mips = texture_new_2D(0, 0, 0,
+		buffer_new("depth",		true, -1),
+		buffer_new("tiles0",	false, 4),
+		buffer_new("tiles1",	false, 4),
+		buffer_new("tiles2",	false, 4),
+		buffer_new("tiles3",	false, 4));
 
-	_texture_new_2D_pre(0, 0, 0);
-		buffer_new("depth",		true, -1);
-		buffer_new("albedo",	true, 4);
-		buffer_new("nmr",		true, 4);
-		buffer_new("emissive",	false, 3);
-	texture_t *gbuffer = _texture_new(0);
+	texture_t *gbuffer = texture_new_2D(0, 0, 0,
+		buffer_new("depth",		true, -1),
+		buffer_new("albedo",	true, 4),
+		buffer_new("nmr",		true, 4),
+		buffer_new("emissive",	false, 3));
 
-	_texture_new_2D_pre(0, 0, 0);
-		buffer_new("depth",		true, -1);
-		buffer_new("albedo",	true, 4);
-		buffer_new("nmr",		true, 4);
-		buffer_new("emissive",	false, 3);
-	texture_t *smol = _texture_new(0);
+	texture_t *smol = texture_new_2D(0, 0, 0,
+		buffer_new("depth",		true, -1),
+		buffer_new("albedo",	true, 4),
+		buffer_new("nmr",		true, 4),
+		buffer_new("emissive",	false, 3));
 
 	/* texture_t *gbuffer =	texture_new_2D(0, 0, 0, */
 	/* ); */
@@ -513,10 +510,9 @@ void renderer_default_pipeline(renderer_t *self)
 		/* buffer_new("color",	true, 4) */
 	/* ); */
 
-	_texture_new_2D_pre(0, 0, 0);
-		buffer_new("depth",		true, -1);
-		buffer_new("ids",		false, 4);
-	texture_t *selectable = _texture_new(0);
+	texture_t *selectable = texture_new_2D(0, 0, 0,
+		buffer_new("depth",		true, -1),
+		buffer_new("ids",		false, 4));
 
 	renderer_add_tex(self, "query_mips",	0.1f, query_mips);
 	renderer_add_tex(self, "gbuffer",		1.0f, gbuffer);
@@ -623,13 +619,13 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 	/* renderer_add_kawase(self, volum, volum_tmp, 0, 0); */
 
-	renderer_add_pass(self, "sea", "sea", ref("quad"), 0, light,
-			NULL, 0,
-		(bind_t[]){
-			{TEX, "gbuffer", .buffer = gbuffer},
-			{NONE}
-		}
-	);
+	/* renderer_add_pass(self, "sea", "sea", ref("quad"), 0, light, */
+	/* 		NULL, 0, */
+	/* 	(bind_t[]){ */
+	/* 		{TEX, "gbuffer", .buffer = gbuffer}, */
+	/* 		{NONE} */
+	/* 	} */
+	/* ); */
 
 	renderer_add_pass(self, "refraction", "copy", ref("quad"), 0,
 			refr, NULL, 0,
@@ -648,7 +644,7 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_pass(self, "transp_1", "gbuffer", ref("transparent"),
 			0, gbuffer, gbuffer, 0, (bind_t[]){ {NONE} });
 
-	renderer_add_pass(self, "transp", "gbuffer", ref("transparent"),
+	renderer_add_pass(self, "transp", "transparency", ref("transparent"),
 			DEPTH_LOCK | DEPTH_EQUAL, light, gbuffer, 0,
 		(bind_t[]){
 			{TEX, "refr", .buffer = refr},

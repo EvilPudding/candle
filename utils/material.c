@@ -701,7 +701,7 @@ void material_generate_struct(vifunc_t *func, char **args)
 
 struct transparent
 {
-	vec4_t absorve;
+	vec4_t absorb;
 	vec3_t normal;
 	float roughness;
 	vec3_t emissive;
@@ -859,6 +859,8 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		type->ubo_size = size;
 	}
 
+	uint32_t output_type = call->type->id;
+
 	char *gbuffer = str_new(128);
 	str_cat(&gbuffer, "#include \"common.glsl\"\n");
 	vil_foreach_func(call->type->ctx, (vil_func_cb)material_generate_struct, &gbuffer);
@@ -886,28 +888,17 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		"layout (location = 1) out vec2 GeomID;\n"
 		"#elif defined(SHADOW_PASS)\n"
 		"layout (location = 0) out vec4 Depth;\n"
-		"#else\n");
-	uint32_t group = call->type->id;
+		"#elif defined(TRANSPARENCY_PASS)\n"
+		"layout (location = 0) out vec4 FragColor;\n"
+		"BUFFER { sampler2D color; } refr;\n"
+		"#else\n"
+		"layout (location = 0) out vec4 Alb;\n"
+		"layout (location = 1) out vec4 NMR;\n"
+		"layout (location = 2) out vec3 Emi;\n");
 
-	if (group == ref("opaque") || group == ref("parallax") || group == ref("decal"))
+	if (output_type == ref("decal"))
 	{
 		str_cat(&gbuffer,
-			"layout (location = 0) out vec4 Alb;\n"
-			"layout (location = 1) out vec4 NMR;\n"
-			"layout (location = 2) out vec3 Emi;\n"
-		);
-	}
-	else if (group == ref("transparent"))
-	{
-		str_cat(&gbuffer,
-			"layout (location = 0) out vec4 FragColor;\n"
-			"BUFFER { sampler2D color; } refr;\n"
-		);
-	}
-	if (group == ref("decal"))
-	{
-		str_cat(&gbuffer,
-			"layout (location = 0) out vec4 FragColor;\n"
 			"BUFFER { sampler2D depth; } gbuffer;\n"
 		);
 	}
@@ -922,7 +913,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	vifunc_foreach_call(func, false, true, true, false,
 	                    (vil_call_cb)material_generate_precall, &gbuffer);
 
-	if (group == ref("transparent"))
+	if (output_type == ref("transparent"))
 	{
 		str_cat(&gbuffer,
 			"#ifdef QUERY_PASS\n"
@@ -932,7 +923,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		);
 	}
 
-	if (group == ref("decal"))
+	if (output_type == ref("decal"))
 	{
 		str_cat(&gbuffer,
 			"	float depth = textureLod(gbuffer.depth, pixel_pos(), 0.0).r;\n"
@@ -964,7 +955,8 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 
 	vicall_foreach_unlinked_input(type->tmp_material_instance,
 	                              _generate_uniform_assigment, &gbuffer);
-	if (group == ref("parallax"))
+
+	if (output_type == ref("parallax"))
 	{
 		str_cat(&gbuffer, "/* HEIGHT PRECOMPUTATION */\n");
 		vicall_iterate_dependencies(call, ref("height"), ~0,
@@ -992,15 +984,13 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		str_cat(&gbuffer, type->code);
 	}
 
-
-	if (group == ref("opaque") || group == ref("parallax") || group == ref("decal"))
+	if (output_type != ref("transparent"))
 	{
 		str_cat(&gbuffer,
-				"#if defined(SELECT_PASS) || defined(SHADOW_PASS)\n"
-				"	if (pbr_in.albedo.a < 0.7) discard;\n"
-				"#endif\n");
+			"#if defined(SELECT_PASS) || defined(SHADOW_PASS)\n"
+			"	if (pbr_in.albedo.a < 0.7) discard;\n"
+			"#endif\n");
 	}
-
 	str_cat(&gbuffer,
 		"#ifdef QUERY_PASS\n"
 		"	TILES0.r = float(tile_array[0] % 256u);\n"
@@ -1028,75 +1018,79 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		"	IDS.zw = vec2(poly_id);\n"
 		"#elif defined(SHADOW_PASS)\n"
 		"	Depth = encode_float_rgba(gl_FragCoord.z);\n"
-		/* "	Depth = encode_float_rgba(vertex_distance / 4.0);\n" */
-		"#else\n");
+		"#elif defined(TRANSPARENCY_PASS)\n");
+		if (output_type == ref("transparent"))
+		{
+			str_cat(&gbuffer,
+				"	vec2 pp = pixel_pos();\n"
+				"	vec4 final = vec4(1.0);\n"
+				"	if (pbr_in.roughness > 0.0) {\n"
+				"		vec3 nor = get_normal(pbr_in.normal);\n"
+				"		vec2 coord = pp + nor.xy * (pbr_in.roughness * 0.03);\n"
+				"		float mip = clamp(pbr_in.roughness * 3.0, 0.0, 3.0);\n"
+				"		vec3 refracted = textureLod(refr.color, coord.xy, mip).rgb;\n"
+				"		refracted = refracted * (1.0 - pbr_in.absorb);\n"
+				"		final = vec4(mix(final.rgb, refracted, final.a), 1.0);\n"
+				"	} else {\n"
+				"	}\n"
+				"	final.rgb += pbr_in.emissive;\n"
+				"	FragColor = final;\n");
+		}
+		str_cat(&gbuffer, "#else\n");
 
-	if (group == ref("opaque") || group == ref("parallax") || group == ref("decal"))
+	if (output_type == ref("decal"))
+	{
+		str_cat(&gbuffer,
+			"	vec3 norm = ((camera(view) * model) * vec4(pbr_in.normal, 0.0)).xyz;\n");
+	}
+	else
+	{
+		str_cat(&gbuffer,
+			"	vec3 norm = get_normal(pbr_in.normal);\n");
+	}
+
+	str_cat(&gbuffer,
+		"	NMR.a = pbr_in.roughness;\n"
+		"	NMR.rg = encode_normal(norm);\n");
+
+	if (output_type == ref("transparent"))
+	{
+		str_cat(&gbuffer,
+			"	NMR.b = 1.f;\n");
+
+	}
+	else
 	{
 		str_cat(&gbuffer,
 			"	if (pbr_in.albedo.a < 0.7) discard;\n"
-			"	Alb = vec4(pbr_in.albedo.rgb, receive_shadows ? 1.0 : 0.5);\n");
-
-		if (group == ref("decal"))
-		{
-			str_cat(&gbuffer,
-				"	vec3 norm = ((camera(view) * model) * vec4(pbr_in.normal, 0.0)).xyz;\n");
-		}
-		else
-		{
-			str_cat(&gbuffer,
-				"	vec3 norm = get_normal(pbr_in.normal);\n");
-		}
-
-		str_cat(&gbuffer,
-			"	NMR.rg = encode_normal(norm);\n"
 			"	NMR.b = pbr_in.metalness;\n"
-			"	NMR.a = pbr_in.roughness;\n"
-			"	Emi = pbr_in.emissive;\n"
-		);
+			"	Alb = vec4(pbr_in.albedo.rgb, receive_shadows ? 1.0 : 0.5);\n"
+			"	Emi = pbr_in.emissive;\n");
 	}
-	else if (group == ref("transparent"))
-	{
-		str_cat(&gbuffer,
-			"	vec2 pp = pixel_pos();\n"
-			"	vec4 final = vec4(1.0);\n"
-			"	if (pbr_in.roughness > 0.0) {\n"
-			"		vec3 nor = get_normal(pbr_in.normal);\n"
-			"		vec2 coord = pp + nor.xy * (pbr_in.roughness * 0.03);\n"
-			"		float mip = clamp(pbr_in.roughness * 3.0, 0.0, 3.0);\n"
-			"		vec3 refracted = textureLod(refr.color, coord.xy, mip).rgb;\n"
-			"		refracted = refracted * (1.0 - pbr_in.absorve);\n"
-			"		final = vec4(mix(final.rgb, refracted, final.a), 1.0);\n"
-			"	} else {\n"
-			"	}\n"
-			"	final.rgb += pbr_in.emissive;\n"
-			"	FragColor = final;\n");
-	}
-
 	str_cat(&gbuffer,
 		"#endif\n"
 		"}\n");
 
-	if (group == ref("opaque"))
-	{
-		const char *line = gbuffer;
-		uint32_t line_num = 1u;
-		while (true)
-		{
-			char *next_line = strchr(line, '\n');
-			if (next_line)
-			{
-				printf("%d	%.*s\n", line_num, (int)(next_line - line), line);
-				line = next_line+1;
-			}
-			else
-			{
-				printf("%d	%s\n", line_num, line);
-				break;
-			}
-			line_num++;
-		}
-	}
+	/* if (output_type == ref("opaque")) */
+	/* { */
+	/* 	const char *line = gbuffer; */
+	/* 	uint32_t line_num = 1u; */
+	/* 	while (true) */
+	/* 	{ */
+	/* 		char *next_line = strchr(line, '\n'); */
+	/* 		if (next_line) */
+	/* 		{ */
+	/* 			printf("%d	%.*s\n", line_num, (int)(next_line - line), line); */
+	/* 			line = next_line+1; */
+	/* 		} */
+	/* 		else */
+	/* 		{ */
+	/* 			printf("%d	%s\n", line_num, line); */
+	/* 			break; */
+	/* 		} */
+	/* 		line_num++; */
+	/* 	} */
+	/* } */
 
 	c_render_device(&SYS)->shader = NULL;
 	c_render_device(&SYS)->frag_bound = NULL;
@@ -1109,6 +1103,8 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	char *s_name2 = str_new(64);
 	char *d_name = str_new(64);
 	char *d_name2 = str_new(64);
+	char *t_name = str_new(64);
+	char *t_name2 = str_new(64);
 
 	char *select = str_new(64);
 	str_cat(&select, "#define SELECT_PASS\n");
@@ -1122,6 +1118,10 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	str_cat(&depth, "#define SHADOW_PASS\n");
 	str_cat(&depth, gbuffer);
 
+	char *transp = str_new(64);
+	str_cat(&transp, "#define TRANSPARENCY_PASS\n");
+	str_cat(&transp, gbuffer);
+
 	uint32_t id = type - g_mat_types;
 	str_catf(&d_name, "depth#%d", id);
 	str_catf(&d_name2, "depth#%d.glsl", id);
@@ -1131,6 +1131,8 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	str_catf(&s_name2, "select#%d.glsl", id);
 	str_catf(&name, "gbuffer#%d", id);
 	str_catf(&name2, "gbuffer#%d.glsl", id);
+	str_catf(&t_name, "transparency#%d", id);
+	str_catf(&t_name2, "transparency#%d.glsl", id);
 
 	if (type->src)
 	{
@@ -1140,6 +1142,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 			shader_add_source(q_name2, (unsigned char*)query, str_len(query));
 			shader_add_source(d_name2, (unsigned char*)depth, str_len(depth));
 			shader_add_source(s_name2, (unsigned char*)select, str_len(select));
+			shader_add_source(t_name2, (unsigned char*)transp, str_len(transp));
 
 			str_free(type->src);
 			type->src = gbuffer;
@@ -1154,6 +1157,9 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 
 			fs = fs_new("select");
 			fs_update_variation(fs, id);
+
+			fs = fs_new("transparency");
+			fs_update_variation(fs, id);
 		}
 		else
 		{
@@ -1167,6 +1173,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		shader_add_source(q_name2, (unsigned char*)query, str_len(query));
 		shader_add_source(d_name2, (unsigned char*)depth, str_len(depth));
 		shader_add_source(s_name2, (unsigned char*)select, str_len(select));
+		shader_add_source(t_name2, (unsigned char*)transp, str_len(transp));
 
 		type->src = gbuffer;
 		fs_t *fs = fs_new("gbuffer");
@@ -1180,6 +1187,9 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 
 		fs = fs_new("select");
 		fs_push_variation(fs, s_name);
+
+		fs = fs_new("transparency");
+		fs_push_variation(fs, t_name);
 	}
 
 	str_free(query);
@@ -1191,6 +1201,8 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	str_free(depth);
 	str_free(d_name);
 	str_free(d_name2);
+	str_free(t_name);
+	str_free(t_name2);
 	str_free(name);
 	str_free(name2);
 }
@@ -1447,8 +1459,8 @@ void materials_init_vil()
 
 
 	vifunc_t *transparent = vifunc_new(ctx, "transparent", NULL, sizeof(struct transparent), false);
-		vicall_new(transparent, v3, "absorve", vec2(200, 10),
-		           offsetof(struct transparent, absorve), V_IN);
+		vicall_new(transparent, v3, "absorb", vec2(200, 10),
+		           offsetof(struct transparent, absorb), V_IN);
 		vicall_new(transparent, v3, "normal", vec2(200, 10),
 		           offsetof(struct transparent, normal), V_IN);
 		vicall_new(transparent, tnum, "roughness", vec2(300, 10),

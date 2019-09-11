@@ -105,9 +105,9 @@ texture_t *_texture_new_2D_pre(uint32_t width, uint32_t height, uint32_t flags);
 
 extern __thread texture_t *_g_tex_creating;
 #define texture_new_2D(w, h, f, ...) \
-	(_texture_new_2D_pre(w, h, f),_texture_new(0, ##__VA_ARGS__))
+	(_texture_new_2D_pre(w, h, f),_texture_new_2D_post(((int32_t[]){__VA_ARGS__})))
 
-texture_t *_texture_new(int32_t ignore, ...);
+texture_t *_texture_new_2D_post(int32_t buffers[]);
 
 texture_t *texture_new_3D(uint32_t width, uint32_t height,
                           uint32_t depth, int32_t dims);

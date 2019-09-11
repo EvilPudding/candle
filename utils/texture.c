@@ -77,10 +77,9 @@ void svp_init()
 	                         buffer_new("indir", false, 3));
 	g_tiles = malloc(g_indir_w * g_indir_h * sizeof(tex_tile_t));
 
-	_texture_new_2D_pre(1024 * 4, 1024 * 6, 0);
-		buffer_new("depth", false, -1);
-		buffer_new("color", false, 4);
-	g_probe_cache = _texture_new(0);
+	g_probe_cache = texture_new_2D(1024 * 4, 1024 * 6, 0,
+		buffer_new("depth", false, -1),
+		buffer_new("color", false, 4));
 
 	g_max_probe_levels = log2(1024 / g_min_shadow_tile) + 1;
 	g_num_shadows = get_sum_tiles(g_max_probe_levels);
@@ -263,6 +262,7 @@ uint32_t texture_get_pixel(texture_t *self, int32_t buffer, int32_t x, int32_t y
 
 void texture_update_brightness(texture_t *self)
 {
+#ifndef __EMSCRIPTEN__
 	texture_bind(self, 0);
 
 	float data[4];
@@ -280,6 +280,7 @@ void texture_update_brightness(texture_t *self)
 	float b = data[2];
 	self->brightness = ((float)(r + g + b)) / (3.0f);
 	if(self->brightness <= 0) self->brightness = 1.0;
+#endif
 }
 
 static void texture_update_sizes(texture_t *self)
@@ -789,7 +790,7 @@ texture_t *_texture_new_2D_pre
 	return self;
 }
 
-texture_t *_texture_new(int32_t ignore, ...)
+texture_t *_texture_new_2D_post(int32_t buffers[])
 {
 	texture_t *self = _g_tex_creating;
 	_g_tex_creating = NULL;

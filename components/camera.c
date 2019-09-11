@@ -108,6 +108,7 @@ int c_camera_component_menu(c_camera_t *self, void *ctx)
 
 int c_camera_update(c_camera_t *self, float *dt)
 {
+#ifndef __EMSCRIPTEN__
 	if(self->auto_exposure && self->renderer && self->renderer->output)
 	{
 		float brightness = (self->renderer->output->brightness - 0.5) * 2.0;
@@ -121,6 +122,7 @@ int c_camera_update(c_camera_t *self, float *dt)
 		self->exposure += step;
 		self->renderer->glvars[0].exposure = self->exposure;
 	}
+#endif
 	return CONTINUE;
 }
 
