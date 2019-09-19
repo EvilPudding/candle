@@ -716,7 +716,8 @@ fs_t *fs_new(const char *filename)
 	if (   strncmp(filename, "gbuffer", strlen("gbuffer"))
 	    && strncmp(filename, "query_mips", strlen("query_mips"))
 	    && strncmp(filename, "select", strlen("select"))
-	    && strncmp(filename, "depth", strlen("depth")))
+	    && strncmp(filename, "depth", strlen("depth"))
+	    && strncmp(filename, "transparency", strlen("transparency")))
 	{
 		fs_push_variation(self, filename);
 	}

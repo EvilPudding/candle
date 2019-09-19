@@ -14,10 +14,10 @@ extern __thread entity_t _g_creating[32];
 extern __thread int _g_creating_num;
 
 #define entity_new(...) \
-	(_entity_new_pre(),_entity_new(0, ##__VA_ARGS__))
+	(_entity_new_pre(),_entity_new_post((void*[]){__VA_ARGS__}))
 
 void _entity_new_pre(void);
-entity_t _entity_new(int ignore, ...);
+entity_t _entity_new_post(void *components[]);
 int entity_signal_same_TOPLEVEL(entity_t self, unsigned int signal, void *data, void *output);
 int entity_signal_TOPLEVEL(entity_t self, unsigned int signal, void *data, void *output);
 int component_signal_TOPLEVEL(c_t *comp, ct_t *ct, unsigned int signal, void *data, void *output);

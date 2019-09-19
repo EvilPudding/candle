@@ -25,6 +25,8 @@ On linux, if all dependencies are installed, run ```make```, additionally, you c
 
 On windows, it is recommended to have an *msys* environment with *mingw*, after installing *glew* and *SDL2*, you can compile the project with ```make -f windows.mk```
 
+On BSD systems, in order to be able to compile and run *Candle*, you have to install both its dependencies and GNU version of Make program, because the BSD version usually doesn't implement many required extensions. Therefore, instead of executing ```make``` you should use ```gmake``` on BSDs.
+
 ### Entities and Components
 
 Candle loosely follows *Entity Component System* paradigm. Entities are a simple handle, which can be extended with the use of components.

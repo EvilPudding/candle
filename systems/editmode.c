@@ -1565,6 +1565,8 @@ int32_t c_editmode_event(c_editmode_t *self, SDL_Event *event)
 int32_t c_editmode_pick_load(c_editmode_t *self, const char *filter, char **output)
 {
 	/* TODO: prompt for a path in nuklear */
+	printf("Warning: File picking only works with the filepicker module loaded. "
+	       "A gui alternative is planned but not implemented yet.\n");
 	*output = strdup("unnamed");
 	return STOP;
 }
