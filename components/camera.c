@@ -138,7 +138,7 @@ int c_camera_resize(c_camera_t *self, window_resize_data *event)
 void c_camera_assign(c_camera_t *self)
 {
 	c_window_t *win = c_window(&SYS);
-	if(self->window && !win->renderer)
+	if(self->window)
 	{
 		win->renderer = self->renderer;
 	}
@@ -177,7 +177,7 @@ REG()
 	ct_listener(ct, WORLD, 0, sig("window_resize"), c_camera_resize);
 	ct_listener(ct, WORLD, 0, sig("world_update"), c_camera_update);
 	ct_listener(ct, WORLD, 50, sig("world_pre_draw"), c_camera_pre_draw);
-	ct_listener(ct, WORLD, 21, sig("world_draw"), c_camera_draw);
+	ct_listener(ct, WORLD, 10, sig("world_draw"), c_camera_draw);
 
 	ct_listener(ct, WORLD, 0, sig("component_menu"), c_camera_component_menu);
 }

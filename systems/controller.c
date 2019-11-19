@@ -178,6 +178,7 @@ int32_t c_controllers_event(c_controllers_t *self, const SDL_Event *event)
 			                  ? ref("controller_button_down")
 			                  : ref("controller_button_up");
 			button->pressed = event->type == SDL_CONTROLLERBUTTONDOWN;
+			button->key = event->cbutton.button;
 			entity_signal(entity_null, signal, button, NULL);
 			return STOP;
 		case SDL_CONTROLLERAXISMOTION:
@@ -185,15 +186,19 @@ int32_t c_controllers_event(c_controllers_t *self, const SDL_Event *event)
 			switch (event->caxis.axis)
 			{
 				case SDL_CONTROLLER_AXIS_LEFTX:
+					controller->axis_left.changed = true;
 					controller->axis_left.x = value;
 					break;
 				case SDL_CONTROLLER_AXIS_LEFTY:
+					controller->axis_left.changed = true;
 					controller->axis_left.y = value;
 					break;
 				case SDL_CONTROLLER_AXIS_RIGHTX:
+					controller->axis_right.changed = true;
 					controller->axis_right.x = value;
 					break;
 				case SDL_CONTROLLER_AXIS_RIGHTY:
+					controller->axis_right.changed = true;
 					controller->axis_right.y = value;
 					break;
 				case SDL_CONTROLLER_AXIS_TRIGGERLEFT:
@@ -216,12 +221,18 @@ int32_t c_controllers_events_end(c_controllers_t *self)
 	{
 		controller_t *controller = &self->controllers[i];
 		if (!controller->connected) continue;
-		if (controller->axis_left.x != 0.f || controller->axis_left.y != 0.f)
+		if (   controller->axis_left.changed
+		    || controller->axis_left.x != 0.f
+		    || controller->axis_left.y != 0.f)
 		{
+			controller->axis_left.changed = false;
 			entity_signal(entity_null, ref("controller_axis"), &controller->axis_left, NULL);
 		}
-		if (controller->axis_right.x != 0.f || controller->axis_right.y != 0.f)
+		if (   controller->axis_right.changed
+		    || controller->axis_right.x != 0.f
+		    || controller->axis_right.y != 0.f)
 		{
+			controller->axis_right.changed = false;
 			entity_signal(entity_null, ref("controller_axis"), &controller->axis_right, NULL);
 		}
 	}

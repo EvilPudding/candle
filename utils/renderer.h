@@ -195,10 +195,10 @@ typedef struct c_renderer_t
 	int depth_inverted;
 
 	int32_t camera_count;
+	uint32_t stored_camera_frame[6];
 	struct gl_camera glvars[6];
 	uint32_t ubos[6];
 	uint32_t ubo_changed[6];
-	int moved[6];
 
 	bool_t cubemap;
 	ivec2_t pos;

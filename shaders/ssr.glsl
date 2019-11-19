@@ -12,10 +12,6 @@ BUFFER {
 } gbuffer;
 
 BUFFER {
-	sampler2D depth;
-} gbuffer_smol;
-
-BUFFER {
 	sampler2D occlusion;
 } ssao;
 
@@ -58,7 +54,7 @@ vec4 upsample()
 		ivec2 coord = dfc + offsets[i];
 		vec2 sampled = texelFetch(ssao.occlusion, coord, 0).rg;
 		vec3 downscaledVolum = texelFetch(volum.color, coord, 0).rgb;
-		float downscaledDepth = linearize(texelFetch(gbuffer_smol.depth, coord, 0).r);
+		float downscaledDepth = linearize(texelFetch(gbuffer.depth, coord * 2, 0).r);
 		float downscaledSsao = sampled.r;
 
 		float currentWeight = max(0.0, 1.0f - 0.5 * abs(downscaledDepth - frag_depth));

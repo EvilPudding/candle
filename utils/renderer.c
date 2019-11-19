@@ -270,7 +270,11 @@ void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model)
 	}
 	else
 	{
-		self->glvars[camid].previous_view = self->glvars[camid].inv_model;
+		if (self->stored_camera_frame[camid] != self->frame)
+		{
+			self->glvars[camid].previous_view = self->glvars[camid].inv_model;
+			self->stored_camera_frame[camid] = self->frame;
+		}
 		self->glvars[camid].pos = pos;
 		self->glvars[camid].model = *model;
 		self->glvars[camid].inv_model = mat4_invert(*model);
@@ -473,12 +477,6 @@ void renderer_default_pipeline(renderer_t *self)
 		buffer_new("nmr",		true, 4),
 		buffer_new("emissive",	false, 3));
 
-	texture_t *smol = texture_new_2D(0, 0, 0,
-		buffer_new("depth",		true, -1),
-		buffer_new("albedo",	true, 4),
-		buffer_new("nmr",		true, 4),
-		buffer_new("emissive",	false, 3));
-
 	/* texture_t *gbuffer =	texture_new_2D(0, 0, 0, */
 	/* ); */
 
@@ -516,7 +514,6 @@ void renderer_default_pipeline(renderer_t *self)
 
 	renderer_add_tex(self, "query_mips",	0.1f, query_mips);
 	renderer_add_tex(self, "gbuffer",		1.0f, gbuffer);
-	renderer_add_tex(self, "gbuffer_smol",	1.0f / 2.0f, smol);
 	renderer_add_tex(self, "ssao",			1.0f / 2.0f, ssao);
 	renderer_add_tex(self, "light",			1.0f, light);
 	renderer_add_tex(self, "volum",			1.0f / 2.0f, volum);
@@ -564,15 +561,6 @@ void renderer_default_pipeline(renderer_t *self)
 			{NONE}
 		}
 	);
-	renderer_add_pass(self, "smol", "gbuffer", ref("visible"), 0, smol,
-			smol, 0,
-		(bind_t[]){
-			{CLEAR_DEPTH, .number = 1.0f},
-			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
-			{NONE}
-		}
-	);
-
 
 	renderer_add_pass(self, "selectable", "select", ref("selectable"),
 			0, selectable, selectable, 0,
@@ -584,13 +572,13 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	/* DECAL PASS */
-	/* renderer_add_pass(self, "decals_pass", "decals", ref("decals"), 0, */
-	/* 		gbuffer, NULL, 0, */
-	/* 	(bind_t[]){ */
-	/* 		{TEX, "gbuffer", .buffer = gbuffer}, */
-	/* 		{NONE} */
-	/* 	} */
-	/* ); */
+	renderer_add_pass(self, "decals_pass", "gbuffer", ref("decals"), 0,
+			gbuffer, NULL, 0,
+		(bind_t[]){
+			{TEX, "gbuffer", .buffer = gbuffer},
+			{NONE}
+		}
+	);
 
 	renderer_add_pass(self, "ambient_light_pass", "phong", ref("ambient"),
 			ADD, light, NULL, 0,
@@ -655,7 +643,7 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_pass(self, "ssao_pass", "ssao", ref("quad"), 0,
 			ssao, NULL, 0,
 		(bind_t[]){
-			{TEX, "gbuffer", .buffer = smol},
+			{TEX, "gbuffer", .buffer = gbuffer},
 			{NUM, "power", .number = 1.0},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{NONE}
@@ -672,7 +660,6 @@ void renderer_default_pipeline(renderer_t *self)
 			{TEX, "light", .buffer = light},
 			{TEX, "refr", .buffer = refr},
 			{TEX, "ssao", .buffer = ssao},
-			{TEX, "gbuffer_smol", .buffer = smol},
 			{TEX, "volum", .buffer = volum},
 			{NONE}
 		}

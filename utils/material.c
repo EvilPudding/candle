@@ -241,7 +241,8 @@ static float _tex_previewer_gui(vicall_t *call, _mat_sampler_t *texid, void *ctx
 	}
 
 	nk_layout_row_dynamic(ctx, 20, 1);
-	if (nk_button_label(ctx, texid->texture ? texid->texture->filename : "pick texture "))
+	if (nk_button_label(ctx, texid->texture && texid->texture->filename
+	                         ? texid->texture->filename : "pick texture "))
 	{
 		char *file = NULL;
 		entity_signal(entity_null, ref("pick_file_load"), "png;tga;jpg", &file);
@@ -459,6 +460,7 @@ void materials_reg()
 	sauces_loader(ref("mat"), mat_loader);
 	sauces_register("_default.mat", NULL, mat_new("_default.mat", "default"));
 	sauces_register("_parallax.mat", NULL, mat_new("_parallax.mat", "parallax"));
+	sauces_register("_decal.mat", NULL, mat_new("_decal.mat", "decal"));
 }
 
 void material_foreach_input(vicall_t *call, slot_t slot, char **str)
@@ -716,6 +718,15 @@ struct opaque
 	float metalness;
 };
 
+struct decal
+{
+	vec4_t albedo;
+	vec3_t normal;
+	float roughness;
+	vec3_t emissive;
+	float metalness;
+};
+
 struct parallax
 {
 	vec4_t albedo;
@@ -926,6 +937,8 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	if (output_type == ref("decal"))
 	{
 		str_cat(&gbuffer,
+			"#if defined(QUERY_PASS)\n"
+			"#elif !defined(SELECT_PASS) && !defined(SHADOW_PASS) && !defined(TRANSPARENCY_PASS)\n"
 			"	float depth = textureLod(gbuffer.depth, pixel_pos(), 0.0).r;\n"
 			"	if (depth > gl_FragCoord.z) discard;\n"
 			"	vec4 w_pos = (camera(model)*vec4(get_position(gbuffer.depth), 1.0));\n"
@@ -933,6 +946,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 			"	vec3 diff = abs(m_pos);\n"
 			"	if (diff.x > 0.5 || diff.y > 0.5 || diff.z > 0.5) discard;\n"
 			"	tex_space_in = m_pos.xy - 0.5;\n"
+			"#endif\n"
 		);
 	}
 	else
@@ -1467,6 +1481,22 @@ void materials_init_vil()
 		           offsetof(struct transparent, roughness), V_IN);
 		vicall_new(transparent, v3, "emissive", vec2(500, 10),
 		           offsetof(struct transparent, emissive), V_IN);
+
+	vifunc_t *decal = vifunc_new(ctx, "decal", NULL, sizeof(struct decal), false);
+		albedo = vicall_new(decal, v4, "albedo", vec2(100, 10),
+		                    offsetof(struct decal, albedo), V_IN);
+		normal = vicall_new(decal, v3, "normal", vec2(200, 10),
+		                    offsetof(struct decal, normal), V_IN);
+		roughn = vicall_new(decal, tnum, "roughness", vec2(300, 10),
+		                    offsetof(struct decal, roughness), V_IN);
+		vicall_new(decal, tnum, "metalness", vec2(400, 10),
+		           offsetof(struct decal, metalness), V_IN);
+		vicall_new(decal, v3, "emissive", vec2(500, 10),
+		           offsetof(struct decal, emissive), V_IN);
+		vicall_set_arg(albedo, ~0, &((vec4_t){.x = 0.5f, .y = 0.5f, .z = 0.5f, .w = 1.0f}));
+		vicall_set_arg(normal, ~0, &((vec3_t){.x = 0.5f, .y = 0.5f, .z = 1.0f}));
+		vicall_set_arg(roughn, ~0, &((float){0.5f}));
+
 }
 
 void mat1i(mat_t *self, uint32_t ref, int32_t value)
