@@ -760,6 +760,7 @@ int32_t c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 	if(!entity_exists(self->camera)) return CONTINUE;
 	renderer_t *renderer = c_camera(&self->camera)->renderer;
 
+
 	entity_t ent = renderer_entity_at_pixel(renderer, event->x, event->y, NULL);
 	uint32_t geom = renderer_geom_at_pixel(renderer, event->x, event->y, NULL);
 
@@ -782,6 +783,10 @@ int32_t c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 			nk_input_button(self->nk, NK_BUTTON_RIGHT, event->x, event->y, true);
 		}
 		return STOP;
+	}
+	else if (self->menu_x != -1)
+	{
+		self->menu_x = -1;
 	}
 
 	if(ent)
