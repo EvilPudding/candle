@@ -42,7 +42,7 @@ REG()
 
 	signal_init(sig("spatial_changed"), sizeof(entity_t));
 
-	ct_listener(ct, WORLD, sig("component_menu"), c_spatial_menu);
+	ct_listener(ct, WORLD, 0, sig("component_menu"), c_spatial_menu);
 }
 
 void c_spatial_unlock(c_spatial_t *self)

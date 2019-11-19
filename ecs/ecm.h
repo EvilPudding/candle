@@ -170,9 +170,9 @@ void _signal_init(uint32_t id, uint32_t size);
 #define signal_init(id, size) \
 	(_signal_init(id, size))
 
-void _ct_listener(ct_t *self, int32_t flags, uint32_t signal, signal_cb cb);
-#define ct_listener(self, flags, signal, cb) \
-	(_ct_listener(self, flags, signal, (signal_cb)cb))
+void _ct_listener(ct_t *self, int32_t flags, int32_t priority, uint32_t signal, signal_cb cb);
+#define ct_listener(self, flags, priority, signal, cb) \
+	(_ct_listener(self, flags, priority, signal, (signal_cb)cb))
 
 listener_t *ct_get_listener(ct_t *self, uint32_t signal);
 

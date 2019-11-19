@@ -289,12 +289,29 @@ int c_window_draw(c_window_t *self)
 	return CONTINUE;
 }
 
+int32_t c_window_event(c_window_t *self, const SDL_Event *event)
+{
+	if (event->type != SDL_WINDOWEVENT)
+	{
+		return CONTINUE;
+	}
+
+	switch(event->window.event)
+	{
+		case SDL_WINDOWEVENT_RESIZED:
+			c_window_handle_resize(self, event);
+			return STOP;
+	}
+	return CONTINUE;
+}
+
 REG()
 {
 	ct_t *ct = ct_new("window", sizeof(c_window_t), c_window_init, NULL, 0);
 
-	ct_listener(ct, ENTITY, sig("entity_created"), c_window_created);
-	ct_listener(ct, WORLD | 10, sig("world_draw"), c_window_draw);
+	ct_listener(ct, ENTITY, 0, sig("entity_created"), c_window_created);
+	ct_listener(ct, WORLD, 10, sig("world_draw"), c_window_draw);
 
 	signal_init(sig("window_resize"), sizeof(window_resize_data));
+	ct_listener(ct, WORLD, 250, ref("event_handle"), c_window_event);
 }

@@ -7,7 +7,6 @@ typedef struct
 {
 	c_t super; /* extends c_t */
 	vec3_t dir;
-	int pressing;
 	int type;
 	mesh_t *dir_mesh;
 	int visible;

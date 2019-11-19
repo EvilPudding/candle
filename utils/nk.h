@@ -2,6 +2,7 @@
 #define NK_H
 
 #include <stdarg.h>
+#include <SDL2/SDL.h>
 
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
@@ -27,7 +28,8 @@ NK_API int nk_tree_entity_image_push_hashed(struct nk_context*, enum nk_tree_typ
 NK_API void nk_tree_entity_pop(struct nk_context*);
 NK_API void nk_can_font_stash_begin(struct nk_font_atlas **atlas);;
 NK_API void nk_can_font_stash_end(void);
-NK_API int nk_can_handle_event(void *evt);
+NK_API int nk_can_handle_event(struct nk_context *ctx, void *evt);
+NK_API int nk_can_handle_key(struct nk_context *ctx, SDL_Keycode key, int down);
 NK_API int nk_can_begin_titled(struct nk_context *ctx, const char *name,
 		const char *title, struct nk_rect bounds, nk_flags flags);
 

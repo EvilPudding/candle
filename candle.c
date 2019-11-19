@@ -59,141 +59,22 @@ void candle_reset_dir()
 #endif
 }
 
-int handle_event(SDL_Event event)
-{
-	char key;
-	if(entity_exists(g_candle->mouse_owners[0]))
-	{
-		if(entity_signal_same(g_candle->mouse_owners[0], sig("event_handle"),
-					&event, NULL) == STOP)
-		{
-			return CONTINUE;
-		}
-	}
-	else
-	{
-		if(entity_signal(entity_null, sig("event_handle"), &event, NULL) == STOP)
-		{
-			return CONTINUE;
-		}
-	}
-	mouse_button_data bdata;
-	mouse_move_data mdata;
-	switch(event.type)
-	{
-		case SDL_MOUSEWHEEL:
-			bdata = (mouse_button_data){event.wheel.x, event.wheel.y,
-				event.wheel.direction, SDL_BUTTON_MIDDLE};
-			entity_signal(entity_null, sig("mouse_wheel"), &bdata, NULL);
-			break;
-		case SDL_MOUSEBUTTONUP:
-			bdata = (mouse_button_data){event.button.x, event.button.y, 0,
-				event.button.button};
-			/* if(entity_exists(g_candle->mouse_owners[0])) */
-			/* { */
-				/* entity_signal_same(g_candle->mouse_owners[0], sig("mouse_release"), */
-						/* &bdata, NULL); */
-			/* } */
-			/* else */
-			{
-				entity_signal(entity_null, sig("mouse_release"), &bdata, NULL);
-			}
-			break;
-		case SDL_MOUSEBUTTONDOWN:
-			bdata = (mouse_button_data){event.button.x, event.button.y, 0,
-				event.button.button};
-			/* if(entity_exists(g_candle->mouse_owners[0])) */
-			/* { */
-				/* entity_signal_same(g_candle->mouse_owners[0], sig("mouse_press"), */
-						/* &bdata, NULL); */
-			/* } */
-			/* else */
-			{
-				entity_signal(entity_null, sig("mouse_press"), &bdata, NULL);
-			}
-			break;
-		case SDL_MOUSEMOTION:
-			g_candle->mx = event.motion.x; g_candle->my = event.motion.y;
-			mdata = (mouse_move_data){event.motion.xrel, event.motion.yrel,
-				event.motion.x, event.motion.y};
-
-			if(entity_exists(g_candle->mouse_owners[0]))
-			{
-				entity_signal(g_candle->mouse_owners[0], sig("mouse_move"),
-						&mdata, NULL);
-			}
-			else
-			{
-				entity_signal(entity_null, sig("mouse_move"), &mdata, NULL);
-			}
-			break;
-		case SDL_KEYUP:
-			key = event.key.keysym.sym;
-			if(key == -32)
-			{
-				c_keyboard(&SYS)->ctrl = 0;
-			}
-			if(key == -31)
-			{
-				c_keyboard(&SYS)->shift = 0;
-			}
-			entity_signal(entity_null, sig("key_up"), &key, NULL);
-			break;
-		case SDL_KEYDOWN:
-			key = event.key.keysym.sym;
-			if(key == -32)
-			{
-				c_keyboard(&SYS)->ctrl = 1;
-			}
-			if(key == -31)
-			{
-				c_keyboard(&SYS)->shift = 1;
-			}
-			entity_signal(entity_null, sig("key_down"), &key, NULL);
-			break;
-		case SDL_WINDOWEVENT:
-			switch(event.window.event)
-			{
-				case SDL_WINDOWEVENT_RESIZED:
-				c_window_handle_resize(c_window(&SYS), &event);
-					break; 
-			}
-			break;
-	}
-	/* break; */
-
-	return STOP;
-}
 static void candle_handle_events(void)
 {
 	SDL_Event event;
 	/* SDL_WaitEvent(&event); */
 	/* keySpec(state->key_state, state); */
-	int has_events = 0;
 	entity_signal(entity_null, sig("events_begin"), NULL, NULL);
 	while(SDL_PollEvent(&event))
 	{
-		/* if(!) */
+		if(event.type == SDL_QUIT)
 		{
-			/* has_events = 1; */
-			if(event.type == SDL_QUIT)
-			{
-				//close(candle->events[0]);
-				//close(candle->events[1]);
-				g_candle->exit = 1;
-				return;
-			}
-			/* int res = write(candle->events[1], &event, sizeof(event)); */
-			/* if(res == -1) exit(1); */
-			handle_event(event);
+			g_candle->exit = 1;
+			return;
 		}
+		entity_signal(entity_null, sig("event_handle"), &event, NULL);
 	}
 	entity_signal(entity_null, sig("events_end"), NULL, NULL);
-	if(has_events)
-	{
-		/* event.type = SDL_USEREVENT; */
-		/* write(candle->events[1], &event, sizeof(event)); */
-	}
 }
 
 static int skip = 0;
@@ -418,50 +299,6 @@ int candle_run(entity_t root, const char *map_name)
 	return 1;
 }
 
-void candle_release_mouse(entity_t ent, int reset)
-{
-	int i;
-	for(i = 0; i < 16; i++)
-	{
-		if(g_candle->mouse_owners[i] == ent)
-		{
-			/* // SDL_SetWindowGrab(mainWindow, SDL_FALSE); */
-			SDL_SetRelativeMouseMode(SDL_FALSE);
-			if(reset)
-			{
-				SDL_WarpMouseInWindow(c_window(&SYS)->window, g_candle->mo_x,
-						g_candle->mo_y);
-			}
-			for(; i < 15; i++)
-			{
-				g_candle->mouse_owners[i] = g_candle->mouse_owners[i + 1];
-				g_candle->mouse_visible[i] = g_candle->mouse_visible[i + 1];
-
-			}
-		}
-	}
-	int vis = g_candle->mouse_visible[0];
-	SDL_ShowCursor(vis); 
-	SDL_SetRelativeMouseMode(!vis);
-}
-
-void candle_grab_mouse(entity_t ent, int visibility)
-{
-	int i;
-	if(g_candle->mouse_owners[0] == ent) return;
-	for(i = 15; i >= 1; i--)
-	{
-		g_candle->mouse_owners[i] = g_candle->mouse_owners[i - 1];
-		g_candle->mouse_visible[i] = g_candle->mouse_visible[i - 1];
-	}
-	g_candle->mouse_owners[0] = ent;
-	g_candle->mouse_visible[0] = visibility;
-	g_candle->mo_x = g_candle->mx;
-	g_candle->mo_y = g_candle->my;
-	SDL_ShowCursor(visibility); 
-	SDL_SetRelativeMouseMode(!visibility);
-}
-
 static
 entity_t _c_new(entity_t root, int argc, char **argv)
 {
@@ -497,22 +334,19 @@ void candle_init(void)
 __attribute__((constructor (CONSTR_AFTER_REG)))
 void candle_init2(void)
 {
-	if(g_candle->mouse_visible[0]) return;
-
-	g_candle->mouse_owners[0] = entity_null;
-	g_candle->mouse_visible[0] = 1;
+	if(c_name(&SYS)) return;
 
 	entity_add_component(SYS, c_name_new("Candle"));
 	entity_add_component(SYS, c_nodegraph_new());
 	entity_add_component(SYS, c_mouse_new());
 	entity_add_component(SYS, c_keyboard_new());
+	entity_add_component(SYS, c_controllers_new());
 	entity_add_component(SYS, c_sauces_new());
 	entity_add_component(SYS, c_node_new());
 
 	textures_reg();
 	meshes_reg();
 	materials_reg();
-
 
 #ifndef __EMSCRIPTEN__
 	g_candle->sem = SDL_CreateSemaphore(0);

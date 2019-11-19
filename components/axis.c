@@ -77,71 +77,69 @@ c_axis_t *c_axis_new(int type, vecN_t dir)
 int c_axis_press(c_axis_t *self, model_button_data *event)
 {
 	if(event->button != SDL_BUTTON_LEFT) return CONTINUE;
-	self->pressing = 1;
-	candle_grab_mouse(c_entity(self), 0);
+	c_mouse_t *mouse = c_mouse(self);
+	c_mouse_visible(mouse, false);
+	c_mouse_activate(mouse);
 	return STOP;
 }
 
 int c_axis_release(c_axis_t *self, mouse_button_data *event)
 {
-	if(self->pressing)
+	c_mouse_t *mouse = c_mouse(self);
+	if(c_mouse_active(mouse))
 	{
-		candle_release_mouse(c_entity(self), 0);
+		c_mouse_deactivate(mouse);
 	}
-	self->pressing = 0;
 	return CONTINUE;
 }
 
 int c_axis_mouse_move(c_axis_t *self, mouse_move_data *event)
 {
-	if(self->pressing)
+	entity_t arrows = c_node(self)->parent;
+	entity_t target = c_node(&arrows)->parent;
+	if(target)
 	{
-		entity_t arrows = c_node(self)->parent;
-		entity_t target = c_node(&arrows)->parent;
-		if(target)
+		entity_t parent = c_node(&target)->parent;
+		float amount = -event->sy * 0.01;
+
+		c_spatial_t *sc = c_spatial(&target);
+
+		vec3_t dir = self->dir;
+		if(parent)
 		{
-			entity_t parent = c_node(&target)->parent;
-			float amount = -event->sy * 0.01;
+			c_node_t *nc = c_node(&parent);
+			vec3_t world_dir = c_node_dir_to_global(c_node(&target), dir);
+			world_dir = vec3_norm(world_dir);
+			dir = c_node_dir_to_local(nc, world_dir);
+		}
+		else
+		{
+			dir = quat_mul_vec3(sc->rot_quat, dir);
+		}
+		dir = vec3_scale(dir, amount);
 
-			c_spatial_t *sc = c_spatial(&target);
-
-			vec3_t dir = self->dir;
-			if(parent)
+		if(self->type == 0)
+		{
+			c_spatial_set_pos(sc, vec3_add(dir, sc->pos));
+		}
+		else if(self->type == 1)
+		{
+			if(self->dir.x > 0.0f)
 			{
-				c_node_t *nc = c_node(&parent);
-				vec3_t world_dir = c_node_dir_to_global(c_node(&target), dir);
-				world_dir = vec3_norm(world_dir);
-				dir = c_node_dir_to_local(nc, world_dir);
+				c_spatial_rotate_X(sc, amount);
 			}
-			else
+			else if(self->dir.y > 0.0f)
 			{
-				dir = quat_mul_vec3(sc->rot_quat, dir);
+				c_spatial_rotate_Y(sc, amount);
 			}
-			dir = vec3_scale(dir, amount);
-
-			if(self->type == 0)
+			else if(self->dir.z > 0.0f)
 			{
-				c_spatial_set_pos(sc, vec3_add(dir, sc->pos));
+				c_spatial_rotate_Z(sc, amount);
 			}
-			else if(self->type == 1)
-			{
-				if(self->dir.x > 0.0f)
-				{
-					c_spatial_rotate_X(sc, amount);
-				}
-				else if(self->dir.y > 0.0f)
-				{
-					c_spatial_rotate_Y(sc, amount);
-				}
-				else if(self->dir.z > 0.0f)
-				{
-					c_spatial_rotate_Z(sc, amount);
-				}
-			}
-			else if(self->type == 2)
-			{
-				c_spatial_set_scale(sc, vec3_add(vec3_scale(self->dir, amount), sc->scale));
-			}
+		}
+		else if(self->type == 2)
+		{
+			c_spatial_set_scale(sc, vec3_add(vec3_scale(self->dir, amount), sc->scale));
 		}
 	}
 
@@ -175,15 +173,15 @@ int c_axis_created(c_axis_t *self)
 REG()
 {
 	ct_t *ct = ct_new("axis", sizeof(c_axis_t),
-			c_axis_init, NULL, 1, ref("node"));
+			c_axis_init, NULL, 2, ref("node"), ref("mouse"));
 
-	ct_listener(ct, WORLD, sig("editmode_toggle"), c_axis_editmode_toggle);
+	ct_listener(ct, WORLD, 0, sig("editmode_toggle"), c_axis_editmode_toggle);
 
-	ct_listener(ct, ENTITY, sig("entity_created"), c_axis_created);
+	ct_listener(ct, ENTITY, 0, sig("entity_created"), c_axis_created);
 
-	ct_listener(ct, ENTITY, sig("model_press"), c_axis_press);
+	ct_listener(ct, ENTITY, 0, sig("model_press"), c_axis_press);
 
-	ct_listener(ct, WORLD, sig("mouse_release"), c_axis_release);
+	ct_listener(ct, ENTITY, 0, sig("mouse_release"), c_axis_release);
 
-	ct_listener(ct, WORLD, sig("mouse_move"), c_axis_mouse_move);
+	ct_listener(ct, ENTITY, 0, sig("mouse_move"), c_axis_mouse_move);
 }

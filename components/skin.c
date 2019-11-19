@@ -104,6 +104,6 @@ REG()
 {
 	ct_t *ct = ct_new("skin", sizeof(c_skin_t),
 			c_skin_init, NULL, 1, ref("node"));
-	ct_listener(ct, WORLD, sig("world_update"), c_skin_update_transforms);
+	ct_listener(ct, WORLD, 0, sig("world_update"), c_skin_update_transforms);
 }
 

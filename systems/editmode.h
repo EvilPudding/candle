@@ -72,8 +72,6 @@ typedef struct c_editmode_t
 	int32_t control;
 	int32_t visible;
 	int32_t dragging;
-	int32_t pressing_l;
-	int32_t pressing_r;
 	int32_t activated;
 	int32_t tool;
 	struct mouse_tool tools[16];
@@ -83,6 +81,15 @@ typedef struct c_editmode_t
 	vec3_t mouse_position;
 	int32_t menu_x;
 	int32_t menu_y;
+	entity_t open_entities[16];
+	int32_t open_entities_count;
+
+	texture_t *open_textures[16];
+	int32_t open_textures_count;
+
+	void *open_vil;
+
+	vec2_t spawn_pos;
 
 	/* TOOL VARIABLES */
 
@@ -91,7 +98,6 @@ typedef struct c_editmode_t
 	texture_t *mouse_depth;
 
 	void *nk;
-	vec2_t spawn_pos;
 	entity_t selected;
 	entity_t over;
 	entity_t context;
@@ -99,14 +105,6 @@ typedef struct c_editmode_t
 	float context_enter_phase;
 	int32_t selected_poly;
 	int32_t over_poly;
-
-	entity_t open_entities[16];
-	int32_t open_entities_count;
-
-	texture_t *open_textures[16];
-	int32_t open_textures_count;
-
-	void *open_vil;
 
 	enum {
 		EDIT_VERT,

@@ -145,9 +145,9 @@ REG()
 	ct_t *ct = ct_new("sprite", sizeof(c_sprite_t),
 			c_sprite_init, c_sprite_destroy, 1, ref("node"));
 
-	ct_listener(ct, ENTITY, ref("entity_created"), c_sprite_created);
+	ct_listener(ct, ENTITY, 0, ref("entity_created"), c_sprite_created);
 
-	ct_listener(ct, WORLD, ref("component_menu"), c_sprite_menu);
+	ct_listener(ct, WORLD, 0, ref("component_menu"), c_sprite_menu);
 
-	ct_listener(ct, ENTITY, ref("node_changed"), c_sprite_position_changed);
+	ct_listener(ct, ENTITY, 0, ref("node_changed"), c_sprite_position_changed);
 }

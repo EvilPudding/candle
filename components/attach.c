@@ -40,6 +40,6 @@ REG()
 {
 	ct_t *ct = ct_new("attach", sizeof(c_attach_t), NULL, NULL, 0);
 
-	ct_listener(ct, WORLD, sig("world_update"), c_attach_update);
+	ct_listener(ct, WORLD, 0, sig("world_update"), c_attach_update);
 }
 

@@ -129,13 +129,14 @@ signal_t *ecm_get_signal(uint32_t signal)
 	return &kh_value(g_ecm->signals, k);
 }
 
-void _ct_listener(ct_t *self, int flags, uint32_t signal, signal_cb cb)
+void _ct_listener(ct_t *self, int32_t flags, int32_t priority, uint32_t signal,
+                  signal_cb cb)
 {
 	signal_t *sig = ecm_get_signal(signal);
 	if(ct_get_listener(self, signal)) exit(1);
 
 	listener_t lis = {.signal = signal, .cb = (signal_cb)cb,
-		.flags = flags & 0xFF00, .priority = flags & 0x00FF,
+		.flags = flags, .priority = flags,
 		.target = self->id};
 
 	vector_add(sig->listener_types, &lis);
@@ -284,7 +285,7 @@ ct_t *_ct_new(const char *name, uint32_t hash, uint32_t size, init_cb init,
 		.cs = kh_init(c)
 		/* .pages_size = 0 */
 	};
-	strncpy(ct->name, name, sizeof(ct->name));
+	strncpy(ct->name, name, sizeof(ct->name) - 1);
 
 	if(depend_size)
 	{

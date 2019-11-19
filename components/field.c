@@ -149,9 +149,9 @@ REG()
 	ct_t *ct = ct_new("field", sizeof(c_field_t),
 			c_field_init, c_field_destroy, 1, ref("node"));
 
-	ct_listener(ct, ENTITY, ref("entity_created"), c_field_created);
+	ct_listener(ct, ENTITY, 0, ref("entity_created"), c_field_created);
 
-	ct_listener(ct, WORLD, ref("component_menu"), c_field_menu);
+	ct_listener(ct, WORLD, 0, ref("component_menu"), c_field_menu);
 
-	ct_listener(ct, ENTITY, ref("node_changed"), c_field_position_changed);
+	ct_listener(ct, ENTITY, 0, ref("node_changed"), c_field_position_changed);
 }

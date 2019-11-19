@@ -173,11 +173,11 @@ REG()
 {
 	ct_t *ct = ct_new("camera", sizeof(c_camera_t), NULL, NULL, 1, ref("node"));
 
-	ct_listener(ct, ENTITY, sig("node_changed"), c_camera_changed);
-	ct_listener(ct, WORLD, sig("window_resize"), c_camera_resize);
-	ct_listener(ct, WORLD, sig("world_update"), c_camera_update);
-	ct_listener(ct, WORLD | 50, sig("world_pre_draw"), c_camera_pre_draw);
-	ct_listener(ct, WORLD | 21, sig("world_draw"), c_camera_draw);
+	ct_listener(ct, ENTITY, 0, sig("node_changed"), c_camera_changed);
+	ct_listener(ct, WORLD, 0, sig("window_resize"), c_camera_resize);
+	ct_listener(ct, WORLD, 0, sig("world_update"), c_camera_update);
+	ct_listener(ct, WORLD, 50, sig("world_pre_draw"), c_camera_pre_draw);
+	ct_listener(ct, WORLD, 21, sig("world_draw"), c_camera_draw);
 
-	ct_listener(ct, WORLD, sig("component_menu"), c_camera_component_menu);
+	ct_listener(ct, WORLD, 0, sig("component_menu"), c_camera_component_menu);
 }

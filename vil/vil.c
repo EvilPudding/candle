@@ -651,7 +651,7 @@ vifunc_t *vifunc_new(vil_t *ctx, const char *name,
 		.is_assignable = is_assignable
 	};
 
-	strncpy((*type)->name, name, sizeof((*type)->name));
+	strncpy((*type)->name, name, sizeof((*type)->name) - 1);
 
 	return *type;
 }
@@ -821,7 +821,7 @@ vicall_t *vicall_new(vifunc_t *parent, vifunc_t *type, const char *name,
 	call->is_output = !!(flags & V_OUT);
 	call->is_linked = !!(flags & V_LINKED);
 
-	strncpy(call->name, name, sizeof(call->name));
+	strncpy(call->name, name, sizeof(call->name) - 1);
 	type_push(parent, call);
 	if (call->is_linked || !call->is_input) return call;
 
@@ -1613,7 +1613,7 @@ uint32_t vifunc_gui(vifunc_t *self, void *nk)
 							if (strlen(g_renaming_buffer) > 0)
 							{
 								strncpy(it->name, g_renaming_buffer,
-								        sizeof(it->name));
+								        sizeof(it->name) - 1);
 								vicall_propagate_changed(it, false);
 							}
 							g_renaming = NULL;

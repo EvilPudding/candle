@@ -179,6 +179,6 @@ REG()
 	ct_t *ct = ct_new("timeline", sizeof(c_timeline_t),
 			NULL, NULL, 1, ref("node"));
 
-	ct_listener(ct, WORLD, sig("world_update"), c_timeline_update);
+	ct_listener(ct, WORLD, 0, sig("world_update"), c_timeline_update);
 }
 

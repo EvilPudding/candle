@@ -101,10 +101,10 @@ REG()
 	ct_t *ct = ct_new("freemove", sizeof(c_freemove_t),
 			NULL, NULL, 1, ref("velocity"));
 
-	ct_listener(ct, WORLD, sig("key_up"), c_freemove_key_up);
+	ct_listener(ct, WORLD, 0, sig("key_up"), c_freemove_key_up);
 
-	ct_listener(ct, WORLD, sig("key_down"), c_freemove_key_down);
+	ct_listener(ct, WORLD, 0, sig("key_down"), c_freemove_key_down);
 
-	ct_listener(ct, WORLD, sig("world_update"), c_freemove_update);
+	ct_listener(ct, WORLD, 0, sig("world_update"), c_freemove_update);
 }
 

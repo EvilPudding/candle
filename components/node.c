@@ -217,8 +217,8 @@ REG()
 
 	signal_init(sig("node_changed"), 0);
 
-	ct_listener(ct, ENTITY, sig("entity_created"), c_node_created);
-	ct_listener(ct, ENTITY, sig("spatial_changed"), c_node_changed);
+	ct_listener(ct, ENTITY, 0, sig("entity_created"), c_node_created);
+	ct_listener(ct, ENTITY, 0, sig("spatial_changed"), c_node_changed);
 }
 
 bool_t c_node_update_model(c_node_t *self)
