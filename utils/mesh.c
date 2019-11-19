@@ -2732,14 +2732,14 @@ void mesh_load(mesh_t *self, const char *filename)
 	char ext[16];
 	mesh_lock(self);
 
-	strncpy(ext, strrchr(filename, '.') + 1, sizeof(ext));
+	strncpy(ext, strrchr(filename, '.') + 1, sizeof(ext) - 1);
 
 
-	if(!strncmp(ext, "ply", sizeof(ext)))
+	if(!strncmp(ext, "ply", sizeof(ext) - 1))
 	{
 		mesh_load_ply(self, filename);
 	}
-	else if(!strncmp(ext, "obj", sizeof(ext)))
+	else if(!strncmp(ext, "obj", sizeof(ext) - 1))
 	{
 		mesh_load_obj(self, filename);
 	}

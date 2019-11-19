@@ -996,13 +996,13 @@ REG()
 	ct_t *ct = ct_new("model", sizeof(c_model_t),
 			c_model_init, c_model_destroy, 1, ref("node"));
 
-	ct_listener(ct, ENTITY, sig("entity_created"), c_model_created);
+	ct_listener(ct, ENTITY, 0, sig("entity_created"), c_model_created);
 
-	ct_listener(ct, WORLD, sig("component_menu"), c_model_menu);
-	ct_listener(ct, WORLD, sig("component_tool"), c_model_tool);
-	ct_listener(ct, WORLD | 100, sig("world_pre_draw"), c_model_pre_draw);
+	ct_listener(ct, WORLD, 0, sig("component_menu"), c_model_menu);
+	ct_listener(ct, WORLD, 0, sig("component_tool"), c_model_tool);
+	ct_listener(ct, WORLD, 100, sig("world_pre_draw"), c_model_pre_draw);
 
-	ct_listener(ct, ENTITY, sig("node_changed"), c_model_position_changed);
+	ct_listener(ct, ENTITY, 0, sig("node_changed"), c_model_position_changed);
 
 	add_tool("circle", (tool_gui_cb)tool_circle_gui,
 			(tool_edit_cb)tool_circle_edit,

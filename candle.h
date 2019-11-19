@@ -7,6 +7,7 @@
 #include <utils/texture.h>
 
 #include <systems/keyboard.h>
+#include <systems/controller.h>
 #include <systems/mouse.h>
 #include <utils/khash.h>
 
@@ -35,12 +36,7 @@ typedef struct candle_t
 	int last_update;
 	int pressing;
 
-	/* TODO move this to mouse.h */
-	int mx, my;
-	entity_t mouse_owners[16];
-	int mouse_visible[16];
-	int mo_x, mo_y;
-	/* ------------------------- */
+	entity_t input_owners[16];
 
 	khash_t(cmd) *cmds;
 
@@ -67,9 +63,6 @@ int candle_run(entity_t root, const char *map_name);
 entity_t candle_run_command(entity_t root,
 		const char *command);
 
-/* TODO send this to mouse.h */
-void candle_grab_mouse(entity_t ent, int visibility);
-void candle_release_mouse(entity_t ent, int reset);
 void candle_skip_frame(int frames);
 
 extern candle_t *g_candle;

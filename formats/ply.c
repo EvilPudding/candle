@@ -98,7 +98,7 @@ static int get_type(const char *name)
 
 void mesh_load_ply(mesh_t *self, const char *filename)
 {
-	strncpy(self->name, filename, sizeof(self->name));
+	strncpy(self->name, filename, sizeof(self->name) - 1);
 
     FILE *fp = fopen(filename, "r");
 
@@ -178,7 +178,7 @@ void mesh_load_ply(mesh_t *self, const char *filename)
 			struct element_type *el = &elements[i];
 			el->props_num = 0;
 			
-			strncpy(el->name, *word, sizeof el->name); word++;
+			strncpy(el->name, *word, sizeof(el->name) - 1); word++;
 			if(sscanf(*word, "%d", &el->num) < 0) exit(1);
 			word++;
 
@@ -196,7 +196,7 @@ void mesh_load_ply(mesh_t *self, const char *filename)
 					props->list_count_type = get_type(*word); word++;
 					props->list_element_type = get_type(*word); word++;
 				}
-				strncpy(props->name, *word, sizeof props->name); word++;
+				strncpy(props->name, *word, sizeof(props->name) - 1); word++;
 			}
 		}
 		else if(!strcmp(*word, "end_header"))

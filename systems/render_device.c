@@ -224,11 +224,11 @@ REG()
 	ct_t *ct = ct_new("render_device", sizeof(c_render_device_t),
 			NULL, c_render_device_destroy, 1, ref("window"));
 
-	ct_listener(ct, WORLD, ref("world_update"), c_render_device_update);
+	ct_listener(ct, WORLD, 0, ref("world_update"), c_render_device_update);
 
-	ct_listener(ct, WORLD | 100, ref("world_draw"), c_render_device_draw);
+	ct_listener(ct, WORLD, 100, ref("world_draw"), c_render_device_draw);
 
-	ct_listener(ct, ENTITY, ref("entity_created"), c_render_device_created);
+	ct_listener(ct, ENTITY, 0, ref("entity_created"), c_render_device_created);
 
 	signal_init(sig("world_pre_draw"), sizeof(void*));
 }

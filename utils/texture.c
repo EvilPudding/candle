@@ -975,7 +975,7 @@ int32_t texture_load_from_memory(texture_t *self, void *buffer, int32_t len)
 	}
 	*self = temp;
 
-	strncpy(self->name, "unnamed", sizeof(self->name));
+	strncpy(self->name, "unnamed", sizeof(self->name) - 1);
 	self->filename = strdup("unnamed");
 	texture_from_rgb(self);
 
@@ -999,7 +999,7 @@ int32_t texture_load(texture_t *self, const char *filename)
 	*self = temp;
 
 	self->filename = strdup(filename);
-	strncpy(self->name, filename, sizeof(self->name));
+	strncpy(self->name, filename, sizeof(self->name) - 1);
 	texture_from_rgb(self);
 
 	return 1;
@@ -1015,7 +1015,7 @@ texture_t *texture_from_buffer(void *buffer, int32_t width, int32_t height,
 
 	texture_from_rgb(self);
 	self->filename = strdup("unnamed");
-	strncpy(self->name, "unnamed", sizeof(self->name));
+	strncpy(self->name, "unnamed", sizeof(self->name) - 1);
 	return self;
 }
 

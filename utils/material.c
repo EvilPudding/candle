@@ -45,7 +45,7 @@ static struct mat_type *get_type(const char *type_name)
 	for (tid = 0; g_mat_types[tid].mat; tid++)
 	{
 		if (!strncmp(g_mat_types[tid].name, type_name,
-		             sizeof(g_mat_types[tid].name)))
+		             sizeof(g_mat_types[tid].name) - 1))
 		{
 			break;
 		}
@@ -90,12 +90,12 @@ void mat_assign_type(mat_t *self, struct mat_type *type)
 mat_t *mat_new(const char *name, const char *type_name)
 {
 	mat_t *self = calloc(1, sizeof *self);
-	strncpy(self->name, name, sizeof(self->name));
+	strncpy(self->name, name, sizeof(self->name) - 1);
 	self->global_id = g_mats_num++;
 	g_mats[self->global_id] = self;
 
 	char buffer[256];
-	snprintf(buffer, sizeof(buffer), "_material%d_sandbox", self->global_id);
+	snprintf(buffer, sizeof(buffer) - 1, "_material%d_sandbox", self->global_id);
 	self->sandbox = vifunc_new(&g_mat_ctx, buffer, NULL, 0, false);
 
 	if (type_name)
@@ -415,7 +415,7 @@ int mat_menu(mat_t *self, void *ctx)
 			self->sandbox = NULL;
 		}
 		char buffer[256];
-		snprintf(buffer, sizeof(buffer), "_material%d_%s", self->global_id,
+		snprintf(buffer, sizeof(buffer) - 1, "_material%d_%s", self->global_id,
 		         g_mat_types[new_tid].name);
 		self->sandbox = vifunc_new(&g_mat_ctx, buffer, NULL, 0, false);
 		mat_assign_type(self, &g_mat_types[new_tid]);
@@ -1219,9 +1219,9 @@ static void init_type(uint32_t tid, const char *type_name)
 		materials_init_vil();
 
 	struct mat_type *type = &g_mat_types[tid];
-	strncpy(type->name, type_name, sizeof(type->name));
+	strncpy(type->name, type_name, sizeof(type->name) - 1);
 
-	snprintf(buffer, sizeof(buffer), "_%s", type->name);
+	snprintf(buffer, sizeof(buffer) - 1, "_%s", type->name);
 
 	type->mat = vil_get(&g_mat_ctx, ref(buffer));
 	if (!type->mat)
@@ -1238,7 +1238,7 @@ static void init_type(uint32_t tid, const char *type_name)
 	mat->usrptr = type;
 	if (!vifunc_get(mat, "pbr"))
 	{
-		snprintf(buffer, sizeof(buffer), "%s.vil", type->name);
+		snprintf(buffer, sizeof(buffer) - 1, "%s.vil", type->name);
 		if (!vifunc_load(mat, buffer))
 		{
 			printf("Type '%s' doesn't exist or is incomplete.\n", type_name);
@@ -1247,7 +1247,7 @@ static void init_type(uint32_t tid, const char *type_name)
 	}
 	vifunc_watch(mat, mat_type_changed, type);
 
-	snprintf(buffer, sizeof(buffer), "_placeholder_%s", type->name);
+	snprintf(buffer, sizeof(buffer) - 1, "_placeholder_%s", type->name);
 
 	vifunc_t *placeholder = vifunc_new(&g_mat_ctx, buffer, NULL, 0, false);
 	if (placeholder)

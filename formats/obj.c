@@ -176,7 +176,7 @@ static void readProperty(mesh_t *self, FILE * fp, vec3_t *tempNorm,
 void mesh_load_obj(mesh_t *self, const char *filename)
 {
 
-	strncpy(self->name, filename, sizeof(self->name));
+	strncpy(self->name, filename, sizeof(self->name) - 1);
     int i;
     FILE *fp = fopen(filename, "r");
     int v, vt, vn, f;

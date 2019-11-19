@@ -296,8 +296,8 @@ REG()
 	ct_t *ct = ct_new("light", sizeof(c_light_t), c_light_init,
 			c_light_destroy, 1, ref("node"));
 
-	ct_listener(ct, WORLD, sig("editmode_toggle"), c_light_editmode_toggle);
-	ct_listener(ct, WORLD, sig("component_menu"), c_light_menu);
-	ct_listener(ct, WORLD, sig("world_pre_draw"), c_light_pre_draw);
-	ct_listener(ct, ENTITY, sig("node_changed"), c_light_position_changed);
+	ct_listener(ct, WORLD, 0, sig("editmode_toggle"), c_light_editmode_toggle);
+	ct_listener(ct, WORLD, 0, sig("component_menu"), c_light_menu);
+	ct_listener(ct, WORLD, 0, sig("world_pre_draw"), c_light_pre_draw);
+	ct_listener(ct, ENTITY, 0, sig("node_changed"), c_light_position_changed);
 }

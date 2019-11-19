@@ -218,7 +218,7 @@ void renderer_add_tex(renderer_t *self, const char *name,
 	self->outputs[self->outputs_num++] = (pass_output_t){
 		.resolution = resolution,
 		.hash = ref(name), .buffer = buffer};
-	strncpy(buffer->name, name, sizeof(buffer->name));
+	strncpy(buffer->name, name, sizeof(buffer->name) - 1);
 }
 
 static void update_ubo(renderer_t *self, int32_t camid)
@@ -1144,7 +1144,7 @@ void renderer_add_pass(
 
 	if(shader_name)
 	{
-		strncpy(pass->shader_name, shader_name, sizeof(pass->shader_name));
+		strncpy(pass->shader_name, shader_name, sizeof(pass->shader_name) - 1);
 	}
 	pass->clear = 0;
 
@@ -1186,7 +1186,7 @@ void renderer_add_pass(
 	pass->cull = !(flags & CULL_DISABLE);
 	pass->cull_invert = !!(flags & CULL_INVERT);
 	pass->clear_depth = 1.0f;
-	strncpy(pass->name, buffer, sizeof(pass->name));
+	strncpy(pass->name, buffer, sizeof(pass->name) - 1);
 
 	int bind_count;
 	for(bind_count = 0; binds[bind_count].type != NONE; bind_count++);

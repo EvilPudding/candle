@@ -113,6 +113,6 @@ REG()
 {
 	ct_t *ct = ct_new("bone", sizeof(c_bone_t), c_bone_init,
 	                  c_bone_destroy, 1, ref("node"));
-	ct_listener(ct, ENTITY, sig("node_changed"), c_bone_position_changed);
+	ct_listener(ct, ENTITY, 0, sig("node_changed"), c_bone_position_changed);
 }
 

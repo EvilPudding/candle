@@ -7,12 +7,14 @@
 /* #include <components/camera.h> */
 #include <systems/mouse.h>
 #include <systems/keyboard.h>
+#include <systems/controller.h>
 #include <math.h>
 
 
 void c_editlook_init(c_editlook_t *self)
 {
 	self->win_min_side = 1080;
+	c_mouse(self)->visible = false;
 }
 
 c_editlook_t *c_editlook_new()
@@ -48,30 +50,14 @@ int c_editlook_mouse_wheel(c_editlook_t *self, mouse_button_data *event)
 
 float fake_x;
 float fake_y;
-int c_editlook_mouse_press(c_editlook_t *self, mouse_button_data *event)
-{
-	if(event->button == SDL_BUTTON_RIGHT)
-	{
-		self->pressed_r = 1;
-		fake_x = event->x;
-		fake_y = event->y;
-	}
-	return CONTINUE;
-}
-
 int c_editlook_mouse_release(c_editlook_t *self, mouse_button_data *event)
 {
 	if(event->button == SDL_BUTTON_RIGHT)
 	{
-		if(self->pressed_r)
-		{
-			candle_release_mouse(c_entity(self), !self->panning);
-		}
-		self->pressed_r = 0;
 		self->panning = 0;
-		if(self->dragging)
+		if (c_mouse_active(c_mouse(self)))
 		{
-			self->dragging = 0;
+			c_mouse_deactivate(c_mouse(self));
 			return STOP;
 		}
 	}
@@ -81,21 +67,23 @@ int c_editlook_mouse_release(c_editlook_t *self, mouse_button_data *event)
 int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 {
 	c_editmode_t *edit = c_editmode(&SYS);
-	c_window_t *window = c_window(&SYS);
-	if(!edit->control) return CONTINUE;
-	if(!self->pressed_r) return CONTINUE;
-
-	candle_grab_mouse(c_entity(self), 0);
+	if (!edit->control) return CONTINUE;
 
 	c_spatial_t *sc = c_spatial(self);
 	c_camera_t *cam = c_camera(self);
 	if(!cam) return CONTINUE;
 
-	self->dragging = 1;
-	fake_x -= event->sx;
-	fake_y -= event->sy;
+	if (!c_mouse_active(c_mouse(self)))
+	{
+		if (!c_mouse(edit)->right) return CONTINUE;
+		c_mouse_activate(c_mouse(self));
+	}
+
 	if(c_keyboard(&SYS)->shift)
 	{
+		fake_x -= event->sx;
+		fake_y -= event->sy;
+		c_window_t *window = c_window(&SYS);
 		float px = fake_x / window->width;
 		float py = 1.0f - fake_y / window->height;
 
@@ -117,26 +105,20 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 		vec3_t diff = vec3_sub(new_pos, old_pos);
 		self->pan_diff = vec3_sub(self->pan_diff, diff);
 
-		/* new_pos = vec3_add(self->pan_diff, edit->mouse_position); */
-		/* c_spatial_set_pos(sc, new_pos); */
-
 		return STOP;
 	}
 
 
 	float frac = self->sensitivity / self->win_min_side;
 
-	float inc_y = -(event->sx * frac) * self->pressed_r;
-	float inc_x = -(event->sy * frac) * self->pressed_r;
+	float inc_y = -(event->sx * frac);
+	float inc_x = -(event->sy * frac);
 
 
-	/* if(rot > max_up) rot = max_up; */
-	/* if(rot < max_down) rot = max_down; */
 	const vec3_t pivot = c_keyboard(&SYS)->ctrl ? sc->pos :
 		edit->mouse_position;
 
 	vec3_t diff = vec3_sub(sc->pos, pivot);
-	/* float radius = vec3_len(diff); */
 
 	float cosy = cosf(inc_y);
 	float siny = sinf(inc_y);
@@ -162,20 +144,55 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 	return STOP;
 }
 
+int c_editlook_controller(c_editlook_t *self, controller_axis_t *event)
+{
+	c_spatial_t *sc = c_spatial(self);
+	if (event->side == 0)
+	{
+		float inc_y = event->y;
+		float inc_x = event->x;
+		c_spatial_lock(sc);
+		vec3_t pos = vec3_add(sc->pos, vec3_scale(c_spatial_sideways(sc), inc_y));
+		pos = vec3_add(pos, vec3_scale(c_spatial_forward(sc), inc_x));
+		c_spatial_set_pos(sc, pos);
+		c_spatial_unlock(sc);
+
+	}
+	else if (event->side == 1)
+	{
+		float frac = self->sensitivity / 2.f;
+
+		float inc_y = -(event->x * frac);
+		float inc_x = -(event->y * frac);
+
+		float oldx = sc->rot.x;
+
+		c_spatial_rotate_X(sc, -oldx);
+		c_spatial_rotate_Y(sc, inc_y);
+
+		c_spatial_lock(sc);
+
+		c_spatial_rotate_X(sc, oldx + inc_x);
+		c_spatial_unlock(sc);
+
+	}
+	return CONTINUE;
+}
+
 REG()
 {
 	ct_t *ct = ct_new("editLook", sizeof(c_editlook_t),
-			c_editlook_init, NULL, 1, ref("spatial"));
+			c_editlook_init, NULL, 2, ref("spatial"), ref("mouse"));
 
-	ct_listener(ct, WORLD, sig("mouse_wheel"), c_editlook_mouse_wheel);
+	ct_listener(ct, WORLD, 0, sig("mouse_wheel"), c_editlook_mouse_wheel);
 
-	ct_listener(ct, WORLD | 100, sig("mouse_move"), c_editlook_mouse_move);
+	ct_listener(ct, WORLD, 100, sig("mouse_move"), c_editlook_mouse_move);
 
-	ct_listener(ct, WORLD, sig("window_resize"), c_editlook_window_resize);
+	ct_listener(ct, WORLD, 100, sig("controller_axis"), c_editlook_controller);
 
-	ct_listener(ct, WORLD | 10, sig("mouse_press"), c_editlook_mouse_press);
+	ct_listener(ct, WORLD, 0, sig("window_resize"), c_editlook_window_resize);
 
-	ct_listener(ct, WORLD | 10, sig("mouse_release"), c_editlook_mouse_release);
+	ct_listener(ct, ENTITY, 100, sig("mouse_release"), c_editlook_mouse_release);
 
 }
 

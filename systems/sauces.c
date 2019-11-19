@@ -89,14 +89,14 @@ void c_sauces_register(c_sauces_t *self, const char *name, const char *path, voi
 	uint32_t key;
 	int ret;
 	char buffer[64];
-	strncpy(buffer, name, sizeof(buffer));
+	strncpy(buffer, name, sizeof(buffer) - 1);
 	char *dot = strrchr(buffer, '.');
 
 	resource_t *sauce = calloc(1, sizeof(*sauce));
-	strncpy(sauce->name, name, sizeof(sauce->name));
+	strncpy(sauce->name, name, sizeof(sauce->name) - 1);
 	if(path)
 	{
-		strncpy(sauce->path, path, sizeof(sauce->path));
+		strncpy(sauce->path, path, sizeof(sauce->path) - 1);
 	}
 	sauce->data = data;
 
@@ -152,7 +152,7 @@ void *c_sauces_get_data(c_sauces_t *self, resource_handle_t *handle)
 resource_handle_t sauce_handle(const char *name)
 {
 	char buffer[64];
-	strncpy(buffer, name, sizeof(buffer));
+	strncpy(buffer, name, sizeof(buffer) - 1);
 	to_lower_case(buffer);
 	char *requested_dot = strrchr(buffer, '.');
 
@@ -190,7 +190,7 @@ int c_sauces_index_dir(c_sauces_t *self, const char *dir_name)
 
 		if(ent->d_name[0] == '.') continue;
 
-		strncpy(path, dir_name, sizeof(path));
+		strncpy(path, dir_name, sizeof(path) - 1);
 		path_join(path, sizeof(path), ent->d_name);
 		if(c_sauces_index_dir(self, path)) continue;
 
@@ -236,5 +236,5 @@ REG()
 {
 	ct_t *ct = ct_new("sauces", sizeof(c_sauces_t), NULL, NULL, 0);
 
-	ct_listener(ct, WORLD, sig("component_menu"), c_sauces_component_menu);
+	ct_listener(ct, WORLD, 0, sig("component_menu"), c_sauces_component_menu);
 }

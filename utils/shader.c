@@ -343,7 +343,7 @@ static const struct source shader_source(const char *filename)
 
 #define prefix "resauces/shaders/"
 	char name[] = prefix "XXXXXXXXXXXXXXXXXXXXXXXXXXX";
-	strncpy(name + (sizeof(prefix) - 1), filename, sizeof(name) - (sizeof(prefix) - 1));
+	strncpy(name + (sizeof(prefix) - 1), filename, (sizeof(name) - (sizeof(prefix) - 1)) - 1);
 	FILE *fp;
 	char *buffer = NULL;
 
@@ -641,7 +641,7 @@ static uint32_t fs_new_loader(fs_variation_t *self)
 	self->program = 0;
 
 	char buffer[256];
-	snprintf(buffer, sizeof(buffer), "%s.glsl", self->filename);
+	snprintf(buffer, sizeof(buffer) - 1, "%s.glsl", self->filename);
 
 	printf("fetching %s\n", buffer);
 	self->code = shader_preprocess(shader_source(buffer), true, false, false);
@@ -748,7 +748,7 @@ void shader_bind(shader_t *self)
 /* 	if(member) */
 /* 	{ */
 /* 		char buffer[256]; */
-/* 		snprintf(buffer, sizeof(buffer), "%s_%s", uniform, member); */
+/* 		snprintf(buffer, sizeof(buffer) - 1, "%s_%s", uniform, member); */
 /* 		return glGetUniformLocation(self->program, buffer); glerr(); */
 /* 	} */
 /* 	return glGetUniformLocation(self->program, uniform); glerr(); */
@@ -759,7 +759,7 @@ void shader_bind(shader_t *self)
 /* 	if(member) */
 /* 	{ */
 /* 		char buffer[256]; */
-/* 		snprintf(buffer, sizeof(buffer), "%s.%s", uniform, member); */
+/* 		snprintf(buffer, sizeof(buffer) - 1, "%s.%s", uniform, member); */
 /* 		return glGetUniformLocation(self->program, buffer); glerr(); */
 /* 	} */
 /* 	return glGetUniformLocation(self->program, uniform); glerr(); */

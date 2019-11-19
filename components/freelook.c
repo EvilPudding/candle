@@ -84,10 +84,10 @@ REG()
 	ct_t *ct = ct_new("freelook", sizeof(c_freelook_t),
 			c_freelook_init, NULL, 1, ref("spatial"));
 
-	ct_listener(ct, WORLD, sig("mouse_move"), c_freelook_mouse_move);
+	ct_listener(ct, WORLD, 0, sig("mouse_move"), c_freelook_mouse_move);
 
-	ct_listener(ct, ENTITY, sig("entity_created"), c_freelook_update);
+	ct_listener(ct, ENTITY, 0, sig("entity_created"), c_freelook_update);
 
-	ct_listener(ct, WORLD, sig("window_resize"), c_freelook_window_resize);
+	ct_listener(ct, WORLD, 0, sig("window_resize"), c_freelook_window_resize);
 }
 
