@@ -7,7 +7,8 @@ layout (location = 0) out vec4 FragColor;
 BUFFER {
 	sampler2D depth;
 	sampler2D albedo;
-	sampler2D nmr;
+	sampler2D nn;
+	sampler2D mr;
 	sampler2D emissive;
 } gbuffer;
 
@@ -76,13 +77,14 @@ void main(void)
 	ivec2 fc = ivec2(gl_FragCoord.xy);
 	vec4 cc = texelFetch(light.color, fc, 0);
 
-	vec4 normal_metalic_roughness = texelFetch(gbuffer.nmr, fc, 0);
+	vec2 normal = texelFetch(gbuffer.nn, fc, 0).rg;
+	vec2 metalic_roughness = texelFetch(gbuffer.mr, fc, 0).rg;
 	vec4 albedo = texelFetch(gbuffer.albedo, fc, 0);
 	vec3 emissive = texelFetch(gbuffer.emissive, fc, 0).rgb;
-	vec3 nor = decode_normal(normal_metalic_roughness.rg);
+	vec3 nor = decode_normal(normal);
 
 	vec4 ssred = ssr2(gbuffer.depth, refr.color, albedo,
-			normal_metalic_roughness.ba, nor) * 1.5;
+			metalic_roughness, nor) * 1.5;
 
 	/* FragColor = ssred; return; */
 

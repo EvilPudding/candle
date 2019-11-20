@@ -11,7 +11,6 @@ BUFFER {
 BUFFER {
 	sampler2D depth;
 	sampler2D albedo;
-	sampler2D nmr;
 } gbuffer;
 
 void main(void)

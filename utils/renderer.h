@@ -29,8 +29,9 @@ enum pass_options
 	CULL_INVERT		= 1 << 5,
 	ADD				= 1 << 6,
 	MUL				= 1 << 7,
-	GEN_MIP			= 1 << 8,
-	TRACK_BRIGHT	= 1 << 9
+	BLEND			= 1 << 8,
+	GEN_MIP			= 1 << 9,
+	TRACK_BRIGHT	= 1 << 10
 };
 
 enum bind_type
@@ -127,8 +128,9 @@ typedef struct pass_t
 	char name[32];
 	char shader_name[32];
 	uint32_t hash;
-	int32_t additive;
-	int32_t multiply;
+	bool_t additive;
+	bool_t multiply;
+	bool_t blend;
 	int32_t depth_update;
 	int32_t cull;
 	int32_t cull_invert;

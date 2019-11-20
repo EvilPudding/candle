@@ -2,7 +2,8 @@
 
 BUFFER {
 	sampler2D depth;
-	sampler2D nmr;
+	sampler2D nn;
+	sampler2D mr;
 } gbuffer;
 
 layout (location = 0) out float FragColor;
@@ -25,7 +26,7 @@ void main(void)
 	float ao = 0.0;
 
 	vec2 tc = texcoord;
-	vec3 n = decode_normal(texelFetch(gbuffer.nmr, ivec2(gl_FragCoord.xy) * 2, 0).rg);
+	vec3 n = decode_normal(texelFetch(gbuffer.nn, ivec2(gl_FragCoord.xy) * 2, 0).rg);
 	float D = texelFetch(gbuffer.depth, ivec2(gl_FragCoord.xy) * 2, 0).r;
 	float d0 = linearize(D);
 

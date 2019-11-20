@@ -904,8 +904,9 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		"BUFFER { sampler2D color; } refr;\n"
 		"#else\n"
 		"layout (location = 0) out vec4 Alb;\n"
-		"layout (location = 1) out vec4 NMR;\n"
-		"layout (location = 2) out vec3 Emi;\n");
+		"layout (location = 1) out vec4 NN;\n"
+		"layout (location = 2) out vec4 MR;\n"
+		"layout (location = 3) out vec3 Emi;\n");
 
 	if (output_type == ref("decal"))
 	{
@@ -938,6 +939,9 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	{
 		str_cat(&gbuffer,
 			"#if defined(QUERY_PASS)\n"
+				"tex_space_in = texcoord;\n"
+		        "world_space_in = vertex_world_position;\n"
+		        "view_space_in = vertex_position;\n"
 			"#elif !defined(SELECT_PASS) && !defined(SHADOW_PASS) && !defined(TRANSPARENCY_PASS)\n"
 			"	float depth = textureLod(gbuffer.depth, pixel_pos(), 0.0).r;\n"
 			"	if (depth > gl_FragCoord.z) discard;\n"
@@ -998,7 +1002,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		str_cat(&gbuffer, type->code);
 	}
 
-	if (output_type != ref("transparent"))
+	if (output_type != ref("transparent") && output_type != ref("decal"))
 	{
 		str_cat(&gbuffer,
 			"#if defined(SELECT_PASS) || defined(SHADOW_PASS)\n"
@@ -1064,20 +1068,29 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	}
 
 	str_cat(&gbuffer,
-		"	NMR.a = pbr_in.roughness;\n"
-		"	NMR.rg = encode_normal(norm);\n");
+		"	MR.g = pbr_in.roughness;\n"
+		"	NN.rg = encode_normal(norm);\n");
 
 	if (output_type == ref("transparent"))
 	{
 		str_cat(&gbuffer,
-			"	NMR.b = 1.f;\n");
+			"	MR.r = 1.f;\n");
 
+	}
+	else if (output_type == ref("decal"))
+	{
+		str_cat(&gbuffer,
+			"	MR.r = pbr_in.metalness;\n"
+			"	Alb = pbr_in.albedo.rgba;\n"
+			"	Emi = pbr_in.emissive;\n"
+			"	MR.a = pbr_in.albedo.a;\n"
+			"	NN.a = 0.0;\n");
 	}
 	else
 	{
 		str_cat(&gbuffer,
 			"	if (pbr_in.albedo.a < 0.7) discard;\n"
-			"	NMR.b = pbr_in.metalness;\n"
+			"	MR.r = pbr_in.metalness;\n"
 			"	Alb = vec4(pbr_in.albedo.rgb, receive_shadows ? 1.0 : 0.5);\n"
 			"	Emi = pbr_in.emissive;\n");
 	}

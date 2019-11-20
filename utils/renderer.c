@@ -474,7 +474,8 @@ void renderer_default_pipeline(renderer_t *self)
 	texture_t *gbuffer = texture_new_2D(0, 0, 0,
 		buffer_new("depth",		true, -1),
 		buffer_new("albedo",	true, 4),
-		buffer_new("nmr",		true, 4),
+		buffer_new("nn",		true, 2),
+		buffer_new("mr",		false, 2),
 		buffer_new("emissive",	false, 3));
 
 	/* texture_t *gbuffer =	texture_new_2D(0, 0, 0, */
@@ -536,6 +537,14 @@ void renderer_default_pipeline(renderer_t *self)
 		}
 	);
 
+	renderer_add_pass(self, "query_mips", "query_mips", ref("decals"), 0,
+			query_mips, NULL, 0,
+		(bind_t[]){
+			{SKIP, .integer = 16},
+			{NONE}
+		}
+	);
+
 	renderer_add_pass(self, "query_mips", "query_mips", ref("transparent"), 0,
 			query_mips, query_mips, 0,
 		(bind_t[]){
@@ -572,7 +581,7 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	/* DECAL PASS */
-	renderer_add_pass(self, "decals_pass", "gbuffer", ref("decals"), 0,
+	renderer_add_pass(self, "decals_pass", "gbuffer", ref("decals"), BLEND,
 			gbuffer, NULL, 0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
@@ -833,6 +842,11 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 	{
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_DST_COLOR, GL_ZERO);
+	}
+	if(pass->blend)
+	{
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
 	if(pass->cull)
 	{
@@ -1170,6 +1184,7 @@ void renderer_add_pass(
 	pass->draw_signal = draw_signal;
 	pass->additive = !!(flags & ADD);
 	pass->multiply = !!(flags & MUL);
+	pass->blend = !!(flags & BLEND);
 	pass->cull = !(flags & CULL_DISABLE);
 	pass->cull_invert = !!(flags & CULL_INVERT);
 	pass->clear_depth = 1.0f;
