@@ -138,8 +138,8 @@ static void render_loop_tick(void)
 		g_candle->last_tick = current;
 	}
 	glerr();
-	SDL_Delay(16);
-	SDL_Delay(16);
+	/* SDL_Delay(16); */
+	/* SDL_Delay(16); */
 	/* SDL_Delay(1); */
 }
 
