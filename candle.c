@@ -139,8 +139,6 @@ static void render_loop_tick(void)
 	}
 	glerr();
 	/* SDL_Delay(16); */
-	/* SDL_Delay(16); */
-	/* SDL_Delay(1); */
 }
 
 #ifndef __EMSCRIPTEN__

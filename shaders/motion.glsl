@@ -13,6 +13,8 @@ BUFFER {
 	sampler2D albedo;
 } gbuffer;
 
+uniform float power;
+
 void main(void)
 {
 	vec2 p = pixel_pos();
@@ -24,7 +26,7 @@ void main(void)
 
 	const int num_samples = 8;
 	pp = (pp + 1.0) / 2.0;
-	vec2 velocity = (p - pp) / float(num_samples);
+	vec2 velocity = ((p - pp) / float(num_samples)) * power;
 
 	vec3 color = textureLod(buf.color, p, 0.0).rgb;
 	float samples = 1.0;

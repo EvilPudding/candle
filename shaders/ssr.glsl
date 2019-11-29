@@ -28,6 +28,9 @@ BUFFER {
 	sampler2D color;
 } volum;
 
+uniform float ssr_power;
+uniform float ssao_power;
+
 vec4 upsample()
 {
 	ivec2 fc = ivec2(gl_FragCoord.xy);
@@ -53,15 +56,18 @@ vec4 upsample()
 	for (int i = 0; i < 4; i ++)
 	{
 		ivec2 coord = dfc + offsets[i];
-		vec2 sampled = texelFetch(ssao.occlusion, coord, 0).rg;
 		vec3 downscaledVolum = texelFetch(volum.color, coord, 0).rgb;
 		float downscaledDepth = linearize(texelFetch(gbuffer.depth, coord * 2, 0).r);
-		float downscaledSsao = sampled.r;
 
 		float currentWeight = max(0.0, 1.0f - 0.5 * abs(downscaledDepth - frag_depth));
+		if (ssao_power > 0.05)
+		{
+			vec2 sampled = texelFetch(ssao.occlusion, coord, 0).rg;
+			float downscaledSsao = sampled.r;
+			ssao_factor += (1.0f - downscaledSsao) * currentWeight;
+		}
 		/* float currentWeight = abs(downscaledDepth - frag_depth) > 0.3 ? 0.0 : 1.0; */
 
-		ssao_factor += (1.0f - downscaledSsao) * currentWeight;
 		volumetric += downscaledVolum * currentWeight;
 		totalWeight += currentWeight;
 
@@ -69,7 +75,7 @@ vec4 upsample()
 
 	const float epsilon = 0.0001f;
 	float factor = totalWeight + epsilon;
-	return vec4(volumetric, factor - ssao_factor) / factor;
+	return vec4(volumetric, factor - ssao_factor * ssao_power) / factor;
 }
 
 void main(void)
@@ -83,8 +89,8 @@ void main(void)
 	vec3 emissive = texelFetch(gbuffer.emissive, fc, 0).rgb;
 	vec3 nor = decode_normal(normal);
 
-	vec4 ssred = ssr2(gbuffer.depth, refr.color, albedo,
-			metalic_roughness, nor) * 1.5;
+	vec4 ssred = ssr_power > 0.05 ? ssr2(gbuffer.depth, refr.color, albedo,
+			metalic_roughness, nor) * 1.5 : vec4(0.0);
 
 	/* FragColor = ssred; return; */
 
@@ -142,7 +148,7 @@ void main(void)
 
     cc.rgb *= volum_ssao.w;
 
-	vec3 final = cc.rgb + ssred.rgb * ssred.a + emissive + volum_ssao.xyz;
+	vec3 final = cc.rgb + ssred.rgb * (ssred.a * ssr_power) + emissive + volum_ssao.xyz;
 
 
 	/* FragColor = vec4(cc.xyz, 1.0); return; */

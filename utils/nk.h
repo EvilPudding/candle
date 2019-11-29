@@ -14,7 +14,7 @@
 #define NK_INCLUDE_COMMAND_USERDATA
 #include "utils/nuklear/nuklear.h"
 
-NK_API struct nk_context* nk_can_init(void *win);
+NK_API struct nk_context* nk_can_init(SDL_Window *win);
 
 void nk_can_render(enum nk_anti_aliasing AA);
 void nk_draw_image_ext(struct nk_command_buffer *b, struct nk_rect r,

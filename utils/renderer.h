@@ -55,6 +55,7 @@ typedef vec3_t(*vec3_getter)(void *usrptr);
 typedef vec4_t(*vec4_getter)(void *usrptr);
 typedef float(*number_getter)(void *usrptr);
 typedef int(*integer_getter)(void *usrptr);
+typedef texture_t*(*tex_getter)(void *usrptr);
 typedef void*(*getter_cb)(void *usrptr);
 typedef entity_t(*camera_getter)(void *usrptr);
 

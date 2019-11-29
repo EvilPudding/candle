@@ -19,8 +19,6 @@ vec2 hemicircle[] = vec2[](
 	vec2(-0.92388, 0.38268)
 );
 
-uniform float power;
-
 void main(void)
 {
 	float ao = 0.0;
@@ -86,7 +84,7 @@ void main(void)
 		}
 	}
 	ao /= float(taps) * iterations;
-	ao = 1.0 - ao * power;
+	ao = 1.0 - ao;
 	FragColor = clamp(ao, 0.0, 1.0); 
 }
 

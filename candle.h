@@ -34,7 +34,6 @@ typedef struct candle_t
 
 	int exit;
 	int last_update;
-	int pressing;
 
 	entity_t input_owners[16];
 

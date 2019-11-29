@@ -34,6 +34,11 @@ static int pass_bind_buffer(pass_t *pass, bind_t *bind, shader_t *shader)
 {
 	hash_bind_t *sb = &bind->vs_uniforms;
 
+	if(bind->getter)
+	{
+		bind->buffer = ((tex_getter)bind->getter)(bind->usrptr);
+	}
+
 	texture_t *buffer = bind->buffer;
 
 	int t;
@@ -65,6 +70,10 @@ void bind_get_uniforms(bind_t *bind, hash_bind_t *sb)
 			printf("Empty bind??\n");
 			break;
 		case TEX:
+			if(bind->getter)
+			{
+				bind->buffer = ((tex_getter)bind->getter)(bind->usrptr);
+			}
 			for(t = 0; t < bind->buffer->bufs_size; t++)
 			{
 				char buffer[256];

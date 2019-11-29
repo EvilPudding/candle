@@ -686,7 +686,7 @@ int32_t c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 			1.0f - event->y / renderer->height);
 	self->mouse_screen_pos.xy = p;
 
-	if(self->control && !g_candle->pressing)
+	if (self->control)
 	{
 		struct nk_context *ctx = self->nk;
 		if (ctx)
