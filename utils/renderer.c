@@ -36,7 +36,7 @@ static int pass_bind_buffer(pass_t *pass, bind_t *bind, shader_t *shader)
 
 	if(bind->getter)
 	{
-		bind->buffer = ((tex_getter)bind->getter)(bind->usrptr);
+		bind->buffer = ((tex_getter)bind->getter)(pass, pass->usrptr);
 	}
 
 	texture_t *buffer = bind->buffer;
@@ -61,7 +61,7 @@ static int pass_bind_buffer(pass_t *pass, bind_t *bind, shader_t *shader)
 	return 1;
 }
 
-void bind_get_uniforms(bind_t *bind, hash_bind_t *sb)
+void bind_get_uniforms(bind_t *bind, hash_bind_t *sb, pass_t *pass)
 {
 	int t;
 	switch(bind->type)
@@ -72,7 +72,7 @@ void bind_get_uniforms(bind_t *bind, hash_bind_t *sb)
 		case TEX:
 			if(bind->getter)
 			{
-				bind->buffer = ((tex_getter)bind->getter)(bind->usrptr);
+				bind->buffer = ((tex_getter)bind->getter)(pass, pass->usrptr);
 			}
 			for(t = 0; t < bind->buffer->bufs_size; t++)
 			{
@@ -134,7 +134,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 		hash_bind_t *sb = &bind->vs_uniforms;
 		if (!sb->cached && shader)
 		{
-			bind_get_uniforms(bind, sb);
+			bind_get_uniforms(bind, sb, pass);
 		}
 
 		switch(bind->type)
@@ -146,7 +146,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 		case NUM:
 			if(bind->getter)
 			{
-				bind->number = ((number_getter)bind->getter)(bind->usrptr);
+				bind->number = ((number_getter)bind->getter)(pass, pass->usrptr);
 			}
 			glUniform1f(shader_cached_uniform(shader, sb->number.u), bind->number); glerr();
 			glerr();
@@ -154,7 +154,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 		case INT:
 			if(bind->getter)
 			{
-				bind->integer = ((integer_getter)bind->getter)(bind->usrptr);
+				bind->integer = ((integer_getter)bind->getter)(pass, pass->usrptr);
 			}
 			glUniform1i(shader_cached_uniform(shader, sb->integer.u), bind->integer); glerr();
 			glerr();
@@ -162,7 +162,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 		case VEC2:
 			if(bind->getter)
 			{
-				bind->vec2 = ((vec2_getter)bind->getter)(bind->usrptr);
+				bind->vec2 = ((vec2_getter)bind->getter)(pass, pass->usrptr);
 			}
 			glUniform2f(shader_cached_uniform(shader, sb->vec2.u), bind->vec2.x, bind->vec2.y);
 			glerr();
@@ -170,7 +170,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 		case VEC3:
 			if(bind->getter)
 			{
-				bind->vec3 = ((vec3_getter)bind->getter)(bind->usrptr);
+				bind->vec3 = ((vec3_getter)bind->getter)(pass, pass->usrptr);
 			}
 			glUniform3f(shader_cached_uniform(shader, sb->vec3.u), _vec3(bind->vec3));
 			glerr();
@@ -178,13 +178,13 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 		case VEC4:
 			if(bind->getter)
 			{
-				bind->vec4 = ((vec4_getter)bind->getter)(bind->usrptr);
+				bind->vec4 = ((vec4_getter)bind->getter)(pass, pass->usrptr);
 			}
 			glUniform4f(shader_cached_uniform(shader, sb->vec4.u), _vec4(bind->vec4));
 			glerr();
 			break;
 		case CALLBACK:
-			bind->getter(bind->usrptr);
+			bind->getter(pass, pass->usrptr);
 			glerr();
 			break;
 		default:
@@ -356,14 +356,13 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 /* 	); */
 }
 
-/* bool_t svt_stage; */
-void *renderer_process_query_mips(renderer_t *self)
+void *pass_process_query_mips(pass_t *self)
 {
-	texture_t *tex = renderer_tex(self, ref("query_mips"));
+	texture_t *tex = self->output;
 	if (!tex->framebuffer_ready) return NULL;
 
 	uint32_t size = tex->width * tex->height * 4;
-	bool_t svt_stage = true;
+	bool_t second_stage = true;
 	if (!tex->bufs[1].pbo)
 	{
 		glGenBuffers(1, &tex->bufs[1].pbo);
@@ -384,7 +383,7 @@ void *renderer_process_query_mips(renderer_t *self)
 		glBufferData(GL_PIXEL_PACK_BUFFER, size, 0, GL_STREAM_READ);
 
 		glerr();
-		svt_stage = false;
+		second_stage = false;
 	}
 
 	struct{
@@ -403,7 +402,7 @@ void *renderer_process_query_mips(renderer_t *self)
 	glReadBuffer(GL_COLOR_ATTACHMENT0); glerr();
 
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[1].pbo); glerr();
-	if (svt_stage)
+	if (second_stage)
 	{
 		glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0, size, mips[0]);
 	}
@@ -413,7 +412,7 @@ void *renderer_process_query_mips(renderer_t *self)
 	glReadBuffer(GL_COLOR_ATTACHMENT1); glerr();
 
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[2].pbo);
-	if (svt_stage)
+	if (second_stage)
 	{
 		glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0, size, mips[1]);
 	}
@@ -423,7 +422,7 @@ void *renderer_process_query_mips(renderer_t *self)
 	glReadBuffer(GL_COLOR_ATTACHMENT2); glerr();
 
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[3].pbo);
-	if (svt_stage)
+	if (second_stage)
 	{
 		glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0, size, mips[2]);
 	}
@@ -433,7 +432,7 @@ void *renderer_process_query_mips(renderer_t *self)
 	glReadBuffer(GL_COLOR_ATTACHMENT3); glerr();
 
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[4].pbo);
-	if (svt_stage)
+	if (second_stage)
 	{
 		glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0, size, mips[3]);
 	}
@@ -441,7 +440,7 @@ void *renderer_process_query_mips(renderer_t *self)
 			GL_UNSIGNED_BYTE, NULL); glerr();
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-	if (svt_stage)
+	if (second_stage)
 	{
 		uint32_t max_loads = 64;
 		for (int y = 0; y < tex->height; y++) {
@@ -459,9 +458,63 @@ void *renderer_process_query_mips(renderer_t *self)
 			}
 		}
 	}
-	svt_stage = true;
 
 end:
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0); glerr();
+	return NULL;
+}
+
+void *pass_process_brightness(pass_t *self)
+{
+	texture_t *tex = self->output;
+	if (tex->width == 0 || tex->height == 0 || tex->bufs[0].ready == 0)
+		return NULL;
+	if (!tex->framebuffer_ready) return NULL;
+
+	texture_bind(tex, 0);
+	glGenerateMipmap(tex->target); glerr();
+
+	uint32_t mip = MAX_MIPS - 1;
+	uint32_t size = tex->sizes[mip].x * tex->sizes[mip].y * 4 * sizeof(float);
+	bool_t second_stage = true;
+	if (!tex->bufs[0].pbo)
+	{
+		glGenBuffers(1, &tex->bufs[0].pbo);
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[0].pbo); glerr();
+		glBufferData(GL_PIXEL_PACK_BUFFER, size, 0, GL_STREAM_READ);
+		glerr();
+		second_stage = false;
+	}
+
+	float *data = alloca(size);
+
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, tex->frame_buffer[mip]); glerr();
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1); glerr();
+
+	glReadBuffer(GL_COLOR_ATTACHMENT0); glerr();
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[0].pbo); glerr();
+	if (second_stage)
+	{
+		glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0, size, data);
+	}
+	glReadPixels(0, 0, tex->sizes[mip].x, tex->sizes[mip].y, tex->bufs[0].format,
+			GL_FLOAT, NULL); glerr();
+
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+	float brightness = 0.0f;
+	uint32_t count = 0u;
+	if (second_stage)
+	{
+		for (uint32_t i = 0; i < size / 4; i += 4)
+		{
+			brightness += data[i + 0] + data[i + 1] + data[i + 2];
+			count += 3;
+		}
+		brightness /= (float)count;
+		tex->brightness = brightness;
+	}
+
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0); glerr();
 	return NULL;
 }
@@ -565,7 +618,7 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_pass(self, "svt", NULL, -1, 0,
 			query_mips, query_mips, 0,
 		(bind_t[]){
-			{CALLBACK, .getter = (getter_cb)renderer_process_query_mips, .usrptr = self},
+			{CALLBACK, .getter = (getter_cb)pass_process_query_mips},
 			{SKIP, .integer = 16},
 			{NONE}
 		}
@@ -812,7 +865,7 @@ int renderer_resize(renderer_t *self, int width, int height)
 }
 
 static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
-                                     uint32_t *profile)
+                                     bool_t *profile)
 {
 	if(!pass->active) return NULL;
 	if (pass->shader_name[0] && !pass->shader)
@@ -941,15 +994,15 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 		gen_mip = 1;
 	}
 
-	if(pass->track_brightness && self->frame % 4 == 0)
-	{
-		if(!gen_mip)
-		{
-			texture_bind(pass->output, 0);
-			glGenerateMipmap(pass->output->target); glerr();
-		}
-		texture_update_brightness(pass->output);
-	}
+	/* if(pass->track_brightness && self->frame % 4 == 0) */
+	/* { */
+	/* 	if(!gen_mip) */
+	/* 	{ */
+	/* 		texture_bind(pass->output, 0); */
+	/* 		glGenerateMipmap(pass->output->target); glerr(); */
+	/* 	} */
+	/* 	texture_update_brightness(pass->output); */
+	/* } */
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
 	rd->cull_invert = false;
@@ -1207,6 +1260,11 @@ void renderer_add_pass(
 	pass->binds_size = 0;
 	for(i = 0; i < bind_count; i++)
 	{
+		if(binds[i].type == USRPTR)
+		{
+			pass->usrptr = binds[i].ptr;
+			continue;
+		}
 		if(binds[i].type == CAM)
 		{
 			pass->camid = binds[i].integer;

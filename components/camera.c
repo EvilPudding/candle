@@ -113,8 +113,10 @@ int c_camera_update(c_camera_t *self, float *dt)
 	{
 		float brightness = (self->renderer->output->brightness - 0.5) * 2.0;
 		float targetExposure = -brightness * 2.0f;
-		if(targetExposure > 5.0) targetExposure = 5.0;
-		if(targetExposure < -4.0) targetExposure = -4.0;
+		float max_exposure = 10.0f;
+		float min_exposure = -4.0f;
+		targetExposure = fmin(targetExposure, max_exposure);
+		targetExposure = fmax(targetExposure, min_exposure);
 
 		float step = (targetExposure - self->exposure) / 30;
 		if(step > 0.3f) step = 0.3f;

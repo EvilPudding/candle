@@ -71,19 +71,19 @@ int32_t translate_end(struct edit_translate *self)
 	return CONTINUE;
 }
 
-vec2_t bind_mouse_pos(struct edit_rotate *self)
+vec2_t bind_mouse_pos(pass_t *pass, struct edit_rotate *self)
 {
 	return self->p;
 }
-float bind_start_radius(struct edit_rotate *self)
+float bind_start_radius(pass_t *pass, struct edit_rotate *self)
 {
 	return self->start_radius;
 }
-float bind_tool_fade(struct edit_rotate *self)
+float bind_tool_fade(pass_t *pass, struct edit_rotate *self)
 {
 	return self->tool_fade;
 }
-vec3_t bind_obj_pos(struct edit_rotate *self)
+vec3_t bind_obj_pos(pass_t *pass, struct edit_rotate *self)
 {
 	return self->obj_pos;
 }
@@ -114,11 +114,12 @@ int32_t rotate_init(struct edit_rotate *self, c_editmode_t *ec)
 		renderer_add_pass(renderer, "tool", "editmode", ref("quad"),
 				ADD, renderer_tex(renderer, ref("final")), NULL, 0,
 			(bind_t[]){
-				{VEC2, "mouse_pos", (getter_cb)bind_mouse_pos, self},
-				{NUM, "start_radius", (getter_cb)bind_start_radius, self},
-				{NUM, "tool_fade", (getter_cb)bind_tool_fade, self},
-				{NUM, "tool_fade", (getter_cb)bind_tool_fade, self},
-				{VEC3, "selected_pos", (getter_cb)bind_obj_pos, self},
+				{VEC2, "mouse_pos", (getter_cb)bind_mouse_pos},
+				{NUM, "start_radius", (getter_cb)bind_start_radius},
+				{NUM, "tool_fade", (getter_cb)bind_tool_fade},
+				{NUM, "tool_fade", (getter_cb)bind_tool_fade},
+				{VEC3, "selected_pos", (getter_cb)bind_obj_pos},
+				{USRPTR, .ptr = self},
 				{NONE}
 			}
 		);
@@ -449,26 +450,26 @@ void c_editmode_init(c_editmode_t *self)
 	}
 }
 
-int32_t c_editmode_bind_mode(c_editmode_t *self)
+int32_t c_editmode_bind_mode(pass_t *pass, c_editmode_t *self)
 {
 	return self->mode;
 }
 
-vec2_t c_editmode_bind_over(c_editmode_t *self)
+vec2_t c_editmode_bind_over(pass_t *pass, c_editmode_t *self)
 {
 	return entity_to_vec2(self->over);
 }
-vec2_t c_editmode_bind_over_poly(c_editmode_t *self)
+vec2_t c_editmode_bind_over_poly(pass_t *pass, c_editmode_t *self)
 {
 	return entity_to_vec2(self->over_poly);
 }
-vec2_t c_editmode_bind_mouse_position(c_editmode_t *self)
+vec2_t c_editmode_bind_mouse_position(pass_t *pass, c_editmode_t *self)
 {
 	return vec2(_vec2(self->mouse_iposition));
 }
 
 
-vec3_t c_editmode_bind_selected_pos(c_editmode_t *self)
+vec3_t c_editmode_bind_selected_pos(pass_t *pass, c_editmode_t *self)
 {
 	if(!entity_exists(self->selected)) return Z3;
 	c_node_t *nc = c_node(&self->selected);
@@ -476,11 +477,11 @@ vec3_t c_editmode_bind_selected_pos(c_editmode_t *self)
 	return c_node_pos_to_global(nc, Z3);
 }
 
-vec2_t c_editmode_bind_context(c_editmode_t *self)
+vec2_t c_editmode_bind_context(pass_t *pass, c_editmode_t *self)
 {
 	return entity_to_vec2(self->context);
 }
-vec3_t c_editmode_bind_context_pos(c_editmode_t *self)
+vec3_t c_editmode_bind_context_pos(pass_t *pass, c_editmode_t *self)
 {
 	if (!entity_exists(self->context))
 		return vec3(0.0f);
@@ -489,16 +490,16 @@ vec3_t c_editmode_bind_context_pos(c_editmode_t *self)
 		return vec3(0.0f);
 	return c_node_pos_to_global(node, vec3(0.0f));
 }
-float c_editmode_bind_context_phase(c_editmode_t *self)
+float c_editmode_bind_context_phase(pass_t *pass, c_editmode_t *self)
 {
 	return self->context_enter_phase;
 }
-vec2_t c_editmode_bind_selected(c_editmode_t *self)
+vec2_t c_editmode_bind_selected(pass_t *pass, c_editmode_t *self)
 {
 	return entity_to_vec2(self->selected);
 }
 
-vec2_t c_editmode_bind_sel(c_editmode_t *self)
+vec2_t c_editmode_bind_sel(pass_t *pass, c_editmode_t *self)
 {
 	return entity_to_vec2(self->selected);
 }
@@ -527,7 +528,8 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 		(bind_t[]){
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{TEX, "gbuffer", .buffer = renderer_tex(renderer, ref("gbuffer"))},
-			{VEC2, "position", (getter_cb)c_editmode_bind_mouse_position, self},
+			{VEC2, "position", (getter_cb)c_editmode_bind_mouse_position},
+			{USRPTR, .ptr = self},
 			{NONE}
 		}
 	);
@@ -538,12 +540,13 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 			{TEX, "gbuffer", .buffer = renderer_tex(renderer, ref("gbuffer"))},
 			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
 			{TEX, "ssao", .buffer = renderer_tex(renderer, ref("ssao"))},
-			{VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
-			{VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
-			{VEC2, "context_id", (getter_cb)c_editmode_bind_context, self},
-			{VEC2, "sel_id", (getter_cb)c_editmode_bind_sel, self},
-			{VEC3, "context_pos", (getter_cb)c_editmode_bind_context_pos, self},
-			{NUM, "context_phase", (getter_cb)c_editmode_bind_context_phase, self},
+			{VEC2, "over_id", (getter_cb)c_editmode_bind_over},
+			{VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly},
+			{VEC2, "context_id", (getter_cb)c_editmode_bind_context},
+			{VEC2, "sel_id", (getter_cb)c_editmode_bind_sel},
+			{VEC3, "context_pos", (getter_cb)c_editmode_bind_context_pos},
+			{NUM, "context_phase", (getter_cb)c_editmode_bind_context_phase},
+			{USRPTR, .ptr = self},
 			{NONE}
 		}
 	);
@@ -552,11 +555,12 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 			ADD, renderer_tex(renderer, ref("final")), NULL, 0,
 		(bind_t[]){
 			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
-			{INT, "mode", (getter_cb)c_editmode_bind_mode, self},
-			{VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
-			{VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
-			{VEC2, "context_id", (getter_cb)c_editmode_bind_context, self},
-			{VEC2, "sel_id", (getter_cb)c_editmode_bind_sel, self},
+			{INT, "mode", (getter_cb)c_editmode_bind_mode},
+			{VEC2, "over_id", (getter_cb)c_editmode_bind_over},
+			{VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly},
+			{VEC2, "context_id", (getter_cb)c_editmode_bind_context},
+			{VEC2, "sel_id", (getter_cb)c_editmode_bind_sel},
+			{USRPTR, .ptr = self},
 			{NONE}
 		}
 	);
@@ -567,11 +571,12 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 		(bind_t[]){
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
-			{INT, "mode", (getter_cb)c_editmode_bind_mode, self},
-			{VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
-			{VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
-			{VEC2, "sel_id", (getter_cb)c_editmode_bind_sel, self},
+			{INT, "mode", (getter_cb)c_editmode_bind_mode},
+			{VEC2, "over_id", (getter_cb)c_editmode_bind_over},
+			{VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly},
+			{VEC2, "sel_id", (getter_cb)c_editmode_bind_sel},
 			{INT, "horizontal", .integer = 1},
+			{USRPTR, .ptr = self},
 			{NONE}
 		}
 	);
@@ -581,11 +586,12 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 		(bind_t[]){
 			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
 			{TEX, "tmp", .buffer = tmp},
-			{INT, "mode", (getter_cb)c_editmode_bind_mode, self},
-			{VEC2, "over_id", (getter_cb)c_editmode_bind_over, self},
-			{VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly, self},
-			{VEC2, "sel_id", (getter_cb)c_editmode_bind_sel, self},
+			{INT, "mode", (getter_cb)c_editmode_bind_mode},
+			{VEC2, "over_id", (getter_cb)c_editmode_bind_over},
+			{VEC2, "over_poly_id", (getter_cb)c_editmode_bind_over_poly},
+			{VEC2, "sel_id", (getter_cb)c_editmode_bind_sel},
 			{INT, "horizontal", .integer = 0},
+			{USRPTR, .ptr = self},
 			{NONE}
 		}
 	);
