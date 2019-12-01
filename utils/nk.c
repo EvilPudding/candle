@@ -793,6 +793,8 @@ nk_can_handle_key(struct nk_context *ctx, SDL_Keycode key, int down)
 				nk_input_key(ctx, NK_KEY_RIGHT, down);
 			break;
 		default:
+			if (down)
+				nk_input_char(ctx, key);
 			return 0;
 	}
 	return 1;

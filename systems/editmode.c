@@ -1100,7 +1100,9 @@ int32_t c_editmode_key_up(c_editmode_t *self, SDL_Keycode *key)
 		if (nk_window_is_any_hovered(self->nk) || nk_item_is_any_active(self->nk))
 		{
 			if (nk_can_handle_key(self->nk, *key, false))
+			{
 				return STOP;
+			}
 		}
 	}
 	if(!entity_exists(self->selected) || self->selected == SYS)
