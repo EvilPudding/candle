@@ -129,6 +129,7 @@ void shaders_downsample_glsl_reg(void);
 void shaders_upsample_glsl_reg(void);
 void shaders_border_glsl_reg(void);
 void shaders_marching_glsl_reg(void);
+void shaders_extract_depth_glsl_reg(void);
 
 void shaders_phong_glsl_reg(void);
 void shaders_volum_glsl_reg(void);
@@ -161,6 +162,7 @@ void shaders_reg()
 	shaders_ssao_glsl_reg();
 	shaders_ssr_glsl_reg();
 	shaders_uniforms_glsl_reg();
+	shaders_extract_depth_glsl_reg();
 }
 
 vertex_modifier_t _vertex_modifier_new(bool_t has_skin, const char *code,

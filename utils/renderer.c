@@ -521,11 +521,6 @@ void *pass_process_brightness(pass_t *self)
 
 void renderer_default_pipeline(renderer_t *self)
 {
-	/* texture_t *query_mips =	texture_new_2D(0, 0, 0, */
-	/* 	buffer_new("mips",		true, 4), */
-	/* 	buffer_new("coords",	true, 3), /1* Texcoords, Matid *1/ */
-	/* 	buffer_new("depth",		true, -1) */
-	/* ); */
 	texture_t *query_mips = texture_new_2D(0, 0, 0,
 		buffer_new("depth",		true, -1),
 		buffer_new("tiles0",	false, 4),
@@ -555,18 +550,17 @@ void renderer_default_pipeline(renderer_t *self)
 	texture_t *light =	texture_new_2D(0, 0, 0,
 		buffer_new("color",	true, 4)
 	);
-	texture_t *refr =		texture_new_2D(0, 0, TEX_MIPMAP,
+	texture_t *refr =		texture_new_2D(0, 0, TEX_MIPMAP | TEX_INTERPOLATE,
 		buffer_new("color",	true, 4)
 	);
-	texture_t *tmp =		texture_new_2D(0, 0, TEX_MIPMAP,
+	texture_t *tmp =		texture_new_2D(0, 0, TEX_MIPMAP | TEX_INTERPOLATE,
 		buffer_new("color",	true, 4)
 	);
 	texture_t *final =		texture_new_2D(0, 0, TEX_INTERPOLATE | TEX_MIPMAP,
 		buffer_new("color",	true, 4)
 	);
-	/* texture_t *bloom =		texture_new_2D(0, 0, TEX_INTERPOLATE, */
-		/* buffer_new("color",	true, 4) */
-	/* ); */
+	texture_t *bloom = texture_new_2D(0, 0, TEX_INTERPOLATE | TEX_MIPMAP,
+			buffer_new("color", false, 4));
 	/* texture_t *bloom2 =		texture_new_2D(0, 0, TEX_INTERPOLATE, */
 		/* buffer_new("color",	true, 4) */
 	/* ); */
@@ -575,19 +569,16 @@ void renderer_default_pipeline(renderer_t *self)
 		buffer_new("depth",		true, -1),
 		buffer_new("ids",		false, 4));
 
-	renderer_add_tex(self, "query_mips",	0.1f, query_mips);
-	renderer_add_tex(self, "gbuffer",		1.0f, gbuffer);
-	renderer_add_tex(self, "ssao",			1.0f / 2.0f, ssao);
-	renderer_add_tex(self, "light",			1.0f, light);
-	renderer_add_tex(self, "volum",			1.0f / 2.0f, volum);
-	/* renderer_add_tex(self, "volum_tmp",		1.0f, volum_tmp); */
-	renderer_add_tex(self, "refr",			1.0f, refr);
-	renderer_add_tex(self, "tmp",			1.0f, tmp);
-	renderer_add_tex(self, "final",			1.0f, final);
-	renderer_add_tex(self, "selectable",	1.0f, selectable);
-
-	/* renderer_add_tex(self, "bloom",		0.3f, bloom); */
-	/* renderer_add_tex(self, "bloom2",		0.3f, bloom2); */
+	renderer_add_tex(self, "query_mips", 0.05f, query_mips);
+	renderer_add_tex(self, "gbuffer",    1.0f, gbuffer);
+	renderer_add_tex(self, "ssao",       1.0f / 2.0f, ssao);
+	renderer_add_tex(self, "light",      1.0f, light);
+	renderer_add_tex(self, "volum",      1.0f / 2.0f, volum);
+	renderer_add_tex(self, "refr",       1.0f, refr);
+	renderer_add_tex(self, "tmp",        1.0f, tmp);
+	renderer_add_tex(self, "final",      1.0f, final);
+	renderer_add_tex(self, "selectable", 1.0f, selectable);
+	renderer_add_tex(self, "bloom",      1.0f, bloom);
 
 	renderer_add_pass(self, "query_mips", "query_mips", ref("visible"), 0,
 			query_mips, query_mips, 0,
@@ -633,20 +624,20 @@ void renderer_default_pipeline(renderer_t *self)
 		}
 	);
 
-	renderer_add_pass(self, "selectable", "select", ref("selectable"),
-			0, selectable, selectable, 0,
-		(bind_t[]){
-			{CLEAR_DEPTH, .number = 1.0f},
-			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
-			{NONE}
-		}
-	);
-
 	/* DECAL PASS */
 	renderer_add_pass(self, "decals_pass", "gbuffer", ref("decals"), BLEND,
 			gbuffer, NULL, 0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
+			{NONE}
+		}
+	);
+
+	renderer_add_pass(self, "selectable", "select", ref("selectable"),
+			0, selectable, selectable, 0,
+		(bind_t[]){
+			{CLEAR_DEPTH, .number = 1.0f},
+			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{NONE}
 		}
 	);
@@ -715,61 +706,52 @@ void renderer_default_pipeline(renderer_t *self)
 			ssao, NULL, 0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
-			{NUM, "power", .number = 1.0},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{NONE}
 		}
 	);
-	/* renderer_add_kawase(self, ssao, tmp, 0, 0); */
 
-
-	renderer_add_pass(self, "final", "ssr", ref("quad"), TRACK_BRIGHT, final,
+	renderer_add_pass(self, "final", "ssr", ref("quad"), 0, final,
 			NULL, 0,
 		(bind_t[]){
-			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{TEX, "gbuffer", .buffer = gbuffer},
 			{TEX, "light", .buffer = light},
 			{TEX, "refr", .buffer = refr},
+			{NUM, "ssr_power", .number = 1.0f},
 			{TEX, "ssao", .buffer = ssao},
+			{NUM, "ssao_power", .number = 0.6f},
 			{TEX, "volum", .buffer = volum},
 			{NONE}
 		}
 	);
+	renderer_add_pass(self, "bloom_0", "bright", ref("quad"), 0,
+			bloom, NULL, 0,
+		(bind_t[]){
+			{TEX, "buf", .buffer = final},
+			{NONE}
+		}
+	);
+	renderer_add_kawase(self, bloom, tmp, 0, 1);
+	renderer_add_kawase(self, bloom, tmp, 1, 2);
+	renderer_add_kawase(self, bloom, tmp, 2, 3);
 
-	/* renderer_add_pass(self, "bloom_%d", "bright", ref("quad"), 0, */
-	/* 		renderer_tex(self, ref("bloom")), NULL, */
-	/* 	(bind_t[]){ */
-	/* 		{TEX, "buf", .buffer = renderer_tex(self, ref("final"))}, */
-	/* 		{NONE} */
-	/* 	} */
-	/* ); */
-	/* int i; */
-	/* for(i = 0; i < 2; i++) */
-	/* { */
-	/* 	renderer_add_pass(self, "bloom_%d", "blur", ref("quad"), 0, */
-	/* 			renderer_tex(self, ref("bloom2")), NULL */
-	/* 		(bind_t[]){ */
-	/* 			{TEX, "buf", .buffer = renderer_tex(self, ref("bloom"))}, */
-	/* 			{INT, "horizontal", .integer = 1}, */
-	/* 			{NONE} */
-	/* 		} */
-	/* 	); */
-	/* 	renderer_add_pass(self, "bloom_%d", "blur", ref("quad"), 0, */
-	/* 			renderer_tex(self, ref("bloom")), NULL, */
-	/* 		(bind_t[]){ */
-	/* 			{TEX, "buf", .buffer = renderer_tex(self, ref("bloom2"))}, */
-	/* 			{INT, "horizontal", .integer = 0}, */
-	/* 			{NONE} */
-	/* 		} */
-	/* 	); */
-	/* } */
-	/* renderer_add_pass(self, "bloom_%d", "copy", ref("quad"), ADD, */
-	/* 		renderer_tex(self, ref("final")), NULL, */
-	/* 	(bind_t[]){ */
-	/* 		{TEX, "buf", .buffer = renderer_tex(self, ref("bloom"))}, */
-	/* 		{NONE} */
-	/* 	} */
-	/* ); */
+	renderer_add_pass(self, "bloom_1", "upsample", ref("quad"), ADD,
+			final, NULL, 0,
+		(bind_t[]){
+			{TEX, "buf", .buffer = bloom},
+			{INT, "level", .integer = 3},
+			{NUM, "alpha", .number = 0.5},
+			{NONE}
+		}
+	);
+	renderer_add_pass(self, "luminance_calc", NULL, -1, 0,
+			final, NULL, 0,
+		(bind_t[]){
+			{CALLBACK, .getter = (getter_cb)pass_process_brightness},
+			{SKIP, .integer = 16},
+			{NONE}
+		}
+	);
 
 	/* renderer_tex(self, ref(light))->mipmaped = 1; */
 
@@ -986,12 +968,10 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 
 	glDisable(GL_BLEND);
 
-	int gen_mip = 0;
 	if(pass->auto_mip && pass->output->mipmaped)
 	{
 		texture_bind(pass->output, 0);
 		glGenerateMipmap(pass->output->target); glerr();
-		gen_mip = 1;
 	}
 
 	/* if(pass->track_brightness && self->frame % 4 == 0) */
