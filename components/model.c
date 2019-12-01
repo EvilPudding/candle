@@ -31,11 +31,8 @@ vs_t *model_vs()
 			"#endif\n"
 
 			"		mat4 MV    = camera(view) * M;\n"
-			"		vec3 vertex_normal    = normalize(MV * vec4( N, 0.0f)).xyz;\n"
-			"		vec3 vertex_tangent   = normalize(MV * vec4(TG, 0.0f)).xyz;\n"
-			"		vec3 vertex_bitangent = cross(vertex_tangent, vertex_normal);\n"
-			"		$TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
-
+			"		vertex_normal    = (MV * vec4( N, 0.0f)).xyz;\n"
+			"		vertex_tangent   = (MV * vec4(TG, 0.0f)).xyz;\n"
 			"		pos = M * pos;\n"
 			"		$vertex_world_position = pos.xyz;\n"
 			"		pos = camera(view) * pos;\n"

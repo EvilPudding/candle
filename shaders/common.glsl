@@ -25,10 +25,11 @@ flat in mat4 model;
 
 in vec3 poly_color;
 in vec3 vertex_position;
+in vec3 vertex_tangent;
+in vec3 vertex_normal;
 in vec3 vertex_world_position;
 in float vertex_distance;
 in vec2 texcoord;
-in mat3 TM;
 
 vec2 sampleCube(const vec3 v, out uint faceIndex, out float z)
 {
@@ -268,17 +269,24 @@ vec3 get_normal(sampler2D buffer)
 	return decode_normal(texelFetch(buffer, ivec2(gl_FragCoord.x,
 					gl_FragCoord.y), 0).rg);
 }
+
+mat3 TM()
+{
+	vec3 vertex_bitangent = cross(normalize(vertex_tangent), normalize(vertex_normal));
+	return mat3(vertex_tangent, vertex_bitangent, vertex_normal);
+}
 vec3 get_normal(vec3 color)
 {
+
 	vec3 norm;
 	if(has_tex)
 	{
 		vec3 texcolor = color * 2.0 - 1.0;
-		norm = TM * texcolor;
+		norm = TM() * texcolor;
 	}
 	else
 	{
-		norm = TM[2];
+		norm = vertex_normal;
 	}
 	if(!gl_FrontFacing)
 	{

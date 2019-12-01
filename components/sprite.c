@@ -39,10 +39,8 @@ vs_t *sprite_vs()
 			"		vec2 size = vec2(P.x * (screen_size.y / screen_size.x), P.y) * 0.5 * scale;\n"
 			"		pos = vec4(pos.xy + 0.5 * size, pos.z, pos.w);\n"
 
-			"		vec3 vertex_normal    = (vec4( N, 0.0f)).xyz;\n"
-			"		vec3 vertex_tangent   = (vec4(TG, 0.0f)).xyz;\n"
-			"		vec3 vertex_bitangent = cross(vertex_normal, vertex_tangent);\n"
-			"		$TM = mat3(vertex_tangent, vertex_bitangent, vertex_normal);\n"
+			"		vertex_normal    = (vec4( N, 0.0f)).xyz;\n"
+			"		vertex_tangent   = (vec4(TG, 0.0f)).xyz;\n"
 			"		$texcoord = vec2(UV.x, 1.0f - UV.y);\n"
 
 			"	}\n"

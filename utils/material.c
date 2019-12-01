@@ -966,7 +966,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		str_cat(&gbuffer,
 				"float scl = ((1.0 - pbr_in.height) * .05);\n"
 				"vec3 newpoint = (normalize(view_space_in) * scl);\n"
-				"vec3 flatnorm = (newpoint * TM);\n"
+				"vec3 flatnorm = (newpoint * TM());\n"
 				"flatnorm.y = -flatnorm.y;\n"
 		        "tex_space_in += flatnorm.xy;\n"
 		        "view_space_in += flatnorm;\n"
