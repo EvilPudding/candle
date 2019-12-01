@@ -755,24 +755,38 @@ nk_can_handle_key(struct nk_context *ctx, SDL_Keycode key, int down)
 			break;
 		case SDLK_z:
 			nk_input_key(ctx, NK_KEY_TEXT_UNDO, down && state[SDL_SCANCODE_LCTRL]);
+			if (down)
+				nk_input_char(ctx, key);
 			break;
 		case SDLK_r:
 			nk_input_key(ctx, NK_KEY_TEXT_REDO, down && state[SDL_SCANCODE_LCTRL]);
+			if (down)
+				nk_input_char(ctx, key);
 			break;
 		case SDLK_c:
 			nk_input_key(ctx, NK_KEY_COPY, down && state[SDL_SCANCODE_LCTRL]);
+			if (down)
+				nk_input_char(ctx, key);
 			break;
 		case SDLK_v:
 			nk_input_key(ctx, NK_KEY_PASTE, down && state[SDL_SCANCODE_LCTRL]);
+			if (down)
+				nk_input_char(ctx, key);
 			break;
 		case SDLK_x:
 			nk_input_key(ctx, NK_KEY_CUT, down && state[SDL_SCANCODE_LCTRL]);
+			if (down)
+				nk_input_char(ctx, key);
 			break;
 		case SDLK_b:
 			nk_input_key(ctx, NK_KEY_TEXT_LINE_START, down && state[SDL_SCANCODE_LCTRL]);
+			if (down)
+				nk_input_char(ctx, key);
 			break;
 		case SDLK_e:
 			nk_input_key(ctx, NK_KEY_TEXT_LINE_END, down && state[SDL_SCANCODE_LCTRL]);
+			if (down)
+				nk_input_char(ctx, key);
 			break;
 		case SDLK_UP:
 			nk_input_key(ctx, NK_KEY_UP, down);
