@@ -51,7 +51,7 @@ tex_tile_t *g_tiles;
 const int g_cache_w = 64;
 const int g_cache_h = 32;
 const int g_indir_w = 256;
-const int g_indir_h = 64;
+const int g_indir_h = 256;
 int g_cache_n = 0;
 int g_indir_n = 1;
 
@@ -260,29 +260,6 @@ uint32_t texture_get_pixel(texture_t *self, int32_t buffer, int32_t x, int32_t y
 	return data;
 }
 
-void texture_update_brightness(texture_t *self)
-{
-#ifndef __EMSCRIPTEN__
-	texture_bind(self, 0);
-
-	float data[4];
-
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, self->frame_buffer[MAX_MIPS - 1]); glerr();
-	glReadBuffer(GL_COLOR_ATTACHMENT0); glerr();
-
-	/* glGetTexImage(self->target, 9, self->bufs[0].format, GL_UNSIGNED_BYTE, */
-			/* data); */
-	glReadPixels(0, 0, 1, 1, self->bufs[0].format, GL_FLOAT, data); glerr();
-
-	float r = data[0];
-	float g = data[1];
-	float b = data[2];
-	self->brightness = ((float)(r + g + b)) / (3.0f);
-	if(self->brightness <= 0) self->brightness = 1.0;
-#endif
-}
-
 static void texture_update_sizes(texture_t *self)
 {
 	int m;
@@ -296,6 +273,7 @@ static void texture_update_sizes(texture_t *self)
 		/* glGetTexLevelParameteriv(GL_TEXTURE_2D, m, GL_TEXTURE_WIDTH, &w2); */
 		/* glGetTexLevelParameteriv(GL_TEXTURE_2D, m, GL_TEXTURE_HEIGHT, &h2); */
 		self->sizes[m] = uvec2(w, h);
+
 	}
 }
 
@@ -776,7 +754,7 @@ texture_t *_texture_new_2D_pre
 	_g_tex_creating = self;
 
 	self->target = GL_TEXTURE_2D;
-	self->brightness = 1.0f;
+	self->brightness = 0.3f;
 
 	self->repeat = !!(flags & TEX_REPEAT);
 	self->mipmaped = !!(flags & TEX_MIPMAP);

@@ -134,11 +134,11 @@ static void render_loop_tick(void)
 	{
 		g_candle->fps = g_candle->fps_count;
 		g_candle->fps_count = 0;
+		printf("%d\n", g_candle->fps);
 		g_candle->last_tick = current;
 	}
 	glerr();
-	SDL_Delay(60);
-	/* SDL_Delay(1); */
+	/* SDL_Delay(16); */
 }
 
 #ifndef __EMSCRIPTEN__

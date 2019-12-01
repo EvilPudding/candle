@@ -116,11 +116,6 @@ static struct source *g_sources = NULL;
 static uint32_t g_sources_num = 0;
 
 void shaders_common_glsl_reg(void);
-void shaders_depth_glsl_reg(void);
-void shaders_gbuffer_glsl_reg(void);
-void shaders_query_mips_glsl_reg(void);
-void shaders_select_glsl_reg(void);
-void shaders_decals_glsl_reg(void);
 void shaders_ambient_glsl_reg(void);
 void shaders_bright_glsl_reg(void);
 void shaders_copy_glsl_reg(void);
@@ -131,7 +126,6 @@ void shaders_blur_glsl_reg(void);
 void shaders_kawase_glsl_reg(void);
 void shaders_motion_glsl_reg(void);
 void shaders_downsample_glsl_reg(void);
-void shaders_extract_depth_glsl_reg(void);
 void shaders_upsample_glsl_reg(void);
 void shaders_border_glsl_reg(void);
 void shaders_marching_glsl_reg(void);
@@ -139,7 +133,6 @@ void shaders_marching_glsl_reg(void);
 void shaders_phong_glsl_reg(void);
 void shaders_volum_glsl_reg(void);
 void shaders_ssao_glsl_reg(void);
-void shaders_transparency_glsl_reg(void);
 void shaders_highlight_glsl_reg(void);
 void shaders_context_glsl_reg(void);
 void shaders_editmode_glsl_reg(void);
@@ -152,16 +145,11 @@ void shaders_reg()
 	shaders_kawase_glsl_reg();
 	shaders_motion_glsl_reg();
 	shaders_downsample_glsl_reg();
-	shaders_extract_depth_glsl_reg();
 	shaders_upsample_glsl_reg();
 	shaders_border_glsl_reg();
 	shaders_bright_glsl_reg();
 	shaders_common_glsl_reg();
 	shaders_copy_glsl_reg();
-	shaders_decals_glsl_reg();
-	shaders_depth_glsl_reg();
-	shaders_gbuffer_glsl_reg();
-	shaders_query_mips_glsl_reg();
 	shaders_editmode_glsl_reg();
 	shaders_highlight_glsl_reg();
 	shaders_context_glsl_reg();
@@ -169,11 +157,9 @@ void shaders_reg()
 	shaders_volum_glsl_reg();
 	shaders_marching_glsl_reg();
 	shaders_quad_glsl_reg();
-	shaders_select_glsl_reg();
 	shaders_sprite_glsl_reg();
 	shaders_ssao_glsl_reg();
 	shaders_ssr_glsl_reg();
-	shaders_transparency_glsl_reg();
 	shaders_uniforms_glsl_reg();
 }
 

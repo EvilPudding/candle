@@ -136,7 +136,7 @@ void _ct_listener(ct_t *self, int32_t flags, int32_t priority, uint32_t signal,
 	if(ct_get_listener(self, signal)) exit(1);
 
 	listener_t lis = {.signal = signal, .cb = (signal_cb)cb,
-		.flags = flags, .priority = flags,
+		.flags = flags, .priority = priority,
 		.target = self->id};
 
 	vector_add(sig->listener_types, &lis);

@@ -113,8 +113,10 @@ int c_camera_update(c_camera_t *self, float *dt)
 	{
 		float brightness = (self->renderer->output->brightness - 0.5) * 2.0;
 		float targetExposure = -brightness * 2.0f;
-		if(targetExposure > 5.0) targetExposure = 5.0;
-		if(targetExposure < -4.0) targetExposure = -4.0;
+		float max_exposure = 10.0f;
+		float min_exposure = -4.0f;
+		targetExposure = fmin(targetExposure, max_exposure);
+		targetExposure = fmax(targetExposure, min_exposure);
 
 		float step = (targetExposure - self->exposure) / 30;
 		if(step > 0.3f) step = 0.3f;
@@ -138,7 +140,7 @@ int c_camera_resize(c_camera_t *self, window_resize_data *event)
 void c_camera_assign(c_camera_t *self)
 {
 	c_window_t *win = c_window(&SYS);
-	if(self->window && !win->renderer)
+	if(self->window)
 	{
 		win->renderer = self->renderer;
 	}
@@ -177,7 +179,7 @@ REG()
 	ct_listener(ct, WORLD, 0, sig("window_resize"), c_camera_resize);
 	ct_listener(ct, WORLD, 0, sig("world_update"), c_camera_update);
 	ct_listener(ct, WORLD, 50, sig("world_pre_draw"), c_camera_pre_draw);
-	ct_listener(ct, WORLD, 21, sig("world_draw"), c_camera_draw);
+	ct_listener(ct, WORLD, 10, sig("world_draw"), c_camera_draw);
 
 	ct_listener(ct, WORLD, 0, sig("component_menu"), c_camera_component_menu);
 }

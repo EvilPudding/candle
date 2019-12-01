@@ -11,8 +11,9 @@ BUFFER {
 BUFFER {
 	sampler2D depth;
 	sampler2D albedo;
-	sampler2D nmr;
 } gbuffer;
+
+uniform float power;
 
 void main(void)
 {
@@ -25,15 +26,21 @@ void main(void)
 
 	const int num_samples = 8;
 	pp = (pp + 1.0) / 2.0;
-	vec2 velocity = (p - pp) / float(num_samples);
+	vec2 velocity = ((p - pp) / float(num_samples)) * power;
 
 	vec3 color = textureLod(buf.color, p, 0.0).rgb;
+	float samples = 1.0;
 	for(int i = 1; i < num_samples; ++i)
 	{
 		p += velocity;
+		if (p.x < 0.f || p.x > 1.0f || p.y < 0.f || p.y > 1.0f)
+		{
+			break;
+		}
+		samples += 1.0;
 		color += textureLod(buf.color, p, 0.0).rgb;
 	}
-	FragColor = vec4(color / float(num_samples), 1.0);
+	FragColor = vec4(color / samples, 1.0);
 }
 
 // vim: set ft=c:

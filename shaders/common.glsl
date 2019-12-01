@@ -301,68 +301,10 @@ float rand(vec2 co)
     return fract(sin(dot(co.xy, vec2(12.9898,78.233))) * 43758.5453);
 }
 
-float shadow_at_dist_no_tan(vec3 vec, float i)
-{
-	/* vec3 rnd = (vec3(rand(vec.xy), rand(vec.yz), rand(vec.xz)) - 0.5) * i; */
-	/* if(lookup(-vec,  rnd) > 0.5) return 1.0; */
-	/* return 0.0; */
-
-	vec3 x = vec3(1.0, 0.0, 0.0) * i;
-	vec3 y = vec3(0.0, 1.0, 0.0) * i;
-	vec3 z = vec3(0.0, 0.0, 1.0) * i;
-
-	if(lookup(-vec + x) > 0.5) return 1.0;
-	if(lookup(-vec + y) > 0.5) return 1.0;
-	if(lookup(-vec + z) > 0.5) return 1.0;
-	if(lookup(-vec - x) > 0.5) return 1.0;
-	if(lookup(-vec - y) > 0.5) return 1.0;
-	if(lookup(-vec - z) > 0.5) return 1.0;
-
-
-	return 0.0;
-}
-
 float ditherPattern[16] = float[16](0.0f, 0.5f, 0.125f, 0.625f,
 									0.75f, 0.22f, 0.875f, 0.375f,
 									0.1875f, 0.6875f, 0.0625f, 0.5625,
 									0.9375f, 0.4375f, 0.8125f, 0.3125);
-
-
-float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)
-{
-	float z;
-	float ocluder_to_light = lookup_single(-vec, z);
-	ocluder_to_light = min(z, ocluder_to_light);
-	float ditherValue = ditherPattern[(int(gl_FragCoord.x) % 4) * 4 + (int(gl_FragCoord.y) % 4)];
-
-	float sd = ((ocluder_to_light - point_to_light) > -0.01) ? 0.0 : 1.0;
-	if(sd > 0.5)
-	{
-
-		/* sd = 0.5; */
-		float shadow_len = min(0.8 * (point_to_light / ocluder_to_light - 1.0), 10.0);
-		float p = 0.02 * linearize(depth);
-		if(shadow_len > 0.001)
-		{
-
-			uint count = 1u;
-			uint iters = 1u + clamp(uint(round(shadow_len / p)), 3u, 10u);
-			float inc = shadow_len / float(iters);
-			float i = inc + inc * ditherValue;
-
-			for (uint j = 1u; j < 10u && count < iters; j++)
-			{
-				if(shadow_at_dist_no_tan(vec, i) > 0.5) break;
-
-				count++;
-				i += inc;
-			}
-			if(count == 1u) return 0.0;
-			return float(count) / float(iters);
-		}
-	}
-	return 0.0;
-}
 
 vec3 ppp[] = vec3[](
 		vec3(-0.6025853861145103, 0.4154745183350379, 0.6813749166615211),
@@ -379,20 +321,58 @@ vec3 ppp[] = vec3[](
 		vec3(0.968975404819239, -0.07683527155447646, 0.234910633860074));
 
 
-vec2 fTaps_Poisson[] = vec2[](
-	vec2(-.326,-.406),
-	vec2(-.840,-.074),
-	vec2(-.696, .457),
-	vec2(-.203, .621),
-	vec2( .962,-.195),
-	vec2( .473,-.480),
-	vec2( .519, .767),
-	vec2( .185,-.893),
-	vec2( .507, .064),
-	vec2( .896, .412),
-	vec2(-.322,-.933),
-	vec2(-.792,-.598)
+vec3 fTaps_Poisson[] = vec3[](
+	vec3(0.068824, -0.326151,   0.0),
+	vec3(0.248043, 0.222679,   0.0),
+	vec3(-0.316867, 0.103472,   0.0),
+	vec3(-0.525182, 0.410644,   0.5),
+	vec3(-0.618219, -0.249499,   0.5),
+	vec3(-0.093037, -0.660143,   0.5),
+	vec3(0.525182, -0.410644,   0.5),
+	vec3(0.618219, 0.249499,   0.5),
+	vec3(0.093037, 0.660143,   0.5),
+	vec3(0.536822, -0.843695,   1.0),
+	vec3(0.930210, -0.367028,   1.0),
+	vec3(0.968289, 0.249832,   1.0),
+	vec3(0.636515, 0.771264,   1.0),
+	vec3(0.061613, 0.998100,   1.0),
+	vec3(-0.536822, 0.843695,   1.0),
+	vec3(-0.930210, 0.367028,   1.0),
+	vec3(-0.968289, -0.249832,   1.0),
+	vec3(-0.636515, -0.771264,   1.0),
+	vec3(-0.061613, -0.998100,   1.0)
 );
+
+
+float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)
+{
+	float z;
+	float ocluder_to_light = lookup_single(-vec, z);
+	if (ocluder_to_light > z - 0.08) return 0.0;
+
+	ocluder_to_light = min(z, ocluder_to_light);
+	float ditherValue = ditherPattern[(int(gl_FragCoord.x) % 4) * 4 + (int(gl_FragCoord.y) % 4)];
+
+	float shadow_len = min(0.8 * (point_to_light / ocluder_to_light - 1.0), 10.0);
+	if(shadow_len > 0.001)
+	{
+		vec3 normal = normalize(vec);
+		vec3 tangent = cross(normal, vec3(0.0, 1.0, 0.0));
+		vec3 bitangent = cross(normal, tangent);
+		float min_dist = 1.0;
+		for (uint j = 0u; j < 19u; j++)
+		{
+			vec3 offset = fTaps_Poisson[j] * ditherValue;
+			if(lookup(-vec + (offset.x * tangent + offset.y * bitangent) * shadow_len) > 0.5)
+			{
+				min_dist = offset.z;
+				break;
+			}
+		}
+		return min_dist;
+	}
+	return 0.0;
+}
 
 
 // Consts should help improve performance

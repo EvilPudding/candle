@@ -2,7 +2,8 @@
 
 BUFFER {
 	sampler2D depth;
-	sampler2D nmr;
+	sampler2D nn;
+	sampler2D mr;
 } gbuffer;
 
 layout (location = 0) out float FragColor;
@@ -18,15 +19,13 @@ vec2 hemicircle[] = vec2[](
 	vec2(-0.92388, 0.38268)
 );
 
-uniform float power;
-
 void main(void)
 {
 	float ao = 0.0;
 
 	vec2 tc = texcoord;
-	vec3 n = decode_normal(textureLod(gbuffer.nmr, tc, 0.0).rg);
-	float D = texelFetch(gbuffer.depth, ivec2(gl_FragCoord.xy), 0).r;
+	vec3 n = decode_normal(texelFetch(gbuffer.nn, ivec2(gl_FragCoord.xy) * 2, 0).rg);
+	float D = texelFetch(gbuffer.depth, ivec2(gl_FragCoord.xy) * 2, 0).r;
 	float d0 = linearize(D);
 
 	float ditherValue = ditherPattern[(int(gl_FragCoord.x) % 4) * 4 + (int(gl_FragCoord.y) % 4)];
@@ -36,7 +35,7 @@ void main(void)
 	float z = clamp((n.z + 0.5), 0.0, 1.0);
 
 	uint taps = 8u;
-	float iterations = 8.0;
+	float iterations = 3.0;
 	/* uint j = 2u; */
 	for (uint j = 0u; j < taps; ++j)
 	/* for (float j = 0.0; j < M_PI; j += M_PI / 40.0) */
@@ -57,9 +56,11 @@ void main(void)
 		{
 			float c0 = pow((i + ditherValue) / (iterations - 1.0), 2.0) + 0.001;
 			vec2 coord1 = offset * c0;
+			ivec2 tp = ivec2((tc + coord1) * (screen_size)) * 2;
+			ivec2 tn = ivec2((tc - coord1) * (screen_size)) * 2;
 
-			float d1 = linearize(textureLod(gbuffer.depth, tc + coord1, 0.0).r);
-			float d2 = linearize(textureLod(gbuffer.depth, tc - coord1, 0.0).r);
+			float d1 = linearize(texelFetch(gbuffer.depth, tp, 0).r);
+			float d2 = linearize(texelFetch(gbuffer.depth, tn, 0).r);
 			float c1 = d0 - d1;
 			float c2 = d0 - d2;
 			if (abs(c1) < 1.0)
@@ -83,7 +84,7 @@ void main(void)
 		}
 	}
 	ao /= float(taps) * iterations;
-	ao = 1.0 - ao * power;
+	ao = 1.0 - ao;
 	FragColor = clamp(ao, 0.0, 1.0); 
 }
 

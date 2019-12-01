@@ -310,7 +310,7 @@ REG()
 	ct_t *ct = ct_new("window", sizeof(c_window_t), c_window_init, NULL, 0);
 
 	ct_listener(ct, ENTITY, 0, sig("entity_created"), c_window_created);
-	ct_listener(ct, WORLD, 10, sig("world_draw"), c_window_draw);
+	ct_listener(ct, WORLD, 5, sig("world_draw"), c_window_draw);
 
 	signal_init(sig("window_resize"), sizeof(window_resize_data));
 	ct_listener(ct, WORLD, 250, ref("event_handle"), c_window_event);

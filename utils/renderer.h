@@ -29,8 +29,9 @@ enum pass_options
 	CULL_INVERT		= 1 << 5,
 	ADD				= 1 << 6,
 	MUL				= 1 << 7,
-	GEN_MIP			= 1 << 8,
-	TRACK_BRIGHT	= 1 << 9
+	BLEND			= 1 << 8,
+	GEN_MIP			= 1 << 9,
+	TRACK_BRIGHT	= 1 << 10
 };
 
 enum bind_type
@@ -46,16 +47,18 @@ enum bind_type
 	CLEAR_COLOR,
 	CLEAR_DEPTH,
 	CALLBACK,
+	USRPTR,
 	SKIP
 };
 
-typedef vec2_t(*vec2_getter)(void *usrptr);
-typedef vec3_t(*vec3_getter)(void *usrptr);
-typedef vec4_t(*vec4_getter)(void *usrptr);
-typedef float(*number_getter)(void *usrptr);
-typedef int(*integer_getter)(void *usrptr);
-typedef void*(*getter_cb)(void *usrptr);
-typedef entity_t(*camera_getter)(void *usrptr);
+typedef vec2_t     (*vec2_getter)(pass_t *pass, void *usrptr);
+typedef vec3_t     (*vec3_getter)(pass_t *pass, void *usrptr);
+typedef vec4_t     (*vec4_getter)(pass_t *pass, void *usrptr);
+typedef float      (*number_getter)(pass_t *pass, void *usrptr);
+typedef int        (*integer_getter)(pass_t *pass, void *usrptr);
+typedef texture_t* (*tex_getter)(pass_t *pass, void *usrptr);
+typedef void*      (*getter_cb)(pass_t *pass, void *usrptr);
+typedef entity_t   (*camera_getter)(pass_t *pass, void *usrptr);
 
 typedef struct
 {
@@ -97,7 +100,6 @@ typedef struct
 	enum bind_type type;
 	char name[32];
 	getter_cb getter;
-	void *usrptr;
 	union
 	{
 		texture_t *buffer;
@@ -107,6 +109,7 @@ typedef struct
 		vec3_t vec3;
 		vec4_t vec4;
 		int integer;
+		void *ptr;
 	};
 	unsigned int hash;
 	hash_bind_t vs_uniforms;
@@ -127,8 +130,9 @@ typedef struct pass_t
 	char name[32];
 	char shader_name[32];
 	uint32_t hash;
-	int32_t additive;
-	int32_t multiply;
+	bool_t additive;
+	bool_t multiply;
+	bool_t blend;
 	int32_t depth_update;
 	int32_t cull;
 	int32_t cull_invert;
@@ -156,6 +160,7 @@ typedef struct pass_t
 
 	/* int32_t sec; */
 	/* uint64_t nano; */
+	void *usrptr;
 } pass_t;
 
 struct gl_camera
@@ -195,10 +200,10 @@ typedef struct c_renderer_t
 	int depth_inverted;
 
 	int32_t camera_count;
+	uint32_t stored_camera_frame[6];
 	struct gl_camera glvars[6];
 	uint32_t ubos[6];
 	uint32_t ubo_changed[6];
-	int moved[6];
 
 	bool_t cubemap;
 	ivec2_t pos;
@@ -249,6 +254,7 @@ vec3_t renderer_real_pos(renderer_t *self, float depth, vec2_t coord);
 vec3_t renderer_screen_pos(renderer_t *self, vec3_t pos);
 int renderer_component_menu(renderer_t *self, void *ctx);
 void renderer_destroy(renderer_t *self);
-void *renderer_process_query_mips(renderer_t *self);
+void *pass_process_query_mips(pass_t *self);
+void *pass_process_brightness(pass_t *self);
 
 #endif /* !RENDERER_H */
