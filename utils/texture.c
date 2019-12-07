@@ -515,6 +515,10 @@ uint32_t _load_tile(tex_tile_t *tile, uint32_t max_loads)
 
 	if (max_loads == 0) return 0;
 	if (tile->bound) return 0;
+	if (parent_tile && !parent_tile->bound)
+	{
+		return 0;
+	}
 
 	if (!tile->loaded && tile->tex->cacher)
 	{
@@ -532,6 +536,7 @@ uint32_t _load_tile(tex_tile_t *tile, uint32_t max_loads)
 		parent_tile->bound++;
 	}
 
+	assert(tile->loading == false);
 	const uint32_t cache_tile = svt_get_free_tile();
 
 	assert(tile->bound == 0);
