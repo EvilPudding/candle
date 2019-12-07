@@ -399,16 +399,19 @@ void test(float mip)
 void set_tile_location(tex_tile_t *tile,
                        const tex_cache_location_t *location) 
 {
-	uint32_t mip = tile->location.mip;
+	uint32_t mip = tile->mip;
 	uint32_t x = tile->x;
 	uint32_t y = tile->y;
 
-	if (tile->location.x == location->x && tile->location.y == location->y)
+	if (   tile->location.x   == location->x
+	    && tile->location.y   == location->y
+	    && tile->location.mip == location->mip)
 	{
 		return;
 	}
-	tile->location.x = location->x;
-	tile->location.y = location->y;
+	tile->location.mip = location->mip;
+	tile->location.x   = location->x;
+	tile->location.y   = location->y;
 	texture_bind(g_indir, 0);
 	glTexSubImage2D(g_indir->target, 0, tile->indir_x, tile->indir_y,
 					1, 1, GL_RGB, GL_UNSIGNED_BYTE, location);
@@ -441,7 +444,7 @@ void set_tile_location(tex_tile_t *tile,
 
 static tex_tile_t *get_parent_tile(tex_tile_t *tile)
 {
-	return texture_get_tile(tile->tex, tile->location.mip + 1,
+	return texture_get_tile(tile->tex, tile->mip + 1,
 	                        tile->x / 2, tile->y / 2);
 }
 
@@ -474,8 +477,9 @@ static uint32_t svt_get_free_tile(void)
 			parent_tile->bound--;
 			set_tile_location(old_tile, &parent_tile->location);
 		}
-		old_tile->location.x = -1;
-		old_tile->location.y = -1;
+		old_tile->location.x = 0;
+		old_tile->location.y = 0;
+		old_tile->location.mip = 0;
 		old_tile->bound = 0;
 	}
 	else
@@ -517,7 +521,7 @@ uint32_t _load_tile(tex_tile_t *tile, uint32_t max_loads)
 		assert(tile->tex->usrptr);
 		if (!tile->loading)
 		{
-			tile->tex->cacher(tile->tex, tile->location.mip, tile->x, tile->y);
+			tile->tex->cacher(tile->tex, tile->mip, tile->x, tile->y);
 		}
 		return 0;
 	}
@@ -537,7 +541,7 @@ uint32_t _load_tile(tex_tile_t *tile, uint32_t max_loads)
 
 	texture_bind(g_cache, 0);
 	tex_cache_location_t new_location;
-	new_location.mip = tile->location.mip;
+	new_location.mip = tile->mip;
 	new_location.x = cache_tile % g_cache_w;
 	new_location.y = cache_tile / g_cache_w;
 
@@ -972,15 +976,24 @@ static void texture_update_indir_info(texture_t *self)
 		for (int y = 0; y < tiles_x; y++) for (int x = 0; x < tiles_x; x++)
 		{
 			tex_tile_t *tilep = &g_tiles[g_indir_n];
-			tilep->indir_x = g_indir_n % g_indir_w;
-			tilep->indir_y = g_indir_n / g_indir_w;
-			tilep->location.mip = m;
-			tilep->location.x = 0;
-			tilep->location.y = 0;
+
+			tilep->loaded = false;
+			tilep->loading = false;
+			tilep->bound = false;
+			tilep->touched = 0;
+
+			tilep->mip = m;
 			tilep->x = x;
 			tilep->y = y;
-			tilep->bound = 0;
+			tilep->indir_x = g_indir_n % g_indir_w;
+			tilep->indir_y = g_indir_n / g_indir_w;
+
+			tilep->location.mip = 0;
+			tilep->location.x = 0;
+			tilep->location.y = 0;
+
 			tilep->tex = self;
+
 			g_indir_n++;
 			assert(g_indir_n < g_indir_w * g_indir_h);
 
@@ -1068,7 +1081,7 @@ int32_t load_tex(texture_t *self)
 int32_t load_tex_tile(tex_tile_t *tile)
 {
 	char buffer[256];
-	texture_tile_filename(tile->tex, tile->location.mip, tile->x, tile->y,
+	texture_tile_filename(tile->tex, tile->mip, tile->x, tile->y,
 	                      buffer, sizeof(buffer));
 
 	int32_t w;
@@ -1090,7 +1103,7 @@ int32_t load_tex_tile(tex_tile_t *tile)
 int32_t save_tex_tile(tex_tile_t *tile)
 {
 	char buffer[256];
-	texture_tile_filename(tile->tex, tile->location.mip, tile->x, tile->y,
+	texture_tile_filename(tile->tex, tile->mip, tile->x, tile->y,
 	                      buffer, sizeof(buffer));
 	stbi_write_png(buffer, 129, 129, 4, tile->bytes, 0);
 	return 1;

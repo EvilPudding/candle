@@ -31,11 +31,13 @@ typedef struct tex_tile
 	uint8_t loading;
 	uint8_t bound;
 	uint8_t touched;
-	uint16_t indir_x;
-	uint16_t indir_y;
 
 	uint16_t x;
 	uint16_t y;
+	uint16_t mip;
+	uint8_t indir_x;
+	uint8_t indir_y;
+
 	tex_cache_location_t location;
 	texture_t *tex;
 
