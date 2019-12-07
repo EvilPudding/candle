@@ -91,6 +91,7 @@ static vicall_t *vifunc_get_call(vifunc_t *type, const slot_t slot,
 		if (iter->id == slot.calls[depth])
 		{
 			depth++;
+			assert(depth < 16);
 			if (depth == max_depth)
 			{
 				return iter;
@@ -143,6 +144,7 @@ slot_t vifunc_slot_from_name(vifunc_t *func, char *buffer,
 		}
 
 		slot.calls[slot.depth++] = id;
+		assert(slot.depth < 16);
 	}
 	return slot;
 }
@@ -300,6 +302,7 @@ void vicall_update_initialized(vicall_t *call)
 		if (arg->data_size && memcmp(arg->previous_data, arg->data,
 		                             arg->data_size))
 		{
+			assert(arg->previous_data);
 			memcpy(arg->previous_data, arg->data, call->type->builtin_size);
 			arg->initialized = true;
 		}
@@ -345,6 +348,7 @@ bool_t vicall_is_linked(vifunc_t *root, slot_t slot)
 	slot_t slt = slot;
 	for (uint8_t depth = 1; depth < slot.depth; depth++) {
 
+		assert(depth < 16);
 		for (uint32_t i = 1; i < 7; i++)
 			slt.calls[i - 1] = slt.calls[i];
 		slt.depth--;
@@ -370,6 +374,7 @@ void _vifunc_foreach_call(vifunc_t *self, bool_t recursive,
 	{
 		slot_t slot = parent_slot;
 		slot.calls[slot.depth++] = ref(iter->name);
+		assert(slot.depth < 16);
 
 		/* if (   (iter->is_input  && !allow_input) */
 		    /* || (iter->is_output && !allow_output)) continue; */
@@ -628,6 +633,8 @@ void vifunc_destroy(vifunc_t *self)
 	{
 		vicall_destroy(it);
 	}
+	free(self->call_buf);
+	free(self->links);
 	khiter_t k = kh_get(vifunc, self->ctx->funcs, self->id);
 	kh_del(vifunc, self->ctx->funcs, k);
 }
@@ -648,7 +655,9 @@ vifunc_t *vifunc_new(vil_t *ctx, const char *name,
 		.builtin_size = builtin_size,
 		.id = id,
 		.ctx = ctx,
-		.is_assignable = is_assignable
+		.is_assignable = is_assignable,
+		.call_buf = calloc(64, sizeof(vicall_t)),
+		.links = calloc(64 * 2, sizeof(struct vil_link)),
 	};
 
 	strncpy((*type)->name, name, sizeof((*type)->name) - 1);
@@ -728,6 +737,7 @@ void propagate_output(vicall_t *root, vicall_t *call, slot_t parent_slot)
 {
 	slot_t slot = parent_slot;
 	slot.calls[slot.depth++] = call->id;
+	assert(slot.depth < 16);
 	vicall_get_ret(root, slot);
 
 	for (vicall_t *it = call->type->begin; it; it = it->next)
@@ -742,22 +752,40 @@ void propagate_data(vicall_t *root, vicall_t *call, slot_t parent_slot,
 {
 	slot_t slot = parent_slot;
 	slot.calls[slot.depth++] = call->id;
+	assert(slot.depth < 16);
 	struct vil_arg *arg = vicall_get_arg(root, slot);
 
 	if (call->data_offset != ~0 && parent_data)
 	{
 		arg->data = parent_data + call->data_offset;
 	}
-	if (!arg->data && call->type->builtin_size)
+	else if (!arg->data && call->type->builtin_size)
 	{
-		arg->data = calloc(1, call->type->builtin_size);
+		/* Am getting an invalid write without this, should be fixed */
+		if (call->type->builtin_size < 64)
+		{
+			arg->data = calloc(1, 64);
+		}
+		else
+		{
+			arg->data = calloc(1, call->type->builtin_size);
+		}
+
 		arg->alloc_head = true;
 		arg->initialized = false;
 	}
 	if (!arg->previous_data && call->type->builtin_size)
 	{
-		arg->previous_data = calloc(1, call->type->builtin_size);
+		if (call->type->builtin_size < 64)
+		{
+			arg->previous_data = calloc(1, 64);
+		}
+		else
+		{
+			arg->previous_data = calloc(1, call->type->builtin_size);
+		}
 	}
+
 	arg->data_size = call->type->builtin_size;
 
 	for (vicall_t *it = call->type->begin; it; it = it->next)
@@ -872,6 +900,7 @@ static void output_options(vicall_t *root,
 	{
 		slot_t slot = parent_slot;
 		slot.calls[slot.depth++] = it->id;
+		assert(slot.depth < 16);
 		struct vil_ret *ret = vicall_get_ret(root, slot);
 		if(it != root && it->type->builtin_size && it->type->is_assignable)
 		{
@@ -901,6 +930,7 @@ static float call_outputs(vicall_t *root,
 	vicall_t *it;
 	slot_t slot = parent_slot;
 	slot.calls[slot.depth++] = call->id;
+	assert(slot.depth < 16);
 
 	struct vil_ret *ret = vicall_get_ret(root, slot);
 
@@ -1005,6 +1035,7 @@ static void call_inputs(vicall_t *root,
 
 	slot_t slot = parent_slot;
 	slot.calls[slot.depth++] = call->id;
+	assert(slot.depth < 16);
 
 	struct vil_arg *arg = vicall_get_arg(root, slot);
 
@@ -1156,6 +1187,7 @@ void _vicall_foreach_unlinked_input(vicall_t *root,
 
 	slot_t slot = parent_slot;
 	slot.calls[slot.depth++] = call->id;
+	assert(slot.depth < 16);
 
 	uint8_t *data = parent_data;
 	struct vil_arg *arg = vicall_get_arg(root, slot);
@@ -1236,6 +1268,7 @@ float _vicall_gui(vicall_t *root, slot_t parent_slot,
 
 	slot_t slot = parent_slot;
 	slot.calls[slot.depth++] = call->id;
+	assert(slot.depth < 16);
 	struct vil_arg *arg = vicall_get_arg(root, slot);
 	arg->y = *y;
 	float start_y = *y;

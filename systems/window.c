@@ -107,6 +107,7 @@ static void init_context_b(c_window_t *self)
 
 void c_window_init(c_window_t *self)
 {
+    SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "no");
 	SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER|SDL_INIT_EVENTS);
 	/* SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, */
 			/* SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); */

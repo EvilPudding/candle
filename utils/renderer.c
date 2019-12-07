@@ -439,6 +439,8 @@ void *pass_process_query_mips(pass_t *self)
 	glReadPixels(0, 0, tex->width, tex->height, tex->bufs[4].format,
 			GL_UNSIGNED_BYTE, NULL); glerr();
 
+	load_tile_frame_inc();
+
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	if (second_stage)
 	{
@@ -569,7 +571,7 @@ void renderer_default_pipeline(renderer_t *self)
 		buffer_new("depth",		true, -1),
 		buffer_new("ids",		false, 4));
 
-	renderer_add_tex(self, "query_mips", 0.05f, query_mips);
+	renderer_add_tex(self, "query_mips", 0.1f, query_mips);
 	renderer_add_tex(self, "gbuffer",    1.0f, gbuffer);
 	renderer_add_tex(self, "ssao",       1.0f / 2.0f, ssao);
 	renderer_add_tex(self, "light",      1.0f, light);
@@ -620,6 +622,13 @@ void renderer_default_pipeline(renderer_t *self)
 		(bind_t[]){
 			{CLEAR_DEPTH, .number = 1.0f},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{NONE}
+		}
+	);
+
+	renderer_add_pass(self, "framebuffer_pass", "framebuffer_draw", ref("framebuffer"), 0,
+			gbuffer, gbuffer, 0,
+		(bind_t[]){
 			{NONE}
 		}
 	);

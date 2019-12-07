@@ -60,6 +60,7 @@ struct conf_vars
 {
 	mesh_t *mesh;
 	skin_t *skin;
+	texture_t *custom_texture;
 	vs_t *vs;
 	draw_cb draw_callback;
 	void *usrptr;
@@ -110,6 +111,7 @@ typedef struct drawable_t
 
 	mesh_t *mesh;
 	skin_t *skin;
+	texture_t *custom_texture;
 	int32_t xray;
 	mat_t *mat;
 	uint32_t matid;
@@ -150,6 +152,7 @@ void drawable_set_vs(drawable_t *self, vs_t *vs);
 void drawable_set_xray(drawable_t *self, int32_t xray);
 void drawable_set_entity(drawable_t *self, entity_t entity);
 void drawable_set_callback(drawable_t *self, draw_cb cb, void *usrptr);
+void drawable_set_texture(drawable_t *self, texture_t *texture);
 
 int32_t drawable_draw(drawable_t *self);
 

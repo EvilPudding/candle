@@ -28,6 +28,7 @@ void drawable_init(drawable_t *self, uint32_t group)
 	self->transform = mat4();
 	self->mesh = NULL;
 	self->skin = NULL;
+	self->custom_texture = NULL;
 	self->xray = false;
 	self->mat = NULL;
 	self->entity = entity_null;
@@ -237,6 +238,15 @@ void drawable_set_group(drawable_t *self, uint32_t group)
 	self->bind[gid].updates = 0;
 
 	drawable_model_changed(self);
+}
+
+void drawable_set_texture(drawable_t *self, texture_t *texture)
+{
+	if (texture != self->custom_texture)
+	{
+		self->custom_texture = texture;
+		drawable_model_changed(self);
+	}
 }
 
 void drawable_set_skin(drawable_t *self, skin_t *skin)
@@ -667,13 +677,14 @@ draw_conf_t *drawable_get_conf(drawable_t *self, uint32_t gid)
 
 	draw_conf_t *result;
 	struct conf_vars conf = {
-		.mesh          = self->mesh,
-		.skin          = self->skin,
-		.vs            = self->vs,
-		.draw_callback = self->draw_callback,
-		.usrptr        = self->usrptr,
-		.xray          = self->xray,
-		.mat_type      = self->mat ? self->mat->type : 0
+		.mesh           = self->mesh,
+		.skin           = self->skin,
+		.custom_texture = self->custom_texture,
+		.vs             = self->vs,
+		.draw_callback  = self->draw_callback,
+		.usrptr         = self->usrptr,
+		.xray           = self->xray,
+		.mat_type       = self->mat ? self->mat->type : 0
 	};
 
 	if (self->bind[gid].grp == 0)
@@ -1057,6 +1068,11 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	draw_conf_update_vao(self);
 
 	c_render_device_t *rd = c_render_device(&SYS);
+
+	shader_t *shader = vs_bind(self->vars.vs, self->vars.mat_type);
+	if (!shader)
+		goto end;
+
 	if (self->vars.skin)
 	{
 		draw_conf_update_skin(self);
@@ -1067,9 +1083,14 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 		c_render_device_bind_ubo(rd, 22, material_get_ubo(self->vars.mat_type));
 	}
 
-	shader_t *shader = vs_bind(self->vars.vs, self->vars.mat_type);
-	if (!shader)
-		goto end;
+	if (self->vars.custom_texture)
+	{
+		uint32_t loc;
+		loc = shader_cached_uniform(shader, ref("g_framebuffer"));
+		glUniform1i(loc, 6);
+		glActiveTexture(GL_TEXTURE0 + 6);
+		texture_bind(self->vars.custom_texture, 0);
+	}
 
 	if (self->vars.draw_callback)
 	{

@@ -153,8 +153,8 @@ typedef struct vifunc_t
 	char name[32];
 	uint32_t id;
 
-	vicall_t call_buf[32];
-	struct vil_link links[64];
+	vicall_t *call_buf;
+	struct vil_link *links;
 	vicall_t *begin;
 	vicall_t *end;
 	uint32_t call_count;

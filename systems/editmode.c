@@ -1196,8 +1196,8 @@ int32_t c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 	float h = tex->height;
 	/* if (w > 1000) */
 	{
-		h = 800.0f * (h / w);
-		w = 800.0f;
+		h = 300.0f * (h / w);
+		w = 300.0f;
 	}
 
 	res = nk_can_begin_titled(self->nk, buffer, title,

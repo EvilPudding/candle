@@ -138,6 +138,7 @@ void shaders_highlight_glsl_reg(void);
 void shaders_context_glsl_reg(void);
 void shaders_editmode_glsl_reg(void);
 void shaders_uniforms_glsl_reg(void);
+void shaders_framebuffer_draw_glsl_reg(void);
 
 void shaders_reg()
 {
@@ -163,6 +164,7 @@ void shaders_reg()
 	shaders_ssr_glsl_reg();
 	shaders_uniforms_glsl_reg();
 	shaders_extract_depth_glsl_reg();
+	shaders_framebuffer_draw_glsl_reg();
 }
 
 vertex_modifier_t _vertex_modifier_new(bool_t has_skin, const char *code,

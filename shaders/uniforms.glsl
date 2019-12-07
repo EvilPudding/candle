@@ -47,6 +47,7 @@ layout(std140) uniform skin_t
 /* layout(location = 26) */ uniform sampler2D g_cache;
 /* layout(location = 27) */ uniform sampler2D g_indir;
 /* layout(location = 28) */ uniform sampler2D g_probes;
+/* layout(location = 29) */ uniform sampler2D g_framebuffer;
 
 /* layout(location = 25) uniform camera_t camera; */
 

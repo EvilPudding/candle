@@ -2734,7 +2734,6 @@ void mesh_load(mesh_t *self, const char *filename)
 
 	strncpy(ext, strrchr(filename, '.') + 1, sizeof(ext) - 1);
 
-
 	if(!strncmp(ext, "ply", sizeof(ext) - 1))
 	{
 		mesh_load_ply(self, filename);

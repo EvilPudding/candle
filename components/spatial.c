@@ -158,12 +158,14 @@ void c_spatial_set_rot(c_spatial_t *self, float x, float y, float z, float angle
 	float new_z = z * angle;
 	c_spatial_lock(self);
 
-	mat4_t rot_matrix = mat4_rotate(mat4(), x, 0, 0,
-			new_x - self->rot.x);
-	rot_matrix = mat4_rotate(rot_matrix, 0, 0, z,
-			new_z - self->rot.z);
-	rot_matrix = mat4_rotate(rot_matrix, 0, y, 0,
-			new_y - self->rot.y);
+	mat4_t rot_matrix = mat4();
+	if (x)
+		rot_matrix = mat4_rotate(rot_matrix, x, 0, 0, new_x);
+	if (z)
+		rot_matrix = mat4_rotate(rot_matrix, 0, 0, z, new_z);
+	if (y)
+		rot_matrix = mat4_rotate(rot_matrix, 0, y, 0, new_y);
+
 	self->rot_quat = mat4_to_quat(rot_matrix);
 
 	if(x) self->rot.x = new_x;

@@ -17,43 +17,50 @@ typedef struct
 	uint8_t x;
 	uint8_t y;
 	uint8_t mip;
+	uint8_t alignment_pad;
 } tex_cache_location_t;
 
 typedef struct tex_tile tex_tile_t;
 typedef struct texture_t texture_t;
+typedef void(*texture_cache_cb)(texture_t *texture, uint32_t mip,
+                                uint32_t x, uint32_t y);
 
 typedef struct tex_tile
 {
-	uint32_t bound;
-	uint32_t touched;
-	uint32_t indir_x;
-	uint32_t indir_y;
-	uint32_t bytes[129 * 129];
+	uint8_t loaded;
+	uint8_t loading;
+	uint8_t bound;
+	uint8_t touched;
+	uint16_t indir_x;
+	uint16_t indir_y;
 
-	uint32_t x;
-	uint32_t y;
+	uint16_t x;
+	uint16_t y;
 	tex_cache_location_t location;
-	tex_tile_t *loaded_mip;
 	texture_t *tex;
+
+	uint32_t bytes[129 * 129];
 } tex_tile_t;
 
 typedef struct
 {
+	char name[32];
 	uint32_t id;
 	uint32_t fb_ready;
-	int dims;
+
+	int32_t dims;
 	uint32_t format;
 	uint32_t internal;
 	uint32_t type;
-	char *name;
-	uint8_t *data;
+
 	uint32_t ready;
 	uint32_t pbo;
+	uint8_t *data;
 
 	tex_tile_t *mips[MAX_MIPS];
 	uint32_t num_tiles[MAX_MIPS];
 	tex_tile_t *tiles;
-	int indir_n;
+	int32_t indir_n;
 } buffer_t;
 
 typedef struct texture_t
@@ -79,7 +86,6 @@ typedef struct texture_t
 	uint32_t frame_buffer[MAX_MIPS];
 	uvec2_t sizes[MAX_MIPS];
 
-	char *filename;
 	int32_t framebuffer_ready;
 	int32_t draw_id;
 	int32_t prev_id;
@@ -87,6 +93,9 @@ typedef struct texture_t
 	int32_t interpolate;
 	int32_t loading;
 	bool_t sparse_it;
+
+	texture_cache_cb cacher;
+	void *usrptr;
 } texture_t;
 
 texture_t *texture_from_file(const char *filename);
@@ -128,6 +137,7 @@ void texture_destroy(texture_t *self);
 uint32_t load_tile(texture_t *self, uint32_t mip, uint32_t x, uint32_t y,
                  uint32_t max_loads);
 uint32_t load_tile_by_id(uint32_t tile, uint32_t max_loads);
+void load_tile_frame_inc(void);
 tex_tile_t *texture_get_tile(texture_t *self, uint32_t mip,
                              uint32_t x, uint32_t y);
 

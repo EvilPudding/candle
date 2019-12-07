@@ -322,15 +322,15 @@ vec3 ppp[] = vec3[](
 
 
 vec3 fTaps_Poisson[] = vec3[](
-	vec3(0.068824, -0.326151,   0.0),
-	vec3(0.248043, 0.222679,   0.0),
-	vec3(-0.316867, 0.103472,   0.0),
-	vec3(-0.525182, 0.410644,   0.5),
-	vec3(-0.618219, -0.249499,   0.5),
-	vec3(-0.093037, -0.660143,   0.5),
-	vec3(0.525182, -0.410644,   0.5),
-	vec3(0.618219, 0.249499,   0.5),
-	vec3(0.093037, 0.660143,   0.5),
+	vec3(0.068824, -0.326151,   0.3),
+	vec3(0.248043, 0.222679,   0.3),
+	vec3(-0.316867, 0.103472,   0.3),
+	vec3(-0.525182, 0.410644,   0.6),
+	vec3(-0.618219, -0.249499,   0.6),
+	vec3(-0.093037, -0.660143,   0.6),
+	vec3(0.525182, -0.410644,   0.6),
+	vec3(0.618219, 0.249499,   0.6),
+	vec3(0.093037, 0.660143,   0.6),
 	vec3(0.536822, -0.843695,   1.0),
 	vec3(0.930210, -0.367028,   1.0),
 	vec3(0.968289, 0.249832,   1.0),
@@ -362,7 +362,7 @@ float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)
 		float min_dist = 1.0;
 		for (uint j = 0u; j < 19u; j++)
 		{
-			vec3 offset = fTaps_Poisson[j] * ditherValue;
+			vec3 offset = fTaps_Poisson[j] * ((4.0/3.0) * ditherValue);
 			if(lookup(-vec + (offset.x * tangent + offset.y * bitangent) * shadow_len) > 0.5)
 			{
 				min_dist = offset.z;

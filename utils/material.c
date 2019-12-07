@@ -194,15 +194,6 @@ static bool_t _texture_load(vicall_t *call, _mat_sampler_t *texid, FILE *fp)
 	{
 		printf("Failed to fetch texture '%s'\n", filename);
 	}
-	for (uint32_t i = 0; !texid->texture->bufs[0].indir_n; i++)
-	{
-		SDL_Delay(100);
-		/* if (i == 3) */
-		{
-			/* printf("giving up on %s\n", filename); */
-			/* break; */
-		}
-	}
 	texid->tile = texid->texture->bufs[0].indir_n;
 	texid->size = vec2(texid->texture->width, texid->texture->height);
 
@@ -211,7 +202,7 @@ static bool_t _texture_load(vicall_t *call, _mat_sampler_t *texid, FILE *fp)
 
 static void _texture_save(vicall_t *call, _mat_sampler_t *texid, FILE *fp) 
 {
-	fprintf(fp, "%s", texid->texture ? texid->texture->filename : "");
+	fprintf(fp, "%s", texid->texture ? (char*)texid->texture->usrptr : "");
 }
 
 extern texture_t *g_cache;
@@ -241,8 +232,8 @@ static float _tex_previewer_gui(vicall_t *call, _mat_sampler_t *texid, void *ctx
 	}
 
 	nk_layout_row_dynamic(ctx, 20, 1);
-	if (nk_button_label(ctx, texid->texture && texid->texture->filename
-	                         ? texid->texture->filename : "pick texture "))
+	if (nk_button_label(ctx, texid->texture && (char*)texid->texture->usrptr
+	                         ? (char*)texid->texture->usrptr : "pick texture "))
 	{
 		char *file = NULL;
 		entity_signal(entity_null, ref("pick_file_load"), "png;tga;jpg", &file);
@@ -1551,7 +1542,7 @@ void mat1t(mat_t *self, uint32_t ref, texture_t *value)
 		SDL_Delay(100);
 		if (i == 16)
 		{
-			printf("giving up on %s\n", value->filename);
+			printf("giving up on %s\n", (char*)value->usrptr);
 			break;
 		}
 	}
