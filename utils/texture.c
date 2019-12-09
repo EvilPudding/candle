@@ -60,6 +60,7 @@ bool_t *g_probe_tiles;
 uint32_t g_min_shadow_tile = 64;
 uint32_t g_max_probe_levels;
 uint32_t g_num_shadows;
+SDL_sem *g_indir_sem;
 
 uint32_t get_sum_tiles(uint32_t level)
 {
@@ -71,6 +72,7 @@ void svp_init()
 	int max;
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max);
 	max = floorf(((float)max) / 129);
+	g_indir_sem = SDL_CreateSemaphore(1);
 	g_cache = texture_new_2D(g_cache_w * 129, g_cache_h * 129, TEX_INTERPOLATE,
 	                         buffer_new("color", false, 4));
 	g_cache_bound = calloc(g_cache_w * g_cache_h, sizeof(*g_cache_bound));
@@ -536,7 +538,6 @@ uint32_t _load_tile(tex_tile_t *tile, uint32_t max_loads)
 		parent_tile->bound++;
 	}
 
-	assert(tile->loading == false);
 	const uint32_t cache_tile = svt_get_free_tile();
 
 	assert(tile->bound == 0);
@@ -965,6 +966,7 @@ static void texture_update_indir_info(texture_t *self)
 				break;
 	}
 
+	SDL_SemWait(g_indir_sem);
 	self->bufs[0].indir_n = g_indir_n;
 	self->bufs[0].tiles = &g_tiles[g_indir_n];
 
@@ -1010,6 +1012,7 @@ static void texture_update_indir_info(texture_t *self)
 		if (tiles_x > 1)
 			tiles_x = tiles_x / 2;
 	}
+	SDL_SemPost(g_indir_sem);
 
 	self->sparse_it = true;
 }
