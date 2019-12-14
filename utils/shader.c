@@ -363,7 +363,7 @@ static const struct source shader_source(const char *filename)
 	g_sources = realloc(g_sources, (sizeof *g_sources) * g_sources_num);
 	g_sources[i].len = lsize;
 	strcpy(g_sources[i].filename, filename);
-	g_sources[i].src = strdup(buffer);
+	g_sources[i].src = str_dup(buffer);
 
 	return g_sources[i];
 

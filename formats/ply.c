@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define MAX_WORD 4095
+
 enum value_type {
 	NONE,
 	FLOAT, DOUBLE,
@@ -46,19 +48,22 @@ static struct type_info g_types[] =
 
 
 
+typedef struct
+{
+	char chars[MAX_WORD + 1];
+} ply_word_t;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                .PLY LOADER                                 //
 ////////////////////////////////////////////////////////////////////////////////
 
-static char **get_words(FILE *fp, int *nwords)
+static ply_word_t *get_words(FILE *fp, int *nwords)
 {
-#define MAX_WORD 4095
 #define _WORD_FORMAT(mx) " %" #mx "s"
 #define WORD_FORMAT(mx) _WORD_FORMAT(mx)
 	unsigned int i;
 
-	char **words;
+	ply_word_t *words;
 	int num_words = 0;
 
 	char word[MAX_WORD + 1];
@@ -69,13 +74,14 @@ static char **get_words(FILE *fp, int *nwords)
 
 	rewind(fp);
 
-	words =  malloc(sizeof(char *) * num_words);
+	words = malloc(sizeof(ply_word_t) * num_words);
 
 	for(i = 0; i < num_words; i++)
 	{
-		if(fscanf(fp, WORD_FORMAT(MAX_WORD), word) == -1) word[0] = '\0';
-		/* TODO: Make this memory contiguous */
-		words[i] = strdup(word);
+		if(fscanf(fp, WORD_FORMAT(MAX_WORD), words[i].chars) == -1)
+		{
+			words[i].chars[0] = '\0';
+		}
 	}
 
 	*nwords = num_words;
@@ -110,8 +116,8 @@ void mesh_load_ply(mesh_t *self, const char *filename)
 
 	unsigned int i;
 	int nwords;
-	char **words;
-	char **word;
+	ply_word_t *words;
+	ply_word_t *word;
 
 	struct property
 	{
@@ -141,24 +147,24 @@ void mesh_load_ply(mesh_t *self, const char *filename)
 
 	words = get_words(fp, &nwords);
 
-	if(!words || !!strcmp(words[0], "ply")) exit(1);
+	if(!words || !!strcmp(words[0].chars, "ply")) exit(1);
 
 	/* READ HEADER */
 
-	for(word = words; *word;)
+	for(word = words; word->chars[0];)
 	{
-		if(!strcmp(word[0], "format"))
+		if(!strcmp(word[0].chars, "format"))
 		{
 			word++;
-			if(!strcmp(*word, "ascii"))
+			if(!strcmp(word->chars, "ascii"))
 			{
 				file_type = FORMAT_ASCII;
 			}
-			else if(!strcmp(*word, "binary_big_endian"))
+			else if(!strcmp(word->chars, "binary_big_endian"))
 			{
 				file_type = FORMAT_BINARY_BE;
 			}
-			else if(!strcmp(*word, "binary_little_endian"))
+			else if(!strcmp(word->chars, "binary_little_endian"))
 			{
 				file_type = FORMAT_BINARY_LE;
 			}
@@ -169,7 +175,7 @@ void mesh_load_ply(mesh_t *self, const char *filename)
 			/* word[1] is version */
 			word++;
 		}
-		else if(!strcmp(*word, "element"))
+		else if(!strcmp(word->chars, "element"))
 		{
 			word++;
 
@@ -178,28 +184,28 @@ void mesh_load_ply(mesh_t *self, const char *filename)
 			struct element_type *el = &elements[i];
 			el->props_num = 0;
 			
-			strncpy(el->name, *word, sizeof(el->name) - 1); word++;
-			if(sscanf(*word, "%d", &el->num) < 0) exit(1);
+			strncpy(el->name, word->chars, sizeof(el->name) - 1); word++;
+			if(sscanf(word->chars, "%d", &el->num) < 0) exit(1);
 			word++;
 
-			while(!strcmp(*word, "property"))
+			while(!strcmp(word->chars, "property"))
 			{
 				word++;
 
 				struct property *props = &el->props[el->props_num];
 				el->props_num++;
 
-				props->type = get_type(*word); word++;
+				props->type = get_type(word->chars); word++;
 
 				if(g_types[props->type].type == LIST)
 				{
-					props->list_count_type = get_type(*word); word++;
-					props->list_element_type = get_type(*word); word++;
+					props->list_count_type = get_type(word->chars); word++;
+					props->list_element_type = get_type(word->chars); word++;
 				}
-				strncpy(props->name, *word, sizeof(props->name) - 1); word++;
+				strncpy(props->name, word->chars, sizeof(props->name) - 1); word++;
 			}
 		}
-		else if(!strcmp(*word, "end_header"))
+		else if(!strcmp(word->chars, "end_header"))
 		{
 			word++;
 			break;
@@ -243,10 +249,10 @@ void mesh_load_ply(mesh_t *self, const char *filename)
 						struct type_info *list_type =
 							&g_types[prop->list_element_type];
 
-						sscanf(*(word++), count_type->format, &count);
+						sscanf((word++)->chars, count_type->format, &count);
 						for(c = 0; c < count; c++)
 						{
-							sscanf(*(word++), list_type->format, &id[c]);
+							sscanf((word++)->chars, list_type->format, &id[c]);
 						}
 					}
 				}
@@ -256,15 +262,15 @@ void mesh_load_ply(mesh_t *self, const char *filename)
 					{
 						if(!strcmp(prop->name, "x"))
 						{
-							sscanf(*word, type->format, &x);
+							sscanf(word->chars, type->format, &x);
 						}
 						if(!strcmp(prop->name, "y"))
 						{
-							sscanf(*word, type->format, &y);
+							sscanf(word->chars, type->format, &y);
 						}
 						if(!strcmp(prop->name, "z"))
 						{
-							sscanf(*word, type->format, &z);
+							sscanf(word->chars, type->format, &z);
 						}
 						word++;
 					}
@@ -274,8 +280,8 @@ void mesh_load_ply(mesh_t *self, const char *filename)
 			if(face)
 			{
 
-				vec3_t z3 = vec3(0.0);
-				vec2_t z2 = vec2(0.0);
+				vec3_t z3 = vec3(0.0f, 0.0f, 0.0f);
+				vec2_t z2 = vec2(0.0f, 0.0f);
 				if(count == 4)
 				{
 					mesh_add_quad(self,
@@ -297,10 +303,6 @@ void mesh_load_ply(mesh_t *self, const char *filename)
 	self->has_texcoords = 0;
 
 	free(elements);
-	for(i = 0; i < nwords; i++)
-	{
-		free(words[i]);
-	}
 	free(words);
 
     fclose(fp);

@@ -184,11 +184,11 @@ mesh_t *mesh_new()
 
 static void vert_init(vertex_t *self)
 {
-	self->color = vec4(0.0f);
+	self->color = vec4(0.0f, 0.0f, 0.0f, 0.0f);
 	self->tmp = -1;
 	self->half = -1;
-	self->wei = vec4(0.0f);
-	self->bid = vec4(0);
+	self->wei = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+	self->bid = vec4(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
 
@@ -201,8 +201,8 @@ static void edge_init(edge_t *self)
 
 	self->tmp = -1;
 
-	self->n = vec3(0.0f);
-	self->tg = vec3(0.0f);
+	self->n = vec3(0.0f, 0.0f, 0.0f);
+	self->tg = vec3(0.0f, 0.0f, 0.0f);
 
 	self->v = -1;
 
@@ -220,7 +220,7 @@ static void cell_init(cell_t *self)
 
 static void face_init(face_t *self)
 {
-	self->n = vec3(0.0f);
+	self->n = vec3(0.0f, 0.0f, 0.0f);
 	self->e_size = 0;
 	self->tmp = 0;
 	self->e[0] = self->e[1] = self->e[2] = -1;
@@ -1180,7 +1180,7 @@ int mesh_append_edge(mesh_t *self, vecN_t p)
 
 int mesh_add_edge_s(mesh_t *self, int v, int prev)
 {
-	return mesh_add_edge(self, v, -1, prev, vec3(0.0f), vec2(0.0f));
+	return mesh_add_edge(self, v, -1, prev, vec3(0.0f, 0.0f, 0.0f), vec2(0.0f, 0.0f));
 }
 
 static inline void sort3(int *v)
@@ -1426,7 +1426,6 @@ static void mesh_update_cell_pairs(mesh_t *self)
 	}
 }
 
-void breakpoint(void){}
 int mesh_get_pair_edge(mesh_t *self, int edge_id)
 {
 	edge_t *edge = m_edge(self, edge_id); if(!edge) return 0;
@@ -1444,12 +1443,6 @@ int mesh_get_pair_edge(mesh_t *self, int edge_id)
 			k = kh_put(id, self->edges_hash, hash, &ret);
 			kh_value(self->edges_hash, k) = edge_id;
 			assert(m_edge(self, edge_id));
-			/* printf("[31mNOT[0m"); */
-			if (edge_id == 50 && !strcmp(self->name, "boxes"))
-			{
-				printf("%s adding %d\n", self->name, edge_id);
-				breakpoint();
-			}
 		}
 		else
 		{
@@ -1458,16 +1451,13 @@ int mesh_get_pair_edge(mesh_t *self, int edge_id)
 			kh_del(id, self->edges_hash, k);
 
 			edge_t *pair = m_edge(self, pair_id);
-			if (!pair)
-				printf("%s %d\n", self->name, pair_id);
 			assert(pair);
 
-			/* printf("FOUND	%d	(%p)", pair_id, mesh_edge_to_id(self, pair)); */
-			if(edge->v != e_next(pair, self)->v ||
-				pair->v != e_next(edge, self)->v )
-			{
-				/* exit(1); */
-			}
+			/* if(edge->v != e_next(pair, self)->v || */
+			/* 	pair->v != e_next(edge, self)->v ) */
+			/* { */
+			/* 	exit(1); */
+			/* } */
 
 			edge->pair = pair_id;
 
@@ -2051,7 +2041,7 @@ float mesh_get_selection_radius(mesh_t *self, vecN_t center)
 
 vecN_t mesh_get_selection_center(mesh_t *self)
 {
-	vecN_t center = vecN(0.0f);
+	vecN_t center = ZN;
 	int count = 0;
 
 	khash_t(id) *selected_edges = self->selections[SEL_EDITING].edges;

@@ -76,7 +76,7 @@ static int c_bone_position_changed(c_bone_t *self)
 	vec3_t p = c_spatial(self)->pos;
 	float len = vec3_len(p);
 
-	mat4_t model = mat4_look_at(p, vec3(0.0f), vec3(0.0f, 1.0f, 0.0f));
+	mat4_t model = mat4_look_at(p, vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
 	model = mat4_scale_aniso(mat4_invert(model), vec3(len, len, len));
 
 	mat4_t par_model = mat4_mul(par->model, model);

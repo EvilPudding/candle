@@ -311,3 +311,25 @@ void strrepl(const char *original, char *output,
 	output[output_i] = '\0';
 
 }
+
+char *str_readline(FILE *fp)
+{
+    char *line = str_new(1024);
+	char block[1024];
+    while (1)
+	{
+        if (fgets(block, 1024, fp) == NULL)
+		{
+			break;
+		}
+		str_cat(&line, block);
+		char *last_char = &block[strlen(block) - 1];
+		if (*last_char == '\n' || *last_char == '\r')
+		{
+			/* *last_char = '\0'; */
+			/* str_cat(&line, block); */
+			break;
+		}
+    }
+    return line;
+}

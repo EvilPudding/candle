@@ -18,6 +18,10 @@ void sincosf(float x, float *sin, float *cos);
 #define CONST __constant
 #endif
 
+#ifndef M_PI
+#define M_PI   3.14159265358979323846264338327950288
+#endif
+
 #define n_t float
 
 #define MAFS_DEFINE_STRUCTS(n_t, type) \
@@ -40,6 +44,33 @@ typedef struct type##4_t { union { \
 	struct { type##2_t xy; type##2_t zw; }; \
 	type##3_t xyz; \
 }; } type##4_t; \
+
+#define EXPANDED_vec2(x, y) ((vec2_t){{{x, y}}})
+#define EXPANDED_vec3(x, y, z) ((vec3_t){{{x, y, z}}})
+#define EXPANDED_vec4(x, y, z, w) ((vec4_t){{{x, y, z, w}}})
+#define EXPANDED_uvec2(x, y) ((uvec2_t){{{x, y}}})
+#define EXPANDED_uvec3(x, y, z) ((uvec3_t){{{x, y, z}}})
+#define EXPANDED_uvec4(x, y, z, w) ((uvec4_t){{{x, y, z, w}}})
+#define EXPANDED_ivec2(x, y) ((ivec2_t){{{x, y}}})
+#define EXPANDED_ivec3(x, y, z) ((ivec3_t){{{x, y, z}}})
+#define EXPANDED_ivec4(x, y, z, w) ((ivec4_t){{{x, y, z, w}}})
+#define EXPANDED_d2(x, y) ((d2_t){{{x, y}}})
+#define EXPANDED_d3(x, y, z) ((d3_t){{{x, y, z}}})
+#define EXPANDED_d4(x, y, z, w) ((d4_t){{{x, y, z, w}}})
+#define EXPAND(...) __VA_ARGS__
+
+#define vec2(...) EXPANDED_vec2(__VA_ARGS__)
+#define vec3(...) EXPANDED_vec3(__VA_ARGS__)
+#define vec4(...) EXPANDED_vec4(__VA_ARGS__)
+#define uvec2(...) EXPANDED_uvec2(__VA_ARGS__)
+#define uvec3(...) EXPANDED_uvec3(__VA_ARGS__)
+#define uvec4(...) EXPANDED_uvec4(__VA_ARGS__)
+#define ivec2(...) EXPANDED_ivec2(__VA_ARGS__)
+#define ivec3(...) EXPANDED_ivec3(__VA_ARGS__)
+#define ivec4(...) EXPANDED_ivec4(__VA_ARGS__)
+#define d2(...) EXPANDED_d2(__VA_ARGS__)
+#define d3(...) EXPANDED_d3(__VA_ARGS__)
+#define d4(...) EXPANDED_d4(__VA_ARGS__)
 
 #ifndef __OPENCL_C_VERSION__
 
@@ -421,7 +452,7 @@ static inline uint32_t _ignore(uint32_t a) { return a; }
 
 #define MAFS_DEFINE_TYPE(n_t, type, format, sqrt, pow, floor, round, tabs) \
 	MAFS_DEFINE_STRUCTS(n_t, type) \
-	MAFS_DEFINE_CONSTRUCTOR(n_t, type) \
+	/* MAFS_DEFINE_CONSTRUCTOR(n_t, type) \ */ \
 	MAFS_DEFINE_VEC(n_t, type, 2, sqrt, pow, floor, round, tabs) \
 	MAFS_DEFINE_VEC(n_t, type, 3, sqrt, pow, floor, round, tabs) \
 	MAFS_DEFINE_VEC(n_t, type, 4, sqrt, pow, floor, round, tabs) \
@@ -1244,23 +1275,18 @@ static inline vec2_t int_to_vec2(int id)
 	return vec2((float)convert.r / 255, (float)convert.g / 255);
 }
 
-#define Z3 (vec3(0.0f))
-#define Z2 (vec2(0.0f))
+#define Z3 ((vec3_t){{{0.0f, 0.0f, 0.0f}}})
+#define Z2 ((vec2_t){{{0.0f, 0.0f}}})
 /* CONST vec3_t Z3 = { .x = 0, .y = 0, .z = 0}; */
 /* CONST vec2_t Z2 = { .x = 0, .y = 0}; */
 
 #ifndef __OPENCL_C_VERSION__
-#define MAFS_ARGNUM(...) \
-    _MAFS_ARGNUM(_0, ##__VA_ARGS__, 4, 3, 2, 1, 0)
-
-#define _MAFS_ARGNUM(_0, _1, _2, _3, _4, N, ...) N
+/* #define MAFS_ARGNUM(...) \ */
+    /* _MAFS_ARGNUM(_0, ##__VA_ARGS__, 4, 3, 2, 1, 0) */
+/* #define _MAFS_ARGNUM(_0, _1, _2, _3, _4, N, ...) N */
 
 #define CAT(a,b) a##b
 #define CAT2(a,b) CAT(a,b)
-
-#define _type(a, b) __builtin_types_compatible_p(typeof(a), b)
-#define _if(c, a, b) __builtin_choose_expr(c, a, b)
-/* #define CONSTIFY(x) (__builtin_constant_p(x)&&(x)) */
 
 #define _vec2(v) (float)v.x, (float)v.y
 #define _vec3(v) (float)v.x, (float)v.y, (float)v.z
@@ -1274,123 +1300,6 @@ static inline vec2_t int_to_vec2(int id)
 #define _d2(v) (double)v.x, (double)v.y
 #define _d3(v) (double)v.x, (double)v.y, (double)v.z
 #define _d4(v) (double)v.x, (double)v.y, (double)v.z, (double)v.w
-
-#define __vec2_1(a)  \
-			_if(_type(a, vec2_t), \
-				a, \
-				vec2_n(a) \
-			)
-#define __vec2_2(a, b)  \
-			vec2_n_n(a, b)
-
-
-#define __vec3_1(a)  \
-			_if(_type(a, vec3_t), \
-				a, \
-				vec3_n(a) \
-			)
-#define __vec3_2(a, b)  \
-			_if(_type(a, vec2_t), \
-				vec3v2f(a, b), \
-				vec3fv2(a, b) \
-			)
-#define __vec3_3(a, b, c)  \
-			vec3_n_n_n(a, b, c)
-
-#define __vec4_1(a)  \
-			_if(_type(a, vec4_t), \
-				a, \
-				vec4_n(a) \
-			)
-#define __vec4_2(a, b)  \
-			_if(_type(a, vec3_t), \
-				vec4v3f(a, b), \
-				vec4fv3(a, b) \
-			)
-#define __vec4_4(a, b, c, d)  \
-			vec4_n_n_n_n(a, b, c, d)
-
-
-#define __ivec2_1(a)  \
-			_if(_type(a, ivec2_t), \
-				a, \
-				ivec2_n(a) \
-			)
-#define __ivec2_2(a, b)  \
-			ivec2_n_n(a, b)
-
-
-#define __ivec3_1(a)  \
-			_if(_type(a, ivec3_t), \
-				a, \
-				ivec3_n(a) \
-			)
-#define __ivec3_2(a, b)  \
-			_if(_type(a, ivec2_t), \
-				ivec3v2f(a, b), \
-				ivec3fv2(a, b) \
-			)
-#define __ivec3_3(a, b, c)  \
-			ivec3_n_n_n(a, b, c)
-
-#define __ivec4_1(a)  \
-			_if(_type(a, ivec4_t), \
-				a, \
-				ivec4_n(a) \
-			)
-#define __ivec4_2(a, b)  \
-			_if(_type(a, ivec3_t), \
-				ivec4v3f(a, b), \
-				ivec4fv3(a, b) \
-			)
-#define __ivec4_4(a, b, c, d)  \
-			ivec4_n_n_n_n(a, b, c, d)
-
-
-#define __uvec2_1(a)  \
-			_if(_type(a, uvec2_t), \
-				a, \
-				uvec2_n(a) \
-			)
-#define __uvec2_2(a, b)  \
-			uvec2_n_n(a, b)
-
-
-#define __uvec3_1(a)  \
-			_if(_type(a, uvec3_t), \
-				a, \
-				uvec3_n(a) \
-			)
-#define __uvec3_2(a, b)  \
-			_if(_type(a, uvec2_t), \
-				uvec3v2f(a, b), \
-				uvec3fv2(a, b) \
-			)
-#define __uvec3_3(a, b, c)  \
-			uvec3_n_n_n(a, b, c)
-
-#define __uvec4_1(a)  \
-			_if(_type(a, uvec4_t), \
-				a, \
-				uvec4_n(a) \
-			)
-#define __uvec4_2(a, b)  \
-			_if(_type(a, uvec3_t), \
-				uvec4v3f(a, b), \
-				uvec4fv3(a, b) \
-			)
-#define __uvec4_4(a, b, c, d)  \
-			uvec4_n_n_n_n(a, b, c, d)
-
-#define vec2(...) CAT2(__vec2_, MAFS_ARGNUM(__VA_ARGS__))(__VA_ARGS__)
-#define vec3(...) CAT2(__vec3_, MAFS_ARGNUM(__VA_ARGS__))(__VA_ARGS__)
-#define vec4(...) CAT2(__vec4_, MAFS_ARGNUM(__VA_ARGS__))(__VA_ARGS__)
-#define uvec2(...) CAT2(__uvec2_, MAFS_ARGNUM(__VA_ARGS__))(__VA_ARGS__)
-#define uvec3(...) CAT2(__uvec3_, MAFS_ARGNUM(__VA_ARGS__))(__VA_ARGS__)
-#define uvec4(...) CAT2(__uvec4_, MAFS_ARGNUM(__VA_ARGS__))(__VA_ARGS__)
-#define vec2(...) CAT2(__vec2_, MAFS_ARGNUM(__VA_ARGS__))(__VA_ARGS__)
-#define vec3(...) CAT2(__vec3_, MAFS_ARGNUM(__VA_ARGS__))(__VA_ARGS__)
-#define vec4(...) CAT2(__vec4_, MAFS_ARGNUM(__VA_ARGS__))(__VA_ARGS__)
 
 #define xy(vec) vec.xy
 #define xz(vec) vec2(vec.x, vec.z)

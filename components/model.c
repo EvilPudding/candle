@@ -247,7 +247,7 @@ static vec2_t encode_normal(vec3_t n)
 {
 	n = vec3_norm(n);
     float p = sqrtf(n.z * 8.0f + 8.0f);
-	if(p == 0) return vec2(0);
+	if(p == 0) return vec2(0.0f, 0.0f);
 	/* printf("%f ", p); vec3_print(n); */
     return vec2_add_number(vec2_div_number(n.xy, p), 0.5f);
 }

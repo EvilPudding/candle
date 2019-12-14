@@ -498,10 +498,12 @@ void varray_edges_to_gl(varray_t *self)
 
 		vertex_t *V1 = e_vert(curr_edge, mesh);
 		vertex_t *V2 = e_vert(next_edge, mesh);
-		int32_t v1 = varray_add_vert(self, V1->pos,
-				vec3(0.0f), vec2(0.0f), vec3(0.0f), V1->color.xyz, 0, vec4(0,0,0,0), vec4(0,0,0,0));
-		int32_t v2 = varray_add_vert(self, V2->pos,
-				vec3(0.0f), vec2(0.0f), vec3(0.0f), V2->color.xyz, 0, vec4(0,0,0,0), vec4(0,0,0,0));
+		int32_t v1 = varray_add_vert(self, V1->pos, vec3(0.0f, 0.0f, 0.0f), vec2(0.0f, 0.0f),
+		                             vec3(0.0f, 0.0f, 0.0f), V1->color.xyz,
+		                             0, vec4(0.0f, 0.0f, 0.0f, 0.0f), vec4(0.0f, 0.0f, 0.0f, 0.0f));
+		int32_t v2 = varray_add_vert(self, V2->pos, vec3(0.0f, 0.0f, 0.0f), vec2(0.0f, 0.0f),
+		                             vec3(0.0f, 0.0f, 0.0f), V2->color.xyz, 0, vec4(0.0f, 0.0f, 0.0f, 0.0f),
+		                             vec4(0.0f, 0.0f, 0.0f, 0.0f));
 
 		varray_add_line(self, v1, v2);
 
@@ -520,10 +522,10 @@ void varray_verts_to_gl(varray_t *self)
 		vertex_t *curr_vert = m_vert(mesh, i);
 		if (!curr_vert) continue;
 
-		int32_t v1 = varray_add_vert(self, curr_vert->pos, vec3(0.0f),
-		                             vec2(0.0f), vec3(0.0f),
-		                             curr_vert->color.xyz, 0, vec4(0,0,0,0),
-		                             vec4(0,0,0,0));
+		int32_t v1 = varray_add_vert(self, curr_vert->pos, vec3(0.0f, 0.0f, 0.0f),
+		                             vec2(0.0f, 0.0f), vec3(0.0f, 0.0f, 0.0f),
+		                             curr_vert->color.xyz, 0, vec4(0.0f, 0.0f, 0.0f, 0.0f),
+		                             vec4(0.0f, 0.0f, 0.0f, 0.0f));
 
 		varray_add_point(self, v1);
 	}

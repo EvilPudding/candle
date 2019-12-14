@@ -375,21 +375,21 @@ uint32_t texture_mips_to_tiles(texture_t *self)
 }
 void test(float mip)
 {
-	uint tiles_per_row = round_power_of_two(16);
+	uint32_t tiles_per_row = round_power_of_two(16);
 	float max_mips = log2(tiles_per_row);
 	float mm = fmin(max_mips, mip);
 
-	uint map_tiles = (pow(4.,max_mips-mm+1.) * (pow(4.,mm) - 1.)) / 3u;
+	uint32_t map_tiles = (pow(4.,max_mips-mm+1.) * (pow(4.,mm) - 1.)) / 3u;
 
 	if (mip > max_mips)
 	{
 		map_tiles += mip - max_mips;
 	}
 
-	uint offset = 0;
+	uint32_t offset = 0;
 
-	uint tpr = tiles_per_row;
-	for (uint i = 0u; i < MAX_MIPS && i < mip; i++)
+	uint32_t tpr = tiles_per_row;
+	for (uint32_t i = 0u; i < MAX_MIPS && i < mip; i++)
 	{
 		offset += tpr * tpr;
 		if (tpr > 1u)
@@ -1183,7 +1183,8 @@ texture_t *texture_from_file(const char *filename)
 	fclose(fp);
 
 	strncpy(self->name, filename, sizeof(self->name) - 1);
-	self->usrptr = strdup(filename);
+	self->usrptr = malloc(strlen(filename) + 1);
+	strcpy(self->usrptr, filename);
 	self->cacher = texture_disk_cacher;
 
 	texture_update_indir_info(self);

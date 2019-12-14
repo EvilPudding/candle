@@ -1,6 +1,7 @@
 #include "candle.h"
 #include <utils/file.h>
 #include <utils/glutil.h>
+#include <utils/str.h>
 
 #include <string.h>
 #include <stdlib.h>
@@ -243,30 +244,28 @@ void candle_reg_cmd(const char *key, cmd_cb cb)
 entity_t candle_run_command(entity_t root, const char *command)
 {
 	if(command[0] == '\0') return root;
-	char *copy = strdup(command);
-	/* TODO: optimize this function */
-	int i;
+
+	char *copy = malloc(strlen(command) + 1);
+	strcpy(copy, command);
 
 	entity_t instance = root;
 
 	char separators[] = " ";
 
 	char *p = strtok(copy, separators);
-	char *argv[32];
+	char *argv[64];
 	int argc = 0;
 
-	argv[argc++] = strdup(p);
+	argv[argc++] = p;
 
 	while((p = strtok(NULL, separators)) != NULL)
 	{
-		argv[argc++] = strdup(p);
+		argv[argc++] = p;
 	}
 
 	instance = candle_run_command_args(root, argc, argv, NULL);
 
-	for(i = 0; i < argc; i++) free(argv[i]);
 	free(copy);
-
 	if(!entity_exists(instance)) instance = root;
 	return instance;
 }
@@ -275,26 +274,28 @@ int candle_run(entity_t root, const char *map_name)
 {
 	FILE *file = fopen(map_name, "r");
 
-	if(file == NULL) return 0;
+	if (file == NULL) return 0;
 
 	char *line = NULL;
-	size_t n = 0;
-	while(1)
+	while (true)
 	{
-		ssize_t read = getline(&line, &n, file);
-		if(read == -1) break;
-		if(read == 0) continue;
+		line = str_readline(file);
+		if (str_len(line) == 0)
+		{
+			str_free(line);
+			break;
+		}
+
 		entity_t entity = candle_run_command(root, line);
 
 		if(entity_exists(root) && c_node(&root) && entity != root)
 		{
 			c_node_add(c_node(&root), 1, entity);
 		}
+		str_free(line);
 	}
-	free(line);
 
 	fclose(file);
-
 	return 1;
 }
 
@@ -308,7 +309,7 @@ entity_t _c_new(entity_t root, int argc, char **argv)
 __attribute__((constructor (CONSTR_BEFORE_REG)))
 void candle_init(void)
 {
-	 SDL_SetMainReady();
+	SDL_SetMainReady();
 	g_candle = calloc(1, sizeof *g_candle);
 	g_candle->loader = loader_new();
 

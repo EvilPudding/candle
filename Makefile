@@ -1,4 +1,4 @@
-CC = cc
+CC = cc -std=c99
 LD = cc
 AR = ar
 

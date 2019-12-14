@@ -33,7 +33,7 @@ typedef struct vec3_t(*support_cb)(mesh_t *self, const vec3_t dir);
 #	define VEC3(...) vec3(__VA_ARGS__)
 #	define XYZ(v) v
 #	define _uvecN(a) _uvec3(a)
-#	define ZN vec3(0.0f)
+#	define ZN Z3
 
 #	define dN d3_t
 #	define D3(...) d3(__VA_ARGS__)

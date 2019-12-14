@@ -35,7 +35,7 @@ c_light_t *c_light_new(float radius, vec4_t color, uint32_t shadow_size)
 
 void c_light_init(c_light_t *self)
 {
-	self->color = vec4(1.0f);
+	self->color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 	self->shadow_size = 512;
 	self->radius = 5.0f;
 	self->volumetric_intensity = 0.0f;
@@ -60,7 +60,7 @@ void c_light_init(c_light_t *self)
 		mat1t(g_light_widget, ref("albedo.texture"),
 		      texture_from_memory(bulb_png, bulb_png_len));
 		mat1f(g_light_widget, ref("albedo.blend"), 1.0f);
-		mat4f(g_light_widget, ref("emissive.color"), vec4(1.0));
+		mat4f(g_light_widget, ref("emissive.color"), vec4(1.0f, 1.0f, 1.0f, 1.0f));
 	}
 	self->id = g_lights_num++;
 
@@ -203,7 +203,8 @@ static int c_light_pre_draw(c_light_t *self)
 		c_node_t *node = c_node(self);
 		vec3_t pos = c_node_pos_to_global(node, vec3(0, 0, 0));
 		mat4_t model = mat4_translate(pos);
-		model = mat4_scale_aniso(model, vec3(self->radius * 1.15f));
+		float scale = self->radius * 1.15f;
+		model = mat4_scale_aniso(model, vec3(scale, scale, scale));
 
 		drawable_set_transform(&self->draw, model);
 

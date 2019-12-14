@@ -586,7 +586,7 @@ void renderer_default_pipeline(renderer_t *self)
 			query_mips, query_mips, 0, ~0,
 		(bind_t[]){
 			{CLEAR_DEPTH, .number = 1.0f},
-			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 0.0f)},
 			{SKIP, .integer = 16},
 			{NONE}
 		}
@@ -621,7 +621,7 @@ void renderer_default_pipeline(renderer_t *self)
 			gbuffer, 0, ~0,
 		(bind_t[]){
 			{CLEAR_DEPTH, .number = 1.0f},
-			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 0.0f)},
 			{NONE}
 		}
 	);
@@ -646,7 +646,7 @@ void renderer_default_pipeline(renderer_t *self)
 			0, selectable, selectable, 0, ~0,
 		(bind_t[]){
 			{CLEAR_DEPTH, .number = 1.0f},
-			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 0.0f)},
 			{NONE}
 		}
 	);
@@ -654,7 +654,7 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_pass(self, "ambient_light_pass", "phong", ref("ambient"),
 			ADD, light, NULL, 0, ~0,
 		(bind_t[]){
-			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 0.0f)},
 			{TEX, "gbuffer", .buffer = gbuffer},
 			{NONE}
 		}
@@ -672,7 +672,7 @@ void renderer_default_pipeline(renderer_t *self)
 			ADD | CULL_DISABLE, volum, NULL, 0, ~0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
-			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 0.0f)},
 			{NONE}
 		}
 	);
@@ -690,7 +690,7 @@ void renderer_default_pipeline(renderer_t *self)
 			refr, NULL, 0, ~0,
 		(bind_t[]){
 			{TEX, "buf", .buffer = light},
-			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 0.0f)},
 			{INT, "level", .integer = 0},
 			{NONE}
 		}
@@ -715,7 +715,7 @@ void renderer_default_pipeline(renderer_t *self)
 			ssao, NULL, 0, ~0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
-			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 0.0f)},
 			{NONE}
 		}
 	);

@@ -484,11 +484,11 @@ vec2_t c_editmode_bind_context(pass_t *pass, c_editmode_t *self)
 vec3_t c_editmode_bind_context_pos(pass_t *pass, c_editmode_t *self)
 {
 	if (!entity_exists(self->context))
-		return vec3(0.0f);
+		return vec3(0.0f, 0.0f, 0.0f);
 	c_node_t *node = c_node(&self->context);
 	if (!node)
-		return vec3(0.0f);
-	return c_node_pos_to_global(node, vec3(0.0f));
+		return vec3(0.0f, 0.0f, 0.0f);
+	return c_node_pos_to_global(node, vec3(0.0f, 0.0f, 0.0f));
 }
 float c_editmode_bind_context_phase(pass_t *pass, c_editmode_t *self)
 {
@@ -526,7 +526,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	renderer_add_pass(renderer, "mouse_depth", "extract_depth", ref("quad"),
 			0, self->mouse_depth, NULL, 0, ref("selectable"),
 		(bind_t[]){
-			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 0.0f)},
 			{TEX, "depthbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
 			{VEC2, "position", (getter_cb)c_editmode_bind_mouse_position},
 			{USRPTR, .ptr = self},
@@ -569,7 +569,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	renderer_add_pass(renderer, "highlights_0", "border", ref("quad"),
 			0, tmp, NULL, 0, ~0,
 		(bind_t[]){
-			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
+			{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 0.0f)},
 			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
 			{INT, "mode", (getter_cb)c_editmode_bind_mode},
 			{VEC2, "over_id", (getter_cb)c_editmode_bind_over},
@@ -1641,14 +1641,16 @@ int32_t c_editmode_pick_load(c_editmode_t *self, const char *filter, char **outp
 	/* TODO: prompt for a path in nuklear */
 	printf("Warning: File picking only works with the filepicker module loaded. "
 	       "A gui alternative is planned but not implemented yet.\n");
-	*output = strdup("unnamed");
+	*output = malloc(sizeof("unnamed"));
+	strcpy(*output, "unnamed");
 	return STOP;
 }
 
 int32_t c_editmode_pick_save(c_editmode_t *self, const char *filter, char **output)
 {
 	/* TODO: prompt for a path in nuklear */
-	*output = strdup("unnamed");
+	*output = malloc(sizeof("unnamed"));
+	strcpy(*output, "unnamed");
 	return STOP;
 }
 
