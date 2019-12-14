@@ -112,7 +112,7 @@ int32_t rotate_init(struct edit_rotate *self, c_editmode_t *ec)
 		renderer_t *renderer = c_camera(&ec->camera)->renderer;
 
 		renderer_add_pass(renderer, "tool", "editmode", ref("quad"),
-				ADD, renderer_tex(renderer, ref("final")), NULL, 0,
+				ADD, renderer_tex(renderer, ref("final")), NULL, 0, ~0,
 			(bind_t[]){
 				{VEC2, "mouse_pos", (getter_cb)bind_mouse_pos},
 				{NUM, "start_radius", (getter_cb)bind_start_radius},
@@ -524,10 +524,10 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	renderer_add_tex(renderer, "tmp", 1.0f, tmp);
 
 	renderer_add_pass(renderer, "mouse_depth", "extract_depth", ref("quad"),
-			0, self->mouse_depth, NULL, 0,
+			0, self->mouse_depth, NULL, 0, ref("selectable"),
 		(bind_t[]){
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
-			{TEX, "gbuffer", .buffer = renderer_tex(renderer, ref("gbuffer"))},
+			{TEX, "depthbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
 			{VEC2, "position", (getter_cb)c_editmode_bind_mouse_position},
 			{USRPTR, .ptr = self},
 			{NONE}
@@ -535,7 +535,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	);
 
 	renderer_add_pass(renderer, "context", "context", ref("quad"),
-			0, renderer_tex(renderer, ref("final")), NULL, 0,
+			0, renderer_tex(renderer, ref("final")), NULL, 0, ~0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = renderer_tex(renderer, ref("gbuffer"))},
 			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
@@ -552,7 +552,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	);
 
 	renderer_add_pass(renderer, "highlight", "highlight", ref("quad"),
-			ADD, renderer_tex(renderer, ref("final")), NULL, 0,
+			ADD, renderer_tex(renderer, ref("final")), NULL, 0, ~0,
 		(bind_t[]){
 			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
 			{INT, "mode", (getter_cb)c_editmode_bind_mode},
@@ -567,7 +567,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 
 
 	renderer_add_pass(renderer, "highlights_0", "border", ref("quad"),
-			0, tmp, NULL, 0,
+			0, tmp, NULL, 0, ~0,
 		(bind_t[]){
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
@@ -582,7 +582,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	);
 
 	renderer_add_pass(renderer, "highlights_1", "border", ref("quad"),
-			ADD, renderer_tex(renderer, ref("final")), NULL, 0,
+			ADD, renderer_tex(renderer, ref("final")), NULL, 0, ~0,
 		(bind_t[]){
 			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
 			{TEX, "tmp", .buffer = tmp},

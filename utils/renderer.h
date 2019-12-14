@@ -229,6 +229,7 @@ void renderer_add_pass(
 		texture_t *output,
 		texture_t *depth,
 		uint32_t framebuffer,
+		uint32_t after_pass,
 		bind_t binds[]);
 
 void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,

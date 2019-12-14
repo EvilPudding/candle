@@ -297,7 +297,7 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 {
 	renderer_add_pass(self, "kawase_p",
 			to_mip == from_mip ? "copy" : "downsample",
-			ref("quad"), 0, t2, NULL, to_mip,
+			ref("quad"), 0, t2, NULL, to_mip, ~0,
 		(bind_t[]){
 			{TEX, "buf", .buffer = t1},
 			{INT, "level", .integer = from_mip},
@@ -306,7 +306,7 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 	);
 
 	renderer_add_pass(self, "kawase_0", "kawase", ref("quad"), 0,
-			t1, NULL, to_mip,
+			t1, NULL, to_mip, ~0,
 		(bind_t[]){
 			{TEX, "buf", .buffer = t2},
 			{INT, "distance", .integer = 0},
@@ -316,7 +316,7 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 	);
 
 	renderer_add_pass(self, "kawase_1", "kawase", ref("quad"), 0,
-			t2, NULL, to_mip,
+			t2, NULL, to_mip, ~0,
 		(bind_t[]){
 			{TEX, "buf", .buffer = t1},
 			{INT, "distance", .integer = 1},
@@ -326,7 +326,7 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 	);
 
 	renderer_add_pass(self, "kawase_2", "kawase", ref("quad"), 0,
-			t1, NULL, to_mip,
+			t1, NULL, to_mip, ~0,
 		(bind_t[]){
 			{TEX, "buf", .buffer = t2},
 			{INT, "distance", .integer = 2},
@@ -336,7 +336,7 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 	);
 
 /* 	renderer_add_pass(self, "kawase_3", "kawase", ref("quad"), 0, */
-/* 			t2, NULL, to_mip, */
+/* 			t2, NULL, to_mip, ~0, */
 /* 		(bind_t[]){ */
 /* 			{TEX, "buf", .buffer = t1}, */
 /* 			{INT, "distance", .integer = 2}, */
@@ -346,7 +346,7 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 /* 	); */
 
 /* 	renderer_add_pass(self, "kawase_4", "kawase", ref("quad"), 0, */
-/* 			t1, NULL, to_mip, */
+/* 			t1, NULL, to_mip, ~0, */
 /* 		(bind_t[]){ */
 /* 			{TEX, "buf", .buffer = t2}, */
 /* 			{INT, "distance", .integer = 3}, */
@@ -583,7 +583,7 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_tex(self, "bloom",      1.0f, bloom);
 
 	renderer_add_pass(self, "query_mips", "query_mips", ref("visible"), 0,
-			query_mips, query_mips, 0,
+			query_mips, query_mips, 0, ~0,
 		(bind_t[]){
 			{CLEAR_DEPTH, .number = 1.0f},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
@@ -593,7 +593,7 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	renderer_add_pass(self, "query_mips", "query_mips", ref("decals"), 0,
-			query_mips, NULL, 0,
+			query_mips, NULL, 0, ~0,
 		(bind_t[]){
 			{SKIP, .integer = 16},
 			{NONE}
@@ -601,7 +601,7 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	renderer_add_pass(self, "query_mips", "query_mips", ref("transparent"), 0,
-			query_mips, query_mips, 0,
+			query_mips, query_mips, 0, ~0,
 		(bind_t[]){
 			{SKIP, .integer = 16},
 			{NONE}
@@ -609,7 +609,7 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	renderer_add_pass(self, "svt", NULL, -1, 0,
-			query_mips, query_mips, 0,
+			query_mips, query_mips, 0, ~0,
 		(bind_t[]){
 			{CALLBACK, .getter = (getter_cb)pass_process_query_mips},
 			{SKIP, .integer = 16},
@@ -618,7 +618,7 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	renderer_add_pass(self, "gbuffer", "gbuffer", ref("visible"), 0, gbuffer,
-			gbuffer, 0,
+			gbuffer, 0, ~0,
 		(bind_t[]){
 			{CLEAR_DEPTH, .number = 1.0f},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
@@ -627,7 +627,7 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	renderer_add_pass(self, "framebuffer_pass", "framebuffer_draw", ref("framebuffer"), 0,
-			gbuffer, gbuffer, 0,
+			gbuffer, gbuffer, 0, ~0,
 		(bind_t[]){
 			{NONE}
 		}
@@ -635,7 +635,7 @@ void renderer_default_pipeline(renderer_t *self)
 
 	/* DECAL PASS */
 	renderer_add_pass(self, "decals_pass", "gbuffer", ref("decals"), BLEND,
-			gbuffer, NULL, 0,
+			gbuffer, NULL, 0, ~0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
 			{NONE}
@@ -643,7 +643,7 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	renderer_add_pass(self, "selectable", "select", ref("selectable"),
-			0, selectable, selectable, 0,
+			0, selectable, selectable, 0, ~0,
 		(bind_t[]){
 			{CLEAR_DEPTH, .number = 1.0f},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
@@ -652,7 +652,7 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	renderer_add_pass(self, "ambient_light_pass", "phong", ref("ambient"),
-			ADD, light, NULL, 0,
+			ADD, light, NULL, 0, ~0,
 		(bind_t[]){
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
 			{TEX, "gbuffer", .buffer = gbuffer},
@@ -661,7 +661,7 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	renderer_add_pass(self, "render_pass", "phong", ref("light"),
-			ADD, light, NULL, 0,
+			ADD, light, NULL, 0, ~0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
 			{NONE}
@@ -669,7 +669,7 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	renderer_add_pass(self, "volum_pass", "volum", ref("light"),
-			ADD | CULL_DISABLE, volum, NULL, 0,
+			ADD | CULL_DISABLE, volum, NULL, 0, ~0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
@@ -679,7 +679,7 @@ void renderer_default_pipeline(renderer_t *self)
 	/* renderer_add_kawase(self, volum, volum_tmp, 0, 0); */
 
 	/* renderer_add_pass(self, "sea", "sea", ref("quad"), 0, light, */
-	/* 		NULL, 0, */
+	/* 		NULL, 0, ~0, */
 	/* 	(bind_t[]){ */
 	/* 		{TEX, "gbuffer", .buffer = gbuffer}, */
 	/* 		{NONE} */
@@ -687,7 +687,7 @@ void renderer_default_pipeline(renderer_t *self)
 	/* ); */
 
 	renderer_add_pass(self, "refraction", "copy", ref("quad"), 0,
-			refr, NULL, 0,
+			refr, NULL, 0, ~0,
 		(bind_t[]){
 			{TEX, "buf", .buffer = light},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
@@ -701,10 +701,10 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_kawase(self, refr, tmp, 2, 3);
 
 	renderer_add_pass(self, "transp_1", "gbuffer", ref("transparent"),
-			0, gbuffer, gbuffer, 0, (bind_t[]){ {NONE} });
+			0, gbuffer, gbuffer, 0, ~0, (bind_t[]){ {NONE} });
 
-	renderer_add_pass(self, "transp", "transparency", ref("transparent"),
-			DEPTH_LOCK | DEPTH_EQUAL, light, gbuffer, 0,
+	renderer_add_pass(self, "transp_2", "transparency", ref("transparent"),
+			DEPTH_LOCK | DEPTH_EQUAL, light, gbuffer, 0, ~0,
 		(bind_t[]){
 			{TEX, "refr", .buffer = refr},
 			{NONE}
@@ -712,7 +712,7 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	renderer_add_pass(self, "ssao_pass", "ssao", ref("quad"), 0,
-			ssao, NULL, 0,
+			ssao, NULL, 0, ~0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
 			{CLEAR_COLOR, .vec4 = vec4(0.0f)},
@@ -721,7 +721,7 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	renderer_add_pass(self, "final", "ssr", ref("quad"), 0, final,
-			NULL, 0,
+			NULL, 0, ~0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
 			{TEX, "light", .buffer = light},
@@ -734,7 +734,7 @@ void renderer_default_pipeline(renderer_t *self)
 		}
 	);
 	renderer_add_pass(self, "bloom_0", "bright", ref("quad"), 0,
-			bloom, NULL, 0,
+			bloom, NULL, 0, ~0,
 		(bind_t[]){
 			{TEX, "buf", .buffer = final},
 			{NONE}
@@ -745,7 +745,7 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_kawase(self, bloom, tmp, 2, 3);
 
 	renderer_add_pass(self, "bloom_1", "upsample", ref("quad"), ADD,
-			final, NULL, 0,
+			final, NULL, 0, ~0,
 		(bind_t[]){
 			{TEX, "buf", .buffer = bloom},
 			{INT, "level", .integer = 3},
@@ -754,7 +754,7 @@ void renderer_default_pipeline(renderer_t *self)
 		}
 	);
 	renderer_add_pass(self, "luminance_calc", NULL, -1, 0,
-			final, NULL, 0,
+			final, NULL, 0, ~0,
 		(bind_t[]){
 			{CALLBACK, .getter = (getter_cb)pass_process_brightness},
 			{SKIP, .integer = 16},
@@ -1171,6 +1171,7 @@ void renderer_add_pass(
 		texture_t *output,
 		texture_t *depth,
 		uint32_t framebuffer,
+		uint32_t after_pass,
 		bind_t binds[])
 {
 	if(!output) exit(1);
@@ -1179,7 +1180,19 @@ void renderer_add_pass(
 	unsigned int hash = ref(buffer);
 	/* TODO add pass replacement */
 	int i = -1;
-	if(i == -1)
+	if (after_pass != ~0)
+	{
+		pass_t *after = renderer_pass(self, after_pass);
+		assert(after);
+		uint32_t pass_id = after - self->passes;
+		for (uint32_t i = self->passes_size; i > pass_id; --i)
+		{
+			self->passes[i] = self->passes[i - 1];
+		}
+		self->passes_size++;
+		i = pass_id;
+	}
+	else if(i == -1)
 	{
 		i = self->passes_size++;
 	}

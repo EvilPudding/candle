@@ -74,6 +74,7 @@ void c_render_device_update_ubo(c_render_device_t *self)
 void fs_bind(fs_t *fs)
 {
 	c_render_device_t *render_device = c_render_device(&SYS);
+	if (!render_device) return;
 	if(render_device->frag_bound == fs) return;
 	glerr();
 

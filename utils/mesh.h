@@ -285,6 +285,7 @@ int mesh_add_vert(mesh_t *self, vecN_t p);
 int mesh_append_edge(mesh_t *self, vecN_t p);
 int mesh_add_edge_s(mesh_t *self, int v, int next);
 int mesh_add_edge(mesh_t *self, int v, int next, int prev, vec3_t vn, vec2_t vt);
+void mesh_link_edges(mesh_t *self, int e0, int e1);
 int mesh_add_triangle(mesh_t *self,
 		int v0, vec3_t v0n, vec2_t v0t,
 		int v1, vec3_t v1n, vec2_t v1t,

@@ -1069,10 +1069,6 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 
 	c_render_device_t *rd = c_render_device(&SYS);
 
-	shader_t *shader = vs_bind(self->vars.vs, self->vars.mat_type);
-	if (!shader)
-		goto end;
-
 	if (self->vars.skin)
 	{
 		draw_conf_update_skin(self);
@@ -1082,6 +1078,9 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	{
 		c_render_device_bind_ubo(rd, 22, material_get_ubo(self->vars.mat_type));
 	}
+
+	shader_t *shader = vs_bind(self->vars.vs, self->vars.mat_type);
+	if (!shader) goto end;
 
 	if (self->vars.custom_texture)
 	{
@@ -1134,7 +1133,6 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	}
 	else
 	{
-
 		glUniform1i(shader_cached_uniform(shader, ref("has_normals")), 0);
 		glerr();
 		if (vector_count(mesh->edges))
@@ -1172,7 +1170,6 @@ end:
 	glDepthRange(0.0, 1.00); glerr();
 
 	return 1;
-
 }
 
 int32_t drawable_draw(drawable_t *self)

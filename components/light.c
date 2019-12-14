@@ -106,7 +106,7 @@ static void c_light_create_renderer(c_light_t *self)
 	texture_t *output =	g_probe_cache;
 
 	renderer_add_pass(renderer, "depth", "depth", self->visible_group,
-			CULL_DISABLE, output, output, 0,
+			CULL_DISABLE, output, output, 0, ~0,
 			(bind_t[]){
 				{CLEAR_DEPTH, .number = 1.0f},
 				{CLEAR_COLOR, .vec4 = vec4(0.343750, 0.996094, 0.996094, 0.000000)},

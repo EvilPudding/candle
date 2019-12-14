@@ -1069,6 +1069,8 @@ void mesh_clear(mesh_t *self)
 	mesh_lock(self);
 	mesh_unselect(self, SEL_EDITING, MESH_ANY, -1);
 
+	kh_clear(id, self->edges_hash);
+	kh_clear(id, self->faces_hash);
 	vector_clear(self->verts);
 	vector_clear(self->edges);
 	vector_clear(self->faces);
@@ -1424,6 +1426,7 @@ static void mesh_update_cell_pairs(mesh_t *self)
 	}
 }
 
+void breakpoint(void){}
 int mesh_get_pair_edge(mesh_t *self, int edge_id)
 {
 	edge_t *edge = m_edge(self, edge_id); if(!edge) return 0;
@@ -1440,7 +1443,13 @@ int mesh_get_pair_edge(mesh_t *self, int edge_id)
 			int ret;
 			k = kh_put(id, self->edges_hash, hash, &ret);
 			kh_value(self->edges_hash, k) = edge_id;
+			assert(m_edge(self, edge_id));
 			/* printf("[31mNOT[0m"); */
+			if (edge_id == 50 && !strcmp(self->name, "boxes"))
+			{
+				printf("%s adding %d\n", self->name, edge_id);
+				breakpoint();
+			}
 		}
 		else
 		{
@@ -1449,6 +1458,9 @@ int mesh_get_pair_edge(mesh_t *self, int edge_id)
 			kh_del(id, self->edges_hash, k);
 
 			edge_t *pair = m_edge(self, pair_id);
+			if (!pair)
+				printf("%s %d\n", self->name, pair_id);
+			assert(pair);
 
 			/* printf("FOUND	%d	(%p)", pair_id, mesh_edge_to_id(self, pair)); */
 			if(edge->v != e_next(pair, self)->v ||
@@ -1560,8 +1572,6 @@ void mesh_remove_edge(mesh_t *self, int edge_i)
 	edge_t *edge = m_edge(self, edge_i);
 	if(!edge) return;
 
-	edge_t *pair = e_pair(edge, self);
-
 	mesh_edge_remove_from_hash(self, edge);
 
 	edge_t *cpair = e_cpair(edge, self);
@@ -1588,6 +1598,8 @@ void mesh_remove_edge(mesh_t *self, int edge_i)
 	{
 		mesh_remove_face(self, edge->face, false);
 	}
+
+	edge_t *pair = e_pair(edge, self);
 	if(pair)
 	{
 		pair->pair = -1;
@@ -1995,15 +2007,19 @@ void mesh_arc(mesh_t *self, float radius, int segments, vecN_t dir,
 
 	if(prev_e != first_e && closed)
 	{
-		m_edge(self, prev_e)->next = first_e;
-		m_edge(self, first_e)->prev = prev_e;
-
-		/* TODO: add an edge_set_next which calls this */
-		mesh_get_pair_edge(self, prev_e);
+		mesh_link_edges(self, prev_e, first_e);
 	}
 
 	mesh_unlock(self);
 #undef DIMS
+}
+
+void mesh_link_edges(mesh_t *self, int e0, int e1)
+{
+	m_edge(self, e0)->next = e1;
+	m_edge(self, e1)->prev = e0;
+
+	mesh_get_pair_edge(self, e0);
 }
 
 void mesh_circle(mesh_t *self, float radius, int segments, vecN_t dir)
@@ -2437,11 +2453,13 @@ void mesh_extrude_edges(mesh_t *self, int steps, vecN_t offset,
 				continue;
 			}
 
+			vec2_t new_e_t = vec2_scale(e->t, scale * 0.9);
+			vec2_t new_n_t = vec2_scale(ne->t, scale * 0.9);
 			mesh_add_quad(self,
 					ne->v, Z3, ne->t,
 					e->v, Z3, e->t,
-					et, Z3, e->t,
-					nt, Z3, ne->t
+					et, Z3, new_e_t,
+					nt, Z3, new_n_t
 			);
 			/* mesh_edge_select(self, e_id, SEL_UNSELECTED); */
 
