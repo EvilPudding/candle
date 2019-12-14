@@ -1,6 +1,3 @@
-#define _GNU_SOURCE
-#include <search.h>
-
 #include <string.h>
 #include "ecm.h"
 #include <stdarg.h>
