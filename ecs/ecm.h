@@ -191,9 +191,9 @@ void ecm_destroy_all(void);
 void ecm_add_entity(entity_t *entity);
 /* uint32_t ecm_register_system(ecm_t *self, void *system); */
 
-#define ct_new(name, size, init, destroy, depend_size, ...) \
+#define ct_new(name, size, init, destroy, ...) \
 	_ct_new(name, ref(name), size, (init_cb)init, (destroy_cb)destroy, \
-			depend_size, ##__VA_ARGS__)
+			__VA_ARGS__)
 ct_t *_ct_new(const char *name, uint32_t hash, uint32_t size, init_cb init,
 		destroy_cb destroy, int32_t depend_size, ...);
 
