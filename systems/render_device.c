@@ -18,6 +18,7 @@
 void c_render_device_update_lights(c_render_device_t *self)
 {
 	ct_t *lights = ecm_get(ref("light"));
+	if (!lights) return;
 	khiter_t k;
 	for(k = kh_begin(lights->cs); k != kh_end(lights->cs); ++k)
 	{

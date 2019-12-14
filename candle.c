@@ -340,7 +340,9 @@ void candle_init2(void)
 	entity_add_component(SYS, c_nodegraph_new());
 	entity_add_component(SYS, c_mouse_new());
 	entity_add_component(SYS, c_keyboard_new());
+#ifndef __EMSCRIPTEN__
 	entity_add_component(SYS, c_controllers_new());
+#endif
 	entity_add_component(SYS, c_sauces_new());
 	entity_add_component(SYS, c_node_new());
 
