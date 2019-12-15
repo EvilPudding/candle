@@ -1,6 +1,7 @@
 CC = cc -std=c99
 LD = cc
 AR = ar
+COMMA = ,
 
 emscripten: CC = emcc
 emscripten: LD = emcc
@@ -10,15 +11,11 @@ DIR = build
 
 DEPS_REL = $(shell sdl2-config --libs) -lm -lGL -lGLEW
 DEPS_DEB = $(DEPS_REL)
-DEPS_EMS = 
-
-SHAD_REL = $(patsubst %.glsl, $(DIR)/%.glsl.o, $(wildcard shaders/*.glsl))
-
-SHAD_EMS = $(patsubst %.glsl, $(DIR)/%.emscripten_glsl.o, $(wildcard shaders/*.glsl))
+SHAD_SRC = $(patsubst %.glsl, $(DIR)/%.glsl.c, $(wildcard shaders/*.glsl))
 
 SRCS = $(wildcard *.c) $(wildcard components/*.c) $(wildcard systems/*.c) \
 	   $(wildcard formats/*.c) $(wildcard utils/*.c) $(wildcard vil/*.c) \
-	   $(wildcard ecs/*.c)
+	   $(wildcard ecs/*.c) shaders_reg.c
 
 OBJS_REL = $(patsubst %.c, $(DIR)/%.o, $(SRCS))
 OBJS_DEB = $(patsubst %.c, $(DIR)/%.debug.o, $(SRCS))
@@ -46,16 +43,11 @@ all: $(DIR)/export.a
 $(DIR)/export.a: init $(OBJS_REL) $(SHAD_REL)
 	$(AR) rs $@ $(OBJS_REL) $(SHAD_REL)
 
-$(DIR)/%.o: %.c
+$(DIR)/shaders_reg.o: $(DIR)/shaders_reg.c
 	$(CC) -o $@ -c $< $(CFLAGS_REL)
 
-$(DIR)/%.glsl.o: %.glsl
-	@xxd -i $< > $(DIR)/$<.c
-	@printf "\n#include <utils/shader.h>\n\
-	void shaders_%s_glsl_reg(void) { \n\
-	shader_add_source(\"%s.glsl\", shaders_%s_glsl, shaders_%s_glsl_len);}" \
-	$(*F) $(*F) $(*F) $(*F) >> $(DIR)/$<.c
-	$(CC) -o $@ -c $(DIR)/$<.c $(CFLAGS_REL)
+$(DIR)/%.o: %.c
+	$(CC) -o $@ -c $< $(CFLAGS_REL)
 
 ##############################################################################
 
@@ -77,18 +69,23 @@ emscripten: $(DIR)/export_emscripten.a
 $(DIR)/export_emscripten.a: init $(OBJS_EMS) $(SHAD_EMS)
 	$(AR) rs $@ $(OBJS_EMS) $(SHAD_EMS)
 
+$(DIR)/shaders_reg.emscripten.o: $(DIR)/shaders_reg.c
+	$(CC) -o $@ -c $< $(CFLAGS_REL)
+
 $(DIR)/%.emscripten.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS_EMS)
 
-$(DIR)/%.emscripten_glsl.o: %.glsl
-	@xxd -i $< > $(DIR)/$<.c
-	@printf "\n#include <utils/shader.h>\n\
-	void shaders_%s_glsl_reg(void) { \n\
-	shader_add_source(\"%s.glsl\", shaders_%s_glsl, shaders_%s_glsl_len);}" \
-	$(*F) $(*F) $(*F) $(*F) >> $(DIR)/$<.c
-	$(CC) -o $@ -c $(DIR)/$<.c $(CFLAGS_EMS)
-
 ##############################################################################
+
+$(DIR)/shaders_reg.c: $(SHAD_SRC)
+	printf "#include <utils/shader.h>\n" > $@
+	printf "$(patsubst %.c,#include<%.c>\n, $(SHAD_SRC))" >> $@
+	printf "void shaders_reg_glsl(void) { " >> $@
+	printf "$(patsubst $(DIR)/shaders/%.glsl.c, ADD_SRC(%);, $(SHAD_SRC))" >> $@
+	printf "}" >> $@
+
+$(DIR)/%.glsl.c: %.glsl
+	@xxd -i $< > $(DIR)/$<.c
 
 init:
 	# git submodule update

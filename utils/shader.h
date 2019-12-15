@@ -5,6 +5,10 @@
 #include <ecs/ecm.h>
 #include <utils/khash.h>
 
+#define ADD_SRC(name) \
+	shader_add_source(#name ".glsl", shaders_ ## name ## _glsl, \
+	                  shaders_ ## name ## _glsl_len)
+
 typedef struct
 {
 	uint32_t type;
