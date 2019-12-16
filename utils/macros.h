@@ -15,6 +15,8 @@ typedef uint32_t bool_t;
 #define ent_comp_ref(cid, eid) murmur_hash(&cid, 4, eid)
 #define TP2(a, b) a##b
 #define TP(a, b) TP2(a, b)
+#define CAT(a,b) a##b
+#define CAT2(a,b) CAT(a,b)
 
 #ifndef EMSCRIPTEN
 __attribute__((always_inline))

@@ -1,4 +1,4 @@
-CC = cc -std=c99
+CC = cc -std=c99 -pedantic-errors
 LD = cc
 AR = ar
 COMMA = ,
@@ -21,7 +21,7 @@ OBJS_REL = $(patsubst %.c, $(DIR)/%.o, $(SRCS))
 OBJS_DEB = $(patsubst %.c, $(DIR)/%.debug.o, $(SRCS))
 OBJS_EMS = $(patsubst %.c, $(DIR)/%.emscripten.o, $(SRCS))
 
-CFLAGS = $(shell sdl2-config --cflags) -DUSE_VAO -Wall -I. -Wuninitialized \
+CFLAGS = $(shell sdl2-config --cflags) -Wall -I. -Wuninitialized \
 	-Wstrict-prototypes -Wno-format-truncation -Wno-stringop-truncation $(PARENTCFLAGS)
 
 CFLAGS_REL = $(CFLAGS) -O3
@@ -56,6 +56,9 @@ debug: $(DIR)/export_debug.a
 
 $(DIR)/export_debug.a: init $(OBJS_DEB) $(SHAD_REL)
 	$(AR) rs $@ $(OBJS_DEB) $(SHAD_REL)
+
+$(DIR)/shaders_reg.debug.o: $(DIR)/shaders_reg.c
+	$(CC) -o $@ -c $< $(CFLAGS_REL)
 
 $(DIR)/%.debug.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS_DEB)

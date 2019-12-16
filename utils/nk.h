@@ -26,7 +26,7 @@ void nk_draw_image_ext(struct nk_command_buffer *b, struct nk_rect r,
 NK_API int nk_tree_entity_push_hashed(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states initial_state, int *selected, int has_children, const char *hash, int len, int seed);
 NK_API int nk_tree_entity_image_push_hashed(struct nk_context*, enum nk_tree_type, struct nk_image, const char *title, enum nk_collapse_states initial_state, int *selected, int has_children, const char *hash, int len,int seed);
 NK_API void nk_tree_entity_pop(struct nk_context*);
-NK_API void nk_can_font_stash_begin(struct nk_font_atlas **atlas);;
+NK_API void nk_can_font_stash_begin(struct nk_font_atlas **atlas);
 NK_API void nk_can_font_stash_end(void);
 NK_API int nk_can_handle_event(struct nk_context *ctx, void *evt);
 NK_API int nk_can_handle_key(struct nk_context *ctx, SDL_Keycode key, int down);

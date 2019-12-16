@@ -197,28 +197,28 @@ void c_spatial_assign(c_spatial_t *self, c_spatial_t *other)
 void c_spatial_set_model(c_spatial_t *self, mat4_t m)
 {
 	c_spatial_lock(self);
-	vec3_t v0 = mat4_mul_vec4(m, vec4(1,0,0,0)).xyz;
-	vec3_t v1 = mat4_mul_vec4(m, vec4(0,1,0,0)).xyz;
-	vec3_t v2 = mat4_mul_vec4(m, vec4(0,0,1,0)).xyz;
-	vec3_t v3 = mat4_mul_vec4(m, vec4(0,0,0,1)).xyz;
+	vec3_t v0 = vec4_xyz(mat4_mul_vec4(m, vec4(1,0,0,0)));
+	vec3_t v1 = vec4_xyz(mat4_mul_vec4(m, vec4(0,1,0,0)));
+	vec3_t v2 = vec4_xyz(mat4_mul_vec4(m, vec4(0,0,1,0)));
+	vec3_t v3 = vec4_xyz(mat4_mul_vec4(m, vec4(0,0,0,1)));
 
 	self->scale = vec3(vec3_len(v0), vec3_len(v1), vec3_len(v2));
 	self->pos = v3;
 
-	m._[0]._[0] /= self->scale.x;
-	m._[1]._[0] /= self->scale.y;
-	m._[2]._[0] /= self->scale.z;
-	m._[3]._[0] = 0;
+	m._[0][0] /= self->scale.x;
+	m._[1][0] /= self->scale.y;
+	m._[2][0] /= self->scale.z;
+	m._[3][0] = 0;
 
-	m._[0]._[1] /= self->scale.x;
-	m._[1]._[1] /= self->scale.y;
-	m._[2]._[1] /= self->scale.z;
-	m._[3]._[1] = 0;
+	m._[0][1] /= self->scale.x;
+	m._[1][1] /= self->scale.y;
+	m._[2][1] /= self->scale.z;
+	m._[3][1] = 0;
 
-	m._[0]._[2] /= self->scale.x;
-	m._[1]._[2] /= self->scale.y;
-	m._[2]._[2] /= self->scale.z;
-	m._[3]._[2] = 0;
+	m._[0][2] /= self->scale.x;
+	m._[1][2] /= self->scale.y;
+	m._[2][2] /= self->scale.z;
+	m._[3][2] = 0;
 
 	self->rot_quat = vec4_norm(mat4_to_quat(m));
 	self->rot = quat_to_euler(self->rot_quat);

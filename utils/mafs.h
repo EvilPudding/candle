@@ -25,52 +25,29 @@ void sincosf(float x, float *sin, float *cos);
 #define n_t float
 
 #define MAFS_DEFINE_STRUCTS(n_t, type) \
-typedef struct type##2_t { union { \
-	struct { n_t x, y; }; \
-	struct { n_t u, v; }; \
-	n_t _[2]; \
-}; } type##2_t; \
-typedef struct type##3_t { union { \
-	struct { n_t x, y, z; }; \
-	struct { n_t r, g, b; }; \
-	struct { n_t u, v, w; }; \
-	n_t _[3]; \
-	type##2_t xy; \
-}; } type##3_t; \
-typedef struct type##4_t { union { \
-	struct { n_t x, y, z, w; }; \
-	struct { n_t r, g, b, a; }; \
-	n_t _[4]; \
-	struct { type##2_t xy; type##2_t zw; }; \
-	type##3_t xyz; \
-}; } type##4_t; \
+typedef struct type##2_t { \
+	n_t x, y; \
+} type##2_t; \
+typedef struct type##3_t { \
+	n_t x, y, z; \
+} type##3_t; \
+typedef struct type##4_t { \
+	n_t x, y, z, w; \
+} type##4_t; \
 
-#define EXPANDED_vec2(x, y) ((vec2_t){{{x, y}}})
-#define EXPANDED_vec3(x, y, z) ((vec3_t){{{x, y, z}}})
-#define EXPANDED_vec4(x, y, z, w) ((vec4_t){{{x, y, z, w}}})
-#define EXPANDED_uvec2(x, y) ((uvec2_t){{{x, y}}})
-#define EXPANDED_uvec3(x, y, z) ((uvec3_t){{{x, y, z}}})
-#define EXPANDED_uvec4(x, y, z, w) ((uvec4_t){{{x, y, z, w}}})
-#define EXPANDED_ivec2(x, y) ((ivec2_t){{{x, y}}})
-#define EXPANDED_ivec3(x, y, z) ((ivec3_t){{{x, y, z}}})
-#define EXPANDED_ivec4(x, y, z, w) ((ivec4_t){{{x, y, z, w}}})
-#define EXPANDED_d2(x, y) ((d2_t){{{x, y}}})
-#define EXPANDED_d3(x, y, z) ((d3_t){{{x, y, z}}})
-#define EXPANDED_d4(x, y, z, w) ((d4_t){{{x, y, z, w}}})
-#define EXPAND(...) __VA_ARGS__
+#define _vec2(v) (float)v.x, (float)v.y
+#define _vec3(v) (float)v.x, (float)v.y, (float)v.z
+#define _vec4(v) (float)v.x, (float)v.y, (float)v.z, (float)v.w
+#define _uvec2(v) (uint32_t)v.x, (uint32_t)v.y
+#define _uvec3(v) (uint32_t)v.x, (uint32_t)v.y, (uint32_t)v.z
+#define _uvec4(v) (uint32_t)v.x, (uint32_t)v.y, (uint32_t)v.z, (uint32_t)v.w
+#define _ivec2(v) (int32_t)v.x, (int32_t)v.y
+#define _ivec3(v) (int32_t)v.x, (int32_t)v.y, (int32_t)v.z
+#define _ivec4(v) (int32_t)v.x, (int32_t)v.y, (int32_t)v.z, (int32_t)v.w
+#define _d2(v) (double)v.x, (double)v.y
+#define _d3(v) (double)v.x, (double)v.y, (double)v.z
+#define _d4(v) (double)v.x, (double)v.y, (double)v.z, (double)v.w
 
-#define vec2(...) EXPANDED_vec2(__VA_ARGS__)
-#define vec3(...) EXPANDED_vec3(__VA_ARGS__)
-#define vec4(...) EXPANDED_vec4(__VA_ARGS__)
-#define uvec2(...) EXPANDED_uvec2(__VA_ARGS__)
-#define uvec3(...) EXPANDED_uvec3(__VA_ARGS__)
-#define uvec4(...) EXPANDED_uvec4(__VA_ARGS__)
-#define ivec2(...) EXPANDED_ivec2(__VA_ARGS__)
-#define ivec3(...) EXPANDED_ivec3(__VA_ARGS__)
-#define ivec4(...) EXPANDED_ivec4(__VA_ARGS__)
-#define d2(...) EXPANDED_d2(__VA_ARGS__)
-#define d3(...) EXPANDED_d3(__VA_ARGS__)
-#define d4(...) EXPANDED_d4(__VA_ARGS__)
 
 #ifndef __OPENCL_C_VERSION__
 
@@ -79,13 +56,13 @@ static inline type##2_t type##2(n_t x, n_t y) { return (type##2_t){.x = x, .y = 
 static inline type##2_t type##2_n_n(n_t x, n_t y) { return type##2(x, y); } \
 static inline type##2_t type##2_n(n_t f) { return type##2(f, f); } \
 static inline type##2_t type##2_v2(type##2_t v) { return v; } \
-static inline type##3_t type##3(n_t x, n_t y, n_t z) { return ((type##3_t){{{x, y, z}}}); } \
+static inline type##3_t type##3(n_t x, n_t y, n_t z) { return ((type##3_t){x, y, z}); } \
 static inline type##3_t type##3_n_n_n(n_t x, n_t y, n_t z) { return type##3(x, y, z); } \
 static inline type##3_t type##3_v2_n(type##2_t xy, n_t z) { return type##3(xy.x, xy.y, z); } \
 static inline type##3_t type##3_n_v2(n_t x, type##2_t yz) { return type##3(x, yz.x, yz.y); } \
 static inline type##3_t type##3_n(n_t f) { return type##3(f, f, f); } \
 static inline type##3_t type##3_v3(type##3_t v) { return v; } \
-static inline type##4_t type##4(n_t x, n_t y, n_t z, n_t w) { return ((type##4_t){{{x, y, z, w}}}); } \
+static inline type##4_t type##4(n_t x, n_t y, n_t z, n_t w) { return ((type##4_t){x, y, z, w}); } \
 static inline type##4_t type##4_n_n_n_n(n_t x, n_t y, n_t z, n_t w) { return type##4(x, y, z, w); } \
 static inline type##4_t type##4_v3_n(type##3_t xyz, n_t w) { return type##4(xyz.x, xyz.y, xyz.z, w); } \
 static inline type##4_t type##4_n_v3(n_t x, type##3_t yzw) { return type##4(x, yzw.x, yzw.y, yzw.z); } \
@@ -116,17 +93,18 @@ static inline type##4_t __attribute__((overloadable)) type##4(type##4_t v) { ret
 
 #endif
 
+
 #define vec_oper(n, r, oper) \
-do { int x; for(x=0; x<n; ++x) { r._[x] = oper; } } while(0)
+do { int x; for(x=0; x<n; ++x) { ((n_t*)&r)[x] = oper; } } while(0)
 
 
 #define MAFS_DEFINE_VEC_PRINT(n_t, type, format, n) \
 static inline void type##n##_print(type##n##_t const a) \
 { \
 	int i; \
-	printf("vec" #n "(" format, a._[0]); \
+	printf("vec" #n "(" format, ((n_t*)&a)[0]); \
 	for(i=1; i<n; ++i) \
-		printf(", " format, a._[i]); \
+		printf(", " format, ((n_t*)&a)[i]); \
 	printf(")\n"); \
 }
 
@@ -136,7 +114,7 @@ static inline type##n##_t type##n##_add_number(type##n##_t const a, n_t b) \
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		r._[i] = a._[i] + b; \
+		((n_t*)&r)[i] = ((n_t*)&a)[i] + b; \
 	return r; \
 } \
 static inline type##n##_t type##n##_div(type##n##_t const a, type##n##_t const b) \
@@ -144,7 +122,7 @@ static inline type##n##_t type##n##_div(type##n##_t const a, type##n##_t const b
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		r._[i] = a._[i] / b._[i]; \
+		((n_t*)&r)[i] = ((n_t*)&a)[i] / ((n_t*)&b)[i]; \
 	return r; \
 } \
 static inline type##n##_t type##n##_mul(type##n##_t const a, type##n##_t const b) \
@@ -152,7 +130,7 @@ static inline type##n##_t type##n##_mul(type##n##_t const a, type##n##_t const b
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		r._[i] = a._[i] * b._[i]; \
+		((n_t*)&r)[i] = ((n_t*)&a)[i] * ((n_t*)&b)[i]; \
 	return r; \
 } \
 static inline type##n##_t type##n##_div_number(type##n##_t const a, n_t b) \
@@ -161,7 +139,7 @@ static inline type##n##_t type##n##_div_number(type##n##_t const a, n_t b) \
 	int i; \
 	n_t inv = 1.0f / b; \
 	for(i=0; i<n; ++i) \
-		r._[i] = a._[i] * inv; \
+		((n_t*)&r)[i] = ((n_t*)&a)[i] * inv; \
 	return r; \
 } \
 static inline type##n##_t type##n##_mul_number(type##n##_t const a, n_t b) \
@@ -169,7 +147,7 @@ static inline type##n##_t type##n##_mul_number(type##n##_t const a, n_t b) \
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		r._[i] = a._[i] * b; \
+		((n_t*)&r)[i] = ((n_t*)&a)[i] * b; \
 	return r; \
 } \
 static inline type##n##_t type##n##_sub_number(type##n##_t const a, n_t b) \
@@ -177,14 +155,14 @@ static inline type##n##_t type##n##_sub_number(type##n##_t const a, n_t b) \
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		r._[i] = a._[i] - b; \
+		((n_t*)&r)[i] = ((n_t*)&a)[i] - b; \
 	return r; \
 } \
 static inline int type##n##_equals(type##n##_t const a, type##n##_t const b) \
 { \
 	int i; \
 	for(i=0; i<n; ++i) \
-		if(a._[i] != b._[i]) return 0; \
+		if(((n_t*)&a)[i] != ((n_t*)&b)[i]) return 0; \
 	return 1; \
 } \
 static inline type##n##_t type##n##_add(type##n##_t const a, type##n##_t const b) \
@@ -192,7 +170,7 @@ static inline type##n##_t type##n##_add(type##n##_t const a, type##n##_t const b
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		r._[i] = a._[i] + b._[i]; \
+		((n_t*)&r)[i] = ((n_t*)&a)[i] + ((n_t*)&b)[i]; \
 	return r; \
 } \
 static inline type##n##_t type##n##_sub(type##n##_t const a, type##n##_t const b) \
@@ -200,7 +178,7 @@ static inline type##n##_t type##n##_sub(type##n##_t const a, type##n##_t const b
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		r._[i] = a._[i] - b._[i]; \
+		((n_t*)&r)[i] = ((n_t*)&a)[i] - ((n_t*)&b)[i]; \
 	return r; \
 } \
 static inline type##n##_t type##n##_scale(type##n##_t const v, n_t const s) \
@@ -208,7 +186,7 @@ static inline type##n##_t type##n##_scale(type##n##_t const v, n_t const s) \
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		r._[i] = v._[i] * s; \
+		((n_t*)&r)[i] = ((n_t*)&v)[i] * s; \
 	return r; \
 } \
 static inline type##n##_t type##n##_inv(type##n##_t const a) \
@@ -216,7 +194,7 @@ static inline type##n##_t type##n##_inv(type##n##_t const a) \
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		r._[i] = -a._[i]; \
+		((n_t*)&r)[i] = -((n_t*)&a)[i]; \
 	return r; \
 } \
 static inline n_t type##n##_dot(type##n##_t const a, type##n##_t const b) \
@@ -224,14 +202,14 @@ static inline n_t type##n##_dot(type##n##_t const a, type##n##_t const b) \
 	n_t p = 0.0f; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		p += b._[i]*a._[i]; \
+		p += ((n_t*)&b)[i]*((n_t*)&a)[i]; \
 	return p; \
 } \
 static inline int type##n##_null(type##n##_t const v) \
 { \
 	int i; \
 	for(i=0; i<n; ++i) \
-		if(v._[i]) return 0; \
+		if(((n_t*)&v)[i]) return 0; \
 	return 1; \
 } \
 static inline n_t type##n##_len_square(type##n##_t const v) \
@@ -262,7 +240,7 @@ static inline type##n##_t type##n##_abs(type##n##_t a) \
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		r._[i] = tabs(a._[i]); \
+		((n_t*)&r)[i] = tabs(((n_t*)&a)[i]); \
 	return r; \
 } \
 static inline type##n##_t type##n##_round(type##n##_t a) \
@@ -270,7 +248,7 @@ static inline type##n##_t type##n##_round(type##n##_t a) \
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		r._[i] = round(a._[i]); \
+		((n_t*)&r)[i] = round(((n_t*)&a)[i]); \
 	return r; \
 } \
 static inline type##n##_t type##n##_floor(type##n##_t a) \
@@ -278,7 +256,7 @@ static inline type##n##_t type##n##_floor(type##n##_t a) \
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		r._[i] = floor(a._[i]); \
+		((n_t*)&r)[i] = floor(((n_t*)&a)[i]); \
 	return r; \
 } \
 static inline type##n##_t type##n##_fract(type##n##_t a) \
@@ -286,7 +264,7 @@ static inline type##n##_t type##n##_fract(type##n##_t a) \
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		r._[i] = a._[i] - floor(a._[i]); \
+		((n_t*)&r)[i] = ((n_t*)&a)[i] - floor(((n_t*)&a)[i]); \
 	return r; \
 } \
 static inline type##n##_t type##n##_min(type##n##_t a, type##n##_t b) \
@@ -294,8 +272,8 @@ static inline type##n##_t type##n##_min(type##n##_t a, type##n##_t b) \
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		r._[i] = a._[i] < b._[i] ? \
-				a._[i] : b._[i]; \
+		((n_t*)&r)[i] = ((n_t*)&a)[i] < ((n_t*)&b)[i] ? \
+				((n_t*)&a)[i] : ((n_t*)&b)[i]; \
 	return r; \
 } \
 static inline type##n##_t type##n##_clamp(type##n##_t a, n_t min, n_t max) \
@@ -303,8 +281,8 @@ static inline type##n##_t type##n##_clamp(type##n##_t a, n_t min, n_t max) \
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		r._[i] = a._[i]>min ? \
-				(a._[i]<max?a._[i]:max) : min; \
+		((n_t*)&r)[i] = ((n_t*)&a)[i]>min ? \
+				(((n_t*)&a)[i]<max?((n_t*)&a)[i]:max) : min; \
 	return r; \
 } \
 static inline type##n##_t type##n##_max(type##n##_t a, type##n##_t b) \
@@ -312,8 +290,8 @@ static inline type##n##_t type##n##_max(type##n##_t a, type##n##_t b) \
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		r._[i] = a._[i]>b._[i] ? \
-				a._[i] : b._[i]; \
+		((n_t*)&r)[i] = ((n_t*)&a)[i]>((n_t*)&b)[i] ? \
+				((n_t*)&a)[i] : ((n_t*)&b)[i]; \
 	return r; \
 } \
 static inline type##n##_t type##n##_mix(type##n##_t x, type##n##_t y, n_t a) \
@@ -322,7 +300,7 @@ static inline type##n##_t type##n##_mix(type##n##_t x, type##n##_t y, n_t a) \
 	int i; \
 	n_t inv = 1.0f - a; \
 	for(i=0; i<n; ++i) \
-		r._[i] = x._[i] * inv + y._[i] * a; \
+		((n_t*)&r)[i] = ((n_t*)&x)[i] * inv + ((n_t*)&y)[i] * a; \
 	return r; \
 } \
 static inline type##n##_t type##n##_step(type##n##_t edge, type##n##_t x) \
@@ -330,7 +308,7 @@ static inline type##n##_t type##n##_step(type##n##_t edge, type##n##_t x) \
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		r._[i] = !(x._[i] < edge._[i]); \
+		((n_t*)&r)[i] = !(((n_t*)&x)[i] < ((n_t*)&edge)[i]); \
 	return r; \
 } \
 static inline type##n##_t type##n##_step_number(n_t edge, type##n##_t x) \
@@ -338,7 +316,7 @@ static inline type##n##_t type##n##_step_number(n_t edge, type##n##_t x) \
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		r._[i] = !(x._[i] < edge); \
+		((n_t*)&r)[i] = !(((n_t*)&x)[i] < edge); \
 	return r; \
 }
 
@@ -379,7 +357,7 @@ static inline type##3_t type##3_reflect(type##3_t const v, type##3_t const n) \
 	n_t p  = 2.f*type##3_dot(v, n); \
 	int i; \
 	for(i=0;i<3;++i) \
-		r._[i] = v._[i] - p*n._[i]; \
+		((n_t*)&r)[i] = ((n_t*)&v)[i] - p*((n_t*)&n)[i]; \
 	return r; \
 } \
 /* static inline type##4_t type##_cross(type##4_t a, type##4_t b) \ */ \
@@ -397,7 +375,7 @@ static inline type##4_t type##4_reflect(type##4_t v, type##4_t n) \
 	n_t p  = 2.f*type##4_dot(v, n); \
 	int i; \
 	for(i=0;i<4;++i) \
-		r._[i] = v._[i] - p*n._[i]; \
+		((n_t*)&r)[i] = ((n_t*)&v)[i] - p*((n_t*)&n)[i]; \
 	return r; \
 } \
 static inline type##3_t type##3_perpendicular(const type##3_t v, const type##3_t p) \
@@ -452,7 +430,7 @@ static inline uint32_t _ignore(uint32_t a) { return a; }
 
 #define MAFS_DEFINE_TYPE(n_t, type, format, sqrt, pow, floor, round, tabs) \
 	MAFS_DEFINE_STRUCTS(n_t, type) \
-	/* MAFS_DEFINE_CONSTRUCTOR(n_t, type) \ */ \
+	MAFS_DEFINE_CONSTRUCTOR(n_t, type) \
 	MAFS_DEFINE_VEC(n_t, type, 2, sqrt, pow, floor, round, tabs) \
 	MAFS_DEFINE_VEC(n_t, type, 3, sqrt, pow, floor, round, tabs) \
 	MAFS_DEFINE_VEC(n_t, type, 4, sqrt, pow, floor, round, tabs) \
@@ -468,10 +446,37 @@ MAFS_DEFINE_TYPE(int32_t, ivec, "%d", sqrtf, powf, floorf, roundf, abs)
 MAFS_DEFINE_TYPE(float, vec, "%f", sqrtf, powf, floorf, roundf, fabs)
 MAFS_DEFINE_TYPE(double, d, "%lf", sqrt, pow, floor, round, fabs)
 
-typedef struct mat4_t { union {
-	struct { vec4_t a, b, c, d; };
-	vec4_t _[4];
-}; } mat4_t;
+union vec4_convert
+{
+	vec4_t v4;
+	struct {
+		vec3_t xyz;
+		n_t pad;
+	} v3;
+};
+
+#define MXYZ(v) ((union vec4_convert*)&(v[0]))->v3.xyz
+#define XYZ(v) (*((vec3_t*)&v.x))
+#define XY(v) (*((vec2_t*)&v.x))
+#define ZW(v) (*((vec2_t*)&v.z))
+
+static inline vec2_t vec3_xy(vec3_t v)
+{
+	return vec2(v.x, v.y);
+}
+
+static inline vec3_t vec4_xyz(vec4_t v)
+{
+	return vec3(v.x, v.y, v.z);
+}
+static inline vec2_t vec4_xy(vec4_t v)
+{
+	return vec2(v.x, v.y);
+}
+
+typedef struct mat4_t {
+	float _[4][4];
+} mat4_t;
 
 static inline mat4_t mat4(void)
 {
@@ -479,7 +484,7 @@ static inline mat4_t mat4(void)
 	int i, j;
 	for(i=0; i<4; ++i)
 		for(j=0; j<4; ++j)
-			M._[i]._[j] = i==j ? 1.0f : 0.0f;
+			M._[i][j] = i==j ? 1.0f : 0.0f;
 	return M;
 }
 static inline vec4_t mat4_row(mat4_t M, int i)
@@ -488,7 +493,7 @@ static inline vec4_t mat4_row(mat4_t M, int i)
 	int k;
 	/* return M._[i]; TODO? */
 	for(k=0; k<4; ++k)
-		r._[k] = M._[k]._[i];
+		((n_t*)&r.x)[k] = M._[k][i];
 	return r;
 }
 static inline vec4_t mat4_col(mat4_t M, int i)
@@ -496,7 +501,7 @@ static inline vec4_t mat4_col(mat4_t M, int i)
 	vec4_t r;
 	int k;
 	for(k=0; k<4; ++k)
-		r._[k] = M._[i]._[k];
+		((n_t*)&r.x)[k] = M._[i][k];
 	return r;
 }
 static inline mat4_t mat4_transpose(mat4_t N)
@@ -505,60 +510,64 @@ static inline mat4_t mat4_transpose(mat4_t N)
 	int i, j;
 	for(j=0; j<4; ++j)
 		for(i=0; i<4; ++i)
-			M._[i]._[j] = N._[j]._[i];
+			M._[i][j] = N._[j][i];
 	return M;
 }
 static inline mat4_t mat4_add(mat4_t a, mat4_t b)
 {
 	mat4_t M;
-	int i;
+	int i, j;
 	for(i=0; i<4; ++i)
-		M._[i] = vec4_add(a._[i], b._[i]);
+		for(j=0; j<4; ++j)
+		M._[i][j] = a._[i][j] + b._[i][j];
 	return M;
 }
 static inline mat4_t mat4_sub(mat4_t a, mat4_t b)
 {
 	mat4_t M;
-	int i;
+	int i, j;
 	for(i=0; i<4; ++i)
-		M._[i] = vec4_sub(a._[i], b._[i]);
+		for(j=0; j<4; ++j)
+		M._[i][j] = a._[i][j] - b._[i][j];
 	return M;
 }
 static inline mat4_t mat4_scale(mat4_t a, n_t k)
 {
 	mat4_t M;
-	int i;
+	int i, j;
 	for(i=0; i<4; ++i)
-		M._[i] = vec4_scale(a._[i], k);
+		for(j=0; j<4; ++j)
+			M._[i][j] = a._[i][j] * k;
 	return M;
 }
 static inline mat4_t mat4_scale_aniso(mat4_t a, vec3_t s)
 {
 	mat4_t M;
 	int i;
-	M._[0] = vec4_scale(a._[0], s.x);
-	M._[1] = vec4_scale(a._[1], s.y);
-	M._[2] = vec4_scale(a._[2], s.z);
-	for(i = 0; i < 4; ++i) {
-		M._[3]._[i] = a._[3]._[i];
+	for (i = 0; i < 4; ++i)
+	{
+		M._[0][i] = a._[0][i] * s.x;
+		M._[1][i] = a._[1][i] * s.y;
+		M._[2][i] = a._[2][i] * s.z;
+		M._[3][i] = a._[3][i];
 	}
 	return M;
 }
 static inline void mat4_print(mat4_t M)
 {
-	printf("%f	%f	%f	%f\n", M._[0].x, M._[0].y, M._[0].z, M._[0].w);
-	printf("%f	%f	%f	%f\n", M._[1].x, M._[1].y, M._[1].z, M._[1].w);
-	printf("%f	%f	%f	%f\n", M._[2].x, M._[2].y, M._[2].z, M._[2].w);
-	printf("%f	%f	%f	%f\n", M._[3].x, M._[3].y, M._[3].z, M._[3].w);
+	printf("%f	%f	%f	%f\n", M._[0][0], M._[0][1], M._[0][2], M._[0][3]);
+	printf("%f	%f	%f	%f\n", M._[1][0], M._[1][1], M._[1][2], M._[1][3]);
+	printf("%f	%f	%f	%f\n", M._[2][0], M._[2][1], M._[2][2], M._[2][3]);
+	printf("%f	%f	%f	%f\n", M._[3][0], M._[3][1], M._[3][2], M._[3][3]);
 }
 static inline mat4_t mat4_mul(mat4_t a, mat4_t b)
 {
 	mat4_t M;
 	int k, r, c;
 	for(c=0; c<4; ++c) for(r=0; r<4; ++r) {
-		M._[c]._[r] = 0.f;
+		M._[c][r] = 0.f;
 		for(k=0; k<4; ++k)
-			M._[c]._[r] += a._[k]._[r] * b._[c]._[k];
+			M._[c][r] += a._[k][r] * b._[c][k];
 	}
 	return M;
 }
@@ -567,18 +576,18 @@ static inline vec4_t mat4_mul_vec4(mat4_t M, vec4_t v)
 	vec4_t r;
 	int i, j;
 	for(j=0; j<4; ++j) {
-		r._[j] = 0.f;
+		((n_t*)&r)[j] = 0.f;
 		for(i=0; i<4; ++i)
-			r._[j] += M._[i]._[j] * v._[i];
+			((n_t*)&r)[j] += M._[i][j] * ((n_t*)&v)[i];
 	}
 	return r;
 }
 static inline mat4_t mat4_translate(vec3_t pos)
 {
 	mat4_t T = mat4();
-	T._[3]._[0] = pos.x;
-	T._[3]._[1] = pos.y;
-	T._[3]._[2] = pos.z;
+	T._[3][0] = pos.x;
+	T._[3][1] = pos.y;
+	T._[3][2] = pos.z;
 	return T;
 }
 static inline mat4_t mat4_translate_in_place(mat4_t M, vec3_t pos)
@@ -588,7 +597,7 @@ static inline mat4_t mat4_translate_in_place(mat4_t M, vec3_t pos)
 	int i;
 	for (i = 0; i < 4; ++i) {
 		r = mat4_row(M, i);
-		M._[3]._[i] += vec4_dot(r, t);
+		M._[3][i] += vec4_dot(r, t);
 	}
 	return M;
 }
@@ -597,7 +606,7 @@ static inline mat4_t mat4_from_vec3_mul_outer(vec3_t a, vec3_t b)
 	mat4_t M;
 	int i, j;
 	for(i=0; i<4; ++i) for(j=0; j<4; ++j)
-		M._[i]._[j] = i<3 && j<3 ? a._[i] * b._[j] : 0.f;
+		M._[i][j] = i<3 && j<3 ? ((n_t*)&a)[i] * ((n_t*)&b)[j] : 0.f;
 	return M;
 }
 static inline mat4_t mat4_rotate(mat4_t M, n_t x, n_t y, n_t z, n_t angle)
@@ -611,10 +620,10 @@ static inline mat4_t mat4_rotate(mat4_t M, n_t x, n_t y, n_t z, n_t angle)
 		mat4_t T = mat4_from_vec3_mul_outer(u, u);
 
 		mat4_t S = {._={
-			vec4(    0,  u.z, -u.y, 0),
-			vec4(-u.z,     0,  u.x, 0),
-			vec4( u.y, -u.x,     0, 0),
-			vec4(    0,     0,     0, 0)
+			{   0,  u.z, -u.y, 0},
+			{-u.z,    0,  u.x, 0},
+			{ u.y, -u.x,    0, 0},
+			{   0,    0,    0, 0}
 		}};
 		S = mat4_scale(S, s);
 
@@ -626,7 +635,7 @@ static inline mat4_t mat4_rotate(mat4_t M, n_t x, n_t y, n_t z, n_t angle)
 		T = mat4_add(T, C);
 		T = mat4_add(T, S);
 
-		T._[3]._[3] = 1.0f;		
+		T._[3][3] = 1.0f;		
 		return mat4_mul(M, T);
 	} else {
 		return M;
@@ -637,10 +646,10 @@ static inline mat4_t mat4_rotate_X(mat4_t M, n_t angle)
 	n_t s = sinf(angle);
 	n_t c = cosf(angle);
 	mat4_t R = {._={
-		vec4(1.f, 0.f, 0.f, 0.f),
-		vec4(0.f,   c,   s, 0.f),
-		vec4(0.f,  -s,   c, 0.f),
-		vec4(0.f, 0.f, 0.f, 1.f)
+		{1.f, 0.f, 0.f, 0.f},
+		{0.f,   c,   s, 0.f},
+		{0.f,  -s,   c, 0.f},
+		{0.f, 0.f, 0.f, 1.f}
 	}};
 	return mat4_mul(M, R);
 }
@@ -649,10 +658,10 @@ static inline mat4_t mat4_rotate_Y(mat4_t M, n_t angle)
 	n_t s = sinf(angle);
 	n_t c = cosf(angle);
 	mat4_t R = {._={
-		vec4(   c, 0.f,   s, 0.f),
-		vec4( 0.f, 1.f, 0.f, 0.f),
-		vec4(  -s, 0.f,   c, 0.f),
-		vec4( 0.f, 0.f, 0.f, 1.f)
+		{   c, 0.f,   s, 0.f},
+		{ 0.f, 1.f, 0.f, 0.f},
+		{  -s, 0.f,   c, 0.f},
+		{ 0.f, 0.f, 0.f, 1.f}
 	}};
 	return mat4_mul(M, R);
 }
@@ -661,10 +670,10 @@ static inline mat4_t mat4_rotate_Z(mat4_t Q, mat4_t M, n_t angle)
 	n_t s = sinf(angle);
 	n_t c = cosf(angle);
 	mat4_t R = {._={
-		vec4(   c,   s, 0.f, 0.f),
-		vec4(  -s,   c, 0.f, 0.f),
-		vec4( 0.f, 0.f, 1.f, 0.f),
-		vec4( 0.f, 0.f, 0.f, 1.f)
+		{   c,   s, 0.f, 0.f},
+		{  -s,   c, 0.f, 0.f},
+		{ 0.f, 0.f, 1.f, 0.f},
+		{ 0.f, 0.f, 0.f, 1.f}
 	}};
 	return mat4_mul(M, R);
 }
@@ -673,42 +682,42 @@ static inline mat4_t mat4_invert(mat4_t M)
 	mat4_t T;
 	n_t s[6];
 	n_t c[6];
-	s[0] = M._[0]._[0]*M._[1]._[1] - M._[1]._[0]*M._[0]._[1];
-	s[1] = M._[0]._[0]*M._[1]._[2] - M._[1]._[0]*M._[0]._[2];
-	s[2] = M._[0]._[0]*M._[1]._[3] - M._[1]._[0]*M._[0]._[3];
-	s[3] = M._[0]._[1]*M._[1]._[2] - M._[1]._[1]*M._[0]._[2];
-	s[4] = M._[0]._[1]*M._[1]._[3] - M._[1]._[1]*M._[0]._[3];
-	s[5] = M._[0]._[2]*M._[1]._[3] - M._[1]._[2]*M._[0]._[3];
+	s[0] = M._[0][0]*M._[1][1] - M._[1][0]*M._[0][1];
+	s[1] = M._[0][0]*M._[1][2] - M._[1][0]*M._[0][2];
+	s[2] = M._[0][0]*M._[1][3] - M._[1][0]*M._[0][3];
+	s[3] = M._[0][1]*M._[1][2] - M._[1][1]*M._[0][2];
+	s[4] = M._[0][1]*M._[1][3] - M._[1][1]*M._[0][3];
+	s[5] = M._[0][2]*M._[1][3] - M._[1][2]*M._[0][3];
 
-	c[0] = M._[2]._[0]*M._[3]._[1] - M._[3]._[0]*M._[2]._[1];
-	c[1] = M._[2]._[0]*M._[3]._[2] - M._[3]._[0]*M._[2]._[2];
-	c[2] = M._[2]._[0]*M._[3]._[3] - M._[3]._[0]*M._[2]._[3];
-	c[3] = M._[2]._[1]*M._[3]._[2] - M._[3]._[1]*M._[2]._[2];
-	c[4] = M._[2]._[1]*M._[3]._[3] - M._[3]._[1]*M._[2]._[3];
-	c[5] = M._[2]._[2]*M._[3]._[3] - M._[3]._[2]*M._[2]._[3];
+	c[0] = M._[2][0]*M._[3][1] - M._[3][0]*M._[2][1];
+	c[1] = M._[2][0]*M._[3][2] - M._[3][0]*M._[2][2];
+	c[2] = M._[2][0]*M._[3][3] - M._[3][0]*M._[2][3];
+	c[3] = M._[2][1]*M._[3][2] - M._[3][1]*M._[2][2];
+	c[4] = M._[2][1]*M._[3][3] - M._[3][1]*M._[2][3];
+	c[5] = M._[2][2]*M._[3][3] - M._[3][2]*M._[2][3];
 
 	/* Assumes it is invertible */
 	n_t idet = 1.0f/( s[0]*c[5]-s[1]*c[4]+s[2]*c[3]+s[3]*c[2]-s[4]*c[1]+s[5]*c[0] );
 
-	T._[0]._[0] = ( M._[1]._[1] * c[5] - M._[1]._[2] * c[4] + M._[1]._[3] * c[3]) * idet;
-	T._[0]._[1] = (-M._[0]._[1] * c[5] + M._[0]._[2] * c[4] - M._[0]._[3] * c[3]) * idet;
-	T._[0]._[2] = ( M._[3]._[1] * s[5] - M._[3]._[2] * s[4] + M._[3]._[3] * s[3]) * idet;
-	T._[0]._[3] = (-M._[2]._[1] * s[5] + M._[2]._[2] * s[4] - M._[2]._[3] * s[3]) * idet;
+	T._[0][0] = ( M._[1][1] * c[5] - M._[1][2] * c[4] + M._[1][3] * c[3]) * idet;
+	T._[0][1] = (-M._[0][1] * c[5] + M._[0][2] * c[4] - M._[0][3] * c[3]) * idet;
+	T._[0][2] = ( M._[3][1] * s[5] - M._[3][2] * s[4] + M._[3][3] * s[3]) * idet;
+	T._[0][3] = (-M._[2][1] * s[5] + M._[2][2] * s[4] - M._[2][3] * s[3]) * idet;
 
-	T._[1]._[0] = (-M._[1]._[0] * c[5] + M._[1]._[2] * c[2] - M._[1]._[3] * c[1]) * idet;
-	T._[1]._[1] = ( M._[0]._[0] * c[5] - M._[0]._[2] * c[2] + M._[0]._[3] * c[1]) * idet;
-	T._[1]._[2] = (-M._[3]._[0] * s[5] + M._[3]._[2] * s[2] - M._[3]._[3] * s[1]) * idet;
-	T._[1]._[3] = ( M._[2]._[0] * s[5] - M._[2]._[2] * s[2] + M._[2]._[3] * s[1]) * idet;
+	T._[1][0] = (-M._[1][0] * c[5] + M._[1][2] * c[2] - M._[1][3] * c[1]) * idet;
+	T._[1][1] = ( M._[0][0] * c[5] - M._[0][2] * c[2] + M._[0][3] * c[1]) * idet;
+	T._[1][2] = (-M._[3][0] * s[5] + M._[3][2] * s[2] - M._[3][3] * s[1]) * idet;
+	T._[1][3] = ( M._[2][0] * s[5] - M._[2][2] * s[2] + M._[2][3] * s[1]) * idet;
 
-	T._[2]._[0] = ( M._[1]._[0] * c[4] - M._[1]._[1] * c[2] + M._[1]._[3] * c[0]) * idet;
-	T._[2]._[1] = (-M._[0]._[0] * c[4] + M._[0]._[1] * c[2] - M._[0]._[3] * c[0]) * idet;
-	T._[2]._[2] = ( M._[3]._[0] * s[4] - M._[3]._[1] * s[2] + M._[3]._[3] * s[0]) * idet;
-	T._[2]._[3] = (-M._[2]._[0] * s[4] + M._[2]._[1] * s[2] - M._[2]._[3] * s[0]) * idet;
+	T._[2][0] = ( M._[1][0] * c[4] - M._[1][1] * c[2] + M._[1][3] * c[0]) * idet;
+	T._[2][1] = (-M._[0][0] * c[4] + M._[0][1] * c[2] - M._[0][3] * c[0]) * idet;
+	T._[2][2] = ( M._[3][0] * s[4] - M._[3][1] * s[2] + M._[3][3] * s[0]) * idet;
+	T._[2][3] = (-M._[2][0] * s[4] + M._[2][1] * s[2] - M._[2][3] * s[0]) * idet;
 
-	T._[3]._[0] = (-M._[1]._[0] * c[3] + M._[1]._[1] * c[1] - M._[1]._[2] * c[0]) * idet;
-	T._[3]._[1] = ( M._[0]._[0] * c[3] - M._[0]._[1] * c[1] + M._[0]._[2] * c[0]) * idet;
-	T._[3]._[2] = (-M._[3]._[0] * s[3] + M._[3]._[1] * s[1] - M._[3]._[2] * s[0]) * idet;
-	T._[3]._[3] = ( M._[2]._[0] * s[3] - M._[2]._[1] * s[1] + M._[2]._[2] * s[0]) * idet;
+	T._[3][0] = (-M._[1][0] * c[3] + M._[1][1] * c[1] - M._[1][2] * c[0]) * idet;
+	T._[3][1] = ( M._[0][0] * c[3] - M._[0][1] * c[1] + M._[0][2] * c[0]) * idet;
+	T._[3][2] = (-M._[3][0] * s[3] + M._[3][1] * s[1] - M._[3][2] * s[0]) * idet;
+	T._[3][3] = ( M._[2][0] * s[3] - M._[2][1] * s[1] + M._[2][2] * s[0]) * idet;
 	return T;
 }
 static inline mat4_t mat4_orthonormalize(mat4_t M)
@@ -716,66 +725,66 @@ static inline mat4_t mat4_orthonormalize(mat4_t M)
 	mat4_t R = M;
 	n_t s = 1.0f;
 
-	R._[2].xyz = vec3_norm(R._[2].xyz);
+	MXYZ(R._[2]) = vec3_norm(MXYZ(R._[2]));
 	
-	s = vec3_dot(R._[1].xyz, R._[2].xyz);
-	R._[1].xyz = vec3_sub(R._[1].xyz, vec3_scale(R._[2].xyz, s));
-	R._[2].xyz = vec3_norm(R._[2].xyz);
+	s = vec3_dot(MXYZ(R._[1]), MXYZ(R._[2]));
+	MXYZ(R._[1]) = vec3_sub(MXYZ(R._[1]), vec3_scale(MXYZ(R._[2]), s));
+	MXYZ(R._[2]) = vec3_norm(MXYZ(R._[2]));
 
-	s = vec3_dot(R._[1].xyz, R._[2].xyz);
-	R._[1].xyz = vec3_sub(R._[1].xyz, vec3_scale(R._[2].xyz, s));
-	R._[1].xyz = vec3_norm(R._[1].xyz);
+	s = vec3_dot(MXYZ(R._[1]), MXYZ(R._[2]));
+	MXYZ(R._[1]) = vec3_sub(MXYZ(R._[1]), vec3_scale(MXYZ(R._[2]), s));
+	MXYZ(R._[1]) = vec3_norm(MXYZ(R._[1]));
 
-	s = vec3_dot(R._[0].xyz, R._[1].xyz);
-	R._[0].xyz = vec3_sub(R._[0].xyz, vec3_scale(R._[1].xyz, s));
-	R._[0].xyz = vec3_norm(R._[0].xyz);
+	s = vec3_dot(MXYZ(R._[0]), MXYZ(R._[1]));
+	MXYZ(R._[0]) = vec3_sub(MXYZ(R._[0]), vec3_scale(MXYZ(R._[1]), s));
+	MXYZ(R._[0]) = vec3_norm(MXYZ(R._[0]));
 	return R;
 }
 
 static inline mat4_t mat4_frustum(n_t l, n_t r, n_t b, n_t t, n_t n, n_t f)
 {
 	mat4_t M;
-	M._[0]._[0] = 2.f*n/(r-l);
-	M._[0]._[1] = M._[0]._[2] = M._[0]._[3] = 0.f;
+	M._[0][0] = 2.f*n/(r-l);
+	M._[0][1] = M._[0][2] = M._[0][3] = 0.f;
 	
-	M._[1]._[1] = 2.*n/(t-b);
-	M._[1]._[0] =
-		M._[1]._[2] =
-		M._[1]._[3] = 0.0f;
+	M._[1][1] = 2.*n/(t-b);
+	M._[1][0] =
+		M._[1][2] =
+		M._[1][3] = 0.0f;
 
-	M._[2]._[0] = (r+l)/(r-l);
-	M._[2]._[1] = (t+b)/(t-b);
-	M._[2]._[2] = -(f+n)/(f-n);
-	M._[2]._[3] = -1.f;
+	M._[2][0] = (r+l)/(r-l);
+	M._[2][1] = (t+b)/(t-b);
+	M._[2][2] = -(f+n)/(f-n);
+	M._[2][3] = -1.f;
 	
-	M._[3]._[2] = -2.f*(f*n)/(f-n);
-	M._[3]._[0] =
-		M._[3]._[1] =
-		M._[3]._[3] = 0.0f;
+	M._[3][2] = -2.f*(f*n)/(f-n);
+	M._[3][0] =
+		M._[3][1] =
+		M._[3][3] = 0.0f;
 	return M;
 }
 static inline mat4_t mat4_ortho(n_t l, n_t r, n_t b, n_t t, n_t n, n_t f)
 {
 	mat4_t M;
-	M._[0]._[0] = 2.f/(r-l);
-	M._[0]._[1] =
-		M._[0]._[2] =
-		M._[0]._[3] = 0.0f;
+	M._[0][0] = 2.f/(r-l);
+	M._[0][1] =
+		M._[0][2] =
+		M._[0][3] = 0.0f;
 
-	M._[1]._[1] = 2.f/(t-b);
-	M._[1]._[0] =
-		M._[1]._[2] =
-		M._[1]._[3] = 0.0f;
+	M._[1][1] = 2.f/(t-b);
+	M._[1][0] =
+		M._[1][2] =
+		M._[1][3] = 0.0f;
 
-	M._[2]._[2] = -2.f/(f-n);
-	M._[2]._[0] =
-		M._[2]._[1] =
-		M._[2]._[3] = 0.0f;
+	M._[2][2] = -2.f/(f-n);
+	M._[2][0] =
+		M._[2][1] =
+		M._[2][3] = 0.0f;
 	
-	M._[3]._[0] = -(r+l)/(r-l);
-	M._[3]._[1] = -(t+b)/(t-b);
-	M._[3]._[2] = -(f+n)/(f-n);
-	M._[3]._[3] = 1.f;
+	M._[3][0] = -(r+l)/(r-l);
+	M._[3][1] = -(t+b)/(t-b);
+	M._[3][2] = -(f+n)/(f-n);
+	M._[3][3] = 1.f;
 	return M;
 }
 static inline mat4_t mat4_perspective(n_t y_fov, n_t aspect, n_t n, n_t f)
@@ -787,25 +796,25 @@ static inline mat4_t mat4_perspective(n_t y_fov, n_t aspect, n_t n, n_t f)
 
 	n_t const a = 1.f / tan(y_fov / 2.f);
 
-	M._[0]._[0] = a / aspect;
-	M._[0]._[1] = 0.f;
-	M._[0]._[2] = 0.f;
-	M._[0]._[3] = 0.f;
+	M._[0][0] = a / aspect;
+	M._[0][1] = 0.f;
+	M._[0][2] = 0.f;
+	M._[0][3] = 0.f;
 
-	M._[1]._[0] = 0.f;
-	M._[1]._[1] = a;
-	M._[1]._[2] = 0.f;
-	M._[1]._[3] = 0.f;
+	M._[1][0] = 0.f;
+	M._[1][1] = a;
+	M._[1][2] = 0.f;
+	M._[1][3] = 0.f;
 
-	M._[2]._[0] = 0.f;
-	M._[2]._[1] = 0.f;
-	M._[2]._[2] = -((f + n) / (f - n));
-	M._[2]._[3] = -1.f;
+	M._[2][0] = 0.f;
+	M._[2][1] = 0.f;
+	M._[2][2] = -((f + n) / (f - n));
+	M._[2][3] = -1.f;
 
-	M._[3]._[0] = 0.f;
-	M._[3]._[1] = 0.f;
-	M._[3]._[2] = -((2.f * f * n) / (f - n));
-	M._[3]._[3] = 0.f;
+	M._[3][0] = 0.f;
+	M._[3][1] = 0.f;
+	M._[3][2] = -((2.f * f * n) / (f - n));
+	M._[3][3] = 0.f;
 	return M;
 }
 
@@ -816,27 +825,27 @@ static inline mat4_t mat4_from_vecs(vec3_t X, vec3_t Y, vec3_t Z)
 	Y = vec3_norm(Y);
 	Z = vec3_norm(Z);
 
-	result._[0]._[0] = X._[0];
-	result._[0]._[1] = X._[1];
-	result._[0]._[2] = X._[2];
-	result._[0]._[3] = 0;
+	result._[0][0] = X.x;
+	result._[0][1] = X.y;
+	result._[0][2] = X.z;
+	result._[0][3] = 0;
 
-	result._[1]._[0] = Y._[0];
-	result._[1]._[1] = Y._[1];
-	result._[1]._[2] = Y._[2];
-	result._[1]._[3] = 0;
-
-
-	result._[2]._[0] = Z._[0];
-	result._[2]._[1] = Z._[1];
-	result._[2]._[2] = Z._[2];
-	result._[2]._[3] = 0;
+	result._[1][0] = Y.x;
+	result._[1][1] = Y.y;
+	result._[1][2] = Y.z;
+	result._[1][3] = 0;
 
 
-	result._[3]._[0] = 0;
-	result._[3]._[1] = 0;
-	result._[3]._[2] = 0;
-	result._[3]._[3] = 1;
+	result._[2][0] = Z.x;
+	result._[2][1] = Z.y;
+	result._[2][2] = Z.z;
+	result._[2][3] = 0;
+
+
+	result._[3][0] = 0;
+	result._[3][1] = 0;
+	result._[3][2] = 0;
+	result._[3][3] = 1;
 	return result;
 }
 
@@ -856,25 +865,25 @@ static inline mat4_t mat4_look_at(vec3_t eye, vec3_t center, vec3_t up)
 
 	vec3_t t = vec3_cross(s, f);
 
-	M._[0]._[0] =  s.x;
-	M._[0]._[1] =  t.x;
-	M._[0]._[2] = -f.x;
-	M._[0]._[3] =   0.f;
+	M._[0][0] =  s.x;
+	M._[0][1] =  t.x;
+	M._[0][2] = -f.x;
+	M._[0][3] =   0.f;
 
-	M._[1]._[0] =  s.y;
-	M._[1]._[1] =  t.y;
-	M._[1]._[2] = -f.y;
-	M._[1]._[3] =   0.f;
+	M._[1][0] =  s.y;
+	M._[1][1] =  t.y;
+	M._[1][2] = -f.y;
+	M._[1][3] =   0.f;
 
-	M._[2]._[0] =  s.z;
-	M._[2]._[1] =  t.z;
-	M._[2]._[2] = -f.z;
-	M._[2]._[3] =   0.f;
+	M._[2][0] =  s.z;
+	M._[2][1] =  t.z;
+	M._[2][2] = -f.z;
+	M._[2][3] =  0.f;
 
-	M._[3]._[0] =  0.f;
-	M._[3]._[1] =  0.f;
-	M._[3]._[2] =  0.f;
-	M._[3]._[3] =  1.f;
+	M._[3][0] =  0.f;
+	M._[3][1] =  0.f;
+	M._[3][2] =  0.f;
+	M._[3][3] =  1.f;
 
 	return mat4_translate_in_place(M, vec3_inv(eye));
 }
@@ -888,7 +897,7 @@ static inline vec4_t quat_add(vec4_t a, vec4_t b)
 	vec4_t r;
 	int i;
 	for(i=0; i<4; ++i)
-		r._[i] = a._[i] + b._[i];
+		((n_t*)&r)[i] = ((n_t*)&a)[i] + ((n_t*)&b)[i];
 	return r;
 }
 static inline vec4_t quat_sub(vec4_t a, vec4_t b)
@@ -896,7 +905,7 @@ static inline vec4_t quat_sub(vec4_t a, vec4_t b)
 	vec4_t r;
 	int i;
 	for(i=0; i<4; ++i)
-		r._[i] = a._[i] - b._[i];
+		((n_t*)&r)[i] = ((n_t*)&a)[i] - ((n_t*)&b)[i];
 	return r;
 }
 static inline vec4_t quat_scale(vec4_t v, n_t s)
@@ -904,7 +913,7 @@ static inline vec4_t quat_scale(vec4_t v, n_t s)
 	vec4_t r;
 	int i;
 	for(i=0; i<4; ++i)
-		r._[i] = v._[i] * s;
+		((n_t*)&r)[i] = ((n_t*)&v)[i] * s;
 	return r;
 }
 static inline vec4_t quat_invert(vec4_t a)
@@ -913,8 +922,7 @@ static inline vec4_t quat_invert(vec4_t a)
 	if (len != 0.0)
 	{
 		float i = 1.0f / len;
-		vec3_t xyz = vec3_scale(a.xyz, -i);
-		return vec4(xyz.x, xyz.y, xyz.z, a.w * i);
+		return vec4(_vec3(a), a.w * i);
 	}
 	return a;
 }
@@ -923,8 +931,8 @@ static inline vec4_t quat_conj(vec4_t q)
 	vec4_t r;
 	int i;
 	for(i=0; i<3; ++i)
-		r._[i] = -q._[i];
-	r._[3] = q._[3];
+		((n_t*)&r)[i] = -((n_t*)&q)[i];
+	((n_t*)&r)[3] = ((n_t*)&q)[3];
 	return r;
 }
 static inline vec3_t quat_mul_vec3(vec4_t q, vec3_t v)
@@ -934,9 +942,9 @@ static inline vec3_t quat_mul_vec3(vec4_t q, vec3_t v)
 t = 2 * cross(q.xyz, v)
 v' = v + q.w * t + cross(q.xyz, t)
  */
-	vec3_t t = vec3_scale(vec3_cross(q.xyz, v), 2.0f);
+	vec3_t t = vec3_scale(vec3_cross(vec4_xyz(q), v), 2.0f);
 
-	return vec3_add(vec3_add(v, vec3_scale(t, q.w)), vec3_cross(q.xyz, t));
+	return vec3_add(vec3_add(v, vec3_scale(t, q.w)), vec3_cross(vec4_xyz(q), t));
 }
 
 static inline mat4_t quat_to_mat4(vec4_t q)
@@ -952,23 +960,23 @@ static inline mat4_t quat_to_mat4(vec4_t q)
 	n_t qwy = q.w * q.y;
 	n_t qwz = q.w * q.z;
 
-	M._[0]._[0] = 1.0f - 2.0f * (qyy +  qzz);
-	M._[0]._[1] = 2.0f * (qxy + qwz);
-	M._[0]._[2] = 2.0f * (qxz - qwy);
-	M._[0]._[3] = 0;
+	M._[0][0] = 1.0f - 2.0f * (qyy +  qzz);
+	M._[0][1] = 2.0f * (qxy + qwz);
+	M._[0][2] = 2.0f * (qxz - qwy);
+	M._[0][3] = 0;
 
-	M._[1]._[0] = 2.0f * (qxy - qwz);
-	M._[1]._[1] = 1.0f - 2.0f * (qxx +  qzz);
-	M._[1]._[2] = 2.0f * (qyz + qwx);
-	M._[1]._[3] = 0;
+	M._[1][0] = 2.0f * (qxy - qwz);
+	M._[1][1] = 1.0f - 2.0f * (qxx +  qzz);
+	M._[1][2] = 2.0f * (qyz + qwx);
+	M._[1][3] = 0;
 
-	M._[2]._[0] = 2.0f * (qxz + qwy);
-	M._[2]._[1] = 2.0f * (qyz - qwx);
-	M._[2]._[2] = 1.0f - 2.0f * (qxx +  qyy);
-	M._[2]._[3] = 0;
+	M._[2][0] = 2.0f * (qxz + qwy);
+	M._[2][1] = 2.0f * (qyz - qwx);
+	M._[2][2] = 1.0f - 2.0f * (qxx +  qyy);
+	M._[2][3] = 0;
 
-	M._[3]._[0] = M._[3]._[1] = M._[3]._[2] = 0.f;
-	M._[3]._[3] = 1.f;
+	M._[3][0] = M._[3][1] = M._[3][2] = 0.f;
+	M._[3][3] = 1.f;
 	return M;
 }
 /* static inline mat4_t mat4_from_quat(vec4_t q) */
@@ -983,23 +991,23 @@ static inline mat4_t quat_to_mat4(vec4_t q)
 /* 	n_t c2 = c*c; */
 /* 	n_t d2 = d*d; */
 	
-/* 	M._[0]._[0] = a2 + b2 - c2 - d2; */
-/* 	M._[0]._[1] = 2.f*(b*c + a*d); */
-/* 	M._[0]._[2] = 2.f*(b*d - a*c); */
-/* 	M._[0]._[3] = 0.f; */
+/* 	M._[0][0] = a2 + b2 - c2 - d2; */
+/* 	M._[0][1] = 2.f*(b*c + a*d); */
+/* 	M._[0][2] = 2.f*(b*d - a*c); */
+/* 	M._[0][3] = 0.f; */
 
-/* 	M._[1]._[0] = 2*(b*c - a*d); */
-/* 	M._[1]._[1] = a2 - b2 + c2 - d2; */
-/* 	M._[1]._[2] = 2.f*(c*d + a*b); */
-/* 	M._[1]._[3] = 0.f; */
+/* 	M._[1][0] = 2*(b*c - a*d); */
+/* 	M._[1][1] = a2 - b2 + c2 - d2; */
+/* 	M._[1][2] = 2.f*(c*d + a*b); */
+/* 	M._[1][3] = 0.f; */
 
-/* 	M._[2]._[0] = 2.f*(b*d + a*c); */
-/* 	M._[2]._[1] = 2.f*(c*d - a*b); */
-/* 	M._[2]._[2] = a2 - b2 - c2 + d2; */
-/* 	M._[2]._[3] = 0.f; */
+/* 	M._[2][0] = 2.f*(b*d + a*c); */
+/* 	M._[2][1] = 2.f*(c*d - a*b); */
+/* 	M._[2][2] = a2 - b2 - c2 + d2; */
+/* 	M._[2][3] = 0.f; */
 
-/* 	M._[3]._[0] = M._[3]._[1] = M._[3]._[2] = 0.f; */
-/* 	M._[3]._[3] = 1.f; */
+/* 	M._[3][0] = M._[3][1] = M._[3][2] = 0.f; */
+/* 	M._[3][3] = 1.f; */
 /* 	return M; */
 /* } */
 
@@ -1057,7 +1065,7 @@ static inline vec4_t quat_rotate(vec3_t axis, n_t angle)
 	sincosf(angle * 0.5f, &s, &c);
 	#endif
 
-	r.xyz = vec3_scale(axis, s);
+	XYZ(r) = vec3_scale(axis, s);
 	r.w = c;
 	return r;
 }
@@ -1065,11 +1073,11 @@ static inline vec4_t quat_rotate(vec3_t axis, n_t angle)
 /* vec4_t mat3_to_quat(mat4_t m) */
 /* { */
 /* 	vec4_t q; */
-/* 	q.w = sqrtf(1.0f + m._[0]._[0] + m._[1]._[1] + m._[2]._[2]) / 2.0f; */
+/* 	q.w = sqrtf(1.0f + m._[0][0] + m._[1][1] + m._[2][2]) / 2.0f; */
 /* 	float w4 = (4.0f * q.w); */
-/* 	q.x = (m._[2]._[1] - m._[1]._[2]) / w4; */
-/* 	q.y = (m._[0]._[2] - m._[2]._[0]) / w4; */
-/* 	q.z = (m._[1]._[0] - m._[0]._[1]) / w4; */
+/* 	q.x = (m._[2][1] - m._[1][2]) / w4; */
+/* 	q.y = (m._[0][2] - m._[2][0]) / w4; */
+/* 	q.z = (m._[1][0] - m._[0][1]) / w4; */
 /* 	return q; */
 /* } */
 
@@ -1143,12 +1151,12 @@ static inline mat4_t mat4_mul_quat(mat4_t M, vec4_t q)
 /*  XXX: The way this is written only works for othogonal matrices. */
 /* TODO: Take care of non-orthogonal case. */
 	mat4_t R;
-	R._[0].xyz = quat_mul_vec3(q, M._[0].xyz);
-	R._[1].xyz = quat_mul_vec3(q, M._[1].xyz);
-	R._[2].xyz = quat_mul_vec3(q, M._[2].xyz);
+	MXYZ(R._[0]) = quat_mul_vec3(q, MXYZ(M._[0]));
+	MXYZ(R._[1]) = quat_mul_vec3(q, MXYZ(M._[1]));
+	MXYZ(R._[2]) = quat_mul_vec3(q, MXYZ(M._[2]));
 
-	R._[3]._[0] = R._[3]._[1] = R._[3]._[2] = 0.f;
-	R._[3]._[3] = 1.f;
+	R._[3][0] = R._[3][1] = R._[3][2] = 0.f;
+	R._[3][3] = 1.f;
 	return R;
 }
 
@@ -1162,7 +1170,7 @@ static inline mat4_t mat4_mul_quat(mat4_t M, vec4_t q)
 /* 	int *p = perm; */
 
 /* 	for(i = 0; i<3; i++) { */
-/* 		n_t m = M._[i]._[i]; */
+/* 		n_t m = M._[i][i]; */
 /* 		if( m < r ) continue; */
 /* 		m = r; */
 /* 		p = &perm[i]; */
@@ -1184,10 +1192,10 @@ static inline mat4_t mat4_mul_quat(mat4_t M, vec4_t q)
 /* } */
 static inline vec4_t mat4_to_quat(mat4_t m)
 {
-	n_t fourXSquaredMinus1 = m._[0]._[0] - m._[1]._[1] - m._[2]._[2];
-	n_t fourYSquaredMinus1 = m._[1]._[1] - m._[0]._[0] - m._[2]._[2];
-	n_t fourZSquaredMinus1 = m._[2]._[2] - m._[0]._[0] - m._[1]._[1];
-	n_t fourWSquaredMinus1 = m._[0]._[0] + m._[1]._[1] + m._[2]._[2];
+	n_t fourXSquaredMinus1 = m._[0][0] - m._[1][1] - m._[2][2];
+	n_t fourYSquaredMinus1 = m._[1][1] - m._[0][0] - m._[2][2];
+	n_t fourZSquaredMinus1 = m._[2][2] - m._[0][0] - m._[1][1];
+	n_t fourWSquaredMinus1 = m._[0][0] + m._[1][1] + m._[2][2];
 
 	int biggestIndex = 0;
 	n_t fourBiggestSquaredMinus1 = fourWSquaredMinus1;
@@ -1213,22 +1221,21 @@ static inline vec4_t mat4_to_quat(mat4_t m)
 	switch(biggestIndex)
 	{
 		case 0:
-			return vec4((m._[1]._[2] - m._[2]._[1]) * mult, (m._[2]._[0] - m._[0]._[2]) * mult, (m._[0]._[1] - m._[1]._[0]) * mult, biggestVal);
+			return vec4((m._[1][2] - m._[2][1]) * mult, (m._[2][0] - m._[0][2]) * mult, (m._[0][1] - m._[1][0]) * mult, biggestVal);
 		case 1:
-			return vec4(biggestVal, (m._[0]._[1] + m._[1]._[0]) * mult, (m._[2]._[0] + m._[0]._[2]) * mult, (m._[1]._[2] - m._[2]._[1]) * mult);
+			return vec4(biggestVal, (m._[0][1] + m._[1][0]) * mult, (m._[2][0] + m._[0][2]) * mult, (m._[1][2] - m._[2][1]) * mult);
 		case 2:
-			return vec4((m._[0]._[1] + m._[1]._[0]) * mult, biggestVal, (m._[1]._[2] + m._[2]._[1]) * mult, (m._[2]._[0] - m._[0]._[2]) * mult);
+			return vec4((m._[0][1] + m._[1][0]) * mult, biggestVal, (m._[1][2] + m._[2][1]) * mult, (m._[2][0] - m._[0][2]) * mult);
 		case 3:
-			return vec4((m._[2]._[0] + m._[0]._[2]) * mult, (m._[1]._[2] + m._[2]._[1]) * mult, biggestVal, (m._[0]._[1] - m._[1]._[0]) * mult);
+			return vec4((m._[2][0] + m._[0][2]) * mult, (m._[1][2] + m._[2][1]) * mult, biggestVal, (m._[0][1] - m._[1][0]) * mult);
 		default:
 			return vec4(0, 0, 0, 0);
 	}
 }
 
-typedef struct mat3_t { union {
-	struct { vec3_t a, b, c, d; };
-	vec3_t _[3];
-}; } mat3_t;
+typedef struct mat3_t {
+	n_t _[3][3];
+} mat3_t;
 
 
 static inline mat3_t mat3(void)
@@ -1237,7 +1244,7 @@ static inline mat3_t mat3(void)
 	int i, j;
 	for(i=0; i<3; ++i)
 		for(j=0; j<3; ++j)
-			M._[i]._[j] = i==j ? 1.f : 0.f;
+			M._[i][j] = i==j ? 1.f : 0.f;
 	return M;
 }
 
@@ -1247,7 +1254,7 @@ static inline mat3_t mat3_of_mat4(mat4_t N)
 	int i, j;
 	for(i=0; i<3; ++i)
 		for(j=0; j<3; ++j)
-			M._[i]._[j] = N._[i]._[j];
+			M._[i][j] = N._[i][j];
 	return M;
 }
 
@@ -1269,41 +1276,14 @@ static inline vec2_t int_to_vec2(int id)
 		unsigned int i;
 		struct{
 			unsigned char r, g, b, a;
-		};
+		} _convert;
 	} convert = {.i = id};
 
-	return vec2((float)convert.r / 255, (float)convert.g / 255);
+	return vec2((float)convert._convert.r / 255, (float)convert._convert.g / 255);
 }
 
-#define Z3 ((vec3_t){{{0.0f, 0.0f, 0.0f}}})
-#define Z2 ((vec2_t){{{0.0f, 0.0f}}})
-/* CONST vec3_t Z3 = { .x = 0, .y = 0, .z = 0}; */
-/* CONST vec2_t Z2 = { .x = 0, .y = 0}; */
-
-#ifndef __OPENCL_C_VERSION__
-/* #define MAFS_ARGNUM(...) \ */
-    /* _MAFS_ARGNUM(_0, ##__VA_ARGS__, 4, 3, 2, 1, 0) */
-/* #define _MAFS_ARGNUM(_0, _1, _2, _3, _4, N, ...) N */
-
-#define CAT(a,b) a##b
-#define CAT2(a,b) CAT(a,b)
-
-#define _vec2(v) (float)v.x, (float)v.y
-#define _vec3(v) (float)v.x, (float)v.y, (float)v.z
-#define _vec4(v) (float)v.x, (float)v.y, (float)v.z, (float)v.w
-#define _uvec2(v) (uint32_t)v.x, (uint32_t)v.y
-#define _uvec3(v) (uint32_t)v.x, (uint32_t)v.y, (uint32_t)v.z
-#define _uvec4(v) (uint32_t)v.x, (uint32_t)v.y, (uint32_t)v.z, (uint32_t)v.w
-#define _ivec2(v) (int32_t)v.x, (int32_t)v.y
-#define _ivec3(v) (int32_t)v.x, (int32_t)v.y, (int32_t)v.z
-#define _ivec4(v) (int32_t)v.x, (int32_t)v.y, (int32_t)v.z, (int32_t)v.w
-#define _d2(v) (double)v.x, (double)v.y
-#define _d3(v) (double)v.x, (double)v.y, (double)v.z
-#define _d4(v) (double)v.x, (double)v.y, (double)v.z, (double)v.w
-
-#define xy(vec) vec.xy
-#define xz(vec) vec2(vec.x, vec.z)
-
-#endif
+#define Z4 ((vec4_t){0.0f, 0.0f, 0.0f, 0.0f})
+#define Z3 ((vec3_t){0.0f, 0.0f, 0.0f})
+#define Z2 ((vec2_t){0.0f, 0.0f})
 
 #endif

@@ -185,7 +185,7 @@ bool_t _vicall_load(vifunc_t *parent, const char *name, FILE *fp)
 	uint32_t color, data_offset;
 	bool_t is_input, is_output, is_linked, is_hidden, is_locked;
 
-	uint32_t ret = fscanf(fp, "%s %f %f %x %d %d %d %d %d %d\n", 
+	uint32_t ret = fscanf(fp, "%s %f %f %x %u %u %u %u %u %u\n", 
 	                      type, &pos.x, &pos.y,
 	                      &color, &is_input, &is_output,
 	                      &is_linked, &is_hidden, &is_locked, &data_offset);
@@ -692,10 +692,10 @@ void vicall_color(vicall_t *self, vec4_t color)
 {
 	if (!self) return;
 	self->color = nk_color_u32(nk_rgba(
-			color.r * 255,
-			color.g * 255,
-			color.b * 255,
-			color.a * 255));
+			color.x * 255,
+			color.y * 255,
+			color.z * 255,
+			color.w * 255));
 }
 
 void vifunc_slot_print(vifunc_t *func, slot_t slot)
@@ -1434,7 +1434,7 @@ void vifunc_copy(vifunc_t *dst, vifunc_t *src)
 		uint32_t flags =   it->is_linked * V_LINKED | it->is_hidden * V_HID
 						 | it->is_output * V_OUT | it->is_input * V_IN;
 		vicall_t *copy = vicall_new(dst, it->type,
-				it->name, it->bounds.xy, it->data_offset, flags);
+				it->name, vec4_xy(it->bounds), it->data_offset, flags);
 		copy->color = it->color;
 		for (uint32_t i = 0; i < 256; i++)
 		{

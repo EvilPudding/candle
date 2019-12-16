@@ -212,7 +212,7 @@ int32_t scale_drag(struct edit_scale *self, vec3_t p, int32_t button, c_editmode
 	float dist = -mat4_mul_vec4(cam->renderer->glvars[0].inv_model,
 			vec4(_vec3(obj_pos), 1.0f)).z;
 	dist = c_camera_unlinearize(cam, dist);
-	vec3_t proj = c_camera_real_pos(cam, dist, p.xy);
+	vec3_t proj = c_camera_real_pos(cam, dist, vec3_xy(p));
 	float radius = vec3_dist(proj, obj_pos);
 
 	if(!self->dragging)
@@ -297,7 +297,7 @@ int32_t translate_drag(struct edit_translate *self, vec3_t p, int32_t button, c_
 
 	if(self->mode == 0)
 	{
-		vec3_t pos = c_camera_real_pos(cam, p.z, p.xy);
+		vec3_t pos = c_camera_real_pos(cam, p.z, vec3_xy(p));
 
 		if(parent)
 		{
@@ -328,18 +328,18 @@ int32_t rotate_drag(struct edit_rotate *self, vec3_t p, int32_t button, c_editmo
 	c_camera_t *cam = c_camera(&ec->camera);
 
 	self->obj_pos = c_node_pos_to_global(ns, Z3);
-	self->p = p.xy;
+	self->p = vec3_xy(p);
 
 	float dist = -mat4_mul_vec4(cam->renderer->glvars[0].inv_model,
 			vec4(_vec3(self->obj_pos), 1.0f)).z;
 	dist = c_camera_unlinearize(cam, dist);
-	vec3_t proj = c_camera_real_pos(cam, dist, p.xy);
+	vec3_t proj = c_camera_real_pos(cam, dist, vec3_xy(p));
 	float radius = vec3_dist(proj, self->obj_pos);
 
 	if(!self->dragging)
 	{
 		self->tool_fade = 1.0f;
-		self->start_screen = p.xy;
+		self->start_screen = vec3_xy(p);
 		self->dragging = 1;
 		entity_signal_same(ec->selected, ref("transform_start"), NULL, NULL);
 		self->start_radius = radius;
@@ -350,8 +350,8 @@ int32_t rotate_drag(struct edit_rotate *self, vec3_t p, int32_t button, c_editmo
 
 	c_spatial_lock(sc);
 
-	vec2_t sp = c_camera_screen_pos(cam, self->obj_pos).xy;
-	vec2_t dif = vec2_sub(p.xy, sp);
+	vec2_t sp = vec3_xy(c_camera_screen_pos(cam, self->obj_pos));
+	vec2_t dif = vec2_sub(vec3_xy(p), sp);
 
 	float angle1 = atan2f(self->start_screen.y - sp.y, self->start_screen.x - sp.x);
 	float angle2 = atan2f(dif.y, dif.x);
@@ -388,8 +388,14 @@ int32_t rotate_drag(struct edit_rotate *self, vec3_t p, int32_t button, c_editmo
 }
 
 void c_editmode_add_tool(c_editmode_t *self, char key, const char *name,
-                         void *init, void *mmove, void *mdrag, void *mpress,
-                         void *mrelease, void *update, void *end, void *usrptr,
+                         mouse_tool_init_cb init,
+                         mouse_tool_move_cb mmove,
+                         mouse_tool_drag_cb mdrag,
+                         mouse_tool_press_cb mpress,
+                         mouse_tool_release_cb mrelease,
+                         mouse_tool_update_cb update,
+                         mouse_tool_end_cb end,
+                         void *usrptr,
                          uint32_t require_component)
 {
 	uint32_t i;
@@ -430,16 +436,20 @@ void c_editmode_init(c_editmode_t *self)
 	self->context = c_entity(self);
 	c_node(self)->unpacked = 1;
 
-	c_editmode_add_tool(self, 't', "translate", translate_init, NULL,
-			translate_drag, NULL, translate_release, NULL, translate_end,
+	c_editmode_add_tool(self, 't', "translate", (mouse_tool_init_cb)translate_init, NULL,
+			(mouse_tool_drag_cb)translate_drag, NULL,
+			(mouse_tool_release_cb)translate_release, NULL,
+			(mouse_tool_end_cb)translate_end,
 			calloc(1, sizeof(struct edit_translate)), ref("spacial"));
 
-	c_editmode_add_tool(self, 'r', "rotate", rotate_init, NULL,
-			rotate_drag, NULL, rotate_release, rotate_update, rotate_end,
+	c_editmode_add_tool(self, 'r', "rotate", (mouse_tool_init_cb)rotate_init, NULL,
+			(mouse_tool_drag_cb)rotate_drag, NULL, (mouse_tool_release_cb)rotate_release,
+			(mouse_tool_update_cb)rotate_update, (mouse_tool_end_cb)rotate_end,
 			calloc(1, sizeof(struct edit_rotate)), ref("spacial"));
 
-	c_editmode_add_tool(self, 's', "scale", scale_init, NULL,
-			scale_drag, NULL, scale_release, NULL, scale_end,
+	c_editmode_add_tool(self, 's', "scale", (mouse_tool_init_cb)scale_init, NULL,
+			(mouse_tool_drag_cb)scale_drag, NULL,
+			(mouse_tool_release_cb)scale_release, NULL, (mouse_tool_end_cb)scale_end,
 			calloc(1, sizeof(struct edit_scale)), ref("spacial"));
 
 	if(!g_sel_mat)
@@ -526,7 +536,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	renderer_add_pass(renderer, "mouse_depth", "extract_depth", ref("quad"),
 			0, self->mouse_depth, NULL, 0, ref("selectable"),
 		(bind_t[]){
-			{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 0.0f)},
+			{CLEAR_COLOR, .vec4 = Z4},
 			{TEX, "depthbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
 			{VEC2, "position", (getter_cb)c_editmode_bind_mouse_position},
 			{USRPTR, .ptr = self},
@@ -569,7 +579,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	renderer_add_pass(renderer, "highlights_0", "border", ref("quad"),
 			0, tmp, NULL, 0, ~0,
 		(bind_t[]){
-			{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 0.0f)},
+			{CLEAR_COLOR, .vec4 = Z4},
 			{TEX, "sbuffer", .buffer = renderer_tex(renderer, ref("selectable"))},
 			{INT, "mode", (getter_cb)c_editmode_bind_mode},
 			{VEC2, "over_id", (getter_cb)c_editmode_bind_over},
@@ -690,7 +700,7 @@ int32_t c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 	renderer_t *renderer = c_camera(&self->camera)->renderer;
 	vec2_t p = vec2(event->x / renderer->width,
 			1.0f - event->y / renderer->height);
-	self->mouse_screen_pos.xy = p;
+	XY(self->mouse_screen_pos) = p;
 
 	if (self->control)
 	{

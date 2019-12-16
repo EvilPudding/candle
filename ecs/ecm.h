@@ -12,13 +12,13 @@
 #include "utils/khash.h"
 #include "utils/macros.h"
 
-typedef struct ecm_t ecm_t;
+struct ecm;
 
-typedef struct c_t c_t;
+struct c;
 
-typedef void(*init_cb)(c_t *self);
-typedef void(*destroy_cb)(c_t *self);
-typedef int32_t(*signal_cb)(c_t *self, void *data, void *output);
+typedef void(*init_cb)(struct c *self);
+typedef void(*destroy_cb)(struct c *self);
+typedef int32_t(*signal_cb)(struct c *self, void *data, void *output);
 typedef void(*c_reg_cb)(void);
 
 struct set_var
@@ -87,9 +87,16 @@ struct comp_page
 	uint32_t components_size;
 };
 
+typedef struct c
+{
+	entity_t entity;
+	uint32_t comp_type;
+	uint32_t ghost;
+} c_t;
+
 KHASH_MAP_INIT_INT(c, c_t*)
 
-typedef struct ct_t
+typedef struct ct
 {
 	char name[32];
 
@@ -147,13 +154,6 @@ typedef struct ecm_t
 	int32_t dirty;
 	int32_t safe;
 } ecm_t; /* Entity Component System */
-
-typedef struct c_t
-{
-	entity_t entity;
-	uint32_t comp_type;
-	uint32_t ghost;
-} c_t;
 
 #define c_entity(c) (((c_t*)c)->entity)
 
@@ -257,10 +257,10 @@ static inline uvec2_t entity_to_uvec2(entity_t self)
 		uint32_t i;
 		struct{
 			uint8_t r, g, b, a;
-		};
+		} _convert;
 	} convert = {.i = pos};
 
-	return uvec2(convert.r, convert.g);
+	return uvec2(convert._convert.r, convert._convert.g);
 }
 static inline vec2_t entity_to_vec2(entity_t self)
 {

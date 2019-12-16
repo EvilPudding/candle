@@ -1,7 +1,7 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
-typedef struct vector_t vector_t;
+typedef struct vector vector_t;
 
 typedef int(*vector_compare_cb)(const void *a, const void *b);
 

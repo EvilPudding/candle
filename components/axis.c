@@ -60,7 +60,7 @@ c_axis_t *c_axis_new(int type, vecN_t dir)
 		vecN_t point = vecN_(scale)(dir, 0.5);
 		mesh_circle(self->dir_mesh, 0.03f, 8, dir);
 		mesh_extrude_edges(self->dir_mesh, 1, point, 1.0f, NULL, NULL, NULL);
-		mesh_translate(self->dir_mesh, XYZ(point));
+		mesh_translate(self->dir_mesh, vecN_xyz(point));
 		mesh_cube(self->dir_mesh, 0.1, 1.0f);
 		mesh_unlock(self->dir_mesh);
 	}
@@ -69,7 +69,7 @@ c_axis_t *c_axis_new(int type, vecN_t dir)
 	c_model_set_xray(c_model(self), 1);
 	c_model(self)->scale_dist = 0.2f;
 
-	self->dir = XYZ(dir);
+	self->dir = vecN_xyz(dir);
 
 	return self;
 }

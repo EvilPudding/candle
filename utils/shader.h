@@ -31,12 +31,14 @@ typedef struct
 	bool_t has_skin;
 } vs_t;
 
+struct shader;
+
 typedef struct
 {
 	char *code;
 	uint32_t program;
 
-	shader_t *combinations[32];
+	struct shader *combinations[32];
 
 	char filename[32];
 	uint32_t ready;
@@ -60,7 +62,7 @@ typedef struct
 KHASH_MAP_INIT_INT(uniform, uint32_t)
 
 typedef struct light_t light_t;
-typedef struct shader_t
+typedef struct shader
 {
 	fs_variation_t *fs;
 	uint32_t index;

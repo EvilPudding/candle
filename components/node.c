@@ -203,7 +203,7 @@ void c_node_disable_inherit_transform(c_node_t *self)
 	self->inherit_transform = false;
 	self->cached = false;
 
-	sc->pos = mat4_mul_vec4(parent_node->model, vec4(_vec3(sc->pos), 1.0f)).xyz;
+	sc->pos = vec4_xyz(mat4_mul_vec4(parent_node->model, vec4(_vec3(sc->pos), 1.0f)));
 	sc->rot_quat = quat_mul(parent_node->rot, sc->rot_quat);
 
 	c_spatial_unlock(sc);
@@ -253,7 +253,7 @@ bool_t c_node_update_model(c_node_t *self)
 		}
 		else
 		{
-			vec3_t pos = mat4_mul_vec4(parent_node->model, vec4(_vec3(sc->pos), 1.0f)).xyz;
+			vec3_t pos = vec4_xyz(mat4_mul_vec4(parent_node->model, vec4(_vec3(sc->pos), 1.0f)));
 
 			mat4_t model = mat4_translate(pos);
 			model = mat4_mul(model, quat_to_mat4(parent_node->rot));
@@ -278,14 +278,14 @@ vec3_t c_node_pos_to_local(c_node_t *self, vec3_t vec)
 {
 	c_node_update_model(self);
 	mat4_t inv = mat4_invert(self->model);
-	return mat4_mul_vec4(inv, vec4(_vec3(vec), 1.0)).xyz;
+	return vec4_xyz(mat4_mul_vec4(inv, vec4(_vec3(vec), 1.0)));
 }
 
 vec3_t c_node_dir_to_local(c_node_t *self, vec3_t vec)
 {
 	c_node_update_model(self);
 	mat4_t inv = mat4_invert(self->model);
-	return mat4_mul_vec4(inv, vec4(_vec3(vec), 0.0)).xyz;
+	return vec4_xyz(mat4_mul_vec4(inv, vec4(_vec3(vec), 0.0)));
 }
 
 vec4_t c_node_rot_to_local(c_node_t *self, vec4_t rot)
@@ -298,13 +298,13 @@ vec4_t c_node_rot_to_local(c_node_t *self, vec4_t rot)
 vec3_t c_node_pos_to_global(c_node_t *self, vec3_t vec)
 {
 	c_node_update_model(self);
-	return mat4_mul_vec4(self->model, vec4(_vec3(vec), 1.0)).xyz;
+	return vec4_xyz(mat4_mul_vec4(self->model, vec4(_vec3(vec), 1.0)));
 }
 
 vec3_t c_node_dir_to_global(c_node_t *self, vec3_t vec)
 {
 	c_node_update_model(self);
-	return mat4_mul_vec4(self->model, vec4(_vec3(vec), 0.0)).xyz;
+	return vec4_xyz(mat4_mul_vec4(self->model, vec4(_vec3(vec), 0.0)));
 }
 
 vec4_t c_node_rot_to_global(c_node_t *self, vec4_t rot)

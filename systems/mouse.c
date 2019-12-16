@@ -2,7 +2,7 @@
 #include <systems/window.h>
 #include "mouse.h"
 
-entity_t g_active_mouse = SYS;
+entity_t g_active_mouse = 0x0000000100000001ul;
 
 void c_mouse_init(c_mouse_t *self)
 {

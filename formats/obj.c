@@ -36,7 +36,7 @@ struct face {
 	union {
 		struct vert v[4];
 		int l[12];
-	};
+	} value;
 };
 
 static void ignoreLine(FILE *fp)
@@ -155,11 +155,11 @@ static void read_prop(mesh_t *self, FILE * fp, vec3_t *tempNorm,
 						for (j = 0;(token = obj__strsep(&words_i, "/")) != NULL; j++)
 						{
 							if ((token[0] < '0' || token[0] > '9') ||
-									sscanf(token, "%d", &(tf->l[i + j])) <= 0)
+									sscanf(token, "%d", &(tf->value.l[i + j])) <= 0)
 							{
-								tf->l[i + j] = 0;
+								tf->value.l[i + j] = 0;
 							}
-							tf->l[i + j]--;
+							tf->value.l[i + j]--;
 						}
 					}
 					tf->nv = i / 3;
@@ -202,17 +202,17 @@ void mesh_load_obj(mesh_t *self, const char *filename)
 		if (face->nv == 3)
 		{
 			mesh_add_triangle(self,
-					face->v[0].v, tempNorm[face->v[0].n + 1], tempText[face->v[0].t + 1],
-					face->v[1].v, tempNorm[face->v[1].n + 1], tempText[face->v[1].t + 1],
-					face->v[2].v, tempNorm[face->v[2].n + 1], tempText[face->v[2].t + 1]);
+					face->value.v[0].v, tempNorm[face->value.v[0].n + 1], tempText[face->value.v[0].t + 1],
+					face->value.v[1].v, tempNorm[face->value.v[1].n + 1], tempText[face->value.v[1].t + 1],
+					face->value.v[2].v, tempNorm[face->value.v[2].n + 1], tempText[face->value.v[2].t + 1]);
 		}
 		else if (face->nv == 4)
 		{
 			mesh_add_quad(self,
-					face->v[0].v, tempNorm[face->v[0].n + 1], tempText[face->v[0].t + 1],
-					face->v[1].v, tempNorm[face->v[1].n + 1], tempText[face->v[1].t + 1],
-					face->v[2].v, tempNorm[face->v[2].n + 1], tempText[face->v[2].t + 1],
-					face->v[3].v, tempNorm[face->v[3].n + 1], tempText[face->v[3].t + 1]);
+					face->value.v[0].v, tempNorm[face->value.v[0].n + 1], tempText[face->value.v[0].t + 1],
+					face->value.v[1].v, tempNorm[face->value.v[1].n + 1], tempText[face->value.v[1].t + 1],
+					face->value.v[2].v, tempNorm[face->value.v[2].n + 1], tempText[face->value.v[2].t + 1],
+					face->value.v[3].v, tempNorm[face->value.v[3].n + 1], tempText[face->value.v[3].t + 1]);
 		}
 	}
 

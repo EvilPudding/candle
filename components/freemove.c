@@ -30,10 +30,10 @@ static int c_freemove_update(c_freemove_t *self, float *dt)
 	vec3_t front;
 	vec3_t sideways;
 
-	front = vec3_sub(mat4_mul_vec4(sc->model_matrix,
-				vec4(0.0, 0.0, 1.0, 1.0)).xyz, sc->pos);
-	sideways = vec3_sub(mat4_mul_vec4(sc->model_matrix,
-				vec4(1.0, 0.0, 0.0, 1.0)).xyz, sc->pos);
+	front = vec3_sub(vec4_xyz(mat4_mul_vec4(sc->model_matrix,
+				vec4(0.0, 0.0, 1.0, 1.0))), sc->pos);
+	sideways = vec3_sub(vec4_xyz(mat4_mul_vec4(sc->model_matrix,
+				vec4(1.0, 0.0, 0.0, 1.0))), sc->pos);
 
 
 	if((self->left + self->right) && (self->forward || self->backward))

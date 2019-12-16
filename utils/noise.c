@@ -7,21 +7,22 @@
 static vec4_t permute(vec4_t vec)
 {
 	vec4_t ret;
-	vec_oper(4, ret, fmod(((vec._[x] * 34.0) + 1.0) * vec._[x], 289.0));
+	vec_oper(4, ret, fmod(((((float*)&vec)[x] * 34.0) + 1.0) * ((float*)&vec)[x], 289.0));
 	return ret;
 }
 
 static vec4_t taylorInvSqrt(vec4_t vec)
 {
 	vec4_t ret;
-	vec_oper(4, ret, 1.79284291400159 - 0.85373472095314 * vec._[x]);
+	vec_oper(4, ret, 1.79284291400159 - 0.85373472095314 * ((float*)&vec)[x]);
 	return ret;
 }
 
 static vec3_t fade(vec3_t vec)
 {
 	vec3_t ret;
-	vec_oper(3, ret, vec._[x]*vec._[x]*vec._[x]*(vec._[x]*(vec._[x]*6.0-15.0)+10.0));
+	vec_oper(3, ret, ((float*)&vec)[x] * ((float*)&vec)[x] * ((float*)&vec)[x]
+			* (((float*)&vec)[x] * (((float*)&vec)[x] * 6.0-15.0)+10.0));
 	return ret;
 }
 
@@ -30,8 +31,8 @@ float cnoise(vec3_t P)
 	vec3_t Pi0 = vec3_floor(P); // Integer part for indexing
 	vec3_t Pi1 = vec3_add_number(Pi0, 1.0); // Integer part + 1
 
-	vec_oper(3, Pi0, fmod(Pi0._[x], 289.0));
-	vec_oper(3, Pi1, fmod(Pi1._[x], 289.0));
+	vec_oper(3, Pi0, fmod(((float*)&Pi0)[x], 289.0));
+	vec_oper(3, Pi1, fmod(((float*)&Pi1)[x], 289.0));
 
 	vec3_t Pf0 = vec3_fract(P); // Fractional part for interpolation
 	vec3_t Pf1 = vec3_sub_number(Pf0, 1.0); // Fractional part - 1.0

@@ -1,7 +1,6 @@
-#include "vector.h"
 #include <stdlib.h>
 #include <string.h>
-#include <ecs/ecm.h>
+#include <stdint.h>
 
 struct element
 {
@@ -9,7 +8,11 @@ struct element
 	char data[];
 };
 
-typedef struct vector_t
+typedef int(*vector_compare_cb)(const void *a, const void *b);
+#define FIXED_INDEX 0x01
+#define FIXED_ORDER 0x02
+
+typedef struct vector
 {
 	int count;
 	int alloc;
@@ -138,11 +141,19 @@ void *vector_get_item(vector_t *self, void *item)
 	return NULL;
 }
 
-void vector_remove_item(vector_t *self, void *item)
+void vector_shift(vector_t *self, int id, int count)
 {
-	if((item = vector_get_item(self, item)))
+	/* if(id > self->count) exit(1); */
+	if(count > 0)
 	{
-		vector_remove(self, vector_index_of(self, item));
+		memmove(_vector_get(self, id + count), _vector_get(self, id),
+				self->elem_size * (self->count - count - id));
+	}
+	else
+	{
+		count = -count;
+		memmove(_vector_get(self, id), _vector_get(self, id + count),
+				self->elem_size * (self->count - count - id));
 	}
 }
 
@@ -180,17 +191,25 @@ void vector_remove(vector_t *self, int i)
 	}
 }
 
-void vector_alloc(vector_t *self, int num)
-{
-	self->alloc += num;
-	self->elements = realloc(self->elements, self->alloc * self->elem_size);
-}
-
 int vector_index_of(vector_t *self, void *data)
 {
 	size_t element = ((size_t)data - sizeof(struct element));
 	
 	return (element - (size_t)self->elements) / self->elem_size;
+}
+
+void vector_remove_item(vector_t *self, void *item)
+{
+	if((item = vector_get_item(self, item)))
+	{
+		vector_remove(self, vector_index_of(self, item));
+	}
+}
+
+void vector_alloc(vector_t *self, int num)
+{
+	self->alloc += num;
+	self->elements = realloc(self->elements, self->alloc * self->elem_size);
 }
 
 void _vector_grow(vector_t *self)
@@ -205,22 +224,6 @@ void _vector_grow(vector_t *self)
 int vector_count(vector_t *self)
 {
 	return self->count;
-}
-
-void vector_shift(vector_t *self, int id, int count)
-{
-	/* if(id > self->count) exit(1); */
-	if(count > 0)
-	{
-		memmove(_vector_get(self, id + count), _vector_get(self, id),
-				self->elem_size * (self->count - count - id));
-	}
-	else
-	{
-		count = -count;
-		memmove(_vector_get(self, id), _vector_get(self, id + count),
-				self->elem_size * (self->count - count - id));
-	}
 }
 
 
@@ -258,25 +261,6 @@ int vector_get_insert(vector_t *self, void *value)
 	}
 }
 
-
-void vector_add(vector_t *self, void *value)
-{
-	int count = self->count;
-	int si = count;
-	if(self->compare) /* SORTED INSERT */
-	{
-		si = vector_get_insert(self, value);
-	}
-
-	vector_reserve(self);
-
-	if(si < count)
-	{
-		vector_shift(self, si, 1);
-	}
-	memcpy(vector_get(self, si), value, self->data_size);
-}
-
 int vector_reserve(vector_t *self)
 {
 	int i;
@@ -299,6 +283,24 @@ int vector_reserve(vector_t *self)
 		}
 	}
 	return -1;
+}
+
+void vector_add(vector_t *self, void *value)
+{
+	int count = self->count;
+	int si = count;
+	if(self->compare) /* SORTED INSERT */
+	{
+		si = vector_get_insert(self, value);
+	}
+
+	vector_reserve(self);
+
+	if(si < count)
+	{
+		vector_shift(self, si, 1);
+	}
+	memcpy(vector_get(self, si), value, self->data_size);
 }
 
 void *vector_get_set(vector_t *self, int i)

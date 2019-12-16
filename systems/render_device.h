@@ -8,10 +8,6 @@
 #include <utils/drawable.h>
 #include <ecs/ecm.h>
 
-typedef struct pass_t pass_t;
-
-typedef struct uniform_t uniform_t;
-
 struct gl_light
 {
 	vec3_t color;
@@ -49,11 +45,13 @@ struct gl_bones
 	mat4_t bones[30];
 };
 
-typedef struct c_render_device_t
+typedef void(*rd_bind_cb)(void *usrptr, shader_t *shader);
+
+typedef struct c_render_device
 {
 	c_t super;
 
-	void(*bind_function)(void *usrptr, shader_t *shader);
+	rd_bind_cb bind_function;
 	void *usrptr;
 
 	fs_t *frag_bound;

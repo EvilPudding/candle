@@ -7,16 +7,15 @@
 #include <utils/macros.h>
 #include <utils/macros.h>
 
-typedef struct vifunc_t vifunc_t;
-typedef struct vicall_t vicall_t;
-typedef struct vil_t vil_t;
+struct vicall;
+struct vifunc;
 
-typedef float(*vifunc_gui_cb)(vicall_t *call, void *data, void *nk);
-typedef void  (*vicall_save_cb)(vicall_t *call, void *data, FILE *fp);
-typedef bool_t(*vicall_load_cb)(vicall_t *call, void *data, FILE *fp);
-typedef void  (*vifunc_save_cb)(vifunc_t *func, FILE *fp);
-typedef bool_t(*vifunc_load_cb)(vifunc_t *func, FILE *fp);
-typedef void(*vil_func_cb)(vifunc_t *func, void *usrptr);
+typedef float (*vifunc_gui_cb)(struct vicall *call, void *data, void *nk);
+typedef void  (*vicall_save_cb)(struct vicall *call, void *data, FILE *fp);
+typedef bool_t(*vicall_load_cb)(struct vicall *call, void *data, FILE *fp);
+typedef void  (*vifunc_save_cb)(struct vifunc *func, FILE *fp);
+typedef bool_t(*vifunc_load_cb)(struct vifunc *func, FILE *fp);
+typedef void  (*vil_func_cb)(struct vifunc *func, void *usrptr);
 
 enum {
 	V_IN = 0x001,
@@ -27,9 +26,9 @@ enum {
 	V_LINKED = 0x008
 } vicall_flags;
 
-KHASH_MAP_INIT_INT(vifunc, vifunc_t *)
+KHASH_MAP_INIT_INT(vifunc, struct vifunc *)
 
-typedef struct vil_t
+typedef struct vil
 {
 	khash_t(vifunc) *funcs;
 	void *user_data;
@@ -43,10 +42,93 @@ typedef struct
 	uint32_t calls[16];
 } slot_t;
 
-typedef void(*vil_call_cb)(vicall_t *call, slot_t slot, void *usrptr);
-typedef void(*vil_foreach_input_cb)(vicall_t *root, vicall_t *call, slot_t slot,
-                                    uint8_t *data, void *usrptr);
-typedef void(*vil_link_cb)(vifunc_t *func, slot_t to, slot_t from, void *usrptr);
+struct vil_link
+{
+	slot_t from;
+	slot_t into;
+};
+
+struct vil_arg
+{
+	slot_t from;
+	slot_t into;
+	uint8_t *data;
+	uint8_t *previous_data;
+	uint32_t data_size;
+	bool_t has_children;
+	float y;
+	bool_t initialized;
+	bool_t alloc_head;
+};
+
+struct vil_ret
+{
+	slot_t from;
+	slot_t into;
+	float y;
+};
+
+typedef void(*vil_call_cb)(struct vicall *call, slot_t slot, void *usrptr);
+typedef void(*vil_foreach_input_cb)(struct vicall *root, struct vicall *call,
+                                    slot_t slot, uint8_t *data, void *usrptr);
+typedef void(*vil_link_cb)(struct vifunc *func, slot_t to, slot_t from,
+                           void *usrptr);
+
+typedef struct vicall
+{
+	struct vifunc *type;
+	struct vifunc *parent;
+
+	uint32_t id;
+	char name[64];
+	struct vicall *next;
+	struct vicall *prev;
+
+	bool_t is_hidden;
+	bool_t is_input;
+	bool_t is_output;
+	bool_t is_linked;
+	bool_t is_locked;
+	uint32_t data_offset;
+
+	uint32_t color;
+
+	vec4_t bounds;
+
+	struct vil_arg input_args[256];
+	struct vil_ret output_args[256];
+
+	vil_call_cb     watcher;
+	void           *watcher_usrptr;
+	void           *usrptr;
+} vicall_t;
+
+typedef struct vifunc
+{
+	char name[32];
+	uint32_t id;
+
+	vicall_t *call_buf;
+	struct vil_link *links;
+	vicall_t *begin;
+	vicall_t *end;
+	uint32_t call_count;
+	uint32_t link_count;
+	uint32_t locked;
+
+	uint32_t    	builtin_size;
+	vifunc_gui_cb	builtin_gui;
+	vicall_save_cb	builtin_save_call;
+	vicall_load_cb	builtin_load_call;
+	vil_t *ctx;
+
+	vil_func_cb     watcher;
+	void           *watcher_usrptr;
+
+	uint32_t tmp;
+	void *usrptr;
+	bool_t is_assignable;
+} vifunc_t;
 
 void vil_init(vil_t *self);
 vifunc_t *vil_get(vil_t *ctx, uint32_t ref);
@@ -92,88 +174,6 @@ void vifunc_foreach_unlinked_input(vifunc_t *self, vil_foreach_input_cb cb,
                                    void *usrptr);
 
 slot_t slot_pop(slot_t slt);
-
-struct vil_link
-{
-	slot_t from;
-	slot_t into;
-};
-
-struct vil_arg
-{
-	slot_t from;
-	slot_t into;
-	uint8_t *data;
-	uint8_t *previous_data;
-	uint32_t data_size;
-	bool_t has_children;
-	float y;
-	bool_t initialized;
-	bool_t alloc_head;
-};
-
-struct vil_ret
-{
-	slot_t from;
-	slot_t into;
-	float y;
-};
-
-typedef struct vicall_t
-{
-	vifunc_t *type;
-	vifunc_t *parent;
-
-	uint32_t id;
-	char name[64];
-	vicall_t *next;
-	vicall_t *prev;
-
-	bool_t is_hidden;
-	bool_t is_input;
-	bool_t is_output;
-	bool_t is_linked;
-	bool_t is_locked;
-	uint32_t data_offset;
-
-	uint32_t color;
-
-	vec4_t bounds;
-
-	struct vil_arg input_args[256];
-	struct vil_ret output_args[256];
-
-	vil_call_cb     watcher;
-	void           *watcher_usrptr;
-	void           *usrptr;
-} vicall_t;
-
-typedef struct vifunc_t
-{
-	char name[32];
-	uint32_t id;
-
-	vicall_t *call_buf;
-	struct vil_link *links;
-	vicall_t *begin;
-	vicall_t *end;
-	uint32_t call_count;
-	uint32_t link_count;
-	uint32_t locked;
-
-	uint32_t    	builtin_size;
-	vifunc_gui_cb	builtin_gui;
-	vicall_save_cb	builtin_save_call;
-	vicall_load_cb	builtin_load_call;
-	vil_t *ctx;
-
-	vil_func_cb     watcher;
-	void           *watcher_usrptr;
-
-	uint32_t tmp;
-	void *usrptr;
-	bool_t is_assignable;
-} vifunc_t;
 
 
 #endif /* !VISUAL_LOGIC_H */

@@ -27,7 +27,7 @@ typedef struct
 KHASH_MAP_INIT_INT(res, resource_t*)
 KHASH_MAP_INIT_INT(loa, sauces_loader_cb)
 
-typedef struct c_sauces_t
+typedef struct c_sauces
 {
 	c_t super;
 

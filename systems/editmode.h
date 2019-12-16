@@ -48,24 +48,32 @@ struct edit_poly
 	int32_t last_edge;
 };
 
-typedef struct c_editmode_t c_editmode_t;
+struct c_editmode;
+
+typedef int32_t (*mouse_tool_update_cb)(void *usrptr, float dt, struct c_editmode *ec);
+typedef int32_t (*mouse_tool_init_cb)(void *usrptr, struct c_editmode *ec);
+typedef int32_t (*mouse_tool_end_cb)(void *usrptr, struct c_editmode *ec);
+typedef int32_t (*mouse_tool_move_cb)(void *usrptr, vec3_t p, struct c_editmode *ec);
+typedef int32_t (*mouse_tool_press_cb)(void *usrptr, vec3_t p, int32_t button, struct c_editmode *ec);
+typedef int32_t (*mouse_tool_release_cb)(void *usrptr, vec3_t p, int32_t button, struct c_editmode *ec);
+typedef int32_t (*mouse_tool_drag_cb)(void *usrptr, vec3_t p, int32_t button, struct c_editmode *ec);
 
 struct mouse_tool
 {
 	char key;
 	char name[64];
-	int32_t (*update)(void *usrptr, float dt, c_editmode_t *ec);
-	int32_t (*init)(void *usrptr, c_editmode_t *ec);
-	int32_t (*end)(void *usrptr, c_editmode_t *ec);
-	int32_t (*mmove)(void *usrptr, vec3_t p, c_editmode_t *ec);
-	int32_t (*mpress)(void *usrptr, vec3_t p, int32_t button, c_editmode_t *ec);
-	int32_t (*mrelease)(void *usrptr, vec3_t p, int32_t button, c_editmode_t *ec);
-	int32_t (*mdrag)(void *usrptr, vec3_t p, int32_t button, c_editmode_t *ec);
+	mouse_tool_update_cb update;
+	mouse_tool_init_cb init;
+	mouse_tool_end_cb end;
+	mouse_tool_move_cb mmove;
+	mouse_tool_press_cb mpress;
+	mouse_tool_release_cb mrelease;
+	mouse_tool_drag_cb mdrag;
 	void *usrptr;
 	uint32_t require_component;
 };
 
-typedef struct c_editmode_t
+typedef struct c_editmode
 {
 	c_t super; /* extends c_t */
 
@@ -137,8 +145,14 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y);
 void c_editmode_open_texture(c_editmode_t *self, texture_t *tex);
 void c_editmode_select(c_editmode_t *self, entity_t select);
 void c_editmode_add_tool(c_editmode_t *self, char key, const char *name,
-                         void *init, void *mmove, void *mdrag, void *mpress,
-                         void *mrelease, void *update, void *end, void *usrptr,
+                         mouse_tool_init_cb init,
+                         mouse_tool_move_cb mmove,
+                         mouse_tool_drag_cb mdrag,
+                         mouse_tool_press_cb mpress,
+                         mouse_tool_release_cb mrelease,
+                         mouse_tool_update_cb update,
+                         mouse_tool_end_cb end,
+                         void *usrptr,
                          uint32_t require_component);
 
 #endif /* !EDITMODE_H */

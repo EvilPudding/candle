@@ -403,8 +403,8 @@ void mesh_face_calc_flat_tangents(mesh_t *self, face_t *f)
 	vertex_t *v1 = e_vert(e1, self);
 	vertex_t *v2 = e_vert(e2, self);
 
-	vec3_t tangent = get_tangent(XYZ(v0->pos), e0->t, XYZ(v1->pos), e1->t,
-			XYZ(v2->pos), e2->t, f->n);
+	vec3_t tangent = get_tangent(vecN_xyz(v0->pos), e0->t, vecN_xyz(v1->pos), e1->t,
+			vecN_xyz(v2->pos), e2->t, f->n);
 
 
 	if(f->e_size == 4)
@@ -433,15 +433,15 @@ void mesh_face_calc_flat_tangents(mesh_t *self, face_t *f)
 
 void mesh_face_calc_flat_normals(mesh_t *self, face_t *f)
 {
-	vec3_t p0 = XYZ(f_vert(f, 0, self)->pos);
-	vec3_t p1 = XYZ(f_vert(f, 1, self)->pos);
-	vec3_t p2 = XYZ(f_vert(f, 2, self)->pos);
+	vec3_t p0 = vecN_xyz(f_vert(f, 0, self)->pos);
+	vec3_t p1 = vecN_xyz(f_vert(f, 1, self)->pos);
+	vec3_t p2 = vecN_xyz(f_vert(f, 2, self)->pos);
 
 	if(f->e_size == 4)
 	{
 		/* QUAD */
 		
-		vec3_t p3 = XYZ(f_vert(f, 3, self)->pos);
+		vec3_t p3 = vecN_xyz(f_vert(f, 3, self)->pos);
 		
 		f_edge(f, 0, self)->n = get_normal(p3, p0, p1);
 		f_edge(f, 1, self)->n = get_normal(p0, p1, p2);
@@ -1158,8 +1158,8 @@ int mesh_add_vert(mesh_t *self, vecN_t pos)
 			vec4(_vec3(pos), 1.0));
 	vert->pos.w = pos.w;
 #else
-	vert->pos = mat4_mul_vec4(self->transformation,
-			vec4(_vec3(pos), 1.0)).xyz;
+	vert->pos = vec4_xyz(mat4_mul_vec4(self->transformation,
+			vec4(_vec3(pos), 1.0)));
 #endif
 
 	/* mesh_check_duplicate_verts(self, i); */
@@ -1501,10 +1501,10 @@ void mesh_add_quad(mesh_t *self,
 	edge_t *e2 = vector_get(self->edges, ie2); edge_init(e2);
 	edge_t *e3 = vector_get(self->edges, ie3); edge_init(e3);
 
-	v0n = mat4_mul_vec4(self->transformation, vec4(_vec3(v0n), 0.0)).xyz;
-	v1n = mat4_mul_vec4(self->transformation, vec4(_vec3(v1n), 0.0)).xyz;
-	v2n = mat4_mul_vec4(self->transformation, vec4(_vec3(v2n), 0.0)).xyz;
-	v3n = mat4_mul_vec4(self->transformation, vec4(_vec3(v3n), 0.0)).xyz;
+	v0n = vec4_xyz(mat4_mul_vec4(self->transformation, vec4(_vec3(v0n), 0.0)));
+	v1n = vec4_xyz(mat4_mul_vec4(self->transformation, vec4(_vec3(v1n), 0.0)));
+	v2n = vec4_xyz(mat4_mul_vec4(self->transformation, vec4(_vec3(v2n), 0.0)));
+	v3n = vec4_xyz(mat4_mul_vec4(self->transformation, vec4(_vec3(v3n), 0.0)));
 
 	face->e[0] = ie0;
 	face->e[1] = ie1;
@@ -1674,9 +1674,9 @@ int mesh_add_triangle(mesh_t *self,
 	edge_t *e1 = vector_get(self->edges, ie1); edge_init(e1);
 	edge_t *e2 = vector_get(self->edges, ie2); edge_init(e2);
 
-	v0n = mat4_mul_vec4(self->transformation, vec4(_vec3(v0n), 0.0)).xyz;
-	v1n = mat4_mul_vec4(self->transformation, vec4(_vec3(v1n), 0.0)).xyz;
-	v2n = mat4_mul_vec4(self->transformation, vec4(_vec3(v2n), 0.0)).xyz;
+	v0n = vec4_xyz(mat4_mul_vec4(self->transformation, vec4(_vec3(v0n), 0.0)));
+	v1n = vec4_xyz(mat4_mul_vec4(self->transformation, vec4(_vec3(v1n), 0.0)));
+	v2n = vec4_xyz(mat4_mul_vec4(self->transformation, vec4(_vec3(v2n), 0.0)));
 
 	face->e[0] = ie0;
 	face->e[1] = ie1;
@@ -1925,8 +1925,7 @@ void mesh_frame_capsule(mesh_t *self, float radius, vec3_t dir)
 	float height = vec3_len(dir);
 	vec4_t q;
 	vec3_t v2 = vec3(0.0f, 0.0f, 1.0f);
-	vec3_t cross = vec3_cross(v2, dir);
-	q.xyz = cross;
+	XYZ(q) = vec3_cross(v2, dir);
 	q.w = vec3_len(dir) + vec3_dot(dir, v2);
 	q = vec4_norm(q);
 
@@ -2598,9 +2597,9 @@ mesh_t *mesh_lathe(mesh_t *mesh, float angle, int segments,
 			edge_t *e = m_edge(mesh, ei);
 			if(!e) continue;
 
-			verts[ei * segments + ai] = mesh_add_vert(self,
-					VEC3(_vec3(mat4_mul_vec4( rot, vec4(_vec3(e_vert(e,
-											mesh)->pos), 1.0)).xyz)));
+			vec3_t pos = vec4_xyz(mat4_mul_vec4( rot, vec4(_vec3(e_vert(e,
+										mesh)->pos), 1.0)));
+			verts[ei * segments + ai] = mesh_add_vert(self, VEC3(_vec3(pos)));
 		}
 	}
 
@@ -2707,9 +2706,10 @@ void _mesh_point_grid(mesh_t *self, vecN_t start, vecN_t size,
 	else
 	{
 		vecN_t iter = start;
-		for (uint32_t i = 0; i < segments._[dim]; i++)
+		for (uint32_t i = 0; i < ((uint32_t*)&segments)[dim]; i++)
 		{
-			iter._[dim] = start._[dim] + size._[dim] * i;
+			((uint32_t*)&iter)[dim] = ((uint32_t*)&start)[dim]
+			                        + ((uint32_t*)&size)[dim] * i;
 			_mesh_point_grid(self, iter, size, segments, dim + 1);
 		}
 	}
@@ -2759,13 +2759,13 @@ vertex_t *mesh_farthest(mesh_t *self, const vec3_t dir)
 	vertex_t *v = vector_get_set(self->verts, 0);
 	if(!v) return NULL;
 
-	float last_dist = vec3_dot(dir, XYZ(v->pos));
+	float last_dist = vec3_dot(dir, vecN_xyz(v->pos));
 
 	int si;
 	for(si = 1; si < vector_count(self->verts); si++)
 	{
 		vertex_t *vi = m_vert(self, si);
-		float temp = vec3_dot(dir, XYZ(vi->pos));
+		float temp = vec3_dot(dir, vecN_xyz(vi->pos));
 		if(temp > last_dist)
 		{
 			last_dist = temp;
@@ -2777,7 +2777,7 @@ vertex_t *mesh_farthest(mesh_t *self, const vec3_t dir)
 
 static vec3_t mesh_support(mesh_t *self, const vec3_t dir)
 {
-	return XYZ(mesh_farthest(self, dir)->pos);
+	return vecN_xyz(mesh_farthest(self, dir)->pos);
 }
 
 float mesh_get_margin(const mesh_t *self)

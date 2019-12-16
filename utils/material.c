@@ -110,11 +110,11 @@ vec4_t color_from_hex(const char *hex_str)
 {
 	vec4_t self;
 	uint64_t hex = strtol(hex_str + 1, NULL, 16);
-	self.a = (float)((hex >> 24) & 0XFF) / 255.0f;
-	self.r = (float)((hex >> 16) & 0xFF) / 255.0f;
-	self.g = (float)((hex >> 8) & 0xFF) / 255.0f;
-	self.b = (float)((hex >> 0) & 0XFF) / 255.0f;
-	if (self.a == 0.0f) self.a = 1.0f;
+	self.w = (float)((hex >> 24) & 0XFF) / 255.0f;
+	self.x = (float)((hex >> 16) & 0xFF) / 255.0f;
+	self.y = (float)((hex >> 8) & 0xFF) / 255.0f;
+	self.z = (float)((hex >> 0) & 0XFF) / 255.0f;
+	if (self.w == 0.0f) self.w = 1.0f;
 
 	return self;
 }

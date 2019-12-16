@@ -1,23 +1,24 @@
 #ifndef MESH_H
 #define MESH_H
 
+#include "macros.h"
 #include "mafs.h"
 #include "material.h"
 #include "vector.h"
 #include "khash.h"
 
-typedef struct mesh_t mesh_t;
-typedef struct face_t face_t;
-typedef struct edge_t edge_t;
+struct mesh;
+struct face;
+struct edge;
 
-typedef struct vec3_t(*support_cb)(mesh_t *self, const vec3_t dir);
+typedef struct vec3_t(*support_cb)(struct mesh *self, const vec3_t dir);
 
 #ifdef MESH4
 #	define vecN vec4
 #	define vecN_t vec4_t
 #	define uvecN_t uvec4_t
 #	define VEC3(...) vec4(__VA_ARGS__, 0.0f)
-#	define XYZ(v) v.xyz
+#	define vecN_xyz(v) vec4_xyz(v)
 #	define ZN vec4(0.0f)
 #	define _vecN(a) _vec4(a)
 #	define _uvecN(a) _uvec4(a)
@@ -31,7 +32,7 @@ typedef struct vec3_t(*support_cb)(mesh_t *self, const vec3_t dir);
 #	define vecN_t vec3_t
 #	define uvecN_t uvec3_t
 #	define VEC3(...) vec3(__VA_ARGS__)
-#	define XYZ(v) v
+#	define vecN_xyz(v) v
 #	define _uvecN(a) _uvec3(a)
 #	define ZN Z3
 
@@ -40,9 +41,9 @@ typedef struct vec3_t(*support_cb)(mesh_t *self, const vec3_t dir);
 #	define N 3
 #endif
 
-typedef float(*modifier_cb)(mesh_t *mesh, float percent, void *usrptr);
+typedef float(*modifier_cb)(struct mesh *mesh, float percent, void *usrptr);
 
-typedef int(*iter_cb)(mesh_t *mesh, void *selection, void *usrptr);
+typedef int(*iter_cb)(struct mesh *mesh, void *selection, void *usrptr);
 
 #define EXP(e) e
 #define vecN_(eq) CAT2(vecN, _##eq)
@@ -77,7 +78,7 @@ typedef struct vertex_t
 
 #define v_half(v, m) (m_edge(m, v->half))
 
-typedef struct edge_t /* Half edge */
+typedef struct edge /* Half edge */
 {
 	int v;
 	vec3_t n; /* NORMAL OF v */
@@ -170,7 +171,7 @@ typedef struct
 #endif
 } mesh_selection_t;
 
-typedef struct mesh_t
+typedef struct mesh
 {
 	vector_t *faces;
 	vector_t *verts;

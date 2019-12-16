@@ -13,7 +13,6 @@
 
 void candle_register(void);
 
-typedef struct candle_t candle_t;
 typedef entity_t(*cmd_cb)(entity_t root, int argc, char **argv);
 
 typedef struct
@@ -24,7 +23,7 @@ typedef struct
 
 KHASH_MAP_INIT_INT(cmd, cmd_t)
 
-typedef struct candle_t
+typedef struct
 {
 	loader_t *loader;
 

@@ -29,18 +29,18 @@ void main(void)
 	pp = (pp + 1.0) / 2.0;
 	vec2 velocity = ((p - pp) / float(num_samples)) * power;
 
-	vec3 color = textureLod(buf.color, p, 0.0).rgb;
-	float samples = 1.0;
+	float samples = 0.0;
 	p += velocity * ditherValue;
-	for(int i = 1; i < num_samples; ++i)
+	vec3 color = vec3(0.0);
+	for(int i = 0; i < num_samples; ++i)
 	{
-		if (p.x < 0.f || p.x > 1.0f || p.y < 0.f || p.y > 1.0f)
-		{
-			break;
-		}
 		samples += 1.0;
 		color += textureLod(buf.color, p, 0.0).rgb;
 		p += velocity;
+		if (p.x < 0.0 || p.x > 1.0 || p.y < 0.0 || p.y > 1.0)
+		{
+			break;
+		}
 	}
 	FragColor = vec4(color / samples, 1.0);
 }

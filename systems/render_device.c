@@ -26,7 +26,7 @@ void c_render_device_update_lights(c_render_device_t *self)
 		c_light_t *light = (c_light_t*)kh_value(lights->cs, k);
 
 		struct gl_light *gllight = &self->scene.lights[light->id];
-		gllight->color = light->color.xyz;
+		gllight->color = vec4_xyz(light->color);
 		gllight->pos = light->tile.pos;
 		gllight->lod = light->lod;
 		gllight->radius = light->radius;

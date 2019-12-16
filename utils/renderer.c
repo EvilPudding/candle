@@ -45,14 +45,14 @@ static int pass_bind_buffer(pass_t *pass, bind_t *bind, shader_t *shader)
 
 	for(t = 0; t < buffer->bufs_size; t++)
 	{
-		if(((int)sb->buffer.u_tex[t]) != -1)
+		if(((int)sb->u.buffer.u_tex[t]) != -1)
 		{
 			if(buffer->bufs[t].ready)
 			{
 				int i = pass->bound_textures++;
 				glActiveTexture(GL_TEXTURE0 + FIRST_TEX + i);
 				texture_bind(buffer, t);
-				glUniform1i(shader_cached_uniform(shader, sb->buffer.u_tex[t]),
+				glUniform1i(shader_cached_uniform(shader, sb->u.buffer.u_tex[t]),
 				            FIRST_TEX + i);
 				glerr();
 			}
@@ -79,11 +79,11 @@ void bind_get_uniforms(bind_t *bind, hash_bind_t *sb, pass_t *pass)
 				char buffer[256];
 				snprintf(buffer, sizeof(buffer), "%s.%s", bind->name,
 				         bind->buffer->bufs[t].name);
-				sb->buffer.u_tex[t] = ref(buffer);
+				sb->u.buffer.u_tex[t] = ref(buffer);
 			}
 			break;
 		default:
-			sb->number.u = ref(bind->name);
+			sb->u.number.u = ref(bind->name);
 			break;
 	}
 	sb->cached = true;
@@ -148,7 +148,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			{
 				bind->number = ((number_getter)bind->getter)(pass, pass->usrptr);
 			}
-			glUniform1f(shader_cached_uniform(shader, sb->number.u), bind->number); glerr();
+			glUniform1f(shader_cached_uniform(shader, sb->u.number.u), bind->number); glerr();
 			glerr();
 			break;
 		case INT:
@@ -156,7 +156,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			{
 				bind->integer = ((integer_getter)bind->getter)(pass, pass->usrptr);
 			}
-			glUniform1i(shader_cached_uniform(shader, sb->integer.u), bind->integer); glerr();
+			glUniform1i(shader_cached_uniform(shader, sb->u.integer.u), bind->integer); glerr();
 			glerr();
 			break;
 		case VEC2:
@@ -164,7 +164,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			{
 				bind->vec2 = ((vec2_getter)bind->getter)(pass, pass->usrptr);
 			}
-			glUniform2f(shader_cached_uniform(shader, sb->vec2.u), bind->vec2.x, bind->vec2.y);
+			glUniform2f(shader_cached_uniform(shader, sb->u.vec2.u), bind->vec2.x, bind->vec2.y);
 			glerr();
 			break;
 		case VEC3:
@@ -172,7 +172,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			{
 				bind->vec3 = ((vec3_getter)bind->getter)(pass, pass->usrptr);
 			}
-			glUniform3f(shader_cached_uniform(shader, sb->vec3.u), _vec3(bind->vec3));
+			glUniform3f(shader_cached_uniform(shader, sb->u.vec3.u), _vec3(bind->vec3));
 			glerr();
 			break;
 		case VEC4:
@@ -180,7 +180,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			{
 				bind->vec4 = ((vec4_getter)bind->getter)(pass, pass->usrptr);
 			}
-			glUniform4f(shader_cached_uniform(shader, sb->vec4.u), _vec4(bind->vec4));
+			glUniform4f(shader_cached_uniform(shader, sb->u.vec4.u), _vec4(bind->vec4));
 			glerr();
 			break;
 		case CALLBACK:
@@ -254,7 +254,7 @@ static void update_ubo(renderer_t *self, int32_t camid)
 
 void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model)
 {
-	vec3_t pos = mat4_mul_vec4(*model, vec4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
+	vec3_t pos = vec4_xyz(mat4_mul_vec4(*model, vec4(0.0f, 0.0f, 0.0f, 1.0f)));
 
 	if(self->output && self->cubemap)
 	{
@@ -586,7 +586,7 @@ void renderer_default_pipeline(renderer_t *self)
 			query_mips, query_mips, 0, ~0,
 		(bind_t[]){
 			{CLEAR_DEPTH, .number = 1.0f},
-			{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 0.0f)},
+			{CLEAR_COLOR, .vec4 = Z4},
 			{SKIP, .integer = 16},
 			{NONE}
 		}
@@ -621,7 +621,7 @@ void renderer_default_pipeline(renderer_t *self)
 			gbuffer, 0, ~0,
 		(bind_t[]){
 			{CLEAR_DEPTH, .number = 1.0f},
-			{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 0.0f)},
+			{CLEAR_COLOR, .vec4 = Z4},
 			{NONE}
 		}
 	);
@@ -646,7 +646,7 @@ void renderer_default_pipeline(renderer_t *self)
 			0, selectable, selectable, 0, ~0,
 		(bind_t[]){
 			{CLEAR_DEPTH, .number = 1.0f},
-			{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 0.0f)},
+			{CLEAR_COLOR, .vec4 = Z4},
 			{NONE}
 		}
 	);
@@ -654,7 +654,7 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_pass(self, "ambient_light_pass", "phong", ref("ambient"),
 			ADD, light, NULL, 0, ~0,
 		(bind_t[]){
-			{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 0.0f)},
+			{CLEAR_COLOR, .vec4 = Z4},
 			{TEX, "gbuffer", .buffer = gbuffer},
 			{NONE}
 		}
@@ -672,7 +672,7 @@ void renderer_default_pipeline(renderer_t *self)
 			ADD | CULL_DISABLE, volum, NULL, 0, ~0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
-			{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 0.0f)},
+			{CLEAR_COLOR, .vec4 = Z4},
 			{NONE}
 		}
 	);
@@ -690,7 +690,7 @@ void renderer_default_pipeline(renderer_t *self)
 			refr, NULL, 0, ~0,
 		(bind_t[]){
 			{TEX, "buf", .buffer = light},
-			{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 0.0f)},
+			{CLEAR_COLOR, .vec4 = Z4},
 			{INT, "level", .integer = 0},
 			{NONE}
 		}
@@ -715,7 +715,7 @@ void renderer_default_pipeline(renderer_t *self)
 			ssao, NULL, 0, ~0,
 		(bind_t[]){
 			{TEX, "gbuffer", .buffer = gbuffer},
-			{CLEAR_COLOR, .vec4 = vec4(0.0f, 0.0f, 0.0f, 0.0f)},
+			{CLEAR_COLOR, .vec4 = Z4},
 			{NONE}
 		}
 	);
@@ -804,7 +804,7 @@ vec3_t renderer_real_pos(renderer_t *self, float depth, vec2_t coord)
 
     vec4_t worldSpacePosition = mat4_mul_vec4(self->glvars[0].model, viewSpacePosition);
 
-    return worldSpacePosition.xyz;
+    return vec4_xyz(worldSpacePosition);
 }
 
 vec3_t renderer_screen_pos(renderer_t *self, vec3_t pos)
@@ -815,8 +815,7 @@ vec3_t renderer_screen_pos(renderer_t *self, vec3_t pos)
 	vec4_t viewSpacePosition = mat4_mul_vec4(VP, vec4(_vec3(pos), 1.0f));
 	viewSpacePosition = vec4_div_number(viewSpacePosition, viewSpacePosition.w);
 
-	viewSpacePosition.xyz = vec3_scale(vec3_add_number(viewSpacePosition.xyz, 1.0f), 0.5);
-    return viewSpacePosition.xyz;
+    return vec3_scale(vec3_add_number(vec4_xyz(viewSpacePosition), 1.0f), 0.5);
 }
 
 static int renderer_update_screen_texture(renderer_t *self)
@@ -868,7 +867,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 	pass->bound_textures = 0;
 	c_render_device_t *rd = c_render_device(&SYS);
 	if (!rd) return NULL;
-	c_render_device_rebind(rd, (void*)bind_pass, pass);
+	c_render_device_rebind(rd, (rd_bind_cb)bind_pass, pass);
 	if (pass->binds && pass->binds[0].type == CALLBACK)
 	{
 		bind_pass(pass, NULL);
@@ -1299,7 +1298,7 @@ void renderer_add_pass(
 		int t;
 		for(t = 0; t < 16; t++)
 		{
-			sb->buffer.u_tex[t] = -1;
+			sb->u.buffer.u_tex[t] = -1;
 		}
 		bind->hash = ref(bind->name);
 	}

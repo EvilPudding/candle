@@ -14,8 +14,7 @@ typedef uint32_t vertid_t;
 #define IDTYPE GL_UNSIGNED_INT
 #endif
 
-typedef struct drawable_t drawable_t;
-typedef struct mat mat_t;
+#include<utils/material.h>
 
 typedef void(*draw_cb)(void *usrptr, shader_t *shader);
 
@@ -67,17 +66,17 @@ struct conf_vars
 	int32_t xray;
 	int32_t mat_type;
 };
-typedef struct draw_conf_t draw_conf_t;
+struct draw_conf;
 
 struct draw_bind
 {
 	uint32_t grp;
-	draw_conf_t *conf;
+	struct draw_conf *conf;
 	int32_t instance_id;
 	uint8_t updates;
 };
 
-typedef struct draw_conf_t
+typedef struct draw_conf
 {
 	varray_t *varray;
 
@@ -105,7 +104,7 @@ typedef struct draw_conf_t
 	uint32_t last_skin_update;
 } draw_conf_t;
 
-typedef struct drawable_t
+typedef struct drawable
 {
 	/* int groups_num; */
 

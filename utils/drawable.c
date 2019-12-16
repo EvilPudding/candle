@@ -389,7 +389,7 @@ static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
 	self->props[i].x = draw->matid;
 	self->props[i].y = 0;/*TODO: use y for something;*/
 	uvec2_t ent = entity_to_uvec2(draw->entity);
-	self->props[i].zw = vec2(_vec2(ent));
+	ZW(self->props[i]) = vec2(_vec2(ent));
 	self->comps[i] = &draw->bind[gid];
 	self->inst[i] = draw->transform;
 
@@ -498,12 +498,10 @@ void varray_edges_to_gl(varray_t *self)
 
 		vertex_t *V1 = e_vert(curr_edge, mesh);
 		vertex_t *V2 = e_vert(next_edge, mesh);
-		int32_t v1 = varray_add_vert(self, V1->pos, vec3(0.0f, 0.0f, 0.0f), vec2(0.0f, 0.0f),
-		                             vec3(0.0f, 0.0f, 0.0f), V1->color.xyz,
-		                             0, vec4(0.0f, 0.0f, 0.0f, 0.0f), vec4(0.0f, 0.0f, 0.0f, 0.0f));
-		int32_t v2 = varray_add_vert(self, V2->pos, vec3(0.0f, 0.0f, 0.0f), vec2(0.0f, 0.0f),
-		                             vec3(0.0f, 0.0f, 0.0f), V2->color.xyz, 0, vec4(0.0f, 0.0f, 0.0f, 0.0f),
-		                             vec4(0.0f, 0.0f, 0.0f, 0.0f));
+		int32_t v1 = varray_add_vert(self, V1->pos, Z3, Z2, Z3,
+		                             vec4_xyz(V1->color), 0, Z4, Z4);
+		int32_t v2 = varray_add_vert(self, V2->pos, Z3, Z2, Z3,
+		                             vec4_xyz(V2->color), 0, Z4, Z4);
 
 		varray_add_line(self, v1, v2);
 
@@ -522,10 +520,8 @@ void varray_verts_to_gl(varray_t *self)
 		vertex_t *curr_vert = m_vert(mesh, i);
 		if (!curr_vert) continue;
 
-		int32_t v1 = varray_add_vert(self, curr_vert->pos, vec3(0.0f, 0.0f, 0.0f),
-		                             vec2(0.0f, 0.0f), vec3(0.0f, 0.0f, 0.0f),
-		                             curr_vert->color.xyz, 0, vec4(0.0f, 0.0f, 0.0f, 0.0f),
-		                             vec4(0.0f, 0.0f, 0.0f, 0.0f));
+		int32_t v1 = varray_add_vert(self, curr_vert->pos, Z3, Z2, Z3,
+		                             vec4_xyz(curr_vert->color), 0, Z4, Z4);
 
 		varray_add_point(self, v1);
 	}
@@ -542,7 +538,7 @@ void varray_face_to_gl(varray_t *self, face_t *f, int32_t id)
 		vertex_t *V = e_vert(hedge, mesh);
 
 		v[i] = varray_add_vert(self, V->pos, hedge->n,
-				hedge->t, hedge->tg, V->color.xyz, id, V->wei, V->bid);
+				hedge->t, hedge->tg, vec4_xyz(V->color), id, V->wei, V->bid);
 	}
 	if (f->e_size == 4)
 	{

@@ -8,9 +8,9 @@
 #include <utils/drawable.h>
 #include <ecs/ecm.h>
 
-typedef struct pass_t pass_t;
+struct pass;
 
-typedef struct uniform_t uniform_t;
+struct uniform;
 
 /* typedef struct */
 /* { */
@@ -51,14 +51,14 @@ enum bind_type
 	SKIP
 };
 
-typedef vec2_t     (*vec2_getter)(pass_t *pass, void *usrptr);
-typedef vec3_t     (*vec3_getter)(pass_t *pass, void *usrptr);
-typedef vec4_t     (*vec4_getter)(pass_t *pass, void *usrptr);
-typedef float      (*number_getter)(pass_t *pass, void *usrptr);
-typedef int        (*integer_getter)(pass_t *pass, void *usrptr);
-typedef texture_t* (*tex_getter)(pass_t *pass, void *usrptr);
-typedef void*      (*getter_cb)(pass_t *pass, void *usrptr);
-typedef entity_t   (*camera_getter)(pass_t *pass, void *usrptr);
+typedef vec2_t     (*vec2_getter)(struct pass *pass, void *usrptr);
+typedef vec3_t     (*vec3_getter)(struct pass *pass, void *usrptr);
+typedef vec4_t     (*vec4_getter)(struct pass *pass, void *usrptr);
+typedef float      (*number_getter)(struct pass *pass, void *usrptr);
+typedef int        (*integer_getter)(struct pass *pass, void *usrptr);
+typedef texture_t* (*tex_getter)(struct pass *pass, void *usrptr);
+typedef void*      (*getter_cb)(struct pass *pass, void *usrptr);
+typedef entity_t   (*camera_getter)(struct pass *pass, void *usrptr);
 
 typedef struct
 {
@@ -71,8 +71,8 @@ typedef struct
 typedef struct
 {
 	bool_t cached;
-	union
-	{
+
+	union {
 		struct {
 			uint32_t u_brightness;
 			uint32_t u_tex[16];
@@ -92,7 +92,7 @@ typedef struct
 		struct {
 			uint32_t u;
 		} integer;
-	};
+	} u;
 } hash_bind_t;
 
 typedef struct
@@ -100,8 +100,7 @@ typedef struct
 	enum bind_type type;
 	char name[32];
 	getter_cb getter;
-	union
-	{
+
 		texture_t *buffer;
 		entity_t entity;
 		float number;
@@ -110,12 +109,12 @@ typedef struct
 		vec4_t vec4;
 		int integer;
 		void *ptr;
-	};
+
 	unsigned int hash;
 	hash_bind_t vs_uniforms;
 } bind_t;
 
-typedef void(*bind_cb)(uniform_t *self, shader_t *shader);
+typedef void(*bind_cb)(struct uniform *self, shader_t *shader);
 
 typedef struct
 {
@@ -124,7 +123,7 @@ typedef struct
 	unsigned int hash;
 } pass_output_t;
 
-typedef struct pass_t
+typedef struct pass
 {
 	fs_t *shader;
 	char name[32];

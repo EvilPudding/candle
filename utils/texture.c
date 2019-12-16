@@ -1045,7 +1045,7 @@ int32_t texture_load_from_memory(texture_t *self, void *buffer, int32_t len)
 texture_t *texture_from_buffer(void *buffer, int32_t width, int32_t height,
 		int32_t Bpp)
 {
-	texture_t *self = texture_new_2D(width, height, TEX_INTERPOLATE);
+	texture_t *self = texture_new_2D(width, height, TEX_INTERPOLATE, 0);
 
 	self->bufs[0].dims = Bpp;
 	self->bufs[0].data = buffer;
@@ -1059,7 +1059,7 @@ texture_t *texture_from_buffer(void *buffer, int32_t width, int32_t height,
 
 texture_t *texture_from_memory(void *buffer, int32_t len)
 {
-	texture_t *self = texture_new_2D(0, 0, TEX_INTERPOLATE);
+	texture_t *self = texture_new_2D(0, 0, TEX_INTERPOLATE, 0);
 	texture_load_from_memory(self, buffer, len);
 	return self;
 }
@@ -1175,7 +1175,7 @@ static void texture_disk_cacher(texture_t *self, uint32_t mip,
 
 texture_t *texture_from_file(const char *filename)
 {
-	texture_t *self = texture_new_2D(0, 0, TEX_INTERPOLATE);
+	texture_t *self = texture_new_2D(0, 0, TEX_INTERPOLATE, 0);
 	FILE *fp = fopen(filename, "r");
 	stbi_info_from_file(fp, (int32_t*)&self->width, (int32_t*)&self->height,
 	                    &self->bufs[0].dims);

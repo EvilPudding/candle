@@ -249,12 +249,12 @@ static vec2_t encode_normal(vec3_t n)
     float p = sqrtf(n.z * 8.0f + 8.0f);
 	if(p == 0) return vec2(0.0f, 0.0f);
 	/* printf("%f ", p); vec3_print(n); */
-    return vec2_add_number(vec2_div_number(n.xy, p), 0.5f);
+    return vec2_add_number(vec2_div_number(vec3_xy(n), p), 0.5f);
 }
 
 static int paint_2d(mesh_t *mesh, vertex_t *vert)
 {
-	vec3_t norm = vec3_get_unit(XYZ(vert->pos));
+	vec3_t norm = vec3_get_unit(vecN_xyz(vert->pos));
 	vec2_t n = encode_normal(norm);
 	vert->color = vec4(vert->pos.y > 0, n.y, n.x, 1.0f);
 	/* vert->color = vec4(_vec2(n), vert->pos.y > 0, 1.0f); */
@@ -263,9 +263,10 @@ static int paint_2d(mesh_t *mesh, vertex_t *vert)
 
 static int paint_3d(mesh_t *mesh, vertex_t *vert)
 {
-	vec3_t norm = vec3_get_unit(XYZ(vert->pos));
+	vec3_t norm = vec3_get_unit(vecN_xyz(vert->pos));
 	vec2_t n = encode_normal(norm);
-	vert->color = vec4(vert->pos.w > 0, n.y, n.x, 1.0f);
+
+	vert->color = vec4(vert->pos.z > 0, n.y, n.x, 1.0f);
 	/* vert->color.xyz = vec3_add_number(vec3_scale(vert->pos, 0.5f), 0.5f); */
 	/* vert->color.a = vert->pos.w; */
 	return 1;

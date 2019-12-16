@@ -55,7 +55,7 @@ vec4 upsample()
 
 	for (int i = 0; i < 4; i ++)
 	{
-		ivec2 coord = dfc + offsets[i];
+		ivec2 coord = clamp(dfc + offsets[i], ivec2(0), ivec2(screen_size) / 2 - 1);
 		vec3 downscaledVolum = texelFetch(volum.color, coord, 0).rgb;
 		float downscaledDepth = linearize(texelFetch(gbuffer.depth, coord * 2, 0).r);
 

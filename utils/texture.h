@@ -20,9 +20,9 @@ typedef struct
 	uint8_t alignment_pad;
 } tex_cache_location_t;
 
-typedef struct tex_tile tex_tile_t;
-typedef struct texture_t texture_t;
-typedef void(*texture_cache_cb)(texture_t *texture, uint32_t mip,
+struct texture;
+
+typedef void(*texture_cache_cb)(struct texture *texture, uint32_t mip,
                                 uint32_t x, uint32_t y);
 
 typedef struct tex_tile
@@ -39,7 +39,7 @@ typedef struct tex_tile
 	uint8_t indir_y;
 
 	tex_cache_location_t location;
-	texture_t *tex;
+	struct texture *tex;
 
 	uint32_t bytes[129 * 129];
 } tex_tile_t;
@@ -65,7 +65,7 @@ typedef struct
 	int32_t indir_n;
 } buffer_t;
 
-typedef struct texture_t
+typedef struct texture
 {
 	char name[256];
 	int id;
