@@ -5,7 +5,7 @@
 struct element
 {
 	int set;
-	char data[];
+	char data[1];
 };
 
 typedef int(*vector_compare_cb)(const void *a, const void *b);
@@ -229,20 +229,26 @@ int vector_count(vector_t *self)
 
 int vector_get_insert(vector_t *self, void *value)
 {
+	int lower = 0;
+	int cur = 0;
+	int upper;
+	char *base;
+
 	if(vector_count(self) == 0)
 	{
 		return 0;
 	}
-	int lower = 0;
-	int upper = vector_count(self) - 1;
-	int cur = 0;
+	upper = vector_count(self) - 1;
 
-	char *base = (char *)self->elements;
+	base = (char *)self->elements;
 	while(1)
 	{
+		struct element *pivot;
+		int result;
+
 		cur = (upper + lower) / 2;
-		struct element *pivot = (struct element *)(base + cur * self->elem_size);
-		int result = self->compare(pivot->data, value);
+		pivot = (struct element *)(base + cur * self->elem_size);
+		result = self->compare(pivot->data, value);
 
 		if(result == 0)
 		{
@@ -250,12 +256,12 @@ int vector_get_insert(vector_t *self, void *value)
 		}
 		else if(result < 0)
 		{
-			lower = cur + 1; // its in the upper
+			lower = cur + 1; /* its in the upper */
 			if(lower > upper) return cur + 1;
 		}
 		else
 		{
-			upper = cur - 1; // its in the lower
+			upper = cur - 1; /* its in the lower */
 			if(lower > upper) return cur;
 		}
 	}
@@ -264,17 +270,19 @@ int vector_get_insert(vector_t *self, void *value)
 int vector_reserve(vector_t *self)
 {
 	int i;
+	struct element *element;
+
 	if(!self->free_count)
 	{
 		i = self->count++;
 		_vector_grow(self);
-		struct element *element = _vector_get(self, i);
+		element = _vector_get(self, i);
 		element->set = 1;
 		return i;
 	}
 	for(i = 0; i < self->count; i++)
 	{
-		struct element *element = _vector_get(self, i);
+		element = _vector_get(self, i);
 		if(!element->set)
 		{
 			self->free_count--;

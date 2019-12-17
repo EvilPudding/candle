@@ -6,14 +6,15 @@
 
 void path_join(char *path, uint64_t size, const char *other)
 {
+	char buffer[1024];
+	uint64_t len;
+
 	/* printf("\t\t%s + %s\n", path, other); */
 	if(other == NULL) return;
 	if(other[0] == '/') other++;
 	if(other[0] == '\0') return;
 
-	char buffer[size];
-
-	uint64_t len = strlen(path);
+	len = strlen(path);
 
 	if(path[len] == '/') path[len] = '\0';
 	strncpy(buffer, path, size);
@@ -24,7 +25,7 @@ void path_join(char *path, uint64_t size, const char *other)
 	}
 	else
 	{
-		snprintf(path, size, "%s/%s", buffer, other);
+		sprintf(path, "%s/%s", buffer, other);
 	}
 }
 

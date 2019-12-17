@@ -15,9 +15,9 @@ entity_t SYS = 0x0000000100000001ul;
 
 listener_t *ct_get_listener(ct_t *self, uint32_t signal)
 {
+	uint32_t i;
 	signal_t *sig = ecm_get_signal(signal);
 	if(!self) return NULL;
-	uint32_t i;
 	for(i = 0; i < vector_count(sig->listener_types); i++)
 	{
 		listener_t *listener = vector_get(sig->listener_types, i);
@@ -117,13 +117,15 @@ signal_t *ecm_get_signal(uint32_t signal)
 	khiter_t k = kh_get(sig, g_ecm->signals, signal);
 	if(k == kh_end(g_ecm->signals))
 	{
+		signal_t *sig;
 		int ret;
+
 		k = kh_put(sig, g_ecm->signals, signal, &ret);
-		signal_t *sig = &kh_value(g_ecm->signals, k);
-		*sig = (signal_t){
-			.listener_types = vector_new(sizeof(listener_t), 0, NULL,
-					(vector_compare_cb)listeners_compare)
-		};
+		sig = &kh_value(g_ecm->signals, k);
+		sig->listener_types = vector_new(sizeof(listener_t), 0, NULL,
+		                                 (vector_compare_cb)listeners_compare);
+		sig->size = 0;
+		sig->listener_comps = NULL;
 	}
 	return &kh_value(g_ecm->signals, k);
 }
@@ -131,12 +133,15 @@ signal_t *ecm_get_signal(uint32_t signal)
 void _ct_listener(ct_t *self, int32_t flags, int32_t priority, uint32_t signal,
                   signal_cb cb)
 {
+	listener_t lis;
 	signal_t *sig = ecm_get_signal(signal);
 	if(ct_get_listener(self, signal)) exit(1);
 
-	listener_t lis = {.signal = signal, .cb = (signal_cb)cb,
-		.flags = flags, .priority = priority,
-		.target = self->id};
+	lis.signal = signal;
+	lis.cb = cb;
+	lis.flags = flags;
+	lis.target = self->id;
+	lis.priority = priority;
 
 	vector_add(sig->listener_types, &lis);
 
@@ -144,6 +149,8 @@ void _ct_listener(ct_t *self, int32_t flags, int32_t priority, uint32_t signal,
 
 void _signal_init(uint32_t id, uint32_t size)
 {
+	int ret;
+	khiter_t k;
 	signal_t *sig = ecm_get_signal(id);
 	if(sig)
 	{
@@ -151,15 +158,12 @@ void _signal_init(uint32_t id, uint32_t size)
 		return;
 	}
 
-	int ret;
-	khiter_t k = kh_put(sig, g_ecm->signals, id, &ret);
-	kh_value(g_ecm->signals, k) = (signal_t){
-		.size = size,
-		.listener_types = vector_new(sizeof(listener_t), 0, NULL,
-				(vector_compare_cb)listeners_compare),
-		.listener_comps = vector_new(sizeof(listener_t), FIXED_INDEX, NULL,
-				NULL)
-	};
+	k = kh_put(sig, g_ecm->signals, id, &ret);
+	sig = &kh_value(g_ecm->signals, k);
+	sig->size = size;
+	sig->listener_types = vector_new(sizeof(listener_t), 0, NULL,
+	                                 (vector_compare_cb)listeners_compare);
+	sig->listener_comps = vector_new(sizeof(listener_t), FIXED_INDEX, NULL, NULL);
 }
 
 void ecm_destroy_all()
@@ -178,13 +182,16 @@ void ecm_destroy_all()
 
 entity_t ecm_new_entity()
 {
+	entity_t ent;
+	entity_info_t *info;
+	struct { uint32_t pos, uid; } *convert;
+	uint32_t i;
 
 #ifndef __EMSCRIPTEN__
 	SDL_SemWait(sem);
 #endif
-	entity_info_t *info;
 
-	unsigned int i = g_ecm->entities_info[0].next_free;
+	i = g_ecm->entities_info[0].next_free;
 
 	if(i == g_ecm->entities_info_size)
 	{
@@ -205,11 +212,11 @@ entity_t ecm_new_entity()
 
 	info->uid = g_ecm->entity_uid_counter++;
 
-	entity_t ent = info->uid;
+	ent = info->uid;
 
-	struct { unsigned int pos, uid; } *separate = (void*)&ent;
-	separate->pos = i;
-	separate->uid = info->uid;
+	convert = (void*)&ent;
+	convert->pos = i;
+	convert->uid = info->uid;
 
 #ifndef __EMSCRIPTEN__
 	SDL_SemPost(sem);
@@ -219,13 +226,16 @@ entity_t ecm_new_entity()
 
 void ct_add_interaction(ct_t *dep, uint32_t target)
 {
+	int32_t i;
+	ct_t *ct;
+
 	if(target == IDENT_NULL) return;
-	ct_t * ct = ecm_get(target);
+	ct = ecm_get(target);
 	if(!ct) return;
 	if(!dep) return;
 
 	dep->is_interaction = 1;
-	int i = ct->depends_size++;
+	i = ct->depends_size++;
 	ct->depends = realloc(ct->depends, sizeof(*ct->depends) * ct->depends_size);
 	ct->depends[i].ct = dep->id;
 	ct->depends[i].is_interaction = 1;
@@ -233,11 +243,14 @@ void ct_add_interaction(ct_t *dep, uint32_t target)
 
 void ct_add_dependency(ct_t *dep, uint32_t target)
 {
-	if(target == IDENT_NULL) return;
-	ct_t * ct = ecm_get(target);
-	if(!ct) return;
-	if(!dep) return;
-	int i = ct->depends_size++;
+	ct_t *ct;
+	int32_t i;
+
+	if (target == IDENT_NULL) return;
+	ct = ecm_get(target);
+	if (!ct) return;
+	if (!dep) return;
+	i = ct->depends_size++;
 	ct->depends = realloc(ct->depends, sizeof(*ct->depends) * ct->depends_size);
 	ct->depends[i].ct = dep->id;
 	ct->depends[i].is_interaction = 0;
@@ -258,38 +271,37 @@ void ct_add_dependency(ct_t *dep, uint32_t target)
 ct_t *ct_new(const char *name, uint32_t size, init_cb init,
 		destroy_cb destroy, int depend_size, ...)
 {
+	int32_t ret;
+	uint32_t j;
 	uint32_t hash = ref(name);
 	va_list depends;
+	khiter_t k;
+	ct_t *ct;
 
 	va_start(depends, depend_size);
-	uint32_t j;
 	for(j = 0; j < depend_size; j++)
 	{
 		if(va_arg(depends, uint32_t) == IDENT_NULL) return NULL;
 	}
 	va_end(depends);
 
-	int ret;
-	khiter_t k = kh_put(ct, g_ecm->cts, hash, &ret);
+	k = kh_put(ct, g_ecm->cts, hash, &ret);
 
-	ct_t *ct = &kh_value(g_ecm->cts, k);
+	ct = &kh_value(g_ecm->cts, k);
 	/* printf("%s %u\n", name, hash); */
 
-	*ct = (ct_t) {
-		.id = hash,
-		.init = init,
-		.destroy = destroy,
-		.size = size,
-		.depends_size = depend_size,
-		.is_interaction = 0,
-		.cs = kh_init(c)
-		/* .pages_size = 0 */
-	};
+	ct->init = init;
+	ct->destroy = destroy;
+	ct->id = hash;
+	ct->size = size;
+	ct->cs = kh_init(c);
+	ct->depends = NULL;
+	ct->depends_size = depend_size,
+	ct->is_interaction = false;
 	strncpy(ct->name, name, sizeof(ct->name) - 1);
 
 	if(depend_size)
 	{
-
 		ct->depends = malloc(sizeof(*ct->depends) * depend_size),
 
 		va_start(depends, depend_size);
@@ -309,6 +321,7 @@ ct_t *ct_new(const char *name, uint32_t size, init_cb init,
 
 void ecm_clean2(int force)
 {
+	ct_t *dest;
 	khiter_t k;
 	if(force)
 	{
@@ -319,8 +332,9 @@ void ecm_clean2(int force)
 			{
 				for(k = kh_begin(ct->cs); k != kh_end(ct->cs); ++k)
 				{
+					c_t *c;
 					if(!kh_exist(ct->cs, k)) continue;
-					c_t *c = kh_value(ct->cs, k);
+					c = kh_value(ct->cs, k);
 					ct->destroy(c);
 				}
 			}
@@ -328,13 +342,16 @@ void ecm_clean2(int force)
 		goto end;
 	}
 
-	ct_t *dest = ecm_get(ref("destroyed"));
+	dest = ecm_get(ref("destroyed"));
 
 	for(k = kh_begin(dest->cs); k != kh_end(dest->cs); ++k)
 	{
+		c_destroyed_t *dc;
+		entity_t ent;
+
 		if(!kh_exist(dest->cs, k)) continue;
-		c_destroyed_t *dc = (c_destroyed_t*)kh_value(dest->cs, k);
-		entity_t ent = c_entity(dc);
+		dc = (c_destroyed_t*)kh_value(dest->cs, k);
+		ent = c_entity(dc);
 		entity_destroy(ent);
 	}
 end:
@@ -345,9 +362,11 @@ end:
 
 void ecm_clean(int force)
 {
+	int32_t rt;
+
 	if(!g_ecm->dirty && !force) return;
 
-	int rt = SDL_ThreadID() == g_candle->loader->threadId;
+	rt = SDL_ThreadID() == g_candle->loader->threadId;
 
 	if(g_ecm->safe && rt)
 	{
@@ -369,6 +388,11 @@ void ecm_clean(int force)
 static SDL_mutex *mut = NULL;
 c_t *ct_add(ct_t *self, entity_t entity)
 {
+	int32_t ret;
+	uint32_t uid, key;
+	khiter_t k;
+	c_t **comp;
+
 	if(!mut) SDL_CreateMutex();
 	SDL_LockMutex(mut);
 	if(!self) return NULL;
@@ -383,11 +407,10 @@ c_t *ct_add(ct_t *self, entity_t entity)
 
 	/* uint32_t offset; */
 
-	int ret;
-	unsigned int uid = entity_uid(entity);
-	unsigned int key = ent_comp_ref(self->id, uid);
-	khiter_t k = kh_put(c, g_ecm->cs, key, &ret);
-	c_t **comp = &kh_value(g_ecm->cs, k);
+	uid = entity_uid(entity);
+	key = ent_comp_ref(self->id, uid);
+	k = kh_put(c, g_ecm->cs, key, &ret);
+	comp = &kh_value(g_ecm->cs, k);
 	*comp = calloc(1, self->size);
 
 	k = kh_put(c, self->cs, uid, &ret);

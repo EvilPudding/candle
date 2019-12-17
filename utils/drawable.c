@@ -42,10 +42,11 @@ void drawable_init(drawable_t *self, uint32_t group)
 
 static draw_group_t *get_group(uint32_t ref)
 {
-	if (ref == 0) return NULL;
 	int32_t ret;
 	draw_group_t *bind;
 	khiter_t k;
+
+	if (ref == 0) return NULL;
 
 	SDL_SemWait(g_group_semaphore);
 	if (!g_draw_groups) g_draw_groups = kh_init(draw_group);
@@ -55,7 +56,8 @@ static draw_group_t *get_group(uint32_t ref)
 	{
 		k = kh_put(draw_group, g_draw_groups, ref, &ret);
 		bind = &kh_value(g_draw_groups, k);
-		*bind = (draw_group_t){ kh_init(config), 0 };
+		bind->configs = kh_init(config);
+		bind->update_id = 0;
 	}
 	else
 	{
@@ -270,7 +272,8 @@ void drawable_set_mesh(drawable_t *self, mesh_t *mesh)
 			mesh->ref_num++;
 			if (!previous)
 			{
-				for(uint32_t gid = 0; gid < self->bind_num; gid++)
+				uint32_t gid;
+				for(gid = 0; gid < self->bind_num; gid++)
 				{
 					drawable_position_changed(self, &self->bind[gid]);
 				}
@@ -376,11 +379,14 @@ void drawable_set_entity(drawable_t *self, entity_t entity)
 static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
 		uint32_t gid)
 {
+	int32_t i;
+	uvec2_t ent;
+
 #ifndef __EMSCRIPTEN__
 	SDL_SemWait(self->semaphore);
 #endif
 
-	int32_t i = self->inst_num++;
+	i = self->inst_num++;
 	/* if (draw->bind[gid].bind == ref("light")) */
 		/* printf("adding		%d\n", self->inst_num); */
 
@@ -388,7 +394,7 @@ static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
 
 	self->props[i].x = draw->matid;
 	self->props[i].y = 0;/*TODO: use y for something;*/
-	uvec2_t ent = entity_to_uvec2(draw->entity);
+	ent = entity_to_uvec2(draw->entity);
 	ZW(self->props[i]) = vec2(_vec2(ent));
 	self->comps[i] = &draw->bind[gid];
 	self->inst[i] = draw->transform;
@@ -490,18 +496,22 @@ void varray_edges_to_gl(varray_t *self)
 
 	for(i = 0; i < vector_count(mesh->edges); i++)
 	{
+		edge_t *next_edge;
 		edge_t *curr_edge = m_edge(mesh, i);
+		int32_t v1, v2;
+		vertex_t *V1, *V2;
+
 		if (!curr_edge) continue;
 
-		edge_t *next_edge = m_edge(mesh, curr_edge->next);
+		next_edge = m_edge(mesh, curr_edge->next);
 		if (!next_edge) continue;
 
-		vertex_t *V1 = e_vert(curr_edge, mesh);
-		vertex_t *V2 = e_vert(next_edge, mesh);
-		int32_t v1 = varray_add_vert(self, V1->pos, Z3, Z2, Z3,
-		                             vec4_xyz(V1->color), 0, Z4, Z4);
-		int32_t v2 = varray_add_vert(self, V2->pos, Z3, Z2, Z3,
-		                             vec4_xyz(V2->color), 0, Z4, Z4);
+		V1 = e_vert(curr_edge, mesh);
+		V2 = e_vert(next_edge, mesh);
+		v1 = varray_add_vert(self, V1->pos, Z3, Z2, Z3,
+		                     vec4_xyz(V1->color), 0, Z4, Z4);
+		v2 = varray_add_vert(self, V2->pos, Z3, Z2, Z3,
+		                     vec4_xyz(V2->color), 0, Z4, Z4);
 
 		varray_add_line(self, v1, v2);
 
@@ -517,11 +527,12 @@ void varray_verts_to_gl(varray_t *self)
 
 	for(i = 0; i < vector_count(mesh->verts); i++)
 	{
+		int32_t v1;
 		vertex_t *curr_vert = m_vert(mesh, i);
 		if (!curr_vert) continue;
 
-		int32_t v1 = varray_add_vert(self, curr_vert->pos, Z3, Z2, Z3,
-		                             vec4_xyz(curr_vert->color), 0, Z4, Z4);
+		v1 = varray_add_vert(self, curr_vert->pos, Z3, Z2, Z3,
+		                     vec4_xyz(curr_vert->color), 0, Z4, Z4);
 
 		varray_add_point(self, v1);
 	}
@@ -560,9 +571,9 @@ void varray_face_to_gl(varray_t *self, face_t *f, int32_t id)
 static void bind_buffer(uint32_t *vbo, int32_t id, uint32_t type, int32_t dim,
 		int32_t instanced_divisor)
 {
+	int32_t j = 0;
 	glBindBuffer(GL_ARRAY_BUFFER, *vbo); glerr();
 
-	int32_t j = 0;
 	while(j < dim)
 	{
 		int step = (dim - j < 4) ? dim - j : 4;
@@ -588,7 +599,7 @@ static void bind_buffer(uint32_t *vbo, int32_t id, uint32_t type, int32_t dim,
 	}
 }
 
-static inline void create_buffer(uint32_t *vbo, void *arr,
+static void create_buffer(uint32_t *vbo, void *arr,
 		int32_t dim, int32_t count, int32_t instanced_divisor)
 {
 	uint32_t usage = instanced_divisor ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW;
@@ -603,7 +614,7 @@ static inline void create_buffer(uint32_t *vbo, void *arr,
 
 }
 
-static inline void update_buffer(uint32_t *vbo, void *arr, int32_t dim,
+static void update_buffer(uint32_t *vbo, void *arr, int32_t dim,
 		int32_t count, int32_t inst)
 {
 	glBindBuffer(GL_ARRAY_BUFFER, *vbo);
@@ -614,6 +625,8 @@ static inline void update_buffer(uint32_t *vbo, void *arr, int32_t dim,
 
 static void draw_conf_remove_instance(draw_conf_t *self, int32_t id)
 {
+	int32_t last;
+
 	if (self->inst_num == 0)
 	{
 		puts("??");
@@ -622,7 +635,7 @@ static void draw_conf_remove_instance(draw_conf_t *self, int32_t id)
 #ifndef __EMSCRIPTEN__
 	SDL_SemWait(self->semaphore);
 #endif
-	int32_t last = --self->inst_num;
+	last = --self->inst_num;
 
 	self->comps[id]->conf = NULL;
 
@@ -670,20 +683,23 @@ varray_t *varray_get(mesh_t *mesh)
 
 draw_conf_t *drawable_get_conf(drawable_t *self, uint32_t gid)
 {
+	draw_conf_t *result;
+	struct conf_vars conf;
+	draw_group_t *draw_group;
+	uint32_t p;
+	khiter_t k;
+
 	if (!self->vs) return NULL;
 	if (!self->mesh) return NULL;
 
-	draw_conf_t *result;
-	struct conf_vars conf = {
-		.mesh           = self->mesh,
-		.skin           = self->skin,
-		.custom_texture = self->custom_texture,
-		.vs             = self->vs,
-		.draw_callback  = self->draw_callback,
-		.usrptr         = self->usrptr,
-		.xray           = self->xray,
-		.mat_type       = self->mat ? self->mat->type : 0
-	};
+	conf.mesh           = self->mesh;
+	conf.skin           = self->skin;
+	conf.custom_texture = self->custom_texture;
+	conf.vs             = self->vs;
+	conf.draw_callback  = self->draw_callback;
+	conf.usrptr         = self->usrptr;
+	conf.xray           = self->xray;
+	conf.mat_type       = self->mat ? self->mat->type : 0;
 
 	if (self->bind[gid].grp == 0)
 	{
@@ -702,12 +718,12 @@ draw_conf_t *drawable_get_conf(drawable_t *self, uint32_t gid)
 		return result;
 	}
 
-	draw_group_t *draw_group = get_group(self->bind[gid].grp);
+	draw_group = get_group(self->bind[gid].grp);
 	if (draw_group->configs == NULL) return NULL;
 
-	uint32_t p = murmur_hash(&conf, sizeof(conf), 0);
+	p = murmur_hash(&conf, sizeof(conf), 0);
 
-	khiter_t k = kh_get(config, draw_group->configs, p);
+	k = kh_get(config, draw_group->configs, p);
 	if (k == kh_end(draw_group->configs))
 	{
 		int32_t ret;
@@ -731,6 +747,9 @@ void drawable_model_changed(drawable_t *self)
 	uint32_t gid;
 	for(gid = 0; gid < self->bind_num; gid++)
 	{
+		vec4_t *props;
+		uvec2_t new_ent;
+		vec4_t new_props;
 		struct draw_bind *bind = &self->bind[gid];
 		draw_conf_t *conf = drawable_get_conf(self, gid);
 
@@ -750,10 +769,10 @@ void drawable_model_changed(drawable_t *self)
 		if (!conf) continue;
 
 		/* BUFFEREABLE INSTANCE PROPERTIES */ 
-		vec4_t *props = &bind->conf->props[bind->instance_id];
-		uvec2_t new_ent = entity_to_uvec2(self->entity);
+		props = &bind->conf->props[bind->instance_id];
+		new_ent = entity_to_uvec2(self->entity);
 
-		vec4_t new_props = vec4(
+		new_props = vec4(
 				self->matid,
 				0 /* TODO use y for something */,
 				new_ent.x,
@@ -801,6 +820,7 @@ vec4_t get_cell_normal(mesh_t *mesh, cell_t *cell)
 
 int32_t varray_update_ram(varray_t *self)
 {
+	int32_t i;
 	mesh_t *mesh = self->mesh;
 	varray_clear(self);
 
@@ -809,11 +829,10 @@ int32_t varray_update_ram(varray_t *self)
 
 	/* int32_t selection = layer->selection; */
 
-	int32_t i;
 	if (vector_count(mesh->faces))
 	{
-		mesh_update_smooth_normals(mesh, 1.0f - mesh->smooth_angle);
 		int32_t triangle_count = 0;
+		mesh_update_smooth_normals(mesh, 1.0f - mesh->smooth_angle);
 		for(i = 0; i < vector_count(mesh->faces); i++)
 		{
 			int32_t id = i;
@@ -1045,11 +1064,17 @@ static void draw_conf_update_skin(draw_conf_t *self)
 extern uint32_t g_mat_ubo;
 int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 {
+	mesh_t *mesh;
+	c_render_device_t *rd;
+	shader_t *shader;
+	int32_t cull_was_enabled;
+	uint32_t primitive;
+
 	if (!self || !self->inst_num) return 0;
 #ifndef __EMSCRIPTEN__
 	SDL_SemWait(self->semaphore);
 #endif
-	mesh_t *mesh = self->vars.mesh;
+	mesh = self->vars.mesh;
 	/* printf("%d %p %d %s\n", self->vars.transparent, self->vars.mesh, */
 			/* self->vars.xray, self->vars.vs->name); */
 	if (!self->varray) self->varray = varray_get(self->vars.mesh);
@@ -1065,7 +1090,7 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 
 	draw_conf_update_vao(self);
 
-	c_render_device_t *rd = c_render_device(&SYS);
+	rd = c_render_device(&SYS);
 
 	if (self->vars.skin)
 	{
@@ -1077,7 +1102,7 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 		c_render_device_bind_ubo(rd, 22, material_get_ubo(self->vars.mat_type));
 	}
 
-	shader_t *shader = vs_bind(self->vars.vs, self->vars.mat_type);
+	shader = vs_bind(self->vars.vs, self->vars.mat_type);
 	if (!shader) goto end;
 
 	if (self->vars.custom_texture)
@@ -1094,7 +1119,7 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 		self->vars.draw_callback(self->vars.usrptr, shader);
 	}
 
-	int32_t cull_was_enabled = glIsEnabled(GL_CULL_FACE);
+	cull_was_enabled = glIsEnabled(GL_CULL_FACE);
 	if (mesh->cull)
 	{
 		const uint32_t culls[4] = {0, GL_FRONT, GL_BACK, GL_FRONT_AND_BACK};
@@ -1122,7 +1147,6 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 
 	if (self->vars.xray) glDepthRange(0, 0.01);
 
-	uint32_t primitive;
 	if (vector_count(mesh->faces))
 	{
 		primitive = GL_TRIANGLES;
@@ -1381,16 +1405,18 @@ void drawable_destroy(drawable_t *self)
 
 static int32_t draw_group_draw(draw_group_t *self)
 {
-	if (!self) return 0;
 	int32_t res = 0;
 	khiter_t k;
+	draw_conf_t *conf;
+
+	if (!self) return 0;
 	if (!self->configs) return 0;
 
 	SDL_SemWait(g_group_semaphore);
 	for(k = kh_begin(self->configs); k != kh_end(self->configs); ++k)
 	{
 		if (!kh_exist(self->configs, k)) continue;
-		draw_conf_t *conf = kh_value(self->configs, k);
+		conf = kh_value(self->configs, k);
 		res |= draw_conf_draw(conf, -1);
 	}
 	SDL_SemPost(g_group_semaphore);

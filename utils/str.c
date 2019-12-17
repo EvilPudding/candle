@@ -9,7 +9,7 @@ struct _str {
 	size_t length;
 	size_t chunk;
 	size_t allocated;
-	char bytes[];
+	char bytes[1];
 };
 
 void strrepl(const char *, char *, const char *, const char *);
@@ -100,18 +100,19 @@ void str_cat(char **str1, const char *str2)
 
 void str_catf( char **str, const char * format, ... )
 {
-
 	va_list args;
-
-	va_start(args, format);
-
 #if defined(STR_FORMAT_DYNAMIC)
-	size_t format_len = vsnprintf(NULL, 0, format, args);
-	char *formated_str = malloc(format_len + 1);
+	char *formated_str;
 #elif defined(STR_FORMAT_SIZE)
 	char formated_str[STR_FORMAT_SIZE];
 #else
 	char formated_str[STR_DEFAULT_FORMAT_SIZE];
+#endif
+
+	va_start(args, format);
+
+#if defined(STR_FORMAT_DYNAMIC)
+	formated_str = malloc(vsnprintf(NULL, 0, format, args) + 1);
 #endif
 
 	va_start(args, format);
@@ -225,9 +226,9 @@ char *str_replace(const char *original, const char *search, const char *replace)
 
 	while(original_i < original_len)
 	{
+		int match = 1;
 		output[output_i] = original[original_i];
 
-		int match = 1;
 		for(search_i = 0; search_i < search_len; search_i++)
 		{
 			if(original[original_i+search_i] != search[search_i])
@@ -280,9 +281,9 @@ void strrepl(const char *original, char *output,
 
 	while(original_i < original_len)
 	{
+		int match = 1;
 		output[output_i] = original[original_i];
 
-		int match = 1;
 		for(search_i = 0; search_i < search_len; search_i++)
 		{
 			if(original[original_i+search_i] != search[search_i])
@@ -318,12 +319,14 @@ char *str_readline(FILE *fp)
 	char block[1024];
     while (1)
 	{
+		char *last_char;
+
         if (fgets(block, 1024, fp) == NULL)
 		{
 			break;
 		}
 		str_cat(&line, block);
-		char *last_char = &block[strlen(block) - 1];
+		last_char = &block[strlen(block) - 1];
 		if (*last_char == '\n' || *last_char == '\r')
 		{
 			/* *last_char = '\0'; */

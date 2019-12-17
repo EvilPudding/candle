@@ -1,4 +1,4 @@
-CC = cc -std=c99
+CC = cc -std=c89 -pedantic-errors
 LD = cc
 AR = ar
 COMMA = ,

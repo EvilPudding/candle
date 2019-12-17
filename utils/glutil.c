@@ -23,7 +23,7 @@ void _check_gl_error(const char *file, int line)
 			case GL_OUT_OF_MEMORY:          error="OUT_OF_MEMORY";          break;
 			case GL_INVALID_FRAMEBUFFER_OPERATION:  error="INVALID_FRAMEBUFFER_OPERATION";  break;
 		}
-		snprintf(message, sizeof(message), "GL_%s - %s:%d", error, file, line);
+		sprintf(message, "GL_%s - %s:%d", error, file, line);
 		if(!strncmp(last_error, message, sizeof(last_error)))
 		{
 			printf("\b\b\r%s%6d\n", message, ++count);
@@ -58,15 +58,17 @@ SDL_Window *mainWindow = NULL;
 
 void glInit()
 {
+	GLenum err;
+
 	glewExperimental = GL_TRUE; 
-	GLenum err = glewInit();
+	err = glewInit();
 
 	if (err != GLEW_OK)
 	{
 		printf("Glew failed to initialize.\n");
 		exit(1);
 	}
-	if (!GLEW_VERSION_2_1)  // check that the machine supports the 2.1 API.
+	if (!GLEW_VERSION_2_1)  /* check that the machine supports the 2.1 API. */
 	{
 		printf("Glew version.\n");
 		exit(1);

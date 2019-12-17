@@ -50,15 +50,17 @@ void entity_destroy(entity_t self)
 	}
 	else
 	{
+		entity_info_t *info;
 		unsigned int pos = entity_pos(self);
 		unsigned int uid = entity_uid(self);
-
 		ct_t *ct;
-		ecm_foreach_ct(ct, {
 
+		ecm_foreach_ct(ct, {
+			c_t *c;
+			uint32_t key;
 			khiter_t k = kh_get(c, ct->cs, entity_uid(self));
 			if(k == kh_end(ct->cs)) continue;
-			c_t *c = kh_value(ct->cs, k);
+			c = kh_value(ct->cs, k);
 
 
 			if(ct->destroy) ct->destroy(c);
@@ -66,12 +68,12 @@ void entity_destroy(entity_t self)
 
 			kh_del(c, ct->cs, k);
 			
-			unsigned int key = ent_comp_ref(ct->id, uid);
+			key = ent_comp_ref(ct->id, uid);
 			k = kh_get(c, g_ecm->cs, key);
 			kh_del(c, g_ecm->cs, k);
 			free(c);
 		});
-		entity_info_t *info = &g_ecm->entities_info[pos];
+		info = &g_ecm->entities_info[pos];
 		info->next_free = g_ecm->entities_info[0].next_free;
 		info->uid = 0;
 		g_ecm->entities_info[0].next_free = pos;
@@ -85,12 +87,13 @@ int listener_signal(listener_t *self, entity_t ent, void *data, void *output)
 
 	for(k = kh_begin(ct->cs); k != kh_end(ct->cs); ++k)
 	{
+		c_t *c;
+
 		if(!kh_exist(ct->cs, k)) continue;
 
-		c_t *c = kh_value(ct->cs, k);
+		c = kh_value(ct->cs, k);
 		if(!c_entity(c)) continue;
-		if((self->flags & ENTITY) && c_entity(c) != ent)
-			continue;
+		if((self->flags & ENTITY) && c_entity(c) != ent) continue;
 
 		if(self->cb(c, data, output) == STOP) return STOP;
 	}

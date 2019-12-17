@@ -113,7 +113,7 @@ typedef struct ct
 	dep_t *depends;
 	uint32_t depends_size;
 
-	int32_t is_interaction;
+	bool_t is_interaction;
 
 } ct_t;
 

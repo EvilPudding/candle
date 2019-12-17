@@ -148,7 +148,7 @@ LICENSE
 #ifndef INCLUDE_STB_IMAGE_WRITE_H
 #define INCLUDE_STB_IMAGE_WRITE_H
 
-// if STB_IMAGE_WRITE_STATIC causes problems, try defining STBIWDEF to 'inline' or 'static inline'
+/* if STB_IMAGE_WRITE_STATIC causes problems, try defining STBIWDEF to 'inline' or 'static inline' */
 #ifndef STBIWDEF
 #ifdef STB_IMAGE_WRITE_STATIC
 #define STBIWDEF  static
@@ -161,7 +161,7 @@ LICENSE
 #endif
 #endif
 
-#ifndef STB_IMAGE_WRITE_STATIC  // C++ forbids static forward declarations
+#ifndef STB_IMAGE_WRITE_STATIC  /* C++ forbids static forward declarations */
 extern int stbi_write_tga_with_rle;
 extern int stbi_write_png_compression_level;
 extern int stbi_write_force_png_filter;
@@ -185,7 +185,7 @@ STBIWDEF int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int x,
 
 STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
 
-#endif//INCLUDE_STB_IMAGE_WRITE_H
+#endif/* INCLUDE_STB_IMAGE_WRITE_H */
 
 #ifdef STB_IMAGE_WRITE_IMPLEMENTATION
 
@@ -200,7 +200,7 @@ STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
 
 #ifndef STBI_WRITE_NO_STDIO
 #include <stdio.h>
-#endif // STBI_WRITE_NO_STDIO
+#endif /* STBI_WRITE_NO_STDIO */
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -208,9 +208,9 @@ STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
 #include <math.h>
 
 #if defined(STBIW_MALLOC) && defined(STBIW_FREE) && (defined(STBIW_REALLOC) || defined(STBIW_REALLOC_SIZED))
-// ok
+/* ok */
 #elif !defined(STBIW_MALLOC) && !defined(STBIW_FREE) && !defined(STBIW_REALLOC) && !defined(STBIW_REALLOC_SIZED)
-// ok
+/* ok */
 #else
 #error "Must define all or none of STBIW_MALLOC, STBIW_FREE, and STBIW_REALLOC (or STBIW_REALLOC_SIZED)."
 #endif
@@ -261,7 +261,7 @@ typedef struct
    void *context;
 } stbi__write_context;
 
-// initialize a callback-based context
+/* initialize a callback-based context */
 static void stbi__start_write_callbacks(stbi__write_context *s, stbi_write_func *c, void *context)
 {
    s->func    = c;
@@ -293,7 +293,7 @@ static void stbi__end_write_file(stbi__write_context *s)
    fclose((FILE *)s->context);
 }
 
-#endif // !STBI_WRITE_NO_STDIO
+#endif /* !STBI_WRITE_NO_STDIO */
 
 typedef unsigned int stbiw_uint32;
 typedef int stb_image_write_test[sizeof(stbiw_uint32)==4 ? 1 : -1];
@@ -356,16 +356,16 @@ static void stbiw__write_pixel(stbi__write_context *s, int rgb_dir, int comp, in
       s->func(s->context, &d[comp - 1], 1);
 
    switch (comp) {
-      case 2: // 2 pixels = mono + alpha, alpha is written separately, so same as 1-channel case
+      case 2: /* 2 pixels = mono + alpha, alpha is written separately, so same as 1-channel case */
       case 1:
          if (expand_mono)
-            stbiw__write3(s, d[0], d[0], d[0]); // monochrome bmp
+            stbiw__write3(s, d[0], d[0], d[0]); /* monochrome bmp */
          else
-            s->func(s->context, d, 1);  // monochrome TGA
+            s->func(s->context, d, 1);  /* monochrome TGA */
          break;
       case 4:
          if (!write_alpha) {
-            // composite against pink background
+            /* composite against pink background */
             for (k = 0; k < 3; ++k)
                px[k] = bg[k] + ((d[k] - bg[k]) * d[3]) / 255;
             stbiw__write3(s, px[1 - rgb_dir], px[1], px[1 + rgb_dir]);
@@ -424,8 +424,8 @@ static int stbi_write_bmp_core(stbi__write_context *s, int x, int y, int comp, c
    int pad = (-x*3) & 3;
    return stbiw__outfile(s,-1,-1,x,y,comp,1,(void *) data,0,pad,
            "11 4 22 4" "4 44 22 444444",
-           'B', 'M', 14+40+(x*3+pad)*y, 0,0, 14+40,  // file header
-            40, x,y, 1,24, 0,0,0,0,0,0);             // bitmap header
+           'B', 'M', 14+40+(x*3+pad)*y, 0,0, 14+40,  /* file header */
+            40, x,y, 1,24, 0,0,0,0,0,0);             /* bitmap header */
 }
 
 STBIWDEF int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void *data)
@@ -446,13 +446,13 @@ STBIWDEF int stbi_write_bmp(char const *filename, int x, int y, int comp, const 
    } else
       return 0;
 }
-#endif //!STBI_WRITE_NO_STDIO
+#endif /* !STBI_WRITE_NO_STDIO */
 
 static int stbi_write_tga_core(stbi__write_context *s, int x, int y, int comp, void *data)
 {
    int has_alpha = (comp == 2 || comp == 4);
    int colorbytes = has_alpha ? comp-1 : comp;
-   int format = colorbytes < 2 ? 3 : 2; // 3 color channels (RGB/RGBA) = 2, 1 color channel (Y/YA) = 3
+   int format = colorbytes < 2 ? 3 : 2; /* 3 color channels (RGB/RGBA) = 2, 1 color channel (Y/YA) = 3 */
 
    if (y < 0 || x < 0)
       return 0;
@@ -546,9 +546,9 @@ STBIWDEF int stbi_write_tga(char const *filename, int x, int y, int comp, const 
 }
 #endif
 
-// *************************************************************************************************
-// Radiance RGBE HDR writer
-// by Baldur Karlsson
+/* ************************************************************************************************* */
+/* Radiance RGBE HDR writer */
+/* by Baldur Karlsson */
 
 #define stbiw__max(a, b)  ((a) > (b) ? (a) : (b))
 
@@ -580,7 +580,7 @@ void stbiw__write_run_data(stbi__write_context *s, int length, unsigned char dat
 void stbiw__write_dump_data(stbi__write_context *s, int length, unsigned char *data)
 {
    unsigned char lengthbyte = STBIW_UCHAR(length);
-   STBIW_ASSERT(length <= 128); // inconsistent with spec but consistent with official code
+   STBIW_ASSERT(length <= 128); /* inconsistent with spec but consistent with official code */
    s->func(s->context, &lengthbyte, 1);
    s->func(s->context, data, length);
 }
@@ -640,7 +640,7 @@ void stbiw__write_hdr_scanline(stbi__write_context *s, int width, int ncomp, uns
 
          x = 0;
          while (x < width) {
-            // find first run
+            /* find first run */
             r = x;
             while (r+2 < width) {
                if (comp[r] == comp[r+1] && comp[r] == comp[r+2])
@@ -649,19 +649,19 @@ void stbiw__write_hdr_scanline(stbi__write_context *s, int width, int ncomp, uns
             }
             if (r+2 >= width)
                r = width;
-            // dump up to first run
+            /* dump up to first run */
             while (x < r) {
                int len = r-x;
                if (len > 128) len = 128;
                stbiw__write_dump_data(s, len, &comp[x]);
                x += len;
             }
-            // if there's a run, output it
-            if (r+2 < width) { // same test as what we break out of in search loop, so only true if we break'd
-               // find next byte after run
+            /* if there's a run, output it */
+            if (r+2 < width) { /* same test as what we break out of in search loop, so only true if we break'd */
+               /* find next byte after run */
                while (r < width && comp[r] == comp[x])
                   ++r;
-               // output run up to r
+               /* output run up to r */
                while (x < r) {
                   int len = r-x;
                   if (len > 127) len = 127;
@@ -679,7 +679,7 @@ static int stbi_write_hdr_core(stbi__write_context *s, int x, int y, int comp, f
    if (y <= 0 || x <= 0 || data == NULL)
       return 0;
    else {
-      // Each component is stored separately. Allocate scratch space for full output scanline.
+      /* Each component is stored separately. Allocate scratch space for full output scanline. */
       unsigned char *scratch = (unsigned char *) STBIW_MALLOC(x*4);
       int i, len;
       char buffer[128];
@@ -718,16 +718,16 @@ STBIWDEF int stbi_write_hdr(char const *filename, int x, int y, int comp, const 
    } else
       return 0;
 }
-#endif // STBI_WRITE_NO_STDIO
+#endif /* STBI_WRITE_NO_STDIO */
 
 
-//////////////////////////////////////////////////////////////////////////////
-//
-// PNG writer
-//
+/* ///////////////////////////////////////////////////////////////////////// */
+/* */
+/* PNG writer */
+/* */
 
 #ifndef STBIW_ZLIB_COMPRESS
-// stretchy buffer; stbiw__sbpush() == vector<>::push_back() -- stbiw__sbcount() == vector<>::size()
+/* stretchy buffer; stbiw__sbpush() == vector<>::push_back() -- stbiw__sbcount() == vector<>::size() */
 #define stbiw__sbraw(a) ((int *) (a) - 2)
 #define stbiw__sbm(a)   stbiw__sbraw(a)[0]
 #define stbiw__sbn(a)   stbiw__sbraw(a)[1]
@@ -797,7 +797,7 @@ static unsigned int stbiw__zhash(unsigned char *data)
 #define stbiw__zlib_add(code,codebits) \
       (bitbuf |= (code) << bitcount, bitcount += (codebits), stbiw__zlib_flush())
 #define stbiw__zlib_huffa(b,c)  stbiw__zlib_add(stbiw__zlib_bitrev(b,c),c)
-// default huffman tables
+/* default huffman tables */
 #define stbiw__zlib_huff1(n)  stbiw__zlib_huffa(0x30 + (n), 8)
 #define stbiw__zlib_huff2(n)  stbiw__zlib_huffa(0x190 + (n)-144, 9)
 #define stbiw__zlib_huff3(n)  stbiw__zlib_huffa(0 + (n)-256,7)
@@ -807,14 +807,14 @@ static unsigned int stbiw__zhash(unsigned char *data)
 
 #define stbiw__ZHASH   16384
 
-#endif // STBIW_ZLIB_COMPRESS
+#endif /* STBIW_ZLIB_COMPRESS */
 
 unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_len, int quality)
 {
 #ifdef STBIW_ZLIB_COMPRESS
-   // user provided a zlib compress implementation, use that
+   /* user provided a zlib compress implementation, use that */
    return STBIW_ZLIB_COMPRESS(data, data_len, out_len, quality);
-#else // use builtin
+#else /* use builtin */
    static unsigned short lengthc[] = { 3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258, 259 };
    static unsigned char  lengtheb[]= { 0,0,0,0,0,0,0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4,  4,  5,  5,  5,  5,  0 };
    static unsigned short distc[]   = { 1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577, 32768 };
@@ -827,28 +827,28 @@ unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_l
       return NULL;
    if (quality < 5) quality = 5;
 
-   stbiw__sbpush(out, 0x78);   // DEFLATE 32K window
-   stbiw__sbpush(out, 0x5e);   // FLEVEL = 1
-   stbiw__zlib_add(1,1);  // BFINAL = 1
-   stbiw__zlib_add(1,2);  // BTYPE = 1 -- fixed huffman
+   stbiw__sbpush(out, 0x78);   /* DEFLATE 32K window */
+   stbiw__sbpush(out, 0x5e);   /* FLEVEL = 1 */
+   stbiw__zlib_add(1,1);  /* BFINAL = 1 */
+   stbiw__zlib_add(1,2);  /* BTYPE = 1 -- fixed huffman */
 
    for (i=0; i < stbiw__ZHASH; ++i)
       hash_table[i] = NULL;
 
    i=0;
    while (i < data_len-3) {
-      // hash next 3 bytes of data to be compressed
+      /* hash next 3 bytes of data to be compressed */
       int h = stbiw__zhash(data+i)&(stbiw__ZHASH-1), best=3;
       unsigned char *bestloc = 0;
       unsigned char **hlist = hash_table[h];
       int n = stbiw__sbcount(hlist);
       for (j=0; j < n; ++j) {
-         if (hlist[j]-data > i-32768) { // if entry lies within window
+         if (hlist[j]-data > i-32768) { /* if entry lies within window */
             int d = stbiw__zlib_countm(hlist[j], data+i, data_len-i);
             if (d >= best) best=d,bestloc=hlist[j];
          }
       }
-      // when hash table entry is too long, delete half the entries
+      /* when hash table entry is too long, delete half the entries */
       if (hash_table[h] && stbiw__sbn(hash_table[h]) == 2*quality) {
          STBIW_MEMMOVE(hash_table[h], hash_table[h]+quality, sizeof(hash_table[h][0])*quality);
          stbiw__sbn(hash_table[h]) = quality;
@@ -856,14 +856,14 @@ unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_l
       stbiw__sbpush(hash_table[h],data+i);
 
       if (bestloc) {
-         // "lazy matching" - check match at *next* byte, and if it's better, do cur byte as literal
+         /* "lazy matching" - check match at *next* byte, and if it's better, do cur byte as literal */
          h = stbiw__zhash(data+i+1)&(stbiw__ZHASH-1);
          hlist = hash_table[h];
          n = stbiw__sbcount(hlist);
          for (j=0; j < n; ++j) {
             if (hlist[j]-data > i-32767) {
                int e = stbiw__zlib_countm(hlist[j], data+i+1, data_len-i-1);
-               if (e > best) { // if next match is better, bail on current match
+               if (e > best) { /* if next match is better, bail on current match */
                   bestloc = NULL;
                   break;
                }
@@ -872,7 +872,7 @@ unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_l
       }
 
       if (bestloc) {
-         int d = (int) (data+i - bestloc); // distance back
+         int d = (int) (data+i - bestloc); /* distance back */
          STBIW_ASSERT(d <= 32767 && best <= 258);
          for (j=0; best > lengthc[j+1]-1; ++j);
          stbiw__zlib_huff(j+257);
@@ -886,11 +886,11 @@ unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_l
          ++i;
       }
    }
-   // write out final bytes
+   /* write out final bytes */
    for (;i < data_len; ++i)
       stbiw__zlib_huffb(data[i]);
-   stbiw__zlib_huff(256); // end of block
-   // pad with 0 bits to byte boundary
+   stbiw__zlib_huff(256); /* end of block */
+   /* pad with 0 bits to byte boundary */
    while (bitcount)
       stbiw__zlib_add(0,1);
 
@@ -899,7 +899,7 @@ unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_l
    STBIW_FREE(hash_table);
 
    {
-      // compute adler32 on input
+      /* compute adler32 on input */
       unsigned int s1=1, s2=0;
       int blocklen = (int) (data_len % 5552);
       j=0;
@@ -915,10 +915,10 @@ unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_l
       stbiw__sbpush(out, STBIW_UCHAR(s1));
    }
    *out_len = stbiw__sbn(out);
-   // make returned pointer freeable
+   /* make returned pointer freeable */
    STBIW_MEMMOVE(stbiw__sbraw(out), out, *out_len);
    return (unsigned char *) stbiw__sbraw(out);
-#endif // STBIW_ZLIB_COMPRESS
+#endif /* STBIW_ZLIB_COMPRESS */
 }
 
 static unsigned int stbiw__crc32(unsigned char *buffer, int len)
@@ -984,7 +984,7 @@ static unsigned char stbiw__paeth(int a, int b, int c)
    return STBIW_UCHAR(c);
 }
 
-// @OPTIMIZE: provide an option that always forces left-predict or paeth predict
+/* @OPTIMIZE: provide an option that always forces left-predict or paeth predict */
 static void stbiw__encode_png_line(unsigned char *pixels, int stride_bytes, int width, int height, int y, int n, int filter_type, signed char *line_buffer)
 {
    static int mapping[] = { 0,1,2,3,4 };
@@ -1041,12 +1041,12 @@ unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, in
       if (force_filter > -1) {
          filter_type = force_filter;
          stbiw__encode_png_line(pixels, stride_bytes, x, y, j, n, force_filter, line_buffer);
-      } else { // Estimate the best filter by running through all of them:
+      } else { /* Estimate the best filter by running through all of them: */
          int best_filter = 0, best_filter_val = 0x7fffffff, est, i;
          for (filter_type = 0; filter_type < 5; filter_type++) {
             stbiw__encode_png_line(pixels, stride_bytes, x, y, j, n, filter_type, line_buffer);
 
-            // Estimate the entropy of the line using this filter; the less, the better.
+            /* Estimate the entropy of the line using this filter; the less, the better. */
             est = 0;
             for (i = 0; i < x*n; ++i) {
                est += abs((signed char) line_buffer[i]);
@@ -1056,12 +1056,12 @@ unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, in
                best_filter = filter_type;
             }
          }
-         if (filter_type != best_filter) {  // If the last iteration already got us the best filter, don't redo it
+         if (filter_type != best_filter) {  /* If the last iteration already got us the best filter, don't redo it */
             stbiw__encode_png_line(pixels, stride_bytes, x, y, j, n, best_filter, line_buffer);
             filter_type = best_filter;
          }
       }
-      // when we get here, filter_type contains the filter type, and line_buffer contains the data
+      /* when we get here, filter_type contains the filter type, and line_buffer contains the data */
       filt[j*(x*n+1)] = (unsigned char) filter_type;
       STBIW_MEMMOVE(filt+j*(x*n+1)+1, line_buffer, x*n);
    }
@@ -1070,14 +1070,14 @@ unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, in
    STBIW_FREE(filt);
    if (!zlib) return 0;
 
-   // each tag requires 12 bytes of overhead
+   /* each tag requires 12 bytes of overhead */
    out = (unsigned char *) STBIW_MALLOC(8 + 12+13 + 12+zlen + 12);
    if (!out) return 0;
    *out_len = 8 + 12+13 + 12+zlen + 12;
 
    o=out;
    STBIW_MEMMOVE(o,sig,8); o+= 8;
-   stbiw__wp32(o, 13); // header length
+   stbiw__wp32(o, 13); /* header length */
    stbiw__wptag(o, "IHDR");
    stbiw__wp32(o, x);
    stbiw__wp32(o, y);
@@ -1177,34 +1177,34 @@ static void stbiw__jpg_DCT(float *d0p, float *d1p, float *d2p, float *d3p, float
    float tmp3 = d3 + d4;
    float tmp4 = d3 - d4;
 
-   // Even part
-   float tmp10 = tmp0 + tmp3;   // phase 2
+   /* Even part */
+   float tmp10 = tmp0 + tmp3;   /* phase 2 */
    float tmp13 = tmp0 - tmp3;
    float tmp11 = tmp1 + tmp2;
    float tmp12 = tmp1 - tmp2;
 
-   d0 = tmp10 + tmp11;       // phase 3
+   d0 = tmp10 + tmp11;       /* phase 3 */
    d4 = tmp10 - tmp11;
 
-   z1 = (tmp12 + tmp13) * 0.707106781f; // c4
-   d2 = tmp13 + z1;       // phase 5
+   z1 = (tmp12 + tmp13) * 0.707106781f; /* c4 */
+   d2 = tmp13 + z1;       /* phase 5 */
    d6 = tmp13 - z1;
 
-   // Odd part
-   tmp10 = tmp4 + tmp5;       // phase 2
+   /* Odd part */
+   tmp10 = tmp4 + tmp5;       /* phase 2 */
    tmp11 = tmp5 + tmp6;
    tmp12 = tmp6 + tmp7;
 
-   // The rotator is modified from fig 4-8 to avoid extra negations.
-   z5 = (tmp10 - tmp12) * 0.382683433f; // c6
-   z2 = tmp10 * 0.541196100f + z5; // c2-c6
-   z4 = tmp12 * 1.306562965f + z5; // c2+c6
-   z3 = tmp11 * 0.707106781f; // c4
+   /* The rotator is modified from fig 4-8 to avoid extra negations. */
+   z5 = (tmp10 - tmp12) * 0.382683433f; /* c6 */
+   z2 = tmp10 * 0.541196100f + z5; /* c2-c6 */
+   z4 = tmp12 * 1.306562965f + z5; /* c2+c6 */
+   z3 = tmp11 * 0.707106781f; /* c4 */
 
-   z11 = tmp7 + z3;      // phase 5
+   z11 = tmp7 + z3;      /* phase 5 */
    z13 = tmp7 - z3;
 
-   *d5p = z13 + z2;         // phase 6
+   *d5p = z13 + z2;         /* phase 6 */
    *d3p = z13 - z2;
    *d1p = z11 + z4;
    *d7p = z11 - z4;
@@ -1223,28 +1223,33 @@ static void stbiw__jpg_calcBits(int val, unsigned short bits[2]) {
 }
 
 static int stbiw__jpg_processDU(stbi__write_context *s, int *bitBuf, int *bitCnt, float *CDU, float *fdtbl, int DC, const unsigned short HTDC[256][2], const unsigned short HTAC[256][2]) {
-   const unsigned short EOB[2] = { HTAC[0x00][0], HTAC[0x00][1] };
-   const unsigned short M16zeroes[2] = { HTAC[0xF0][0], HTAC[0xF0][1] };
+   unsigned short EOB[2];
+   unsigned short M16zeroes[2];
    int dataOff, i, diff, end0pos;
    int DU[64];
 
-   // DCT rows
+   EOB[0] = HTAC[0x00][0];
+   EOB[1] = HTAC[0x00][1];
+   M16zeroes[0] = HTAC[0xF0][0];
+   M16zeroes[1] = HTAC[0xF0][1];
+
+   /* DCT rows */
    for(dataOff=0; dataOff<64; dataOff+=8) {
       stbiw__jpg_DCT(&CDU[dataOff], &CDU[dataOff+1], &CDU[dataOff+2], &CDU[dataOff+3], &CDU[dataOff+4], &CDU[dataOff+5], &CDU[dataOff+6], &CDU[dataOff+7]);
    }
-   // DCT columns
+   /* DCT columns */
    for(dataOff=0; dataOff<8; ++dataOff) {
       stbiw__jpg_DCT(&CDU[dataOff], &CDU[dataOff+8], &CDU[dataOff+16], &CDU[dataOff+24], &CDU[dataOff+32], &CDU[dataOff+40], &CDU[dataOff+48], &CDU[dataOff+56]);
    }
-   // Quantize/descale/zigzag the coefficients
+   /* Quantize/descale/zigzag the coefficients */
    for(i=0; i<64; ++i) {
       float v = CDU[i]*fdtbl[i];
-      // DU[stbiw__jpg_ZigZag[i]] = (int)(v < 0 ? ceilf(v - 0.5f) : floorf(v + 0.5f));
-      // ceilf() and floorf() are C99, not C89, but I /think/ they're not needed here anyway?
+      /* DU[stbiw__jpg_ZigZag[i]] = (int)(v < 0 ? ceilf(v - 0.5f) : floorf(v + 0.5f)); */
+      /* ceilf() and floorf() are C99, not C89, but I /think/ they're not needed here anyway? */
       DU[stbiw__jpg_ZigZag[i]] = (int)(v < 0 ? v - 0.5f : v + 0.5f);
    }
 
-   // Encode DC
+   /* Encode DC */
    diff = DU[0] - DC;
    if (diff == 0) {
       stbiw__jpg_writeBits(s, bitBuf, bitCnt, HTDC[0]);
@@ -1254,11 +1259,11 @@ static int stbiw__jpg_processDU(stbi__write_context *s, int *bitBuf, int *bitCnt
       stbiw__jpg_writeBits(s, bitBuf, bitCnt, HTDC[bits[1]]);
       stbiw__jpg_writeBits(s, bitBuf, bitCnt, bits);
    }
-   // Encode ACs
+   /* Encode ACs */
    end0pos = 63;
    for(; (end0pos>0)&&(DU[end0pos]==0); --end0pos) {
    }
-   // end0pos = first element in reverse order !=0
+   /* end0pos = first element in reverse order !=0 */
    if(end0pos == 0) {
       stbiw__jpg_writeBits(s, bitBuf, bitCnt, EOB);
       return DU[0];
@@ -1288,7 +1293,7 @@ static int stbiw__jpg_processDU(stbi__write_context *s, int *bitBuf, int *bitCnt
 }
 
 static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, int comp, const void* data, int quality) {
-   // Constants that don't pollute global namespace
+   /* Constants that don't pollute global namespace */
    static const unsigned char std_dc_luminance_nrcodes[] = {0,0,1,5,1,1,1,1,1,1,0,0,0,0,0,0,0};
    static const unsigned char std_dc_luminance_values[] = {0,1,2,3,4,5,6,7,8,9,10,11};
    static const unsigned char std_ac_luminance_nrcodes[] = {0,0,2,1,3,3,2,4,3,5,5,4,4,0,0,1,0x7d};
@@ -1313,7 +1318,7 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
       0xb5,0xb6,0xb7,0xb8,0xb9,0xba,0xc2,0xc3,0xc4,0xc5,0xc6,0xc7,0xc8,0xc9,0xca,0xd2,0xd3,0xd4,0xd5,0xd6,0xd7,0xd8,0xd9,0xda,
       0xe2,0xe3,0xe4,0xe5,0xe6,0xe7,0xe8,0xe9,0xea,0xf2,0xf3,0xf4,0xf5,0xf6,0xf7,0xf8,0xf9,0xfa
    };
-   // Huffman tables
+   /* Huffman tables */
    static const unsigned short YDC_HT[256][2] = { {0,2},{2,3},{3,3},{4,3},{5,3},{6,3},{14,4},{30,5},{62,6},{126,7},{254,8},{510,9}};
    static const unsigned short UVDC_HT[256][2] = { {0,2},{1,2},{2,2},{6,3},{14,4},{30,5},{62,6},{126,7},{254,8},{510,9},{1022,10},{2046,11}};
    static const unsigned short YAC_HT[256][2] = {
@@ -1385,12 +1390,17 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
       }
    }
 
-   // Write Headers
+   /* Write Headers */
    {
       static const unsigned char head0[] = { 0xFF,0xD8,0xFF,0xE0,0,0x10,'J','F','I','F',0,1,1,0,0,1,0,1,0,0,0xFF,0xDB,0,0x84,0 };
       static const unsigned char head2[] = { 0xFF,0xDA,0,0xC,3,1,0,2,0x11,3,0x11,0,0x3F,0 };
-      const unsigned char head1[] = { 0xFF,0xC0,0,0x11,8,(unsigned char)(height>>8),STBIW_UCHAR(height),(unsigned char)(width>>8),STBIW_UCHAR(width),
+      unsigned char head1[] = { 0xFF,0xC0,0,0x11,8,0,0,0,0,
                                       3,1,0x11,0,2,0x11,1,3,0x11,1,0xFF,0xC4,0x01,0xA2,0 };
+	  head1[5] = (unsigned char)(height>>8);
+	  head1[6] = STBIW_UCHAR(height);
+	  head1[7] = (unsigned char)(width>>8);
+	  head1[8] = STBIW_UCHAR(width);
+
       s->func(s->context, (void*)head0, sizeof(head0));
       s->func(s->context, (void*)YTable, sizeof(YTable));
       stbiw__putc(s, 1);
@@ -1398,25 +1408,25 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
       s->func(s->context, (void*)head1, sizeof(head1));
       s->func(s->context, (void*)(std_dc_luminance_nrcodes+1), sizeof(std_dc_luminance_nrcodes)-1);
       s->func(s->context, (void*)std_dc_luminance_values, sizeof(std_dc_luminance_values));
-      stbiw__putc(s, 0x10); // HTYACinfo
+      stbiw__putc(s, 0x10); /* HTYACinfo */
       s->func(s->context, (void*)(std_ac_luminance_nrcodes+1), sizeof(std_ac_luminance_nrcodes)-1);
       s->func(s->context, (void*)std_ac_luminance_values, sizeof(std_ac_luminance_values));
-      stbiw__putc(s, 1); // HTUDCinfo
+      stbiw__putc(s, 1); /* HTUDCinfo */
       s->func(s->context, (void*)(std_dc_chrominance_nrcodes+1), sizeof(std_dc_chrominance_nrcodes)-1);
       s->func(s->context, (void*)std_dc_chrominance_values, sizeof(std_dc_chrominance_values));
-      stbiw__putc(s, 0x11); // HTUACinfo
+      stbiw__putc(s, 0x11); /* HTUACinfo */
       s->func(s->context, (void*)(std_ac_chrominance_nrcodes+1), sizeof(std_ac_chrominance_nrcodes)-1);
       s->func(s->context, (void*)std_ac_chrominance_values, sizeof(std_ac_chrominance_values));
       s->func(s->context, (void*)head2, sizeof(head2));
    }
 
-   // Encode 8x8 macroblocks
+   /* Encode 8x8 macroblocks */
    {
       static const unsigned short fillBits[] = {0x7F, 7};
       const unsigned char *imageData = (const unsigned char *)data;
       int DCY=0, DCU=0, DCV=0;
       int bitBuf=0, bitCnt=0;
-      // comp == 2 is grey+alpha (alpha is ignored)
+      /* comp == 2 is grey+alpha (alpha is ignored) */
       int ofsG = comp > 2 ? 1 : 0, ofsB = comp > 2 ? 2 : 0;
       int x, y, pos;
       for(y = 0; y < height; y += 8) {
@@ -1448,11 +1458,11 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
          }
       }
 
-      // Do the bit alignment of the EOI marker
+      /* Do the bit alignment of the EOI marker */
       stbiw__jpg_writeBits(s, &bitBuf, &bitCnt, fillBits);
    }
 
-   // EOI
+   /* EOI */
    stbiw__putc(s, 0xFF);
    stbiw__putc(s, 0xD9);
 
@@ -1480,7 +1490,7 @@ STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const 
 }
 #endif
 
-#endif // STB_IMAGE_WRITE_IMPLEMENTATION
+#endif /* STB_IMAGE_WRITE_IMPLEMENTATION */
 
 /* Revision history
       1.09  (2018-02-11)

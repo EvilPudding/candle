@@ -23,7 +23,8 @@ static void bind_pass(pass_t *pass, shader_t *shader);
 #define FIRST_TEX 7
 static void pass_unbind_textures(pass_t *pass)
 {
-	for (uint32_t i = 0; i < pass->bound_textures; i++)
+	uint32_t i;
+	for (i = 0; i < pass->bound_textures; i++)
 	{
 		glActiveTexture(GL_TEXTURE0 + FIRST_TEX + i);
 		glBindTexture(GL_TEXTURE_2D, 0);
@@ -32,16 +33,17 @@ static void pass_unbind_textures(pass_t *pass)
 
 static int pass_bind_buffer(pass_t *pass, bind_t *bind, shader_t *shader)
 {
+	int t;
 	hash_bind_t *sb = &bind->vs_uniforms;
+	texture_t *buffer;
 
 	if(bind->getter)
 	{
 		bind->buffer = ((tex_getter)bind->getter)(pass, pass->usrptr);
 	}
 
-	texture_t *buffer = bind->buffer;
+	buffer = bind->buffer;
 
-	int t;
 
 	for(t = 0; t < buffer->bufs_size; t++)
 	{
@@ -77,8 +79,7 @@ void bind_get_uniforms(bind_t *bind, hash_bind_t *sb, pass_t *pass)
 			for(t = 0; t < bind->buffer->bufs_size; t++)
 			{
 				char buffer[256];
-				snprintf(buffer, sizeof(buffer), "%s.%s", bind->name,
-				         bind->buffer->bufs[t].name);
+				sprintf(buffer, "%s.%s", bind->name, bind->buffer->bufs[t].name);
 				sb->u.buffer.u_tex[t] = ref(buffer);
 			}
 			break;
@@ -224,9 +225,10 @@ texture_t *renderer_tex(renderer_t *self, unsigned int hash)
 void renderer_add_tex(renderer_t *self, const char *name,
 		float resolution, texture_t *buffer)
 {
-	self->outputs[self->outputs_num++] = (pass_output_t){
-		.resolution = resolution,
-		.hash = ref(name), .buffer = buffer};
+	pass_output_t *output = &self->outputs[self->outputs_num++];
+	output->resolution = resolution;
+	output->hash = ref(name);
+	output->buffer = buffer;
 	strncpy(buffer->name, name, sizeof(buffer->name) - 1);
 }
 
@@ -234,7 +236,6 @@ static void update_ubo(renderer_t *self, int32_t camid)
 {
 	if(!self->ubo_changed[camid]) return;
 	self->ubo_changed[camid] = false;
-	// TODO this should be gl thread only
 	if(!self->ubos[camid])
 	{
 		glGenBuffers(1, &self->ubos[camid]); glerr();
@@ -259,13 +260,20 @@ void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model)
 	if(self->output && self->cubemap)
 	{
 		int32_t i;
-		vec3_t p1[6] = {
-			vec3(1.0, 0.0, 0.0), vec3(-1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0),
-			vec3(0.0, -1.0, 0.0), vec3(0.0, 0.0, 1.0), vec3(0.0, 0.0, -1.0)};
+		vec3_t p1[6], up[6];
+		p1[0] = vec3(1.0, 0.0, 0.0);
+		p1[1] = vec3(-1.0, 0.0, 0.0);
+		p1[2] = vec3(0.0, 1.0, 0.0);
+		p1[3] = vec3(0.0, -1.0, 0.0);
+		p1[4] = vec3(0.0, 0.0, 1.0);
+		p1[5] = vec3(0.0, 0.0, -1.0);
 
-		vec3_t up[6] = {
-			vec3(0.0,-1.0,0.0), vec3(0.0, -1.0, 0.0), vec3(0.0, 0.0, 1.0),
-			vec3(0.0, 0.0, -1.0), vec3(0.0, -1.0, 0.0), vec3(0.0, -1.0, 0.0)};
+		up[0] = vec3(0.0,-1.0,0.0);
+		up[1] = vec3(0.0, -1.0, 0.0);
+		up[2] = vec3(0.0, 0.0, 1.0);
+		up[3] = vec3(0.0, 0.0, -1.0);
+		up[4] = vec3(0.0, -1.0, 0.0);
+		up[5] = vec3(0.0, -1.0, 0.0);
 
 		for(i = 0; i < 6; i++)
 		{
@@ -346,11 +354,16 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 
 void *pass_process_query_mips(pass_t *self)
 {
+	uint32_t size;
 	texture_t *tex = self->output;
+	bool_t second_stage = true;
+	struct{
+		uint16_t _[2];
+	} *mips[4];
+
 	if (!tex->framebuffer_ready) return NULL;
 
-	uint32_t size = tex->width * tex->height * 4;
-	bool_t second_stage = true;
+	size = tex->width * tex->height * 4;
 	if (!tex->bufs[1].pbo)
 	{
 		glGenBuffers(1, &tex->bufs[1].pbo);
@@ -373,10 +386,6 @@ void *pass_process_query_mips(pass_t *self)
 		glerr();
 		second_stage = false;
 	}
-
-	struct{
-		uint16_t _[2];
-	} *mips[4];
 
 	mips[0] = alloca(size);
 	mips[1] = alloca(size);
@@ -433,10 +442,11 @@ void *pass_process_query_mips(pass_t *self)
 	if (second_stage)
 	{
 		uint32_t max_loads = 64;
-		for (int y = 0; y < tex->height; y++) {
-			for (int x = 0; x < tex->width; x++) {
-				int i = y * tex->width + x;
-				for (int c = 0; c < 4; c++)
+		int32_t y, x, i, c;
+		for (y = 0; y < tex->height; y++) {
+			for (x = 0; x < tex->width; x++) {
+				i = y * tex->width + x;
+				for (c = 0; c < 4; c++)
 				{
 					if (*((uint32_t*)&mips[c][i]) == 0) continue;
 
@@ -456,6 +466,11 @@ end:
 
 void *pass_process_brightness(pass_t *self)
 {
+	uint32_t mip, size, count, i;
+	bool_t second_stage = true;
+	float *data;
+	float brightness;
+
 	texture_t *tex = self->output;
 	if (tex->width == 0 || tex->height == 0 || tex->bufs[0].ready == 0)
 		return NULL;
@@ -464,9 +479,8 @@ void *pass_process_brightness(pass_t *self)
 	texture_bind(tex, 0);
 	glGenerateMipmap(tex->target); glerr();
 
-	uint32_t mip = MAX_MIPS - 1;
-	uint32_t size = tex->sizes[mip].x * tex->sizes[mip].y * 4 * sizeof(float);
-	bool_t second_stage = true;
+	mip = MAX_MIPS - 1;
+	size = tex->sizes[mip].x * tex->sizes[mip].y * 4 * sizeof(float);
 	if (!tex->bufs[0].pbo)
 	{
 		glGenBuffers(1, &tex->bufs[0].pbo);
@@ -476,7 +490,7 @@ void *pass_process_brightness(pass_t *self)
 		second_stage = false;
 	}
 
-	float *data = alloca(size);
+	data = alloca(size);
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, tex->frame_buffer[mip]); glerr();
@@ -492,11 +506,11 @@ void *pass_process_brightness(pass_t *self)
 			GL_FLOAT, NULL); glerr();
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-	float brightness = 0.0f;
-	uint32_t count = 0u;
+	brightness = 0.0f;
+	count = 0u;
 	if (second_stage)
 	{
-		for (uint32_t i = 0; i < size / 4; i += 4)
+		for (i = 0; i < size / 4; i += 4)
 		{
 			brightness += data[i + 0] + data[i + 1] + data[i + 2];
 			count += 3;
@@ -704,6 +718,8 @@ void renderer_default_pipeline(renderer_t *self)
 
 void renderer_update_projection(renderer_t *self)
 {
+	uint32_t f;
+
 	self->glvars[0].projection = mat4_perspective(
 			self->fov,
 			((float)self->width) / self->height,
@@ -712,7 +728,6 @@ void renderer_update_projection(renderer_t *self)
 	self->glvars[0].inv_projection = mat4_invert(self->glvars[0].projection); 
 	self->ubo_changed[0] = true;
 
-	uint32_t f;
 	for(f = 1; f < 6; f++)
 	{
 		self->glvars[f].projection = self->glvars[0].projection;
@@ -724,21 +739,22 @@ void renderer_update_projection(renderer_t *self)
 
 vec3_t renderer_real_pos(renderer_t *self, float depth, vec2_t coord)
 {
-	/* float z = depth; */
+	float z;
+	vec4_t clip_space, view_space, world_space;
+
 	if(depth < 0.01f) depth *= 100.0f;
-    float z = depth * 2.0 - 1.0;
+    z = depth * 2.0 - 1.0;
 	coord = vec2_sub_number(vec2_scale(coord, 2.0f), 1.0);
 
-    vec4_t clipSpacePosition = vec4(_vec2(coord), z, 1.0);
-	vec4_t viewSpacePosition = mat4_mul_vec4(self->glvars[0].inv_projection,
-			clipSpacePosition);
+    clip_space = vec4(_vec2(coord), z, 1.0);
+	view_space = mat4_mul_vec4(self->glvars[0].inv_projection, clip_space);
 
-    // Perspective division
-    viewSpacePosition = vec4_div_number(viewSpacePosition, viewSpacePosition.w);
+    /* Perspective division */
+    view_space = vec4_div_number(view_space, view_space.w);
 
-    vec4_t worldSpacePosition = mat4_mul_vec4(self->glvars[0].model, viewSpacePosition);
+    world_space = mat4_mul_vec4(self->glvars[0].model, view_space);
 
-    return vec4_xyz(worldSpacePosition);
+    return vec4_xyz(world_space);
 }
 
 vec3_t renderer_screen_pos(renderer_t *self, vec3_t pos)
@@ -754,6 +770,7 @@ vec3_t renderer_screen_pos(renderer_t *self, vec3_t pos)
 
 static int renderer_update_screen_texture(renderer_t *self)
 {
+	int i;
 	int w = self->width * self->resolution;
 	int h = self->height * self->resolution;
 
@@ -762,7 +779,6 @@ static int renderer_update_screen_texture(renderer_t *self)
 		renderer_update_projection(self);
 	}
 
-	int i;
 	for(i = 0; i < self->outputs_num; i++)
 	{
 		pass_output_t *output = &self->outputs[i];
@@ -791,6 +807,8 @@ int renderer_resize(renderer_t *self, int width, int height)
 static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
                                      bool_t *profile)
 {
+	c_render_device_t *rd;
+
 	if(!pass->active) return NULL;
 	if (pass->shader_name[0] && !pass->shader)
 	{
@@ -799,7 +817,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 	}
 
 	pass->bound_textures = 0;
-	c_render_device_t *rd = c_render_device(&SYS);
+	rd = c_render_device(&SYS);
 	if (!rd) return NULL;
 	c_render_device_rebind(rd, (rd_bind_cb)bind_pass, pass);
 	if (pass->binds && pass->binds[0].type == OPT_CALLBACK)
@@ -863,13 +881,14 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 
 	if(self->cubemap)
 	{
+		uint32_t f;
 		glEnable(GL_SCISSOR_TEST);
 		glScissor(self->pos.x, self->pos.y, self->size.x * 2, self->size.y * 3);
 		texture_target(pass->output, pass->depth, 0);
 		if(pass->clear) glClear(pass->clear);
 		glDisable(GL_SCISSOR_TEST);
 
-		for(uint32_t f = 0; f < 6; f++)
+		for(f = 0; f < 6; f++)
 		{
 			uvec2_t pos;
 
@@ -995,12 +1014,11 @@ renderer_t *renderer_new(float resolution)
 unsigned int renderer_geom_at_pixel(renderer_t *self, int x, int y,
 		float *depth)
 {
-	uint32_t result;
+	uint32_t result, res;
 	texture_t *tex = renderer_tex(self, ref("selectable"));
 	if(!tex) return entity_null;
 
-	uint32_t res = texture_get_pixel(tex, 0,
-			x * self->resolution, y * self->resolution, depth);
+	res = texture_get_pixel(tex, 0, x * self->resolution, y * self->resolution, depth);
 	res >>= 16;
 	res &= 0xFF;
 	result = res - 1;
@@ -1010,14 +1028,15 @@ unsigned int renderer_geom_at_pixel(renderer_t *self, int x, int y,
 entity_t renderer_entity_at_pixel(renderer_t *self, int x, int y,
 		float *depth)
 {
+	uint32_t pos;
 	entity_t result;
+	struct { uint32_t pos, uid; } *cast = (void*)&result;
 	texture_t *tex = renderer_tex(self, ref("selectable"));
+
 	if(!tex) return entity_null;
 
-	uint32_t pos = texture_get_pixel(tex, 0,
-			x * self->resolution, y * self->resolution, depth);
+	pos = texture_get_pixel(tex, 0, x * self->resolution, y * self->resolution, depth);
 	pos &= 0xFF;
-	struct { uint32_t pos, uid; } *cast = (void*)&result;
 
 	cast->pos = pos;
 	cast->uid = g_ecm->entities_info[pos].uid;
@@ -1030,14 +1049,16 @@ extern texture_t *g_indir;
 extern texture_t *g_probe_cache;
 int renderer_component_menu(renderer_t *self, void *ctx)
 {
-	nk_layout_row_dynamic(ctx, 0, 1);
 	int i;
+	char fps[12]; 
+
+	nk_layout_row_dynamic(ctx, 0, 1);
 	if(nk_button_label(ctx, "Fullscreen"))
 	{
 		c_window_toggle_fullscreen(c_window(&SYS));
 	}
 
-	char fps[12]; sprintf(fps, "%d", g_candle->fps);
+	sprintf(fps, "%d", g_candle->fps);
 	nk_layout_row_begin(ctx, NK_DYNAMIC, 30, 2);
 		nk_layout_row_push(ctx, 0.35);
 		nk_label(ctx, "FPS: ", NK_TEXT_LEFT);
@@ -1215,19 +1236,24 @@ void renderer_add_pass(
 		uint32_t num_opts,
 		...)
 {
-	va_list argptr;
-	if(!output) exit(1);
 	char buffer[32];
-	snprintf(buffer, sizeof(buffer), name, self->passes_size);
-	unsigned int hash = ref(buffer);
-	/* TODO add pass replacement */
+	va_list argptr;
 	int i = -1;
+	unsigned int hash;
+	pass_t *pass;
+
+	if(!output) exit(1);
+	sprintf(buffer, name, self->passes_size);
+	hash = ref(buffer);
+	/* TODO add pass replacement */
 	if (after_pass != ~0)
 	{
+		uint32_t pass_id, i;
 		pass_t *after = renderer_pass(self, after_pass);
+
 		assert(after);
-		uint32_t pass_id = after - self->passes;
-		for (uint32_t i = self->passes_size; i > pass_id; --i)
+		pass_id = after - self->passes;
+		for (i = self->passes_size; i > pass_id; --i)
 		{
 			self->passes[i] = self->passes[i - 1];
 		}
@@ -1243,7 +1269,7 @@ void renderer_add_pass(
 		printf("Replacing %s\n", name);
 	}
 
-	pass_t *pass = &self->passes[i];
+	pass = &self->passes[i];
 	pass->hash = hash;
 	pass->framebuffer_id = framebuffer;
 	pass->auto_mip = !!(flags & GEN_MIP);
@@ -1303,7 +1329,11 @@ void renderer_add_pass(
     va_start(argptr, num_opts);
 	for (i = 0; i < num_opts; i++)
 	{
+		int t;
+		bind_t *bind;
 		bind_t opt = va_arg(argptr, bind_t);
+		hash_bind_t *sb;
+
 		if(opt.type == OPT_USRPTR)
 		{
 			pass->usrptr = opt.ptr;
@@ -1332,13 +1362,12 @@ void renderer_add_pass(
 			continue;
 		}
 
-		bind_t *bind = &pass->binds[pass->binds_size++];
+		bind = &pass->binds[pass->binds_size++];
 		*bind = opt;
 
-		hash_bind_t *sb = &bind->vs_uniforms;
+		sb = &bind->vs_uniforms;
 
 		sb->cached = false;
-		int t;
 		for(t = 0; t < 16; t++)
 		{
 			sb->u.buffer.u_tex[t] = -1;
@@ -1378,10 +1407,10 @@ void renderer_destroy(renderer_t *self)
 
 int renderer_draw(renderer_t *self)
 {
+	uint32_t i;
 	self->frame++;
 
 	glerr();
-	uint32_t i;
 
 	if(!self->width || !self->height) return CONTINUE;
 

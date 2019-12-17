@@ -46,8 +46,9 @@ void vil_init(vil_t *self)
 
 static bool_t slot_equal(slot_t a, slot_t b)
 {
+	uint32_t i;
 	if (a.depth != b.depth) return false;
-	for (uint32_t i = 0; i < a.depth; i++)
+	for (i = 0; i < a.depth; i++)
 	{
 		if (a.calls[i] != b.calls[i]) return false;
 	}
@@ -56,7 +57,8 @@ static bool_t slot_equal(slot_t a, slot_t b)
 
 struct vil_ret *vicall_get_ret(vicall_t *call, slot_t slot)
 {
-	for (uint32_t i = 0; i < 256; i++)
+	uint32_t i;
+	for (i = 0; i < 256; i++)
 	{
 		if (   slot_equal(call->output_args[i].from, slot)
 		    || call->output_args[i].from.depth == 0)
@@ -70,7 +72,8 @@ struct vil_ret *vicall_get_ret(vicall_t *call, slot_t slot)
 
 struct vil_arg *vicall_get_arg(vicall_t *call, slot_t slot)
 {
-	for (uint32_t i = 0; i < 256; i++)
+	uint32_t i;
+	for (i = 0; i < 256; i++)
 	{
 		if (   slot_equal(call->input_args[i].into, slot)
 		    || call->input_args[i].into.depth == 0)
@@ -85,8 +88,10 @@ struct vil_arg *vicall_get_arg(vicall_t *call, slot_t slot)
 static vicall_t *vifunc_get_call(vifunc_t *type, const slot_t slot,
                                  uint32_t depth, uint32_t max_depth)
 {
+	vicall_t *iter;
+
 	if (slot.depth == 0 || max_depth == 0) return NULL;
-	for (vicall_t *iter = type->begin; iter; iter = iter->next)
+	for (iter = type->begin; iter; iter = iter->next)
 	{
 		if (iter->id == slot.calls[depth])
 		{
@@ -126,10 +131,13 @@ slot_t vifunc_slot_from_name(vifunc_t *func, char *buffer,
 	slot_t slot = {0};
 	char *name;
 	char *rest = buffer;
+
 	while ((name = strtok_r(rest, separator, &rest)))
 	{
+		vicall_t *it;
 		uint32_t id = ~0;
-		for(vicall_t *it = func->begin; it; it = it->next)
+
+		for(it = func->begin; it; it = it->next)
 		{
 			if (!strncmp(it->name, name, sizeof(it->name)))
 			{
@@ -152,9 +160,11 @@ slot_t vifunc_slot_from_name(vifunc_t *func, char *buffer,
 void vifunc_slot_to_name(vifunc_t *func, slot_t slot, char *buffer,
                          const char *separator, const char *append)
 {
-	buffer[0] = '\0';
 	vicall_t *call = NULL;
-	for (uint32_t i = 0; i < slot.depth; i++)
+	uint32_t i;
+
+	buffer[0] = '\0';
+	for (i = 0; i < slot.depth; i++)
 	{
 		call = vifunc_get_call(func, slot, i, i + 1);
 		if (!call)
@@ -182,7 +192,8 @@ bool_t _vicall_load(vifunc_t *parent, const char *name, FILE *fp)
 {
 	char type[64];
 	vec2_t pos;
-	uint32_t color, data_offset;
+	uint32_t color, data_offset, flags;
+	vicall_t *self;
 	bool_t is_input, is_output, is_linked, is_hidden, is_locked;
 
 	uint32_t ret = fscanf(fp, "%s %f %f %x %u %u %u %u %u %u\n", 
@@ -191,11 +202,11 @@ bool_t _vicall_load(vifunc_t *parent, const char *name, FILE *fp)
 	                      &is_linked, &is_hidden, &is_locked, &data_offset);
 	if (ret < 0) return false;
 
-	uint32_t flags =   is_linked * V_LINKED | is_hidden * V_HID
-	                 | is_output * V_OUT | is_input * V_IN;
+	flags =   is_linked * V_LINKED | is_hidden * V_HID
+	        | is_output * V_OUT | is_input * V_IN;
 
-	vicall_t *self = vicall_new(parent, vil_get(parent->ctx, ref(type)),
-	                            name, pos, data_offset, flags);
+	self = vicall_new(parent, vil_get(parent->ctx, ref(type)),
+	                  name, pos, data_offset, flags);
 	self->color = color;
 
 	return true;
@@ -203,7 +214,9 @@ bool_t _vicall_load(vifunc_t *parent, const char *name, FILE *fp)
 
 void vifunc_save(vifunc_t *self, const char *filename)
 {
+	uint32_t i;
 	FILE *fp = fopen(filename, "w");
+
 	if (!fp) return;
 
 	if (self->ctx->builtin_save_func)
@@ -211,24 +224,26 @@ void vifunc_save(vifunc_t *self, const char *filename)
 		self->ctx->builtin_save_func(self, fp);
 	}
 
-	for (uint32_t i = 0; i < self->call_count; i++)
+	for (i = 0; i < self->call_count; i++)
 	{
 		vicall_t *call = &self->call_buf[i];
 		_vicall_save(call, fp);
 	}
 
-	for (uint32_t i = 0; i < self->call_count; i++)
+	for (i = 0; i < self->call_count; i++)
 	{
 		vicall_t *call = &self->call_buf[i];
 		if (call->is_input)
 		{
-			for (uint32_t a = 0; a < 256; a++)
+			uint32_t a;
+			for (a = 0; a < 256; a++)
 			{
+				vicall_t *child;
 				char buffer[256];
 				struct vil_arg *arg = &call->input_args[a];
+
 				if (arg->into.depth == 0) break;
-				vicall_t *child = vifunc_get_call(self, arg->into, 0,
-												  arg->into.depth);
+				child = vifunc_get_call(self, arg->into, 0, arg->into.depth);
 
 				if (!vicall_is_linked(call->type, arg->into))
 				if (child->type->builtin_save_call && arg->initialized)
@@ -241,7 +256,7 @@ void vifunc_save(vifunc_t *self, const char *filename)
 			}
 		}
 	}
-	for (uint32_t i = 0; i < self->link_count; i++)
+	for (i = 0; i < self->link_count; i++)
 	{
 		struct vil_link *link = &self->links[i];
 
@@ -254,37 +269,58 @@ void vifunc_save(vifunc_t *self, const char *filename)
 	}
 }
 
+slot_t slot_init(uint32_t id)
+{
+	slot_t slot = {0};
+	slot.depth = 1;
+	slot.calls[0] = id;
+	return slot;
+}
+
+slot_t slot_empty(void)
+{
+	const slot_t slot = {0};
+	return slot;
+}
+
 slot_t vifunc_ref_to_slot(vifunc_t *self, uint32_t ref)
 {
-	if (ref == ~0) return (slot_t){0};
-	for(vicall_t *it = self->begin; it; it = it->next)
+	vicall_t *it;
+	uint32_t i;
+
+	if (ref == ~0) return slot_empty();
+	for(it = self->begin; it; it = it->next)
 	{
-		for (uint32_t i = 0; i < 256; i++)
+		for (i = 0; i < 256; i++)
 		{
+			uint32_t arg_ref;
 			char buffer[256];
 			struct vil_arg *arg = &it->input_args[i];
+
 			if (!arg->into.depth) break;
 			vifunc_slot_to_name(it->parent, arg->into, buffer, ".", NULL);
-			uint32_t arg_ref = ref(buffer);
+			arg_ref = ref(buffer);
 			if (ref == arg_ref)
 			{
 				return arg->into;
 			}
 		}
-		for (uint32_t i = 0; i < 256; i++)
+		for (i = 0; i < 256; i++)
 		{
+			uint32_t ret_ref;
 			char buffer[256];
 			struct vil_ret *ret = &it->output_args[i];
+
 			/* if (!ret->from.depth) break; */
 			vifunc_slot_to_name(it->parent, ret->from, buffer, ".", NULL);
-			uint32_t ret_ref = ref(buffer);
+			ret_ref = ref(buffer);
 			if (ref == ret_ref)
 			{
 				return ret->from;
 			}
 		}
 	}
-	return (slot_t){ 0 };
+	return slot_empty();
 }
 
 int arg_changed(vicall_t *call)
@@ -295,7 +331,8 @@ int arg_changed(vicall_t *call)
 
 void vicall_update_initialized(vicall_t *call)
 {
-	for (uint32_t i = 0; i < 256; i++)
+	uint32_t i;
+	for (i = 0; i < 256; i++)
 	{
 		struct vil_arg *arg = &call->input_args[i];
 		assert(!arg->data_size || arg->previous_data);
@@ -311,13 +348,15 @@ void vicall_update_initialized(vicall_t *call)
 
 void vicall_set_arg(vicall_t *call, uint32_t ref, void *value)
 {
-	for (uint32_t i = 0; i < 256; i++)
+	uint32_t i;
+	for (i = 0; i < 256; i++)
 	{
+		uint32_t arg_ref;
 		char buffer[256];
 		struct vil_arg *arg = &call->input_args[i];
 		if (arg->into.depth == 0) break;
 		vifunc_slot_to_name(call->type, slot_pop(arg->into), buffer, ".", NULL);
-		uint32_t arg_ref = ref(buffer);
+		arg_ref = ref(buffer);
 		if (ref == arg_ref || (ref == ~0 && buffer[0] == '\0'))
 		{
 			memcpy(arg->data, value, arg->data_size);
@@ -345,16 +384,18 @@ static void type_push(vifunc_t *type, vicall_t *call)
 
 bool_t vicall_is_linked(vifunc_t *root, slot_t slot)
 {
+	uint8_t depth;
 	slot_t slt = slot;
-	for (uint8_t depth = 1; depth < slot.depth; depth++) {
-
+	for (depth = 1; depth < slot.depth; depth++)
+	{
+		uint32_t i;
 		assert(depth < 16);
-		for (uint32_t i = 1; i < 7; i++)
+		for (i = 1; i < 7; i++)
 			slt.calls[i - 1] = slt.calls[i];
 		slt.depth--;
 		slt.calls[slt.depth] = 0;
 
-		for (uint32_t i = 0; i < root->link_count; i++) {
+		for (i = 0; i < root->link_count; i++) {
 			if (slot_equal(root->links[i].into, slt)) {
 				return true;
 			}
@@ -370,7 +411,8 @@ void _vifunc_foreach_call(vifunc_t *self, bool_t recursive,
                           bool_t allow_input, bool_t allow_output,
                           bool_t skip_linked, vil_call_cb callback, void *usrptr)
 {
-	for (vicall_t *iter = self->begin; iter; iter = iter->next)
+	vicall_t *iter;
+	for (iter = self->begin; iter; iter = iter->next)
 	{
 		slot_t slot = parent_slot;
 		slot.calls[slot.depth++] = ref(iter->name);
@@ -407,7 +449,7 @@ void vifunc_foreach_call(vifunc_t *self, bool_t recursive,
                          bool_t allow_input, bool_t allow_output,
                          bool_t skip_linked, vil_call_cb callback, void *usrptr)
 {
-	_vifunc_foreach_call(self, recursive, (slot_t){0}, allow_input, allow_output,
+	_vifunc_foreach_call(self, recursive, slot_empty(), allow_input, allow_output,
 	                     skip_linked, callback, usrptr);
 }
 
@@ -416,21 +458,22 @@ static void vicall_propagate_changed_aux1(vicall_t *self, bool_t *iterated,
                                           bool_t data_only)
 {
 
+	uint32_t i;
 	iterated[self->id] = true;
 	if (self->watcher && !self->parent->locked)
 	{
-		self->watcher(self, (slot_t){.depth = 1, .calls={self->id}},
-		              self->watcher_usrptr);
+		self->watcher(self, slot_init(self->id), self->watcher_usrptr);
 	}
 	if (!data_only && self->parent->watcher && !self->parent->locked)
 	{
 		self->parent->watcher(self->parent, self->parent->watcher_usrptr);
 	}
-	for (uint32_t i = 0; i < 256; i++)
+	for (i = 0; i < 256; i++)
 	{
+		vicall_t *input;
 		struct vil_ret *output = &self->output_args[i];
 		if (output->into.depth == 0) continue;
-		vicall_t *input = vifunc_get_call(self->parent, output->into, 0, 1);
+		input = vifunc_get_call(self->parent, output->into, 0, 1);
 		if (!input) break;
 
 		if (!iterated[input->id])
@@ -449,14 +492,17 @@ static void vicall_propagate_changed_aux0(vicall_t *self, bool_t data_only)
 
 static void vicall_propagate_changed(vicall_t *self, bool_t data_only)
 {
+	khiter_t k;
 	vil_t *ctx = self->type->ctx;
 	vicall_propagate_changed_aux0(self, data_only);
 
-	for(khiter_t k = kh_begin(ctx->funcs); k != kh_end(ctx->funcs); ++k)
+	for(k = kh_begin(ctx->funcs); k != kh_end(ctx->funcs); ++k)
 	{
+		vicall_t *it;
+		vifunc_t *func;
 		if(!kh_exist(ctx->funcs, k)) continue;
-		vifunc_t *func = kh_value(ctx->funcs, k);
-		for(vicall_t *it = func->begin; it; it = it->next)
+		func = kh_value(ctx->funcs, k);
+		for(it = func->begin; it; it = it->next)
 		{
 			if (it->type == self->parent)
 			{
@@ -468,6 +514,9 @@ static void vicall_propagate_changed(vicall_t *self, bool_t data_only)
 
 static void _vifunc_link(vifunc_t *self, slot_t from_slot, slot_t into_slot)
 {
+	vicall_t *into, *from;
+	struct vil_arg *arg;
+	struct vil_ret *ret;
 	struct vil_link *link = &self->links[self->link_count++];
 
 	g_call_link = from_slot;
@@ -475,8 +524,8 @@ static void _vifunc_link(vifunc_t *self, slot_t from_slot, slot_t into_slot)
 	link->from = from_slot;
 	link->into = into_slot;
 
-	vicall_t *into = vifunc_get_call(self, into_slot, 0, 1);
-	vicall_t *from = vifunc_get_call(self, from_slot, 0, 1);
+	into = vifunc_get_call(self, into_slot, 0, 1);
+	from = vifunc_get_call(self, from_slot, 0, 1);
 
 	/* char buffer_to[256]; */
 	/* char buffer_from[256]; */
@@ -484,8 +533,8 @@ static void _vifunc_link(vifunc_t *self, slot_t from_slot, slot_t into_slot)
 	/* vifunc_slot_to_name(self, from_slot, buffer_from, ".", "_out"); */
 	/* printf("linking %s to %s\n", buffer_from, buffer_to); */
 
-	struct vil_arg *arg = vicall_get_arg(into, into_slot);
-	struct vil_ret *ret = vicall_get_ret(from, from_slot);
+	arg = vicall_get_arg(into, into_slot);
+	ret = vicall_get_ret(from, from_slot);
 	arg->from = from_slot;
 	arg->into = into_slot;
 
@@ -504,11 +553,13 @@ void vifunc_link(vifunc_t *self, uint32_t from, uint32_t into)
 
 bool_t vifunc_load(vifunc_t *self, const char *filename)
 {
+	FILE *fp;
+	vicall_t *it;
 	if (!self) return false;
 
 	/* TODO: clear self */
 
-	FILE *fp = fopen(filename, "r");
+	fp = fopen(filename, "r");
 	if (!fp) return false;
 
 	if (self->ctx->builtin_load_func)
@@ -519,11 +570,13 @@ bool_t vifunc_load(vifunc_t *self, const char *filename)
 	self->locked++;
 	while (!feof(fp))
 	{
+		vicall_t *root;
+		slot_t slot;
 		char field[64];
 		int ret = fscanf(fp, "%64s ", field);
 		if (ret < 0) goto fail;
-		slot_t slot = vifunc_slot_from_name(self, field, ".");
-		vicall_t *root = vifunc_get_call(self, slot, 0, 1);
+		slot = vifunc_slot_from_name(self, field, ".");
+		root = vifunc_get_call(self, slot, 0, 1);
 
 		if (!root)
 		{
@@ -560,14 +613,15 @@ bool_t vifunc_load(vifunc_t *self, const char *filename)
 			else if (!strncmp(oper, "->", 8))
 			{
 				char into[256];
+				slot_t into_slot;
 				ret = fscanf(fp, "%256s\n", into);
 				if (ret < 0) goto fail;
-				slot_t into_slot = vifunc_slot_from_name(self, into, ".");
+				into_slot = vifunc_slot_from_name(self, into, ".");
 				_vifunc_link(self, slot, into_slot);
 			}
 		}
 	}
-	for (vicall_t *it = self->begin; it; it = it->next)
+	for (it = self->begin; it; it = it->next)
 	{
 		if (it->is_linked || !it->is_input) continue;
 		vicall_update_initialized(it);
@@ -612,7 +666,8 @@ void vil_add_domain(vil_t *self, const char *name, vec4_t color)
 
 void vicall_destroy(vicall_t *self)
 {
-	for (uint32_t a = 0; a < 256; a++)
+	uint32_t a;
+	for (a = 0; a < 256; a++)
 	{
 		struct vil_arg *it_arg = &self->input_args[a];
 		if (it_arg->into.depth == 0) break;
@@ -629,13 +684,16 @@ void vicall_destroy(vicall_t *self)
 
 void vifunc_destroy(vifunc_t *self)
 {
-	for (vicall_t *it = self->begin; it; it = it->next)
+	khiter_t k;
+	vicall_t *it;
+
+	for (it = self->begin; it; it = it->next)
 	{
 		vicall_destroy(it);
 	}
 	free(self->call_buf);
 	free(self->links);
-	khiter_t k = kh_get(vifunc, self->ctx->funcs, self->id);
+	k = kh_get(vifunc, self->ctx->funcs, self->id);
 	kh_del(vifunc, self->ctx->funcs, k);
 }
 
@@ -643,23 +701,24 @@ vifunc_t *vifunc_new(vil_t *ctx, const char *name,
 		vifunc_gui_cb builtin_gui,
 		uint32_t builtin_size, bool_t is_assignable)
 {
-	if (!ctx->funcs) return NULL;
 	int32_t ret = 0;
-	uint32_t id = ref(name);
-	khiter_t k = kh_put(vifunc, ctx->funcs, id, &ret);
-	if(ret == -1) exit(1);
-	vifunc_t **type = &kh_value(ctx->funcs, k);
-	*type = malloc(sizeof(vifunc_t));
-	**type = (vifunc_t){
-		.builtin_gui = builtin_gui,
-		.builtin_size = builtin_size,
-		.id = id,
-		.ctx = ctx,
-		.is_assignable = is_assignable,
-		.call_buf = calloc(64, sizeof(vicall_t)),
-		.links = calloc(64 * 2, sizeof(struct vil_link)),
-	};
+	uint32_t id;
+	khiter_t k;
+	vifunc_t **type;
 
+	if (!ctx->funcs) return NULL;
+	id = ref(name);
+	k = kh_put(vifunc, ctx->funcs, id, &ret);
+	if(ret == -1) exit(1);
+	type = &kh_value(ctx->funcs, k);
+	*type = calloc(1, sizeof(vifunc_t));
+	(*type)->builtin_gui = builtin_gui;
+	(*type)->builtin_size = builtin_size;
+	(*type)->id = id,
+	(*type)->ctx = ctx;
+	(*type)->is_assignable = is_assignable;
+	(*type)->call_buf = calloc(64, sizeof(vicall_t));
+	(*type)->links = calloc(64 * 2, sizeof(struct vil_link));
 	strncpy((*type)->name, name, sizeof((*type)->name) - 1);
 
 	return *type;
@@ -677,8 +736,9 @@ static void type_pop(vifunc_t *type, vicall_t *call)
 
 vifunc_t *vil_get(vil_t *ctx, uint32_t ref)
 {
+	khiter_t k;
 	if (!ctx->funcs) return NULL;
-	khiter_t k = kh_get(vifunc, ctx->funcs, ref);
+	k = kh_get(vifunc, ctx->funcs, ref);
 	if(k == kh_end(ctx->funcs))
 	{
 		return NULL;
@@ -707,18 +767,28 @@ void vifunc_slot_print(vifunc_t *func, slot_t slot)
 
 void slot_print(slot_t slt)
 {
-	for (uint32_t i = 0; i < 16; i++)
+	uint32_t i;
+	for (i = 0; i < 16; i++)
+	{
 		if (i < slt.depth)
+		{
 			printf("%u ", slt.calls[i]);
+		}
 		else
+		{
 			printf("- ");
+		}
+	}
 	puts("");
 }
 
 slot_t slot_insert_start(slot_t slt, uint32_t start)
 {
-	for (uint32_t i = 15; i >= 1; i--)
+	uint32_t i;
+	for (i = 15; i >= 1; i--)
+	{
 		slt.calls[i] = slt.calls[i - 1];
+	}
 	slt.calls[0] = start;
 	slt.depth += 1;
 	return slt;
@@ -726,8 +796,11 @@ slot_t slot_insert_start(slot_t slt, uint32_t start)
 
 slot_t slot_pop(slot_t slt)
 {
-	for (uint32_t i = 1; i < 16; i++)
+	uint32_t i;
+	for (i = 1; i < 16; i++)
+	{
 		slt.calls[i - 1] = slt.calls[i];
+	}
 	slt.depth--;
 	slt.calls[slt.depth] = 0;
 	return slt;
@@ -735,12 +808,13 @@ slot_t slot_pop(slot_t slt)
 
 void propagate_output(vicall_t *root, vicall_t *call, slot_t parent_slot)
 {
+	vicall_t *it;
 	slot_t slot = parent_slot;
 	slot.calls[slot.depth++] = call->id;
 	assert(slot.depth < 16);
 	vicall_get_ret(root, slot);
 
-	for (vicall_t *it = call->type->begin; it; it = it->next)
+	for (it = call->type->begin; it; it = it->next)
 	{
 		if (!it->is_output) continue;
 		propagate_output(root, it, slot);
@@ -751,9 +825,12 @@ void propagate_data(vicall_t *root, vicall_t *call, slot_t parent_slot,
                     uint8_t *parent_data)
 {
 	slot_t slot = parent_slot;
+	struct vil_arg *arg;
+	vicall_t *it;
+
 	slot.calls[slot.depth++] = call->id;
 	assert(slot.depth < 16);
-	struct vil_arg *arg = vicall_get_arg(root, slot);
+	arg = vicall_get_arg(root, slot);
 
 	if (call->data_offset != ~0 && parent_data)
 	{
@@ -788,7 +865,7 @@ void propagate_data(vicall_t *root, vicall_t *call, slot_t parent_slot,
 
 	arg->data_size = call->type->builtin_size;
 
-	for (vicall_t *it = call->type->begin; it; it = it->next)
+	for (it = call->type->begin; it; it = it->next)
 	{
 		if (!it->is_input || it->is_linked) continue;
 		propagate_data(root, it, slot, arg->data);
@@ -797,14 +874,19 @@ void propagate_data(vicall_t *root, vicall_t *call, slot_t parent_slot,
 
 void vicall_copy_defaults(vicall_t *call)
 {
-	for (vicall_t *it = call->type->begin; it; it = it->next)
+	vicall_t *it;
+	for (it = call->type->begin; it; it = it->next)
 	{
-		for (uint32_t a = 0; a < 256; a++)
+		uint32_t a;
+		for (a = 0; a < 256; a++)
 		{
 			struct vil_arg *it_arg = &it->input_args[a];
+			struct vil_arg *call_arg;
+			slot_t slot;
+
 			if (it_arg->into.depth == 0) break;
-			slot_t slot = slot_insert_start(it_arg->into, call->id);
-			struct vil_arg *call_arg = vicall_get_arg(call, slot);
+			slot = slot_insert_start(it_arg->into, call->id);
+			call_arg = vicall_get_arg(call, slot);
 
 			if (call_arg->data_size < it_arg->data_size)
 			{
@@ -829,10 +911,11 @@ void vicall_copy_defaults(vicall_t *call)
 vicall_t *vicall_new(vifunc_t *parent, vifunc_t *type, const char *name,
                      vec2_t pos, uint32_t data_offset, uint32_t flags)
 {
-	if (!parent || !type) return NULL;
 	vicall_t *call;
+	uint32_t i;
+	if (!parent || !type) return NULL;
 	/* NK_ASSERT((nk_size)type->call_count < NK_LEN(type->call_buf)); */
-	uint32_t i = parent->call_count++;
+	i = parent->call_count++;
 	call = &parent->call_buf[i];
 	call->id = i;
 	call->bounds.x = pos.x;
@@ -853,8 +936,8 @@ vicall_t *vicall_new(vifunc_t *parent, vifunc_t *type, const char *name,
 	type_push(parent, call);
 	if (call->is_linked || !call->is_input) return call;
 
-	propagate_data(call, call, (slot_t){0}, NULL);
-	propagate_output(call, call, (slot_t){0});
+	propagate_data(call, call, slot_empty(), NULL);
+	propagate_output(call, call, slot_empty());
 	vicall_copy_defaults(call);
 
 	vicall_propagate_changed(call, false);
@@ -865,6 +948,9 @@ vicall_t *vicall_new(vifunc_t *parent, vifunc_t *type, const char *name,
 static void vifunc_unlink(vifunc_t *self, slot_t into_slot)
 {
 	uint32_t i;
+	vicall_t *from, *into;
+	struct vil_ret *ret;
+	struct vil_arg *arg;
 
 	struct vil_link *link = NULL;
 	for(i = 0; i < self->link_count; i++)
@@ -874,12 +960,12 @@ static void vifunc_unlink(vifunc_t *self, slot_t into_slot)
 	}
 	if (!link || !slot_equal(link->into, into_slot)) return;
 
-	vicall_t *from = vifunc_get_call(self, link->from, 0, 1);
-	vicall_t *into = vifunc_get_call(self, link->into, 0, 1);
+	from = vifunc_get_call(self, link->from, 0, 1);
+	into = vifunc_get_call(self, link->into, 0, 1);
 	printf("unlinking %s -> %s\n", from->name, into->name);
 
-	struct vil_ret *ret = vicall_get_ret(from, link->from);
-	struct vil_arg *arg = vicall_get_arg(into, into_slot);
+	ret = vicall_get_ret(from, link->from);
+	arg = vicall_get_arg(into, into_slot);
 
 	arg->from.depth = 0;
 	ret->into.depth = 0;
@@ -896,12 +982,15 @@ static void output_options(vicall_t *root,
 		vicall_t *call, slot_t parent_slot, struct nk_context *nk)
 {
 	vicall_t *it;
+
 	for (it = call->type->begin; it; it = it->next)
 	{
+		struct vil_ret *ret;
 		slot_t slot = parent_slot;
+
 		slot.calls[slot.depth++] = it->id;
 		assert(slot.depth < 16);
-		struct vil_ret *ret = vicall_get_ret(root, slot);
+		ret = vicall_get_ret(root, slot);
 		if(it != root && it->type->builtin_size && it->type->is_assignable)
 		{
 			if(!ret->into.depth) /* is not linked */
@@ -928,20 +1017,22 @@ static float call_outputs(vicall_t *root,
 {
 
 	vicall_t *it;
+	struct vil_ret *ret;
 	slot_t slot = parent_slot;
+	const struct nk_input *in = &nk->input;
+	struct nk_command_buffer *canvas = nk_window_get_canvas(nk);
+	bool_t is_primitive = root == call && call->type->is_assignable;
+
 	slot.calls[slot.depth++] = call->id;
 	assert(slot.depth < 16);
 
-	struct vil_ret *ret = vicall_get_ret(root, slot);
+	ret = vicall_get_ret(root, slot);
 
 	if(!linking.depth && ret->into.depth == (unsigned char)-1)
 	{
 		ret->into.depth = 0;
 	}
-	const struct nk_input *in = &nk->input;
-	struct nk_command_buffer *canvas = nk_window_get_canvas(nk);
 
-	bool_t is_primitive = root == call && call->type->is_assignable;
 	if (is_primitive)
 	{
 		y -= 20.0f;
@@ -949,8 +1040,9 @@ static float call_outputs(vicall_t *root,
 
 	if(call->type->is_assignable && (ret->into.depth || exposed)) /* is linked */
 	{
-		ret->y = y;
+		struct nk_rect bound;
 		struct nk_rect circle;
+		ret->y = y;
 		circle.x = x + call->bounds.z + 2;
 		/* circle.y = call->bounds.y + space * (float)(n+1); */
 		circle.y = y + 20.0f / 2.0f;
@@ -959,7 +1051,7 @@ static float call_outputs(vicall_t *root,
 		circle.y -= scrolling.y;
 		nk_fill_circle(canvas, circle, nk_rgba_u32(call->color));
 
-		struct nk_rect bound = nk_rect(circle.x-8, circle.y-8,
+		bound = nk_rect(circle.x-8, circle.y-8,
 				circle.w+16, circle.h+16);
 
 		/* start linking process */
@@ -989,10 +1081,10 @@ static float call_outputs(vicall_t *root,
 		circle.h = 24.0f;
 		if (nk_input_is_mouse_hovering_rect(in, bound))
 		{
+			struct nk_color bg = {0, 0, 0, 255};
+			struct nk_color fg = {255, 255, 255, 255};
 			nk_draw_text(canvas, circle, call->name, strlen(call->name),
-						 ((struct nk_context*)nk)->style.font,
-						 (struct nk_color){0, 0, 0, 255},
-						 (struct nk_color){255, 255, 255, 255});
+						 ((struct nk_context*)nk)->style.font, bg, fg);
 			g_over_sub_context = slot;
 		}
 		exposed = false;
@@ -1010,18 +1102,21 @@ static float call_outputs(vicall_t *root,
 
 static struct nk_vec2 get_output_position(vifunc_t *type, slot_t search)
 {
+	struct vil_ret *ret;
 	vicall_t *call = vifunc_get_call(type, search, 0, 1);
 	if (!call) return nk_vec2(0.0f, 0.0f);
-	struct vil_ret *ret = vicall_get_ret(call, search);
+	ret = vicall_get_ret(call, search);
 	if (!ret) return nk_vec2(0.0f, 0.0f);
 	return nk_vec2(call->bounds.x + call->bounds.z, ret->y);
 }
 
 static struct nk_vec2 get_input_position(vifunc_t *type, slot_t search)
 {
+	struct vil_arg *arg;
 	vicall_t *call = vifunc_get_call(type, search, 0, 1);
+
 	if (!call) return nk_vec2(0.0f, 0.0f);
-	struct vil_arg *arg = vicall_get_arg(call, search);
+	arg = vicall_get_arg(call, search);
 	if (!arg) return nk_vec2(0.0f, 0.0f);
 
 	return nk_vec2(call->bounds.x, arg->y);
@@ -1031,31 +1126,30 @@ static void call_inputs(vicall_t *root,
 		vicall_t *call, slot_t parent_slot, float x, float y,
 		struct nk_context *nk, bool_t inherit_hidden)
 {
-
-
+	uint32_t is_linking, linking_allowed, is_linked;
+	struct vil_arg *arg;
 	slot_t slot = parent_slot;
 	slot.calls[slot.depth++] = call->id;
 	assert(slot.depth < 16);
 
-	struct vil_arg *arg = vicall_get_arg(root, slot);
+	arg = vicall_get_arg(root, slot);
 
-	uint32_t is_linking = linking.depth && linking.calls[0] != root->id;
-	uint32_t linking_allowed = is_linking && linking_type == call->type->id;
-
-	uint32_t is_linked =  arg->from.depth;
+	is_linking = linking.depth && linking.calls[0] != root->id;
+	linking_allowed = is_linking && linking_type == call->type->id;
+	is_linked =  arg->from.depth;
 
 	inherit_hidden |= call->is_hidden;
 	if((linking_allowed || is_linked) && !inherit_hidden)
 	{
+		struct nk_rect bound;
 		const struct nk_input *in = &nk->input;
-
 		struct nk_command_buffer *canvas = nk_window_get_canvas(nk);
-
 		struct nk_rect circle = nk_rect(x + 2 - scrolling.x,
 				arg->y + y - scrolling.y, 8, 8);
+
 		nk_fill_circle(canvas, circle, nk_rgba_u32(call->color));
 
-		struct nk_rect bound = nk_rect(circle.x-8, circle.y-8,
+		bound = nk_rect(circle.x-8, circle.y-8,
 				circle.w+16, circle.h+16);
 
 		if(is_linked)
@@ -1091,7 +1185,8 @@ static void call_inputs(vicall_t *root,
 
 	if (!call->type->builtin_gui)
 	{
-		for (vicall_t *it = call->type->begin; it; it = it->next)
+		vicall_t *it;
+		for (it = call->type->begin; it; it = it->next)
 		{
 			if (!it->is_input) continue;
 			call_inputs(root, it, slot, x, y, nk, inherit_hidden);
@@ -1105,20 +1200,24 @@ void _vicall_iterate_dependencies(vicall_t *self,
                                   vil_link_cb link, vil_call_cb call,
                                   void *usrptr)
 {
+	uint32_t i;
 	iterated[self->id] = true;
-	for (uint32_t i = 0; i < 256; i++)
+	for (i = 0; i < 256; i++)
 	{
 		struct vil_arg *input = &self->input_args[i];
+		bool_t included;
+		vicall_t *output;
+
 		if (input->from.depth == 0) continue;
-		const bool_t included = !include.depth || slot_equal(include, slot_pop(input->into));
-		vicall_t *output = vifunc_get_call(self->parent, input->from, 0, 1);
+		included = !include.depth || slot_equal(include, slot_pop(input->into));
+		output = vifunc_get_call(self->parent, input->from, 0, 1);
 		if (!iterated[output->id])
 		{
 			if (exclude.depth && slot_equal(exclude, input->into)) continue;
 			if (included)
 			{
 				_vicall_iterate_dependencies(output, iterated,
-				                             (slot_t){0}, (slot_t){0},
+				                             slot_empty(), slot_empty(),
 				                             link, call, usrptr);
 			}
 		}
@@ -1131,7 +1230,7 @@ void _vicall_iterate_dependencies(vicall_t *self,
 	}
 	if (!include.depth && call)
 	{
-		call(self, (slot_t){.depth = 1, .calls = {self->id}}, usrptr);
+		call(self, slot_init(self->id), usrptr);
 	}
 }
 
@@ -1157,11 +1256,12 @@ void vifunc_iterate_dependencies(vifunc_t *self,
 {
 	slot_t include_slot = vifunc_ref_to_slot(self, include);
 	slot_t exclude_slot = vifunc_ref_to_slot(self, exclude);
-
+	vicall_t *it;
 	bool_t *iterated = alloca(sizeof(bool_t) * self->call_count);
+
 	memset(iterated, false, sizeof(bool_t) * self->call_count);
 
-	for (vicall_t *it = self->begin; it; it = it->next)
+	for (it = self->begin; it; it = it->next)
 	{
 		if (iterated[it->id]) continue;
 		if (exclude != ~0 && it->id == exclude_slot.calls[0])
@@ -1171,7 +1271,7 @@ void vifunc_iterate_dependencies(vifunc_t *self,
 		}
 		if (include == ~0 || it->id == include_slot.calls[0])
 		{
-			_vicall_iterate_dependencies(it, iterated, (slot_t){0}, (slot_t){0},
+			_vicall_iterate_dependencies(it, iterated, slot_empty(), slot_empty(),
 			                             link, call, usrptr);
 			if (include != ~0) break;
 		}
@@ -1184,13 +1284,14 @@ void _vicall_foreach_unlinked_input(vicall_t *root,
 									 vil_foreach_input_cb cb,
 									 void *usrptr)
 {
-
+	uint8_t *data;
+	struct vil_arg *arg;
 	slot_t slot = parent_slot;
 	slot.calls[slot.depth++] = call->id;
 	assert(slot.depth < 16);
 
-	uint8_t *data = parent_data;
-	struct vil_arg *arg = vicall_get_arg(root, slot);
+	data = parent_data;
+	arg = vicall_get_arg(root, slot);
 	
 	/* if (call->is_input) */
 	/* { */
@@ -1219,7 +1320,8 @@ void _vicall_foreach_unlinked_input(vicall_t *root,
 	}
 	else
 	{
-		for (vicall_t *it = call->type->begin; it; it = it->next)
+		vicall_t *it;
+		for (it = call->type->begin; it; it = it->next)
 		{
 			if (!it->is_input) continue;
 			_vicall_foreach_unlinked_input(root, slot, data, it, cb, usrptr);
@@ -1230,16 +1332,19 @@ void _vicall_foreach_unlinked_input(vicall_t *root,
 void vicall_foreach_unlinked_input(vicall_t *call, vil_foreach_input_cb cb,
                                     void *usrptr)
 {
-	if (!call) return;
 	slot_t sl = {0};
+	if (!call) return;
 	_vicall_foreach_unlinked_input(call, sl, NULL, call, cb, usrptr);
 }
 
 void vifunc_foreach_unlinked_input(vifunc_t *self, vil_foreach_input_cb cb,
                                    void *usrptr)
 {
-	for (vicall_t *it = self->begin; it; it = it->next)
+	vicall_t *it;
+	for (it = self->begin; it; it = it->next)
+	{
 		vicall_foreach_unlinked_input(it, cb, usrptr);
+	}
 }
 
 static void _count_size(vicall_t *root, vicall_t *call, slot_t slot,
@@ -1263,15 +1368,16 @@ float _vicall_gui(vicall_t *root, slot_t parent_slot,
                   bool_t collapsible,
                   bool_t *modified)
 {
-
+	struct vil_arg *arg;
 	float call_h = 0.0f;
-
+	float start_y;
 	slot_t slot = parent_slot;
+
 	slot.calls[slot.depth++] = call->id;
 	assert(slot.depth < 16);
-	struct vil_arg *arg = vicall_get_arg(root, slot);
+	arg = vicall_get_arg(root, slot);
 	arg->y = *y;
-	float start_y = *y;
+	start_y = *y;
 
 	if (arg->from.depth || call->is_linked)
 		/* input is linked */
@@ -1327,11 +1433,13 @@ float _vicall_gui(vicall_t *root, slot_t parent_slot,
 		}
 		if (!coll || coll_open)
 		{
+			vicall_t *it;
 			arg->has_children = false;
-			for (vicall_t *it = call->type->begin; it; it = it->next)
+			for (it = call->type->begin; it; it = it->next)
 			{
+				float children_h;
 				if (!it->is_input) continue;
-				float children_h = _vicall_gui(root, slot, it, nk,
+				children_h = _vicall_gui(root, slot, it, nk,
 									  inherit_hidden, y, &arg->has_children,
 									  collapsible, modified);
 				if (return_has_children)
@@ -1361,22 +1469,29 @@ float _vicall_gui(vicall_t *root, slot_t parent_slot,
 		arg->initialized = true;
 		(*modified) = true;
 	}
-	if (call == root) call_h = fmax(25.0f, call_h);
+	if (call == root)
+	{
+		call_h = 25.0f;
+		if (call_h < 25.0f)
+			call_h = 25.0f;
+	}
 
 	return call_h;
 }
 
 float vicall_gui(vicall_t *call, void *nk, bool_t collapsible, float yb)
 {
-	if (!call) return 0.0f;
 	slot_t sl = {0};
 	float y = yb + 83.0f;
 	bool_t modified = false;
+	float h;
+
+	if (!call) return 0.0f;
 
 	propagate_data(call, call, sl, NULL);
 	vicall_copy_defaults(call);
 
-	float h = _vicall_gui(call, sl, call, nk, false, &y, NULL, collapsible,
+	h = _vicall_gui(call, sl, call, nk, false, &y, NULL, collapsible,
 	                      &modified);
 	if (modified)
 	{
@@ -1392,8 +1507,10 @@ const char *vicall_name(const vicall_t *self)
 
 vicall_t *vifunc_get(vifunc_t *self, const char *name)
 {
+	vicall_t *it;
+
 	if (!self) return NULL;
-	for (vicall_t *it = self->begin; it; it = it->next)
+	for (it = self->begin; it; it = it->next)
 	{
 		if (!strncmp(it->name, name, sizeof(it->name))) return it;
 	}
@@ -1402,9 +1519,11 @@ vicall_t *vifunc_get(vifunc_t *self, const char *name)
 
 void _vifunc_foreach_func(vifunc_t *self, vil_func_cb callback, void *usrptr)
 {
+	vicall_t *it;
+
 	if (self->tmp) return;
 	self->tmp = true;
-	for (vicall_t *it = self->begin; it; it = it->next)
+	for (it = self->begin; it; it = it->next)
 	{
 		_vifunc_foreach_func(it->type, callback, usrptr);
 	}
@@ -1413,30 +1532,35 @@ void _vifunc_foreach_func(vifunc_t *self, vil_func_cb callback, void *usrptr)
 
 void vil_foreach_func(vil_t *self, vil_func_cb callback, void *usrptr)
 {
-	for(khiter_t k = kh_begin(self->funcs); k != kh_end(self->funcs); ++k)
+	khiter_t k;
+	vifunc_t *func;
+
+	for(k = kh_begin(self->funcs); k != kh_end(self->funcs); ++k)
 	{
 		if(!kh_exist(self->funcs, k)) continue;
-		vifunc_t *func = kh_value(self->funcs, k);
+		func = kh_value(self->funcs, k);
 		func->tmp = false;
 	}
-	for(khiter_t k = kh_begin(self->funcs); k != kh_end(self->funcs); ++k)
+	for(k = kh_begin(self->funcs); k != kh_end(self->funcs); ++k)
 	{
 		if(!kh_exist(self->funcs, k)) continue;
-		vifunc_t *func = kh_value(self->funcs, k);
+		func = kh_value(self->funcs, k);
 		_vifunc_foreach_func(func, callback, usrptr);
 	}
 }
 
 void vifunc_copy(vifunc_t *dst, vifunc_t *src)
 {
-	for (vicall_t *it = src->begin; it; it = it->next)
+	vicall_t *it;
+	uint32_t i;
+	for (it = src->begin; it; it = it->next)
 	{
 		uint32_t flags =   it->is_linked * V_LINKED | it->is_hidden * V_HID
 						 | it->is_output * V_OUT | it->is_input * V_IN;
 		vicall_t *copy = vicall_new(dst, it->type,
 				it->name, vec4_xy(it->bounds), it->data_offset, flags);
 		copy->color = it->color;
-		for (uint32_t i = 0; i < 256; i++)
+		for (i = 0; i < 256; i++)
 		{
 			struct vil_arg *it_arg = &it->input_args[i];
 			struct vil_arg *cp_arg = &copy->input_args[i];
@@ -1451,7 +1575,7 @@ void vifunc_copy(vifunc_t *dst, vifunc_t *src)
 		}
 		vicall_update_initialized(copy);
 	}
-	for (uint32_t i = 0; i < src->link_count; i++)
+	for (i = 0; i < src->link_count; i++)
 	{
 		struct vil_link *link = &src->links[i];
 
@@ -1466,9 +1590,10 @@ void vifunc_copy(vifunc_t *dst, vifunc_t *src)
 
 void _create_func(vil_t *ctx)
 {
+	vifunc_t *new_func;
 	char buffer[64] = "_";
 	strncat(buffer, g_create_buffer, sizeof(buffer) - 1);
-	vifunc_t *new_func = vifunc_new(ctx, buffer, NULL, 0, false);
+	new_func = vifunc_new(ctx, buffer, NULL, 0, false);
 	if (g_create_template)
 	{
 		vifunc_copy(new_func, g_create_template);
@@ -1515,6 +1640,9 @@ uint32_t vifunc_gui(vifunc_t *self, void *nk)
 									   NK_WINDOW_CLOSABLE);
 	if (res)
 	{
+		khiter_t k;
+		vifunc_t *t;
+
 		/* allocate complete window space */
 		total_space = nk_window_get_content_region(nk);
 		nk_layout_row_begin(nk, NK_STATIC, 20, 10);
@@ -1523,10 +1651,11 @@ uint32_t vifunc_gui(vifunc_t *self, void *nk)
 		if (nk_combo_begin_label(nk, self->name, nk_vec2(100.0f, 500.0f)))
 		{
 			nk_layout_row_dynamic(nk, 20.0f, 1);
-			for(khiter_t k = kh_begin(ctx->funcs); k != kh_end(ctx->funcs); ++k)
+			for(k = kh_begin(ctx->funcs); k != kh_end(ctx->funcs); ++k)
 			{
+
 				if(!kh_exist(ctx->funcs, k)) continue;
-				vifunc_t *t = kh_value(ctx->funcs, k);
+				t = kh_value(ctx->funcs, k);
 				if (t->name[0] == '_' || t->name[0] == '$') continue;
 				if (nk_combo_item_label(nk, t->name, NK_TEXT_LEFT))
 				{
@@ -1543,15 +1672,16 @@ uint32_t vifunc_gui(vifunc_t *self, void *nk)
 			g_create_dialogue = true;
 			g_create_template = NULL;
 		}
-		for (khiter_t k = kh_begin(ctx->funcs); k != kh_end(ctx->funcs); ++k)
+		for (k = kh_begin(ctx->funcs); k != kh_end(ctx->funcs); ++k)
 		{
+			char buffer[256];
+
 			if(!kh_exist(ctx->funcs, k)) continue;
-			vifunc_t *t = kh_value(ctx->funcs, k);
+			t = kh_value(ctx->funcs, k);
 			if (t->name[0] != '$') continue;
 
 			nk_layout_row_push(nk, 100);
-			char buffer[256];
-			snprintf(buffer, sizeof(buffer), "new %s", t->name + 1);
+			sprintf(buffer, "new %s", t->name + 1);
 			if (nk_button_label(nk, buffer))
 			{
 				g_create_buffer[0] = '\0';
@@ -1574,15 +1704,17 @@ uint32_t vifunc_gui(vifunc_t *self, void *nk)
 
 		nk_layout_space_begin(nk, NK_STATIC, total_space.h, self->call_count);
 		{
-			g_over_sub_context.depth = 0;
-			g_over_context = NULL;
+			uint32_t n;
 			vicall_t *it;
 			/* struct nk_rect size = nk_layout_space_bounds(nk); */
 			struct nk_panel *call = 0;
+			struct nk_command_buffer *canvas = nk_window_get_canvas(nk);
+			g_over_sub_context.depth = 0;
+
+			g_over_context = NULL;
 
 			/* draw each link */
-			struct nk_command_buffer *canvas = nk_window_get_canvas(nk);
-			for (uint32_t n = 0; n < self->link_count; ++n)
+			for (n = 0; n < self->link_count; ++n)
 			{
 				struct vil_link *link = &self->links[n];
 
@@ -1630,14 +1762,20 @@ uint32_t vifunc_gui(vifunc_t *self, void *nk)
 				{
 					/* always have last selected call on top */
 
+					struct nk_rect bd;
+					struct nk_rect header;
+					float h;
+
 					call = nk_window_get_panel(nk);
 					if(!call) continue;
 
 					nk_layout_row_dynamic(nk, 20, 1);
 					if (g_renaming == it)
 					{
+						int32_t status;
+
 						nk_edit_focus(nk, NK_EDIT_ALWAYS_INSERT_MODE);
-						int32_t status = nk_edit_string_zero_terminated(nk,
+						status = nk_edit_string_zero_terminated(nk,
 								NK_EDIT_SIG_ENTER | NK_EDIT_GOTO_END_ON_ACTIVATE,
 								g_renaming_buffer, sizeof(g_renaming_buffer),
 								nk_filter_ascii);
@@ -1659,8 +1797,8 @@ uint32_t vifunc_gui(vifunc_t *self, void *nk)
 					}
 
 
-					struct nk_rect bd = call->bounds;
-					struct nk_rect header = nk_rect(bd.x, bd.y, bd.w, 20);
+					bd = call->bounds;
+					header = nk_rect(bd.x, bd.y, bd.w, 20);
 					if (!g_dragging && nk_input_is_mouse_hovering_rect(in, header))
 					{
 						if(!linking.depth && nk_input_is_mouse_pressed(in, NK_BUTTON_LEFT))
@@ -1670,7 +1808,7 @@ uint32_t vifunc_gui(vifunc_t *self, void *nk)
 						g_over_context = it;
 					}
 
-					float h = vicall_gui(it, nk, false, it->bounds.y);
+					h = vicall_gui(it, nk, false, it->bounds.y);
 					it->bounds.w = h;
 					/* contextual menu */
 					nk_group_end(nk);
@@ -1722,16 +1860,17 @@ uint32_t vifunc_gui(vifunc_t *self, void *nk)
 				if (nk_contextual_begin(nk, 0, nk_vec2(100, 520),
 				                        nk_rect(0, 0, 10000, 10000)))
 				{
+					vicall_t *open_context;
+					vicall_t *open_sub;
+
 					if (g_open_sub_context.depth == 0)
 					{
 						g_open_sub_context = g_over_sub_context;
 					}
 					nk_layout_row_dynamic(nk, 20, 1);
 
-					vicall_t *open_context = vifunc_get_call(self,
-					                                   g_open_sub_context, 0,
-					                                   1);
-					vicall_t *open_sub = open_context;
+					open_context = vifunc_get_call(self, g_open_sub_context, 0, 1);
+					open_sub = open_context;
 					if (g_open_sub_context.depth > 1)
 					{
 						open_sub = vifunc_get_call(open_context->type,
@@ -1778,26 +1917,27 @@ uint32_t vifunc_gui(vifunc_t *self, void *nk)
 			{
 				if (nk_contextual_begin(nk, 0, nk_vec2(150, 500), nk_window_get_bounds(nk)))
 				{
+					khiter_t k;
 					if (!g_open_global_context)
 					{
 						g_open_global_context = true;
 						g_context_pos = vec2(in->mouse.pos.x, in->mouse.pos.y);
 					}
 					nk_layout_row_dynamic(nk, 20, 1);
-					khiter_t k;
 					for(k = kh_begin(ctx->funcs); k != kh_end(ctx->funcs); ++k)
 					{
+						vifunc_t *t;
+
 						if(!kh_exist(ctx->funcs, k)) continue;
-						vifunc_t *t = kh_value(ctx->funcs, k);
+						t = kh_value(ctx->funcs, k);
 						if (t == self) continue;
 						if(t->name[0] == '_' || t->name[0] == '$') continue;
 						if(nk_contextual_item_label(nk, t->name, NK_TEXT_CENTERED))
 						{
 							char name[64];
-							snprintf(name, sizeof(name), "%s%d", t->name,
-							         self->call_count);
-							g_renaming = vicall_new(self, t, name,
-							                        g_context_pos, ~0, V_BOTH);
+							sprintf(name, "%s%d", t->name, self->call_count);
+							g_renaming = vicall_new(self, t, name, g_context_pos,
+							                        ~0, V_BOTH);
 						}
 
 					}
@@ -1842,10 +1982,11 @@ uint32_t vifunc_gui(vifunc_t *self, void *nk)
 										    NK_WINDOW_MOVABLE |
 										    NK_WINDOW_CLOSABLE))
 		{
+			int32_t status;
 			nk_layout_row_dynamic(nk, 20, 2);
 
 			nk_edit_focus(nk, NK_EDIT_ALWAYS_INSERT_MODE);
-			int32_t status = nk_edit_string_zero_terminated(nk,
+			status = nk_edit_string_zero_terminated(nk,
 					NK_EDIT_SIG_ENTER | NK_EDIT_GOTO_END_ON_ACTIVATE, g_create_buffer,
 					sizeof(g_create_buffer), nk_filter_ascii);
 			if (status & NK_EDIT_COMMITED)

@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdlib.h>
 #include <utils/glutil.h>
 #include <utils/texture.h>
 #define NK_INCLUDE_FIXED_TYPES
@@ -96,6 +97,7 @@ void nk_draw_image_ext(struct nk_command_buffer *b, struct nk_rect r,
     uint32_t tile, uint32_t width, uint32_t height)
 {
     struct nk_command_image *cmd;
+	struct img_info *info;
     NK_ASSERT(b);
     if (!b) return;
     if (b->use_clipping) {
@@ -113,7 +115,7 @@ void nk_draw_image_ext(struct nk_command_buffer *b, struct nk_rect r,
     cmd->h = (unsigned short)NK_MAX(0, r.h);
     cmd->img = *img;
     cmd->col = col;
-	struct img_info *info = malloc(sizeof(struct img_info));
+	info = malloc(sizeof(struct img_info));
     cmd->header.userdata.ptr = info;
 	info->blending = !no_blending;
 	info->tile = tile;
@@ -228,8 +230,10 @@ nk_can_panel_begin(struct nk_context *ctx, const char *title, enum nk_panel_type
         body.h = (win->bounds.h - layout->header_height);
         if (style->window.fixed_background.type == NK_STYLE_ITEM_IMAGE)
 		{
+			const struct nk_image *image;
+
 			nk_push_scissor(out, win->bounds);
-			const struct nk_image *image = &style->window.fixed_background.data.image;
+			image = &style->window.fixed_background.data.image;
 			nk_draw_image_ext(out, nk_rect(0, 0, image->w, image->h),
 			                  image, nk_white, 1, 0, 0, 0);
 		}
@@ -518,10 +522,11 @@ static void checkShaderError(GLuint shader,
 	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &bufflen);
 	if (bufflen > 1)
 	{
-		GLchar log_string[bufflen + 1];
+		GLchar *log_string = malloc(bufflen + 1);
 		glGetShaderInfoLog(shader, bufflen, 0, log_string);
 		printf("%s\n", code);
 		printf("Log found for '%s':\n%s", name, log_string);
+		free(log_string);
 	}
 
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
@@ -540,6 +545,7 @@ nk_can_device_create(void)
 	g_elements = malloc((size_t)MAX_ELEMENT_BUFFER);
 #endif
 
+    struct nk_can_device *dev = &can.ogl;
     GLint status;
     static const GLchar *vertex_shader =
         NK_SHADER_VERSION
@@ -554,7 +560,9 @@ nk_can_device_create(void)
         "   Frag_Color = Color;\n"
         "   gl_Position = ProjMtx * vec4(Position.xy, 0, 1);\n"
         "}\n";
-    static const GLchar *fragment_shader =
+    static GLchar fs[2500] = "";
+    static const GLchar *fragment_shader = fs;
+	strcat(fs,
         NK_SHADER_VERSION
         "precision mediump float;\n"
         "uniform sampler2D Texture;\n"
@@ -572,6 +580,8 @@ nk_can_device_create(void)
 		"#define MAX_MIPS 9u\n"
 		"float mip_map_level(in vec2 texture_coordinate) // in texel units\n"
 		"{\n"
+	);
+	strcat(fs,
 		"	return clamp(0.5 * log2(mip_map_scalar(texture_coordinate)), 0.0, float(MAX_MIPS - 1u));\n"
 		"}\n"
 		"vec4 solveMip(uvec2 size, uint tile, uint mip, vec2 coords)\n"
@@ -585,6 +595,8 @@ nk_can_device_create(void)
 		"		tiles_per_row = uint(ceil(0.5 * float(tiles_per_row)));\n"
 		"		tiles_per_col = uint(ceil(0.5 * float(tiles_per_col)));\n"
 		"	}\n"
+	);
+	strcat(fs,
 		"	uvec2 indir_coords = uvec2(floor(coords / (pow(2.0, float(mip)) * 128.0)));\n"
 		"	uint tex_tile = indir_coords.y * tiles_per_row + indir_coords.x + offset;\n"
 		"	vec3 info = texelFetch(Indir, ivec2(tex_tile % g_indir_w, tex_tile / g_indir_w), 0).rgb * 255.0;\n"
@@ -592,6 +604,8 @@ nk_can_device_create(void)
 		"	float actual_mip = info.b;\n"
 		"	uvec2 cache_coords = uvec2(cache_tile % g_cache_w, cache_tile / g_cache_w) * 129u;\n"
 		"	const vec2 g_cache_size = vec2(g_cache_w * 129u, g_cache_h * 129u);\n"
+	);
+	strcat(fs,
 		"	vec2 actual_coords = coords / pow(2.0, actual_mip);\n"
 		"	vec2 intile_coords = mod(actual_coords, 128.0) + 0.5f;\n"
 		"	return textureLod(Texture,\n"
@@ -604,6 +618,8 @@ nk_can_device_create(void)
 		"	float mip = mip_map_level(coords * vec2(size));\n"
 		"	uint mip0 = uint(floor(mip));\n"
 		"	uint mip1 = uint(ceil(mip));\n"
+	);
+	strcat(fs,
 		"	return mix(solveMip(size, tile, mip0, rcoords),\n"
 		"	           solveMip(size, tile, mip1, rcoords), fract(mip));\n"
 		"}\n"
@@ -621,9 +637,9 @@ nk_can_device_create(void)
         "       Out_Color = Frag_Color * textureSVT(Size, Tile, uv);\n"
         "   else\n"
         "       Out_Color = Frag_Color * textureLod(Texture, uv, 3.0f);\n"
-        "}\n";
+        "}\n"
+	);
 
-    struct nk_can_device *dev = &can.ogl;
     nk_buffer_init_default(&dev->cmds);
     dev->prog = glCreateProgram();
     dev->vert_shdr = glCreateShader(GL_VERTEX_SHADER);
@@ -1130,8 +1146,8 @@ void nk_can_render(enum nk_anti_aliasing AA)
 
         /* iterate over and execute each draw command */
         nk_draw_foreach(cmd, &can.ctx, &dev->cmds) {
-            if (!cmd->elem_count) continue;
 			struct img_info *info = cmd->userdata.ptr;
+            if (!cmd->elem_count) continue;
 			if(cmd->userdata.ptr)
 			{
 				if (!info->blending)

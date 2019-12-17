@@ -9,85 +9,14 @@
 #include <assert.h>
 #include <utils/str.h>
 
-static const char default_vs[] = 
-	"#include \"uniforms.glsl\"\n"
-	"#line 2\n"
-#ifdef MESH4
-	"layout (location = 0) in vec4 P;\n"
-#else
-	"layout (location = 0) in vec3 P;\n"
-#endif
-	"layout (location = 1) in vec3 N;\n"
-	"layout (location = 2) in vec2 UV;\n"
-	"layout (location = 3) in vec3 TG;\n"
-	"layout (location = 4) in vec2 ID;\n"
-	"layout (location = 5) in vec3 COL;\n"
-	"layout (location = 6) in vec4 BID;\n"
-	"layout (location = 7) in vec4 WEI;\n"
-
-	"layout (location = 8) in mat4 M;\n"
-	"layout (location = 12) in vec4 PROPS;\n"
-	/* PROPS.x = material PROPS.y = NOTHING PROPS.zw = id */
-#ifdef MESH4
-	"layout (location = 13) in float ANG4;\n"
-#endif
-
-	"flat out uvec2 $id;\n"
-	"flat out uint $matid;\n"
-	"flat out vec2 $object_id;\n"
-	"flat out uvec2 $poly_id;\n"
-	"flat out vec3 $obj_pos;\n"
-	"flat out mat4 $model;\n"
-	"out float $vertex_distance;\n"
-	"out vec3 $poly_color;\n"
-	"out vec3 $vertex_position;\n"
-	"out vec3 $vertex_world_position;\n"
-	"out vec2 $texcoord;\n"
-	"out vec3 $vertex_normal;\n"
-	"out vec3 $vertex_tangent;\n"
-	"void main()\n"
-	"{\n"
-	"	vec4 pos = vec4(P.xyz, 1.0);\n"
-	"	$obj_pos = (M * vec4(0.0, 0.0, 0.0, 1.0)).xyz;\n"
-	"	$model = M;\n"
-	"	$poly_color = COL;\n"
-	"	$matid = uint(PROPS.x);\n"
-	"	$poly_id = uvec2(ID);\n"
-	"	$id = uvec2(PROPS.zw);\n"
-	"	$texcoord = UV;\n"
-	"	$vertex_position = pos.xyz;\n";
-static const char default_vs_end[] = 
+static char default_vs[1024] = "";
+static char default_vs_end[] = 
 	"\n"
 	"	gl_Position = pos;\n"
 	"	$vertex_distance = length($vertex_position);\n"
 	"}\n";
 
-static const char default_gs[] = 
-	"#version 300 es\n"
-	"#extension GL_EXT_geometry_shader4 : enable\n"
-	"#extension GL_EXT_gpu_shader4 : enable\n"
-	"layout(points) in;\n"
-	"layout(triangle_strip, max_vertices = 3) out;\n"
-	"flat in uvec2 $id[1];\n"
-	"flat in uint $matid[1];\n"
-	"flat in vec2 $object_id[1];\n"
-	"flat in uvec2 $poly_id[1];\n"
-	"flat in vec3 $obj_pos[1];\n"
-	"flat in mat4 $model[1];\n"
-	"in vec3 $poly_color[1];\n"
-	"in vec3 $vertex_position[1];\n"
-	"in vec2 $texcoord[1];\n"
-	"in mat3 $TM[1];\n"
-	"flat out uvec2 id;\n"
-	"flat out uint matid;\n"
-	"flat out vec2 object_id;\n"
-	"flat out uvec2 poly_id;\n"
-	"flat out vec3 obj_pos;\n"
-	"flat out mat4 model;\n"
-	"out vec3 poly_color;\n"
-	"out vec3 vertex_position;\n"
-	"out vec2 texcoord;\n"
-	"out mat3 TM;\n";
+static char default_gs[1024];
 
 static const char default_gs_end[] = "";
 
@@ -119,6 +48,87 @@ void shaders_reg_glsl(void);
 void shaders_reg()
 {
 	shaders_reg_glsl();
+
+	strcat(default_vs,
+	"#include \"uniforms.glsl\"\n"
+	"#line 2\n"
+#ifdef MESH4
+	"layout (location = 0) in vec4 P;\n"
+#else
+	"layout (location = 0) in vec3 P;\n"
+#endif
+	"layout (location = 1) in vec3 N;\n"
+	"layout (location = 2) in vec2 UV;\n"
+	"layout (location = 3) in vec3 TG;\n"
+	"layout (location = 4) in vec2 ID;\n"
+	"layout (location = 5) in vec3 COL;\n"
+	"layout (location = 6) in vec4 BID;\n"
+	"layout (location = 7) in vec4 WEI;\n"
+	"layout (location = 8) in mat4 M;\n"
+	);
+	strcat(default_vs,
+	"layout (location = 12) in vec4 PROPS;\n"
+	/* PROPS.x = material PROPS.y = NOTHING PROPS.zw = id */
+#ifdef MESH4
+	"layout (location = 13) in float ANG4;\n"
+#endif
+	"flat out uvec2 $id;\n"
+	"flat out uint $matid;\n"
+	"flat out vec2 $object_id;\n"
+	"flat out uvec2 $poly_id;\n"
+	"flat out vec3 $obj_pos;\n"
+	"flat out mat4 $model;\n"
+	"out float $vertex_distance;\n"
+	"out vec3 $poly_color;\n"
+	"out vec3 $vertex_position;\n"
+	"out vec3 $vertex_world_position;\n"
+	"out vec2 $texcoord;\n"
+	);
+	strcat(default_vs,
+	"out vec3 $vertex_normal;\n"
+	"out vec3 $vertex_tangent;\n"
+	"void main()\n"
+	"{\n"
+	"	vec4 pos = vec4(P.xyz, 1.0);\n"
+	"	$obj_pos = (M * vec4(0.0, 0.0, 0.0, 1.0)).xyz;\n"
+	"	$model = M;\n"
+	"	$poly_color = COL;\n"
+	"	$matid = uint(PROPS.x);\n"
+	"	$poly_id = uvec2(ID);\n"
+	"	$id = uvec2(PROPS.zw);\n"
+	"	$texcoord = UV;\n"
+	"	$vertex_position = pos.xyz;\n"
+	);
+
+	strcat(default_gs,
+	"#version 300 es\n"
+	"#extension GL_EXT_geometry_shader4 : enable\n"
+	"#extension GL_EXT_gpu_shader4 : enable\n"
+	"layout(points) in;\n"
+	"layout(triangle_strip, max_vertices = 3) out;\n"
+	"flat in uvec2 $id[1];\n"
+	"flat in uint $matid[1];\n"
+	"flat in vec2 $object_id[1];\n"
+	"flat in uvec2 $poly_id[1];\n"
+	"flat in vec3 $obj_pos[1];\n"
+	"flat in mat4 $model[1];\n"
+	"in vec3 $poly_color[1];\n"
+	);
+	strcat(default_gs,
+	"in vec3 $vertex_position[1];\n"
+	"in vec2 $texcoord[1];\n"
+	"in mat3 $TM[1];\n"
+	"flat out uvec2 id;\n"
+	"flat out uint matid;\n"
+	"flat out vec2 object_id;\n"
+	"flat out uvec2 poly_id;\n"
+	"flat out vec3 obj_pos;\n"
+	"flat out mat4 model;\n"
+	"out vec3 poly_color;\n"
+	"out vec3 vertex_position;\n"
+	"out vec2 texcoord;\n"
+	"out mat3 TM;\n"
+	);
 }
 
 vertex_modifier_t _vertex_modifier_new(bool_t has_skin, const char *code,
@@ -199,6 +209,7 @@ uint32_t vs_new_loader(vs_t *self)
 
 vs_t *vs_new(const char *name, bool_t has_skin, uint32_t num_modifiers, ...)
 {
+	va_list va;
 	uint32_t i = g_vs_num++;
 	vs_t *self = &g_vs[i];
 	self->index = i;
@@ -206,7 +217,6 @@ vs_t *vs_new(const char *name, bool_t has_skin, uint32_t num_modifiers, ...)
 	self->has_skin = has_skin;
 
 	self->ready = 0;
-	va_list va;
 
 	self->vmodifier_num = 1;
 	self->gmodifier_num = 0;
@@ -217,7 +227,7 @@ vs_t *vs_new(const char *name, bool_t has_skin, uint32_t num_modifiers, ...)
 		vertex_modifier_t vst = va_arg(va, vertex_modifier_t);
 		if(vst.type == 1)
 		{
-			// Skip over the first geometry modifier
+			/* Skip over the first geometry modifier */
 			if(self->gmodifier_num == 0) self->gmodifier_num = 1;
 
 			self->gmodifiers[self->gmodifier_num++] = vst;
@@ -276,8 +286,14 @@ void shader_add_source(const char *name, unsigned char data[], uint32_t len)
 
 static const struct source shader_source(const char *filename)
 {
+	FILE *fp;
+	char *buffer = NULL;
+#define prefix "resauces/shaders/"
+	char name[] = prefix "XXXXXXXXXXXXXXXXXXXXXXXXXXX";
 	struct source res = {0};
+	size_t lsize;
 	uint32_t i;
+
 	for(i = 0; i < g_sources_num; i++)
 	{
 		if(!strcmp(filename, g_sources[i].filename))
@@ -286,11 +302,7 @@ static const struct source shader_source(const char *filename)
 		}
 	}
 
-#define prefix "resauces/shaders/"
-	char name[] = prefix "XXXXXXXXXXXXXXXXXXXXXXXXXXX";
 	strncpy(name + (sizeof(prefix) - 1), filename, (sizeof(name) - (sizeof(prefix) - 1)) - 1);
-	FILE *fp;
-	char *buffer = NULL;
 
 	fp = fopen(name, "rb");
 	if(!fp)
@@ -299,7 +311,7 @@ static const struct source shader_source(const char *filename)
 	}
 
 	fseek(fp, 0L, SEEK_END);
-	size_t lsize = ftell(fp);
+	lsize = ftell(fp);
 	rewind(fp);
 
 	buffer = calloc(1, lsize + 1);
@@ -351,6 +363,12 @@ static char *string_preprocess(const char *src, bool_t len, const char *filename
                                bool_t has_skin)
 {
 	size_t lsize = len;
+	const char *line;
+	uint32_t include_lines[128];
+	uint32_t line_num;
+	uint32_t include_lines_num;
+	char *token = NULL;
+	uint32_t include_num = 0;
 
 	/* char defs[][64] = { "#version 420\n" */
 	const char version_str[] =
@@ -403,10 +421,10 @@ static char *string_preprocess(const char *src, bool_t len, const char *filename
 	}
 	strcat(buffer, src);
 
-	const char *line = src;
-	uint32_t line_num = 1u;
-	uint32_t include_lines[128];
-	uint32_t include_lines_num = 0u;
+	line = src;
+	line_num = 1u;
+	include_lines_num = 0u;
+
 	while(line)
 	{
 		if (!strncmp(line, "#include", strlen("#include")))
@@ -418,22 +436,24 @@ static char *string_preprocess(const char *src, bool_t len, const char *filename
 		if (line) line++;
 	}
 
-	char *token = NULL;
-	uint32_t include_num = 0;
 	while((token = strstr(buffer, "#include")))
 	{
+		struct source inc;
 		long offset = token - buffer;
 		char include_name[512];
 		char *start = strchr(token, '"') + 1;
 		char *end = strchr(start, '"');
 		long end_offset = end - buffer + 1;
+		char *include;
+		char *include_buffer;
+
 		memcpy(include_name, start, end - start);
 		include_name[end - start] = '\0';
-		const struct source inc = shader_source(include_name);
+		inc = shader_source(include_name);
 		if(!inc.src) break;
 
-		char *include = str_new(64);
-		char *include_buffer = shader_preprocess(inc, false, has_gshader, false);
+		include = str_new(64);
+		include_buffer = shader_preprocess(inc, false, has_gshader, false);
 #ifndef __EMSCRIPTEN__
 		str_catf(&include, "#line 1 \"%s\"\n", include_name);
 #else
@@ -481,7 +501,7 @@ static void checkShaderError(GLuint shader,
 	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &bufflen);
 	if (bufflen > 1)
 	{
-		GLchar log_string[bufflen + 1];
+		GLchar log_string[2048];
 		glGetShaderInfoLog(shader, bufflen, 0, log_string);
 
 		printf("Log found for '%s':\n%s", name, log_string);
@@ -497,6 +517,10 @@ static void checkShaderError(GLuint shader,
 
 static uint32_t shader_new_loader(shader_t *self)
 {
+	GLint bufflen;
+	int32_t isLinked = 1;
+	int32_t count;
+	uint32_t i;
 	uint32_t fprogram = self->fs->program;
 	uint32_t vprogram = g_vs[self->index].vprogram;
 	uint32_t gprogram = g_vs[self->index].gprogram;
@@ -506,24 +530,21 @@ static uint32_t shader_new_loader(shader_t *self)
 	glAttachShader(self->program, vprogram); glerr();
 	glAttachShader(self->program, fprogram); glerr();
 
-	if(gprogram) // not all programs need a geometry shader
+	if(gprogram) /* not all programs need a geometry shader */
 	{
 		glAttachShader(self->program, g_vs[self->index].gprogram); glerr();
 	}
 
 	glLinkProgram(self->program); glerr();
 
-	int32_t isLinked = 1;
 /* #ifdef DEBUG */
 	glValidateProgram(self->program);
 	/* checkShaderError(self->program, self->fs->filename, NULL); */
 
-	GLint bufflen;
-
 	glGetProgramiv(self->program, GL_INFO_LOG_LENGTH, &bufflen);
 	if (bufflen > 1)
 	{
-		GLchar log_string[bufflen + 1];
+		GLchar log_string[2048];
 		glGetProgramInfoLog(self->program, bufflen, 0, log_string);
 		printf("Log found for '%s':\n%s\n", self->fs->filename, log_string);
 	}
@@ -542,24 +563,25 @@ static uint32_t shader_new_loader(shader_t *self)
 	}
 
 	self->uniforms = kh_init(uniform);
-	int32_t count;
 	/* GET UNNIFORM LOCATIONS */
 	glGetProgramiv(self->program, GL_ACTIVE_UNIFORMS, &count);
 
-	for (uint32_t i = 0; i < count; i++)
+	for (i = 0; i < count; i++)
 	{
+		khiter_t k;
+		uint32_t *uniform;
 		int32_t ret;
-		GLint size; // size of the variable
-		GLenum type; // type of the variable (float, vec3 or mat4, etc)
+		GLint size; /* size of the variable */
+		GLenum type; /* type of the variable (float, vec3 or mat4, etc) */
 
-		const GLsizei bufSize = 64; // maximum name length
-		GLchar name[bufSize]; // variable name in GLSL
-		GLsizei length; // name length
+		const GLsizei bufSize = 64; /* maximum name length */
+		GLchar name[64]; /* variable name in GLSL */
+		GLsizei length; /* name length */
 
 		glGetActiveUniform(self->program, i, bufSize, &length, &size, &type, name);
 
-		khiter_t k = kh_put(uniform, self->uniforms, ref(name), &ret);
-		uint32_t *uniform = &kh_value(self->uniforms, k);
+		k = kh_put(uniform, self->uniforms, ref(name), &ret);
+		uniform = &kh_value(self->uniforms, k);
 		(*uniform) = glGetUniformLocation(self->program, name);
 	}
 	self->scene_ubi = glGetUniformBlockIndex(self->program, "scene_t");
@@ -583,10 +605,10 @@ uint32_t shader_cached_uniform(shader_t *self, uint32_t ref)
 
 static uint32_t fs_new_loader(fs_variation_t *self)
 {
+	char buffer[256];
 	self->program = 0;
 
-	char buffer[256];
-	snprintf(buffer, sizeof(buffer) - 1, "%s.glsl", self->filename);
+	sprintf(buffer, "%s.glsl", self->filename);
 
 	printf("fetching %s\n", buffer);
 	self->code = shader_preprocess(shader_source(buffer), true, false, false);
@@ -607,17 +629,19 @@ static uint32_t fs_new_loader(fs_variation_t *self)
 
 fs_t *fs_get(const char *filename)
 {
-	for(uint32_t i = 0; i < g_fs_num; i++)
+	uint32_t i;
+	for (i = 0; i < g_fs_num; i++)
 	{
-		if(!strcmp(filename, g_fs[i].filename)) return &g_fs[i];
+		if (!strcmp(filename, g_fs[i].filename)) return &g_fs[i];
 	}
 	return NULL;
 }
 
 void fs_update_variation(fs_t *self, uint32_t fs_variation)
 {
+	uint32_t i;
 	fs_variation_t *var = &self->variations[fs_variation];
-	for(uint32_t i = 0; i < 32; i++)
+	for (i = 0; i < 32; i++)
 	{
 		if (var->combinations[i])
 		{
@@ -631,12 +655,13 @@ void fs_update_variation(fs_t *self, uint32_t fs_variation)
 
 void fs_push_variation(fs_t *self, const char *filename)
 {
+	uint32_t i;
 	fs_variation_t *var = &self->variations[self->variations_num];
 	var->program = 0;
 	var->ready = 0;
 	self->variations_num++;
 
-	for(uint32_t i = 0; i < 32; i++)
+	for (i = 0; i < 32; i++)
 	{
 		var->combinations[i] = NULL;
 	}
@@ -648,13 +673,16 @@ void fs_push_variation(fs_t *self, const char *filename)
 
 fs_t *fs_new(const char *filename)
 {
+	uint32_t i;
+	fs_t *self;
+
 	if(!filename) return NULL;
-	for(uint32_t i = 0; i < g_fs_num; i++)
+	for (i = 0; i < g_fs_num; i++)
 	{
-		if(!strcmp(filename, g_fs[i].filename)) return &g_fs[i];
+		if (!strcmp(filename, g_fs[i].filename)) return &g_fs[i];
 	}
 
-	fs_t *self = &g_fs[g_fs_num++];
+	self = &g_fs[g_fs_num++];
 	self->variations_num = 0;
 	strcpy(self->filename, filename);
 
@@ -712,9 +740,10 @@ void shader_bind(shader_t *self)
 
 void fs_destroy(fs_t *self)
 {
-	for(uint32_t i = 0; i < self->variations_num; i++)
+	uint32_t i, j;
+	for(i = 0; i < self->variations_num; i++)
 	{
-		for(uint32_t j = 0; j < g_vs_num; j++)
+		for(j = 0; j < g_vs_num; j++)
 		{
 			shader_destroy(self->variations[i].combinations[j]);
 		}

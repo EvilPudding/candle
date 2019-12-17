@@ -54,6 +54,12 @@ static float roundf(float n)
 {
 	return (n > (floor(n)+0.5f)) ? ceil(n) : floor(n);
 }
+static uint32_t log2(uint32_t x)
+{
+  uint32_t ans = 0;
+  while(x >>= 1) ans++;
+  return ans;
+}
 #else
 #define INLINE inline
 #endif

@@ -39,8 +39,10 @@ void _loader_push_wait(loader_t *self, loader_cb cb, void *usrptr, c_t *c)
 	}
 	else
 	{
+		load_t *load;
+
 		SDL_SemWait(self->semaphore);
-			load_t *load = &self->stack[self->last];
+			load = &self->stack[self->last];
 			load->usrptr = usrptr;
 			load->cb = cb;
 			if(c) load->ct = *c;
@@ -58,9 +60,11 @@ void _loader_push_wait(loader_t *self, loader_cb cb, void *usrptr, c_t *c)
 
 void _loader_push(loader_t *self, loader_cb cb, void *usrptr, c_t *c)
 {
+	load_t *load;
 	bool_t same_thread = self->semaphore ? SDL_ThreadID() == self->threadId : true;
+
 	if(!same_thread) SDL_SemWait(self->semaphore);
-		load_t *load = &self->stack[self->last];
+		load = &self->stack[self->last];
 		load->usrptr = usrptr;
 		load->cb = cb;
 		if(c) load->ct = *c;
