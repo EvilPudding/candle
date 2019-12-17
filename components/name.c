@@ -4,9 +4,10 @@
 
 c_name_t *c_name_new(const char *name)
 {
+	int32_t i;
 	c_name_t *self = component_new("name");
 
-	for(int i = 0; name[i]; i++)
+	for(i = 0; name[i]; i++)
 	{
 		self->name[i] = tolower(name[i]);
 	}

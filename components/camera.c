@@ -82,13 +82,15 @@ vec3_t c_camera_real_pos(c_camera_t *self, float depth, vec2_t coord)
 int c_camera_component_menu(c_camera_t *self, void *ctx)
 {
 	float new = self->renderer->fov * (180.0f / M_PI);
+	float before;
+
 	nk_property_float(ctx, "fov:", 1, &new, 179, 1, 1);
 	if(self->renderer->fov != new)
 	{
 		self->renderer->fov = new * (M_PI / 180.0f);
 		renderer_update_projection(self->renderer);
 	}
-	float before = self->renderer->near;
+	before = self->renderer->near;
 	nk_property_float(ctx, "near:", 0.01, &self->renderer->near,
 			self->renderer->far - 0.01, 0.01, 0.1);
 	if(self->renderer->near != before)
@@ -113,12 +115,20 @@ int c_camera_update(c_camera_t *self, float *dt)
 	{
 		float brightness = (self->renderer->output->brightness - 0.5) * 2.0;
 		float targetExposure = -brightness * 2.0f;
-		float max_exposure = 10.0f;
-		float min_exposure = -4.0f;
-		targetExposure = fmin(targetExposure, max_exposure);
-		targetExposure = fmax(targetExposure, min_exposure);
+		const float max_exposure = 10.0f;
+		const float min_exposure = -4.0f;
+		float step;
 
-		float step = (targetExposure - self->exposure) / 30;
+		if (targetExposure > max_exposure)
+		{
+			targetExposure = max_exposure;
+		}
+		if (targetExposure < min_exposure)
+		{
+			targetExposure = min_exposure;
+		}
+
+		step = (targetExposure - self->exposure) / 30.0f;
 		if(step > 0.3f) step = 0.3f;
 		if(step < -0.3f) step = -0.3f;
 		self->exposure += step;

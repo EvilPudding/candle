@@ -93,7 +93,7 @@ static void render_loop_init(void)
 #ifndef __EMSCRIPTEN__
 	g_candle->render_id = SDL_ThreadID();
 #endif
-	//SDL_GL_MakeCurrent(state->renderer->window, state->renderer->context); 
+	/* SDL_GL_MakeCurrent(state->renderer->window, state->renderer->context); */
 	/* SDL_LockMutex(g_candle->mut); */
 	entity_add_component(SYS, c_window_new(0, 0));
 	entity_add_component(SYS, c_render_device_new());
@@ -102,6 +102,7 @@ static void render_loop_init(void)
 
 static void render_loop_tick(void)
 {
+	int current;
 	candle_handle_events();
 
 	loader_update(g_candle->loader);
@@ -130,7 +131,7 @@ static void render_loop_tick(void)
 
 	}
 
-	int current = SDL_GetTicks();
+	current = SDL_GetTicks();
 	if(current - g_candle->last_tick > 1000)
 	{
 		g_candle->fps = g_candle->fps_count;
@@ -243,18 +244,22 @@ void candle_reg_cmd(const char *key, cmd_cb cb)
 
 entity_t candle_run_command(entity_t root, const char *command)
 {
+	entity_t instance;
+	char *copy;
+	char separators[] = " ";
+	char *p;
+	char *argv[64];
+	int argc;
+
 	if(command[0] == '\0') return root;
 
-	char *copy = malloc(strlen(command) + 1);
+	copy = malloc(strlen(command) + 1);
 	strcpy(copy, command);
 
-	entity_t instance = root;
+	instance = root;
 
-	char separators[] = " ";
-
-	char *p = strtok(copy, separators);
-	char *argv[64];
-	int argc = 0;
+	p = strtok(copy, separators);
+	argc = 0;
 
 	argv[argc++] = p;
 
@@ -272,13 +277,15 @@ entity_t candle_run_command(entity_t root, const char *command)
 
 int candle_run(entity_t root, const char *map_name)
 {
+	char *line;
 	FILE *file = fopen(map_name, "r");
 
 	if (file == NULL) return 0;
 
-	char *line = NULL;
+	line = NULL;
 	while (true)
 	{
+		entity_t entity;
 		line = str_readline(file);
 		if (str_len(line) == 0)
 		{
@@ -286,7 +293,7 @@ int candle_run(entity_t root, const char *map_name)
 			break;
 		}
 
-		entity_t entity = candle_run_command(root, line);
+		entity = candle_run_command(root, line);
 
 		if(entity_exists(root) && c_node(&root) && entity != root)
 		{
@@ -321,7 +328,7 @@ void candle_init(void)
 	ecm_init();
 
 	mat_new("default_material", "default");
-	entity_new();
+	entity_new({});
 
 	g_candle->cmds = kh_init(cmd);
 	candle_reg_cmd("c_new", (cmd_cb)_c_new);

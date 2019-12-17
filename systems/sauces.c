@@ -89,18 +89,20 @@ void c_sauces_register(c_sauces_t *self, const char *name, const char *path, voi
 	uint32_t key;
 	int ret;
 	char buffer[64];
-	strncpy(buffer, name, sizeof(buffer) - 1);
-	char *dot = strrchr(buffer, '.');
+	char *dot;
+	sauces_loader_cb cb = NULL;
+	resource_t *sauce;
 
-	resource_t *sauce = calloc(1, sizeof(*sauce));
+	strncpy(buffer, name, sizeof(buffer) - 1);
+	dot = strrchr(buffer, '.');
+
+	sauce = calloc(1, sizeof(*sauce));
 	strncpy(sauce->name, name, sizeof(sauce->name) - 1);
 	if(path)
 	{
 		strncpy(sauce->path, path, sizeof(sauce->path) - 1);
 	}
 	sauce->data = data;
-
-	sauces_loader_cb cb = NULL;
 
 	if(dot)
 	{
@@ -133,17 +135,19 @@ void c_sauces_register(c_sauces_t *self, const char *name, const char *path, voi
 
 void *c_sauces_get_data(c_sauces_t *self, resource_handle_t *handle)
 {
+	char *dot;
+	sauces_loader_cb cb;
 	resource_t *sauce = c_sauces_get_sauce(self, handle);
 
 	if(!sauce) return NULL;
 	if(sauce->data) return sauce->data;
 
-	char *dot = strrchr(sauce->path, '.');
+	dot = strrchr(sauce->path, '.');
 	if(!dot || dot[1] == '\0') return NULL;
 
 	if (handle->ext == ~0) handle->ext = ref(dot + 1);
 	
-	sauces_loader_cb cb = c_sauces_get_loader(self, handle->ext);
+	cb = c_sauces_get_loader(self, handle->ext);
 	if(!cb) return NULL;
 	sauce->data = cb(sauce->path, sauce->name, handle->ext);
 	return sauce->data;
@@ -151,12 +155,16 @@ void *c_sauces_get_data(c_sauces_t *self, resource_handle_t *handle)
 
 resource_handle_t sauce_handle(const char *name)
 {
+	char *requested_dot;
 	char buffer[64];
+	resource_handle_t handle;
+
 	strncpy(buffer, name, sizeof(buffer) - 1);
 	to_lower_case(buffer);
-	char *requested_dot = strrchr(buffer, '.');
+	requested_dot = strrchr(buffer, '.');
 
-	resource_handle_t handle = {.name = ref(buffer), .ext = ~0};
+	handle.name = ref(buffer);
+	handle.ext = ~0;
 	if (requested_dot)
 	{
 		*requested_dot = '\0';
@@ -179,12 +187,13 @@ void *c_sauces_get(c_sauces_t *self, const char *name)
 
 int c_sauces_index_dir(c_sauces_t *self, const char *dir_name)
 {
+	struct dirent *ent;
 	DIR *dir = opendir(dir_name);
 	if(dir == NULL) return 0;
 
-	struct dirent *ent;
 	while((ent = readdir(dir)) != NULL)
 	{
+		char *dot;
 		char path[512];
 		char buffer[64];
 
@@ -197,7 +206,7 @@ int c_sauces_index_dir(c_sauces_t *self, const char *dir_name)
 		strcpy(buffer, ent->d_name);
 		to_lower_case(buffer);
 
-		char *dot = strrchr(buffer, '.');
+		dot = strrchr(buffer, '.');
 		if(!dot || dot[1] == '\0') continue;
 		/* *dot = '\0'; */
 

@@ -17,27 +17,35 @@ typedef struct vec3_t(*support_cb)(struct mesh *self, const vec3_t dir);
 #	define vecN vec4
 #	define vecN_t vec4_t
 #	define uvecN_t uvec4_t
-#	define VEC3(...) vec4(__VA_ARGS__, 0.0f)
+static vec4_t VEC3(float x, float y, float z)
+{
+	return vec4(x, y, z, 0.0f);
+}
+#	define VEC3i(x, y, z) {x, y, z, 0.0f}
 #	define vecN_xyz(v) vec4_xyz(v)
-#	define ZN vec4(0.0f)
+#	define ZN Z4
 #	define _vecN(a) _vec4(a)
 #	define _uvecN(a) _uvec4(a)
 #	define N 4
 
 #	define dN d4
 #	define dN_t d4_t
-#	define D3(...) d4(__VA_ARGS__, 0.0f)
+#	define D3(x, y, z) d4(x, y, z, 0.0f)
 #else
 #	define vecN vec3
 #	define vecN_t vec3_t
 #	define uvecN_t uvec3_t
-#	define VEC3(...) vec3(__VA_ARGS__)
+static vec3_t VEC3(float x, float y, float z)
+{
+	return vec3(x, y, z);
+}
+#	define VEC3i(x, y, z) {x, y, z}
 #	define vecN_xyz(v) v
 #	define _uvecN(a) _uvec3(a)
 #	define ZN Z3
 
 #	define dN d3_t
-#	define D3(...) d3(__VA_ARGS__)
+#	define D3(x, y, z) d3(x, y, z)
 #	define N 3
 #endif
 
@@ -218,9 +226,9 @@ typedef enum
 {
 	DIR_X,
 	DIR_Y,
-	DIR_Z,
+	DIR_Z
 #ifdef MESH4
-	DIR_W,
+	, DIR_W
 #endif
 } direction_t;
 

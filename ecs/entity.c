@@ -13,17 +13,15 @@ __thread int _g_creating_num = 0;
 
 extern SDL_sem *sem;
 
-entity_t _entity_new_post(void *components[])
+void entity_new_post()
 {
 	entity_t self = _g_creating[--_g_creating_num];
 	entity_signal_same(self, sig("entity_created"), NULL, NULL);
-
-	return self;
 }
 
-void _entity_new_pre(void)
+entity_t entity_new_pre(void)
 {
-	_g_creating[_g_creating_num++] = ecm_new_entity();
+	return _g_creating[_g_creating_num++] = ecm_new_entity();
 }
 
 int filter_listener(listener_t *self)

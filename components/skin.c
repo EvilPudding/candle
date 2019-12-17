@@ -12,44 +12,44 @@ vs_t *g_skin_vs;
 
 static void c_skin_init(c_skin_t *self)
 {
+	c_model_t *mc;
 	if(!g_skin_vs)
 	{
-		g_skin_vs = vs_new("skin", true, 1, vertex_modifier_new(
+		char code[1024] = "";
+		strcat(code, 
 			"	{\n"
 			"		const vec3 colors[] = vec3[]("
-			"			vec3(1.0, 0.0, 0.0),"
-			"			vec3(0.0, 1.0, 0.0),"
-			"			vec3(0.0, 1.0, 1.0),"
-			"			vec3(0.0, 0.0, 1.0),"
-			"			vec3(1.0, 0.0, 1.0),"
-			"			vec3(1.0, 1.0, 0.0),"
-			"			vec3(0.0, 1.0, 0.5),"
-			"			vec3(1.0, 0.5, 1.0),"
-			"			vec3(0.0, 0.5, 1.0),"
-			"			vec3(0.5, 1.0, 0.0),"
-			"			vec3(0.3, 0.0, 0.0)"
+						"vec3(1.,0.,0.),"
+						"vec3(0.,1.,0.),"
+						"vec3(0.,1.,1.),"
+						"vec3(0.,0.,1.),"
+						"vec3(1.,0.,1.),"
+						"vec3(1.,1.,0.),"
+						"vec3(0.,1.,.5),"
+						"vec3(1.,.5,1.),"
+						"vec3(0.,.5,1.),"
+						"vec3(.5,1.,0.),"
+						"vec3(.3,.0,0.)"
 			"	);\n"
+		);
+		strcat(code,
 			"#ifdef MESH4\n"
 			"		float Y = cos(angle4);\n"
 			"		float W = sin(angle4);\n"
 			"		pos = vec4(vec3(P.x, P.y * Y + P.w * W, P.z), 1.0);\n"
 			"#endif\n"
-
-			/* "		$poly_color  = colors[int(BID[0])] * WEI[0];\n" */
-			/* "		$poly_color += colors[int(BID[1])] * WEI[1];\n" */
-			/* "		$poly_color += colors[int(BID[2])] * WEI[2];\n" */
-			/* "		$poly_color += colors[int(BID[3])] * WEI[3];\n" */
 			"		mat4 MODIFIER;\n"
 			"		float wei = WEI[0] + WEI[1] + WEI[2] + WEI[3];\n"
 			"		if(wei > 0.0) {\n"
-			"			mat4 transform = skin.bones[int(BID[0])] * WEI[0];\n"
-			"			transform += skin.bones[int(BID[1])] * WEI[1];\n"
-			"			transform += skin.bones[int(BID[2])] * WEI[2];\n"
-			"			transform += skin.bones[int(BID[3])] * WEI[3];\n"
-			"			MODIFIER = transform;\n"
+			"			mat4 t = skin.bones[int(BID[0])] * WEI[0];\n"
+			"			t += skin.bones[int(BID[1])] * WEI[1];\n"
+			"			t += skin.bones[int(BID[2])] * WEI[2];\n"
+			"			t += skin.bones[int(BID[3])] * WEI[3];\n"
+			"			MODIFIER = t;\n"
 			"		} else\n"
 			"		    MODIFIER = M;\n"
-
+		);
+		strcat(code,
 			"		MODIFIER = camera(view) * MODIFIER;\n"
 
 			"		vec3 vertex_normal    = normalize(MODIFIER * vec4( N, 0.0)).xyz;\n"
@@ -62,9 +62,10 @@ static void c_skin_init(c_skin_t *self)
 
 			"		pos = camera(projection) * pos;\n"
 			"	}\n"
-		));
+		);
+		g_skin_vs = vs_new("skin", true, 1, vertex_modifier_new(code));
 	}
-	c_model_t *mc = c_model(self);
+	mc = c_model(self);
 	if(!mc) return;
 	/* drawable_set_vs(&mc->draw, model_vs()); */
 	drawable_set_vs(&mc->draw, g_skin_vs);
@@ -85,9 +86,9 @@ void c_skin_changed(c_skin_t *self)
 
 int c_skin_update_transforms(c_skin_t *self)
 {
+	uint32_t i;
 	if(!self->modified) return CONTINUE; 
 	self->modified = 0;
-	uint32_t i;
 	for(i = 0; i < self->info.bones_num; i++)
 	{
 		c_bone_t *bone = c_bone(&self->info.bones[i]);
@@ -103,7 +104,7 @@ int c_skin_update_transforms(c_skin_t *self)
 REG()
 {
 	ct_t *ct = ct_new("skin", sizeof(c_skin_t),
-			c_skin_init, NULL, 1, ref("node"));
+			(init_cb)c_skin_init, NULL, 1, ref("node"));
 	ct_listener(ct, WORLD, 0, sig("world_update"), c_skin_update_transforms);
 }
 

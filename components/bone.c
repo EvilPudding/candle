@@ -16,15 +16,15 @@ static void c_bone_init(c_bone_t *self)
 {
 	if(!g_bone)
 	{
+#ifdef MESH4
+		const vec4_t dir = vec4(0.0f, 0.0f, -1.0f, 0.0f);
+#else
+		const vec3_t dir = vec3(0.0f, 0.0f, -1.0f);
+#endif
 		g_mat = mat_new("m", "default");
 		mat4f(g_mat, ref("emissive.color"), vec4(0.3f, 0.1f, 0.9f, 0.5f));
 		mat4f(g_mat, ref("albedo.color"), vec4(1, 1, 1, 1.0f));
 
-#ifdef MESH4
-		vec4_t dir = vec4(0.0f, 0.0f, -1.0f, 0.0f);
-#else
-		vec3_t dir = vec3(0.0f, 0.0f, -1.0f);
-#endif
 		g_bone = mesh_new();
 		mesh_lock(g_bone);
 		mesh_circle(g_bone, 0.01f, 4, dir);
@@ -58,6 +58,10 @@ static void c_bone_init(c_bone_t *self)
 
 static int c_bone_position_changed(c_bone_t *self)
 {
+	vec3_t p;
+	float len;
+	mat4_t par_model, model;
+	c_node_t *par;
 	c_node_t *n = c_node(self);
 	if(!n->parent || !c_bone(&n->parent))
 	{
@@ -65,7 +69,7 @@ static int c_bone_position_changed(c_bone_t *self)
 		drawable_set_mesh(&self->joint, NULL);
 		return CONTINUE;
 	}
-	c_node_t *par = c_node(&n->parent);
+	par = c_node(&n->parent);
 
 	drawable_set_mesh(&self->draw, g_bone);
 	drawable_set_mesh(&self->joint, g_joint);
@@ -73,13 +77,13 @@ static int c_bone_position_changed(c_bone_t *self)
 	c_node_update_model(par);
 	c_node_update_model(n);
 
-	vec3_t p = c_spatial(self)->pos;
-	float len = vec3_len(p);
+	p = c_spatial(self)->pos;
+	len = vec3_len(p);
 
-	mat4_t model = mat4_look_at(p, vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
+	model = mat4_look_at(p, vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
 	model = mat4_scale_aniso(mat4_invert(model), vec3(len, len, len));
 
-	mat4_t par_model = mat4_mul(par->model, model);
+	par_model = mat4_mul(par->model, model);
 
 	drawable_set_transform(&self->draw, par_model);
 	drawable_set_entity(&self->draw, n->parent);
@@ -111,8 +115,8 @@ static void c_bone_destroy(c_bone_t *self)
 
 REG()
 {
-	ct_t *ct = ct_new("bone", sizeof(c_bone_t), c_bone_init,
-	                  c_bone_destroy, 1, ref("node"));
+	ct_t *ct = ct_new("bone", sizeof(c_bone_t), (init_cb)c_bone_init,
+	                  (destroy_cb)c_bone_destroy, 1, ref("node"));
 	ct_listener(ct, ENTITY, 0, sig("node_changed"), c_bone_position_changed);
 }
 

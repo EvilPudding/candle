@@ -55,9 +55,10 @@ c_axis_t *c_axis_new(int type, vecN_t dir)
 	}
 	else if(type == 2)
 	{
+		vecN_t point;
 		self->dir_mesh = mesh_new();
 		mesh_lock(self->dir_mesh);
-		vecN_t point = vecN_(scale)(dir, 0.5);
+		point = vecN_(scale)(dir, 0.5);
 		mesh_circle(self->dir_mesh, 0.03f, 8, dir);
 		mesh_extrude_edges(self->dir_mesh, 1, point, 1.0f, NULL, NULL, NULL);
 		mesh_translate(self->dir_mesh, vecN_xyz(point));
@@ -76,8 +77,9 @@ c_axis_t *c_axis_new(int type, vecN_t dir)
 
 int c_axis_press(c_axis_t *self, model_button_data *event)
 {
+	c_mouse_t *mouse;
 	if(event->button != SDL_BUTTON_LEFT) return CONTINUE;
-	c_mouse_t *mouse = c_mouse(self);
+	mouse = c_mouse(self);
 	c_mouse_visible(mouse, false);
 	c_mouse_activate(mouse);
 	return STOP;
@@ -148,10 +150,11 @@ int c_axis_mouse_move(c_axis_t *self, mouse_move_data *event)
 
 static int c_axis_editmode_toggle(c_axis_t *self)
 {
+	c_model_t *mc;
 	c_editmode_t *edit = c_editmode(&SYS);
 	if(!edit) return CONTINUE;
 
-	c_model_t *mc = c_model(self);
+	mc = c_model(self);
 	if(edit->control)
 	{
 		c_model_set_visible(mc, self->visible);
@@ -173,7 +176,7 @@ int c_axis_created(c_axis_t *self)
 REG()
 {
 	ct_t *ct = ct_new("axis", sizeof(c_axis_t),
-			c_axis_init, NULL, 2, ref("node"), ref("mouse"));
+			(init_cb)c_axis_init, NULL, 2, ref("node"), ref("mouse"));
 
 	ct_listener(ct, WORLD, 0, sig("editmode_toggle"), c_axis_editmode_toggle);
 

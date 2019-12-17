@@ -21,6 +21,9 @@ c_mouse_t *c_mouse_new()
 
 int32_t c_mouse_event(c_mouse_t *self, const SDL_Event *event)
 {
+	mouse_button_data bdata;
+	mouse_move_data mdata;
+	entity_t target;
 	if (event->type == SDL_MOUSEBUTTONUP || event->type == SDL_MOUSEBUTTONDOWN)
 	{
 		if (event->button.button == SDL_BUTTON_RIGHT)
@@ -33,16 +36,17 @@ int32_t c_mouse_event(c_mouse_t *self, const SDL_Event *event)
 		}
 	}
 
-	mouse_button_data bdata;
-	mouse_move_data mdata;
 	if (g_active_mouse != c_entity(self))
 		return CONTINUE;
-	const entity_t target = c_entity(self) == SYS ? entity_null : c_entity(self);
+	target = c_entity(self) == SYS ? entity_null : c_entity(self);
 	switch(event->type)
 	{
 		case SDL_MOUSEWHEEL:
-			bdata = (mouse_button_data){event->wheel.x, event->wheel.y,
-				event->wheel.direction, SDL_BUTTON_MIDDLE, event->button.clicks};
+			bdata.x = event->wheel.x;
+			bdata.y = event->wheel.y;
+			bdata.direction = event->wheel.direction;
+			bdata.button = SDL_BUTTON_MIDDLE;
+			bdata.clicks = event->button.clicks;
 			if (target == entity_null)
 			{
 				return entity_signal(target, sig("mouse_wheel"), &bdata, NULL);
@@ -52,8 +56,11 @@ int32_t c_mouse_event(c_mouse_t *self, const SDL_Event *event)
 				return entity_signal_same(target, sig("mouse_wheel"), &bdata, NULL);
 			}
 		case SDL_MOUSEBUTTONUP:
-			bdata = (mouse_button_data){event->button.x, event->button.y, 0,
-				event->button.button, event->button.clicks};
+			bdata.x = event->button.x;
+			bdata.y = event->button.y;
+			bdata.direction = 0.0f;
+			bdata.button = event->button.button;
+			bdata.clicks = event->button.clicks;
 			if (target == entity_null)
 			{
 				return entity_signal(target, sig("mouse_release"), &bdata, NULL);
@@ -63,8 +70,11 @@ int32_t c_mouse_event(c_mouse_t *self, const SDL_Event *event)
 				return entity_signal_same(target, sig("mouse_release"), &bdata, NULL);
 			}
 		case SDL_MOUSEBUTTONDOWN:
-			bdata = (mouse_button_data){event->button.x, event->button.y, 0,
-				event->button.button, event->button.clicks};
+			bdata.x = event->button.x;
+			bdata.y = event->button.y;
+			bdata.direction = 0.0f;
+			bdata.button = event->button.button;
+			bdata.clicks = event->button.clicks;
 			if (target == entity_null)
 			{
 				return entity_signal(target, sig("mouse_press"), &bdata, NULL);
@@ -76,8 +86,10 @@ int32_t c_mouse_event(c_mouse_t *self, const SDL_Event *event)
 		case SDL_MOUSEMOTION:
 			self->x = event->motion.x;
 			self->y = event->motion.y;
-			mdata = (mouse_move_data){event->motion.xrel, event->motion.yrel,
-				event->motion.x, event->motion.y};
+			mdata.sx = event->motion.xrel;
+			mdata.sy = event->motion.yrel;
+			mdata.x = event->motion.x;
+			mdata.y = event->motion.y;
 			if (target == entity_null)
 			{
 				return entity_signal(target, sig("mouse_move"), &mdata, NULL);
@@ -97,12 +109,13 @@ bool_t c_mouse_active(const c_mouse_t *self)
 
 void c_mouse_deactivate(c_mouse_t *self)
 {
+	c_mouse_t *active_mouse;
 	if (g_active_mouse != c_entity(self))
 	{
 		return;
 	}
 	g_active_mouse = self->previous_active;
-	c_mouse_t *active_mouse = c_mouse(&g_active_mouse);
+	active_mouse = c_mouse(&g_active_mouse);
 	if (self->visible != active_mouse->visible) {
 		SDL_ShowCursor(active_mouse->visible); 
 		SDL_SetRelativeMouseMode(!active_mouse->visible);
@@ -143,7 +156,7 @@ void c_mouse_visible(c_mouse_t *self, bool_t visible)
 
 REG()
 {
-	ct_t *ct = ct_new("mouse", sizeof(c_mouse_t), c_mouse_init, NULL, 0);
+	ct_t *ct = ct_new("mouse", sizeof(c_mouse_t), (init_cb)c_mouse_init, NULL, 0);
 
 	signal_init(sig("mouse_move"), sizeof(mouse_move_data));
 	signal_init(sig("mouse_press"), sizeof(mouse_button_data));

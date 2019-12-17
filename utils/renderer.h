@@ -36,19 +36,19 @@ enum pass_options
 
 enum bind_type
 {
-	NONE,
-	TEX,
-	NUM,
-	INT,
-	VEC2,
-	VEC3,
-	VEC4,
-	CAM,
-	CLEAR_COLOR,
-	CLEAR_DEPTH,
-	CALLBACK,
-	USRPTR,
-	SKIP
+	OPT_NONE,
+	OPT_TEX,
+	OPT_NUM,
+	OPT_INT,
+	OPT_VEC2,
+	OPT_VEC3,
+	OPT_VEC4,
+	OPT_CAM,
+	OPT_CLEAR_COLOR,
+	OPT_CLEAR_DEPTH,
+	OPT_CALLBACK,
+	OPT_USRPTR,
+	OPT_SKIP
 };
 
 typedef vec2_t     (*vec2_getter)(struct pass *pass, void *usrptr);
@@ -195,9 +195,6 @@ typedef struct c_renderer_t
 
 	int ready;
 
-	// GL PROPS
-	int depth_inverted;
-
 	int32_t camera_count;
 	uint32_t stored_camera_frame[6];
 	struct gl_camera glvars[6];
@@ -229,7 +226,8 @@ void renderer_add_pass(
 		texture_t *depth,
 		uint32_t framebuffer,
 		uint32_t after_pass,
-		bind_t binds[]);
+		uint32_t num_opts,
+		...);
 
 void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 		int from_mip, int to_mip);
@@ -256,5 +254,19 @@ int renderer_component_menu(renderer_t *self, void *ctx);
 void renderer_destroy(renderer_t *self);
 void *pass_process_query_mips(pass_t *self);
 void *pass_process_brightness(pass_t *self);
+
+bind_t opt_none(void);
+bind_t opt_tex(const char *name, texture_t *tex, getter_cb getter);
+bind_t opt_num(const char *name, float value, getter_cb getter);
+bind_t opt_int(const char *name, int32_t value, getter_cb getter);
+bind_t opt_vec2(const char *name, vec2_t value, getter_cb getter);
+bind_t opt_vec3(const char *name, vec3_t value, getter_cb getter);
+bind_t opt_vec4(const char *name, vec4_t value, getter_cb getter);
+bind_t opt_cam(entity_t camera, getter_cb getter);
+bind_t opt_clear_color(vec4_t color, getter_cb getter);
+bind_t opt_clear_depth(float depth, getter_cb getter);
+bind_t opt_callback(getter_cb callback);
+bind_t opt_usrptr(void *ptr);
+bind_t opt_skip(uint32_t ticks);
 
 #endif /* !RENDERER_H */

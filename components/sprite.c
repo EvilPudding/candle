@@ -141,7 +141,7 @@ void c_sprite_destroy(c_sprite_t *self)
 REG()
 {
 	ct_t *ct = ct_new("sprite", sizeof(c_sprite_t),
-			c_sprite_init, c_sprite_destroy, 1, ref("node"));
+			(init_cb)c_sprite_init, (destroy_cb)c_sprite_destroy, 1, ref("node"));
 
 	ct_listener(ct, ENTITY, 0, ref("entity_created"), c_sprite_created);
 

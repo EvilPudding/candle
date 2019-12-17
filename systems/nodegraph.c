@@ -17,6 +17,7 @@ void node_entity(c_nodegraph_t *self, entity_t entity, void *ctx)
 	char *final_name = buffer;
 	c_name_t *name = c_name(&entity);
 	c_editmode_t *emc = c_editmode(self);
+	c_node_t *node;
 	if(name && name->name[0])
 	{
 		final_name = name->name;
@@ -25,12 +26,12 @@ void node_entity(c_nodegraph_t *self, entity_t entity, void *ctx)
 	{
 		sprintf(buffer, "NODE_%ld", entity);
 	}
-	c_node_t *node = c_node(&entity);
+	node = c_node(&entity);
 	if(node)
 	{
-		int i;
+		int i, has_children, is_selected, res;
 		if(node->ghost) return;
-		int has_children = 0;
+		has_children = 0;
 		for(i = 0; i < node->children_size; i++)
 		{
 			if(!c_node(&node->children[i])->ghost)
@@ -39,9 +40,10 @@ void node_entity(c_nodegraph_t *self, entity_t entity, void *ctx)
 				break;
 			}
 		}
-		int is_selected = emc->selected == entity;
-		int res = nk_tree_entity_push_id(ctx, NK_TREE_NODE, final_name,
-					NK_MINIMIZED, &is_selected, has_children, (int)entity);
+		is_selected = emc->selected == entity;
+		res = nk_tree_entity_push_id(ctx, NK_TREE_NODE, final_name,
+		                             NK_MINIMIZED, &is_selected,
+		                             has_children, (int)entity);
 		if(is_selected)
 		{
 			if(is_selected && emc->selected != entity)

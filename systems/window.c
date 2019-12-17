@@ -27,6 +27,10 @@ extern SDL_Window *mainWindow;
 
 static void init_context_b(c_window_t *self)
 {
+	const GLubyte *renderer;
+	const GLubyte *vendor;
+	const GLubyte *version;
+	const GLubyte *glslVersion;
 /* #ifdef __EMSCRIPTEN__ */
 
 /* 	emscripten_set_canvas_element_size("#canvas", self->width, self->height); */
@@ -88,10 +92,10 @@ static void init_context_b(c_window_t *self)
 	glInit();
 
 	glDepthFunc(GL_LESS); glerr();
-	const GLubyte *renderer = glGetString( GL_RENDERER );
-	const GLubyte *vendor = glGetString( GL_VENDOR );
-	const GLubyte *version = glGetString( GL_VERSION );
-	const GLubyte *glslVersion = glGetString(GL_SHADING_LANGUAGE_VERSION);
+	renderer = glGetString( GL_RENDERER );
+	vendor = glGetString( GL_VENDOR );
+	version = glGetString( GL_VERSION );
+	glslVersion = glGetString(GL_SHADING_LANGUAGE_VERSION);
 
 	/* GLint major, minor; */
 	/* glGetIntegerv(GL_MAJOR_VERSION, &major); */
@@ -138,10 +142,11 @@ void c_window_init(c_window_t *self)
 
 int c_window_toggle_fullscreen_gl(c_window_t *self)
 {
+	SDL_DisplayMode dm;
+	window_resize_data wdata;
 
 	self->fullscreen = !self->fullscreen;
 
-	SDL_DisplayMode dm;
 	if(SDL_GetDesktopDisplayMode(0, &dm) != 0)
 	{
 		SDL_Log("SDL_GetDesktopDisplayMode failed: %s", SDL_GetError());
@@ -150,9 +155,10 @@ int c_window_toggle_fullscreen_gl(c_window_t *self)
 	self->width = dm.w;
 	self->height = dm.h;
 
+	wdata.width = self->width;
+	wdata.height = self->height;
 	/* printf("window resize: %dx%d\n", self->width, self->height); */
-	entity_signal(entity_null, sig("window_resize"),
-		&(window_resize_data){.width = self->width, .height = self->height}, NULL);
+	entity_signal(entity_null, sig("window_resize"), &wdata, NULL);
 
 	SDL_SetWindowSize(self->window, self->width, self->height);
 
@@ -170,7 +176,8 @@ void c_window_toggle_fullscreen(c_window_t *self)
 
 void c_window_handle_resize(c_window_t *self, const void *event)
 {
-	
+	window_resize_data wdata;
+
 	self->width = ((const SDL_Event*)event)->window.data1;
 	self->height = ((const SDL_Event*)event)->window.data2;
 	/* printf("window resize: %dx%d\n", self->width, self->height); */
@@ -178,9 +185,10 @@ void c_window_handle_resize(c_window_t *self, const void *event)
 	{
 		renderer_resize(self->renderer, self->width, self->height);
 	}
-
+	wdata.width = self->width;
+	wdata.height = self->height;
 	entity_signal(entity_null, sig("window_resize"),
-		&(window_resize_data){.width = self->width, .height = self->height}, NULL);
+		&wdata, NULL);
 }
 
 #ifdef DEBUG
@@ -248,11 +256,15 @@ void c_window_lock_fps(c_window_t *self, int32_t lock_fps)
 
 int c_window_draw(c_window_t *self)
 {
+	texture_t *tex;
+	shader_t *shader;
+	uint32_t uni, ss;
+
 	if(!self->renderer) return CONTINUE;
 
 	/* renderer_draw(self->renderer); */
 
-	texture_t *tex = self->renderer->output;
+	tex = self->renderer->output;
 
 	if(!tex)
 	{
@@ -268,13 +280,13 @@ int c_window_draw(c_window_t *self)
 
 	glViewport(0, 0, self->width, self->height); glerr();
 
-	shader_t *shader = vs_bind(g_quad_vs, 0);
-	uint32_t uni = shader_cached_uniform(shader, ref("tex"));
+	shader = vs_bind(g_quad_vs, 0);
+	uni = shader_cached_uniform(shader, ref("tex"));
 	glUniform1i(uni, 0);
 	glActiveTexture(GL_TEXTURE0);
 	texture_bind(tex, tex->draw_id);
 
-	uint32_t ss = shader_cached_uniform(shader, ref("screen_size"));
+	ss = shader_cached_uniform(shader, ref("screen_size"));
 	glUniform2f(ss, self->width, self->height); glerr();
 
 	drawable_draw(&self->draw);
@@ -303,7 +315,7 @@ int32_t c_window_event(c_window_t *self, const SDL_Event *event)
 
 REG()
 {
-	ct_t *ct = ct_new("window", sizeof(c_window_t), c_window_init, NULL, 0);
+	ct_t *ct = ct_new("window", sizeof(c_window_t), (init_cb)c_window_init, NULL, 0);
 
 	ct_listener(ct, ENTITY, 0, sig("entity_created"), c_window_created);
 	ct_listener(ct, WORLD, 5, sig("world_draw"), c_window_draw);

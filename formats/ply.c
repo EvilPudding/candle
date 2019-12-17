@@ -53,9 +53,9 @@ typedef struct
 	char chars[MAX_WORD + 1];
 } ply_word_t;
 
-////////////////////////////////////////////////////////////////////////////////
-//                                .PLY LOADER                                 //
-////////////////////////////////////////////////////////////////////////////////
+/* ////////////////////////////////////////////////////////////////////////// */
+/*                                .PLY LOADER                                 */
+/* ////////////////////////////////////////////////////////////////////////// */
 
 static ply_word_t *get_words(FILE *fp, int *nwords)
 {
@@ -104,42 +104,37 @@ static int get_type(const char *name)
 
 void mesh_load_ply(mesh_t *self, const char *filename)
 {
+	unsigned int i;
+	int nwords;
+	ply_word_t *words;
+	ply_word_t *word;
+	FILE *fp;
+	struct property
+	{
+		char name[32];
+		int type, list_count_type, list_element_type;
+	};
+	struct element_type
+	{
+		char name[32];
+		struct property props[10]; int props_num;
+		int num;
+	};
+	struct element_type *elements = NULL;
+	int elements_num = 0;
+	int file_type = 0;
+
+
 	strncpy(self->name, filename, sizeof(self->name) - 1);
 
-    FILE *fp = fopen(filename, "r");
+    fp = fopen(filename, "r");
 
-	if(!fp)
+	if (!fp)
 	{
 		printf("Could not find object '%s'\n", filename);
 		return;
 	}
 
-	unsigned int i;
-	int nwords;
-	ply_word_t *words;
-	ply_word_t *word;
-
-	struct property
-	{
-		char name[32];
-		int type,
-			list_count_type,
-			list_element_type;
-	};
-	struct element_type
-	{
-		char name[32];
-
-		struct property props[10]; int props_num;
-
-		int num;
-	};
-
-	struct element_type *elements = NULL;
-	int elements_num = 0;
-
-
-	int file_type = 0;
 
 	#define FORMAT_ASCII		0x01
 	#define FORMAT_BINARY_BE	0x02
@@ -177,11 +172,13 @@ void mesh_load_ply(mesh_t *self, const char *filename)
 		}
 		else if(!strcmp(word->chars, "element"))
 		{
+			struct element_type *el;
+
 			word++;
 
 			i = elements_num++;
 			elements = realloc(elements, sizeof(*elements) * elements_num);
-			struct element_type *el = &elements[i];
+			el = &elements[i];
 			el->props_num = 0;
 			
 			strncpy(el->name, word->chars, sizeof(el->name) - 1); word++;
@@ -190,9 +187,11 @@ void mesh_load_ply(mesh_t *self, const char *filename)
 
 			while(!strcmp(word->chars, "property"))
 			{
+				struct property *props;
+
 				word++;
 
-				struct property *props = &el->props[el->props_num];
+				props = &el->props[el->props_num];
 				el->props_num++;
 
 				props->type = get_type(word->chars); word++;

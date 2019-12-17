@@ -14,7 +14,7 @@ const char *path_relative(const char *path, const char *dir);
 char *filter_sauce_name(char *path_name);
 void to_lower_case(char *str);
 
-static inline int is_dir(const char *f)
+static int is_dir(const char *f)
 {
 	DIR *dir = opendir(f);
 	if(dir == NULL) return 0;

@@ -19,6 +19,8 @@ void c_controllers_rumble(c_controllers_t *self, uint32_t controller,
 
 c_controllers_t *c_controllers_new()
 {
+	bool_t has_gamepads = false;
+	int n_joysticks, i;
 	c_controllers_t *self = component_new("controller");
 
 	if (SDL_WasInit(SDL_INIT_GAMECONTROLLER) == 1)
@@ -26,9 +28,8 @@ c_controllers_t *c_controllers_new()
 	SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER);
 	SDL_InitSubSystem(SDL_INIT_HAPTIC);
 
-	bool_t has_gamepads = false;
-	int nJoysticks = SDL_NumJoysticks();
-	for (int i = 0; i < nJoysticks; i++)
+	n_joysticks = SDL_NumJoysticks();
+	for (i = 0; i < n_joysticks; i++)
 	{
 		if (SDL_IsGameController(i))
 		{
@@ -41,7 +42,7 @@ c_controllers_t *c_controllers_new()
 		}
 	}
 
-	for (uint32_t i = 0; i < 8; i++)
+	for (i = 0; i < 8; i++)
 	{
 		self->controllers[i].id = i;
 		self->controllers[i].axis_right.controller = i;
@@ -98,9 +99,11 @@ float normalize_axis(int32_t val)
 int32_t c_controllers_event(c_controllers_t *self, const SDL_Event *event)
 {
 	float value;
+	uint32_t signal;
 	SDL_GameController *pad;
 	controller_t *controller = &self->controllers[event->cdevice.which];
 	controller_button_t *button;
+
 	switch(event->type)
 	{
 		case SDL_CONTROLLERDEVICEADDED:
@@ -174,7 +177,7 @@ int32_t c_controllers_event(c_controllers_t *self, const SDL_Event *event)
 					return CONTINUE;
 			}
 			printf("button\n");
-			uint32_t signal =   event->type == SDL_CONTROLLERBUTTONDOWN
+			signal =   event->type == SDL_CONTROLLERBUTTONDOWN
 			                  ? ref("controller_button_down")
 			                  : ref("controller_button_up");
 			button->pressed = event->type == SDL_CONTROLLERBUTTONDOWN;
@@ -217,7 +220,8 @@ int32_t c_controllers_event(c_controllers_t *self, const SDL_Event *event)
 
 int32_t c_controllers_events_end(c_controllers_t *self)
 {
-	for (uint32_t i = 0; i < self->num_controllers; i++)
+	uint32_t i;
+	for (i = 0; i < self->num_controllers; i++)
 	{
 		controller_t *controller = &self->controllers[i];
 		if (!controller->connected) continue;

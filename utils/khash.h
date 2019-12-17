@@ -128,6 +128,7 @@ int main() {
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <stdint.h>
 
 /* compiler specific configuration */
 
@@ -137,18 +138,36 @@ typedef unsigned int khint32_t;
 typedef unsigned long khint32_t;
 #endif
 
-#if ULONG_MAX == ULLONG_MAX
-typedef unsigned long khint64_t;
-#else
-typedef unsigned long long khint64_t;
-#endif
+typedef uint64_t khint64_t;
 
 #ifndef kh_inline
-#ifdef _MSC_VER
-#define kh_inline __inline
-#else
-#define kh_inline inline
+# ifdef _MSC_VER
+#  define kh_inline __inline
+# else
+
+#if defined(__STDC__)
+# define PREDEF_STANDARD_C_1989
+# if defined(__STDC_VERSION__)
+#  define PREDEF_STANDARD_C_1990
+#  if (__STDC_VERSION__ >= 199409L)
+#   define PREDEF_STANDARD_C_1994
+#  endif
+#  if (__STDC_VERSION__ >= 199901L)
+#   define PREDEF_STANDARD_C_1999
+#  endif
+#  if (__STDC_VERSION__ >= 201710L)
+#   define PREDEF_STANDARD_C_2018
+#  endif
+# endif
 #endif
+
+#ifdef PREDEF_STANDARD_C_1999
+# define kh_inline inline
+#else
+# define kh_inline
+#endif
+
+# endif
 #endif /* kh_inline */
 
 #ifndef klib_unused

@@ -42,6 +42,8 @@ static int c_freelook_window_resize(c_freelook_t *self,
 
 static void c_freelook_update(c_freelook_t *self)
 {
+	c_spatial_t *sc;
+	float rot;
 	const float max_up = M_PI / 2.0 - 0.01;
 	const float max_down = -M_PI / 2.0 + 0.01;
 
@@ -50,9 +52,9 @@ static void c_freelook_update(c_freelook_t *self)
 		return;
 	}
 
-	c_spatial_t *sc = c_spatial(self);
+	sc = c_spatial(self);
 
-	float rot = sc->rot.x;
+	rot = sc->rot.x;
 	if(rot > max_up) rot = max_up;
 	if(rot < max_down) rot = max_down;
 	c_spatial_set_rot(sc, 1, 0, 0, rot);
@@ -64,13 +66,15 @@ static void c_freelook_update(c_freelook_t *self)
 static int c_freelook_mouse_move(c_freelook_t *self, mouse_move_data *event)
 {
 	float frac = self->sensitivity / self->win_min_side;
+	float new_rot;
+	c_spatial_t *sc_y, *sc_x;
 
-	c_spatial_t *sc_x = c_spatial(&self->x_control);
-	float new_rot = sc_x->rot.y - event->sx * frac;
+	sc_x = c_spatial(&self->x_control);
+	new_rot = sc_x->rot.y - event->sx * frac;
 	c_spatial_set_rot(sc_x, 0, 1, 0, new_rot);
 
 
-	c_spatial_t *sc_y = c_spatial(&self->y_control);
+	sc_y = c_spatial(&self->y_control);
 	new_rot = sc_y->rot.x - event->sy * frac;
 	c_spatial_set_rot(sc_y, 1, 0, 0, new_rot);
 
@@ -82,7 +86,7 @@ static int c_freelook_mouse_move(c_freelook_t *self, mouse_move_data *event)
 REG()
 {
 	ct_t *ct = ct_new("freelook", sizeof(c_freelook_t),
-			c_freelook_init, NULL, 1, ref("spatial"));
+			(init_cb)c_freelook_init, NULL, 1, ref("spatial"));
 
 	ct_listener(ct, WORLD, 0, sig("mouse_move"), c_freelook_mouse_move);
 

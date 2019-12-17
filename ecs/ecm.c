@@ -11,6 +11,8 @@
 static SDL_sem *sem1 = NULL;
 static SDL_sem *sem;
 
+entity_t SYS = 0x0000000100000001ul;
+
 listener_t *ct_get_listener(ct_t *self, uint32_t signal)
 {
 	signal_t *sig = ecm_get_signal(signal);
@@ -253,9 +255,10 @@ void ct_add_dependency(ct_t *dep, uint32_t target)
 
 /* } */
 
-ct_t *_ct_new(const char *name, uint32_t hash, uint32_t size, init_cb init,
+ct_t *ct_new(const char *name, uint32_t size, init_cb init,
 		destroy_cb destroy, int depend_size, ...)
 {
+	uint32_t hash = ref(name);
 	va_list depends;
 
 	va_start(depends, depend_size);

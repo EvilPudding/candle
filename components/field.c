@@ -91,25 +91,32 @@ void c_field_pre_draw(c_field_t *self, shader_t *shader)
 c_field_t *c_field_new(mat_t *mat, vec3_t start, vec3_t end, float cell_size,
                        int cast_shadow)
 {
+	vec3_t size;
+	uvec3_t segments;
+	uint32_t x, y, z;
 	c_field_t *self = component_new("field");
 
 	self->cast_shadow = cast_shadow;
 
-	vec3_t size = vec3_sub(end, start);
-	uvec3_t segments = uvec3(size.x / cell_size,
-	                         size.y / cell_size,
-	                         size.z / cell_size);
+	size = vec3_sub(end, start);
+	segments = uvec3(size.x / cell_size,
+	                 size.y / cell_size,
+	                 size.z / cell_size);
 	self->values = texture_new_3D(_vec3(segments), 1);
-	for (uint32_t x = 0; x < segments.x; x++)
-		for (uint32_t y = 0; y < segments.y; y++)
-			for (uint32_t z = 0; z < segments.z; z++)
+	for (x = 0; x < segments.x; x++)
+		for (y = 0; y < segments.y; y++)
+			for (z = 0; z < segments.z; z++)
 	{
 		float fx = cell_size * x - start.x;
 		float fy = cell_size * y - start.y;
 		/* float fz = cell_size * z - start.z; */
 		uint32_t i = x + y * segments.x + z * (segments.x * segments.y);
-		self->values->bufs[0].data[i] =   fmax(sinf(fx), 0.0f)
-		                                * fmax(cosf(fy), 0.0f) * 255.0f;
+		float sx = sinf(fx);
+		float cy = cosf(fy);
+		if (sx < 0.0f) sx = 0.0f;
+		if (cy < 0.0f) cy = 0.0f;
+
+		self->values->bufs[0].data[i] =   sx * cy * 255.0f;
 	}
 	texture_update_gl(self->values);
 
@@ -147,7 +154,7 @@ void c_field_destroy(c_field_t *self)
 REG()
 {
 	ct_t *ct = ct_new("field", sizeof(c_field_t),
-			c_field_init, c_field_destroy, 1, ref("node"));
+			(init_cb)c_field_init, (destroy_cb)c_field_destroy, 1, ref("node"));
 
 	ct_listener(ct, ENTITY, 0, ref("entity_created"), c_field_created);
 

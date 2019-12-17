@@ -4,11 +4,11 @@
 #include <stdio.h>
 #include <string.h>
 
-////////////////////////////////////////////////////////////////////////////////
-//                                .OBJ LOADER                                 //
-////////////////////////////////////////////////////////////////////////////////
+/* ////////////////////////////////////////////////////////////////////////// */
+/*                                .OBJ LOADER                                 */
+/* ////////////////////////////////////////////////////////////////////////// */
 
-static inline char* obj__strsep(char** stringp, const char* delim)
+static char* obj__strsep(char** stringp, const char* delim)
 {
 	char* start = *stringp;
 	char* p;
@@ -42,7 +42,7 @@ struct face {
 static void ignoreLine(FILE *fp)
 {
     char ch;
-    while((ch=fgetc(fp)) != EOF && ch!='\n'); //printf("%c",ch);
+    while((ch=fgetc(fp)) != EOF && ch!='\n');
 }
 
 static int isToIgnore(char c)
@@ -88,10 +88,11 @@ static void count(FILE *fp, int *numV, int *numVT, int *numVN, int *numF)
 static void read_prop(mesh_t *self, FILE * fp, vec3_t *tempNorm,
 		vec2_t *tempText, struct face *tempFace)
 {
-    rewind(fp);
     int n1 = 0, n2 = 0, n3 = 0, n4 = 0;
     char ch;
 	int ret;
+
+    rewind(fp);
     while((ch = fgetc(fp)) != EOF)
     {
         if (isToIgnore(ch))
@@ -100,6 +101,9 @@ static void read_prop(mesh_t *self, FILE * fp, vec3_t *tempNorm,
 		}
         else
 		{
+			struct face *tf;
+			char *line_i, *words, *token;
+
 			char *line = malloc(512);
 			int i;
 			switch(ch)
@@ -133,25 +137,24 @@ static void read_prop(mesh_t *self, FILE * fp, vec3_t *tempNorm,
 						ret = fscanf(fp, "%f", &pos.y); fgetc(fp);
 						if (!ret) exit(1);
 						ret = fscanf(fp, "%f", &pos.z); fgetc(fp);
-						mesh_add_vert(self, VEC3(_vec3(pos)));
+						mesh_add_vert(self, VEC3(pos.x, pos.y, pos.z));
 						if (!ret) exit(1);
 						n3++;
 					}
 					break;
 				case 'f':
 					if (fgets(line, 512, fp) == NULL) exit(1);
-					struct face *tf = &tempFace[n4];
-
-					char *line_i = line, *words, *token;
+					tf = &tempFace[n4];
+					line_i = line;
 					for (i = 0; (words = obj__strsep(&line_i, " ")) != NULL; i += 3)
 					{
+						int j;
 						char *words_i = words;
 						if (words[0] == '\0')
 						{
 							i -= 3;
 							continue;
 						}
-						int j;
 						for (j = 0;(token = obj__strsep(&words_i, "/")) != NULL; j++)
 						{
 							if ((token[0] < '0' || token[0] > '9') ||
@@ -173,13 +176,15 @@ static void read_prop(mesh_t *self, FILE * fp, vec3_t *tempNorm,
 
 void mesh_load_obj(mesh_t *self, const char *filename)
 {
+	FILE *fp;
+    int i;
+    int v, vt, vn, f;
+	vec3_t *tempNorm;
+	vec2_t *tempText;
+	struct face *tempFace;
 
 	strncpy(self->name, filename, sizeof(self->name) - 1);
-    int i;
-    FILE *fp = fopen(filename, "r");
-    int v, vt, vn, f;
-
-
+    fp = fopen(filename, "r");
 	if (!fp)
 	{
 		printf("Could not find object '%s'\n", filename);
@@ -187,9 +192,9 @@ void mesh_load_obj(mesh_t *self, const char *filename)
 	}
 
     count(fp, &v, &vt, &vn, &f);
-    vec3_t *tempNorm = malloc((vn + 1) * sizeof(vec3_t));
-    vec2_t *tempText = malloc((vt + 1) * sizeof(vec2_t));
-    struct face *tempFace = malloc(f * sizeof(struct face));
+    tempNorm = malloc((vn + 1) * sizeof(vec3_t));
+    tempText = malloc((vt + 1) * sizeof(vec2_t));
+    tempFace = malloc(f * sizeof(struct face));
 
 	tempNorm[0] = Z3;
 	tempText[0] = Z2;

@@ -21,11 +21,12 @@ void c_attach_target(c_attach_t *self, entity_t target)
 
 static int c_attach_update(c_attach_t *self, float *dt)
 {
+	c_node_t *nc;
 	if(!self->target) return CONTINUE;
 
 	/* TODO: this should only be called when spatial_changed of target */
 
-	c_node_t *nc = c_node(&self->target);
+	nc = c_node(&self->target);
 
 	c_node_update_model(nc);
 

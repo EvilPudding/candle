@@ -66,10 +66,10 @@ void bind_get_uniforms(bind_t *bind, hash_bind_t *sb, pass_t *pass)
 	int t;
 	switch(bind->type)
 	{
-		case NONE:
+		case OPT_NONE:
 			printf("Empty bind??\n");
 			break;
-		case TEX:
+		case OPT_TEX:
 			if(bind->getter)
 			{
 				bind->buffer = ((tex_getter)bind->getter)(pass, pass->usrptr);
@@ -139,11 +139,11 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 
 		switch(bind->type)
 		{
-		case NONE: printf("error\n"); break;
-		case TEX:
+		case OPT_NONE: printf("error\n"); break;
+		case OPT_TEX:
 			if(!pass_bind_buffer(pass, bind, shader)) return;
 			break;
-		case NUM:
+		case OPT_NUM:
 			if(bind->getter)
 			{
 				bind->number = ((number_getter)bind->getter)(pass, pass->usrptr);
@@ -151,7 +151,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			glUniform1f(shader_cached_uniform(shader, sb->u.number.u), bind->number); glerr();
 			glerr();
 			break;
-		case INT:
+		case OPT_INT:
 			if(bind->getter)
 			{
 				bind->integer = ((integer_getter)bind->getter)(pass, pass->usrptr);
@@ -159,7 +159,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			glUniform1i(shader_cached_uniform(shader, sb->u.integer.u), bind->integer); glerr();
 			glerr();
 			break;
-		case VEC2:
+		case OPT_VEC2:
 			if(bind->getter)
 			{
 				bind->vec2 = ((vec2_getter)bind->getter)(pass, pass->usrptr);
@@ -167,7 +167,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			glUniform2f(shader_cached_uniform(shader, sb->u.vec2.u), bind->vec2.x, bind->vec2.y);
 			glerr();
 			break;
-		case VEC3:
+		case OPT_VEC3:
 			if(bind->getter)
 			{
 				bind->vec3 = ((vec3_getter)bind->getter)(pass, pass->usrptr);
@@ -175,7 +175,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			glUniform3f(shader_cached_uniform(shader, sb->u.vec3.u), _vec3(bind->vec3));
 			glerr();
 			break;
-		case VEC4:
+		case OPT_VEC4:
 			if(bind->getter)
 			{
 				bind->vec4 = ((vec4_getter)bind->getter)(pass, pass->usrptr);
@@ -183,7 +183,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			glUniform4f(shader_cached_uniform(shader, sb->u.vec4.u), _vec4(bind->vec4));
 			glerr();
 			break;
-		case CALLBACK:
+		case OPT_CALLBACK:
 			bind->getter(pass, pass->usrptr);
 			glerr();
 			break;
@@ -297,42 +297,30 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 {
 	renderer_add_pass(self, "kawase_p",
 			to_mip == from_mip ? "copy" : "downsample",
-			ref("quad"), 0, t2, NULL, to_mip, ~0,
-		(bind_t[]){
-			{TEX, "buf", .buffer = t1},
-			{INT, "level", .integer = from_mip},
-			{NONE}
-		}
+			ref("quad"), 0, t2, NULL, to_mip, ~0, 2,
+			opt_tex("buf", t1, NULL),
+			opt_int("level", from_mip, NULL)
 	);
 
 	renderer_add_pass(self, "kawase_0", "kawase", ref("quad"), 0,
-			t1, NULL, to_mip, ~0,
-		(bind_t[]){
-			{TEX, "buf", .buffer = t2},
-			{INT, "distance", .integer = 0},
-			{INT, "level", .integer = to_mip},
-			{NONE}
-		}
+			t1, NULL, to_mip, ~0, 3,
+			opt_tex( "buf", t2, NULL),
+			opt_int( "distance", 0, NULL),
+			opt_int( "level", to_mip, NULL)
 	);
 
 	renderer_add_pass(self, "kawase_1", "kawase", ref("quad"), 0,
-			t2, NULL, to_mip, ~0,
-		(bind_t[]){
-			{TEX, "buf", .buffer = t1},
-			{INT, "distance", .integer = 1},
-			{INT, "level", .integer = to_mip},
-			{NONE}
-		}
+			t2, NULL, to_mip, ~0, 3,
+			opt_tex("buf", t1, NULL),
+			opt_int("distance", 1, NULL),
+			opt_int("level", to_mip, NULL)
 	);
 
 	renderer_add_pass(self, "kawase_2", "kawase", ref("quad"), 0,
-			t1, NULL, to_mip, ~0,
-		(bind_t[]){
-			{TEX, "buf", .buffer = t2},
-			{INT, "distance", .integer = 2},
-			{INT, "level", .integer = to_mip},
-			{NONE}
-		}
+			t1, NULL, to_mip, ~0, 3,
+			opt_tex("buf", t2, NULL),
+			opt_int("distance", 2, NULL),
+			opt_int("level", to_mip, NULL)
 	);
 
 /* 	renderer_add_pass(self, "kawase_3", "kawase", ref("quad"), 0, */
@@ -523,14 +511,14 @@ void *pass_process_brightness(pass_t *self)
 
 void renderer_default_pipeline(renderer_t *self)
 {
-	texture_t *query_mips = texture_new_2D(0, 0, 0,
+	texture_t *query_mips = texture_new_2D(0, 0, 0, 5,
 		buffer_new("depth",		true, -1),
 		buffer_new("tiles0",	false, 4),
 		buffer_new("tiles1",	false, 4),
 		buffer_new("tiles2",	false, 4),
 		buffer_new("tiles3",	false, 4));
 
-	texture_t *gbuffer = texture_new_2D(0, 0, 0,
+	texture_t *gbuffer = texture_new_2D(0, 0, 0, 5,
 		buffer_new("depth",		true, -1),
 		buffer_new("albedo",	true, 4),
 		buffer_new("nn",		true, 2),
@@ -540,34 +528,34 @@ void renderer_default_pipeline(renderer_t *self)
 	/* texture_t *gbuffer =	texture_new_2D(0, 0, 0, */
 	/* ); */
 
-	texture_t *ssao =		texture_new_2D(0, 0, 0,
+	texture_t *ssao =		texture_new_2D(0, 0, 0, 1,
 		buffer_new("occlusion",	true, 1)
 	);
-	texture_t *volum =	texture_new_2D(0, 0, TEX_INTERPOLATE,
+	texture_t *volum =	texture_new_2D(0, 0, TEX_INTERPOLATE, 1,
 		buffer_new("color",	false, 4)
 	);
-	/* texture_t *volum_tmp =	texture_new_2D(0, 0, TEX_INTERPOLATE, */
+	/* texture_t *volum_tmp =	texture_new_2D(0, 0, TEX_INTERPOLATE, 1, */
 	/* 	buffer_new("color",	false, 4) */
 	/* ); */
-	texture_t *light =	texture_new_2D(0, 0, 0,
+	texture_t *light =	texture_new_2D(0, 0, 0, 1,
 		buffer_new("color",	true, 4)
 	);
-	texture_t *refr =		texture_new_2D(0, 0, TEX_MIPMAP | TEX_INTERPOLATE,
+	texture_t *refr =		texture_new_2D(0, 0, TEX_MIPMAP | TEX_INTERPOLATE, 1,
 		buffer_new("color",	true, 4)
 	);
-	texture_t *tmp =		texture_new_2D(0, 0, TEX_MIPMAP | TEX_INTERPOLATE,
+	texture_t *tmp =		texture_new_2D(0, 0, TEX_MIPMAP | TEX_INTERPOLATE, 1,
 		buffer_new("color",	true, 4)
 	);
-	texture_t *final =		texture_new_2D(0, 0, TEX_INTERPOLATE | TEX_MIPMAP,
+	texture_t *final =		texture_new_2D(0, 0, TEX_INTERPOLATE | TEX_MIPMAP, 1,
 		buffer_new("color",	true, 4)
 	);
-	texture_t *bloom = texture_new_2D(0, 0, TEX_INTERPOLATE | TEX_MIPMAP,
+	texture_t *bloom = texture_new_2D(0, 0, TEX_INTERPOLATE | TEX_MIPMAP, 1,
 			buffer_new("color", false, 4));
-	/* texture_t *bloom2 =		texture_new_2D(0, 0, TEX_INTERPOLATE, */
+	/* texture_t *bloom2 =		texture_new_2D(0, 0, TEX_INTERPOLATE, 1, */
 		/* buffer_new("color",	true, 4) */
 	/* ); */
 
-	texture_t *selectable = texture_new_2D(0, 0, 0,
+	texture_t *selectable = texture_new_2D(0, 0, 0, 2,
 		buffer_new("depth",		true, -1),
 		buffer_new("ids",		false, 4));
 
@@ -583,98 +571,65 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_tex(self, "bloom",      1.0f, bloom);
 
 	renderer_add_pass(self, "query_mips", "query_mips", ref("visible"), 0,
-			query_mips, query_mips, 0, ~0,
-		(bind_t[]){
-			{CLEAR_DEPTH, .number = 1.0f},
-			{CLEAR_COLOR, .vec4 = Z4},
-			{SKIP, .integer = 16},
-			{NONE}
-		}
+			query_mips, query_mips, 0, ~0, 3,
+			opt_clear_depth(1.0f, NULL),
+			opt_clear_color(Z4, NULL),
+			opt_skip(16)
 	);
 
 	renderer_add_pass(self, "query_mips", "query_mips", ref("decals"), 0,
-			query_mips, NULL, 0, ~0,
-		(bind_t[]){
-			{SKIP, .integer = 16},
-			{NONE}
-		}
+			query_mips, NULL, 0, ~0, 1,
+			opt_skip(16)
 	);
 
 	renderer_add_pass(self, "query_mips", "query_mips", ref("transparent"), 0,
-			query_mips, query_mips, 0, ~0,
-		(bind_t[]){
-			{SKIP, .integer = 16},
-			{NONE}
-		}
+			query_mips, query_mips, 0, ~0, 1,
+			opt_skip(16)
 	);
 
 	renderer_add_pass(self, "svt", NULL, -1, 0,
-			query_mips, query_mips, 0, ~0,
-		(bind_t[]){
-			{CALLBACK, .getter = (getter_cb)pass_process_query_mips},
-			{SKIP, .integer = 16},
-			{NONE}
-		}
+			query_mips, query_mips, 0, ~0, 2,
+			opt_callback((getter_cb)pass_process_query_mips),
+			opt_skip(16)
 	);
 
 	renderer_add_pass(self, "gbuffer", "gbuffer", ref("visible"), 0, gbuffer,
-			gbuffer, 0, ~0,
-		(bind_t[]){
-			{CLEAR_DEPTH, .number = 1.0f},
-			{CLEAR_COLOR, .vec4 = Z4},
-			{NONE}
-		}
+			gbuffer, 0, ~0, 2,
+			opt_clear_depth(1.0f, NULL),
+			opt_clear_color(Z4, NULL)
 	);
 
 	renderer_add_pass(self, "framebuffer_pass", "framebuffer_draw", ref("framebuffer"), 0,
-			gbuffer, gbuffer, 0, ~0,
-		(bind_t[]){
-			{NONE}
-		}
+			gbuffer, gbuffer, 0, ~0, 0
 	);
 
 	/* DECAL PASS */
 	renderer_add_pass(self, "decals_pass", "gbuffer", ref("decals"), BLEND,
-			gbuffer, NULL, 0, ~0,
-		(bind_t[]){
-			{TEX, "gbuffer", .buffer = gbuffer},
-			{NONE}
-		}
+			gbuffer, NULL, 0, ~0, 1,
+			opt_tex("gbuffer", gbuffer, NULL)
 	);
 
 	renderer_add_pass(self, "selectable", "select", ref("selectable"),
-			0, selectable, selectable, 0, ~0,
-		(bind_t[]){
-			{CLEAR_DEPTH, .number = 1.0f},
-			{CLEAR_COLOR, .vec4 = Z4},
-			{NONE}
-		}
+			0, selectable, selectable, 0, ~0, 2,
+			opt_clear_depth(1.0f, NULL),
+			opt_clear_color(Z4, NULL)
 	);
 
 	renderer_add_pass(self, "ambient_light_pass", "phong", ref("ambient"),
-			ADD, light, NULL, 0, ~0,
-		(bind_t[]){
-			{CLEAR_COLOR, .vec4 = Z4},
-			{TEX, "gbuffer", .buffer = gbuffer},
-			{NONE}
-		}
+			ADD, light, NULL, 0, ~0, 2,
+			opt_clear_color(Z4, NULL),
+			opt_tex("gbuffer", gbuffer, NULL)
 	);
 
 	renderer_add_pass(self, "render_pass", "phong", ref("light"),
-			ADD, light, NULL, 0, ~0,
-		(bind_t[]){
-			{TEX, "gbuffer", .buffer = gbuffer},
-			{NONE}
-		}
+			ADD, light, NULL, 0, ~0, 1,
+			opt_tex("gbuffer", gbuffer, NULL)
 	);
 
 	renderer_add_pass(self, "volum_pass", "volum", ref("light"),
-			ADD | CULL_DISABLE, volum, NULL, 0, ~0,
-		(bind_t[]){
-			{TEX, "gbuffer", .buffer = gbuffer},
-			{CLEAR_COLOR, .vec4 = Z4},
-			{NONE}
-		}
+			ADD | CULL_DISABLE, volum, NULL, 0, ~0, 2,
+			opt_tex("gbuffer", gbuffer, NULL),
+			opt_clear_color(Z4, NULL)
 	);
 	/* renderer_add_kawase(self, volum, volum_tmp, 0, 0); */
 
@@ -687,13 +642,10 @@ void renderer_default_pipeline(renderer_t *self)
 	/* ); */
 
 	renderer_add_pass(self, "refraction", "copy", ref("quad"), 0,
-			refr, NULL, 0, ~0,
-		(bind_t[]){
-			{TEX, "buf", .buffer = light},
-			{CLEAR_COLOR, .vec4 = Z4},
-			{INT, "level", .integer = 0},
-			{NONE}
-		}
+			refr, NULL, 0, ~0, 3,
+			opt_tex("buf", light, NULL),
+			opt_clear_color(Z4, NULL),
+			opt_int("level", 0, NULL)
 	);
 
 	renderer_add_kawase(self, refr, tmp, 0, 1);
@@ -701,65 +653,47 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_kawase(self, refr, tmp, 2, 3);
 
 	renderer_add_pass(self, "transp_1", "gbuffer", ref("transparent"),
-			0, gbuffer, gbuffer, 0, ~0, (bind_t[]){ {NONE} });
+			0, gbuffer, gbuffer, 0, ~0, 0);
 
 	renderer_add_pass(self, "transp_2", "transparency", ref("transparent"),
-			DEPTH_LOCK | DEPTH_EQUAL, light, gbuffer, 0, ~0,
-		(bind_t[]){
-			{TEX, "refr", .buffer = refr},
-			{NONE}
-		}
+			DEPTH_LOCK | DEPTH_EQUAL, light, gbuffer, 0, ~0, 1,
+			opt_tex("refr", refr, NULL)
 	);
 
 	renderer_add_pass(self, "ssao_pass", "ssao", ref("quad"), 0,
-			ssao, NULL, 0, ~0,
-		(bind_t[]){
-			{TEX, "gbuffer", .buffer = gbuffer},
-			{CLEAR_COLOR, .vec4 = Z4},
-			{NONE}
-		}
+			ssao, NULL, 0, ~0, 2,
+			opt_tex( "gbuffer", gbuffer, NULL),
+			opt_clear_color(Z4, NULL)
 	);
 
 	renderer_add_pass(self, "final", "ssr", ref("quad"), 0, final,
-			NULL, 0, ~0,
-		(bind_t[]){
-			{TEX, "gbuffer", .buffer = gbuffer},
-			{TEX, "light", .buffer = light},
-			{TEX, "refr", .buffer = refr},
-			{NUM, "ssr_power", .number = 1.0f},
-			{TEX, "ssao", .buffer = ssao},
-			{NUM, "ssao_power", .number = 0.6f},
-			{TEX, "volum", .buffer = volum},
-			{NONE}
-		}
+			NULL, 0, ~0, 7,
+			opt_tex("gbuffer", gbuffer, NULL),
+			opt_tex("light", light, NULL),
+			opt_tex("refr", refr, NULL),
+			opt_num("ssr_power", 1.0f, NULL),
+			opt_tex("ssao", ssao, NULL),
+			opt_num("ssao_power", 0.6f, NULL),
+			opt_tex("volum", volum, NULL)
 	);
 	renderer_add_pass(self, "bloom_0", "bright", ref("quad"), 0,
-			bloom, NULL, 0, ~0,
-		(bind_t[]){
-			{TEX, "buf", .buffer = final},
-			{NONE}
-		}
+			bloom, NULL, 0, ~0, 1,
+			opt_tex("buf", final, NULL)
 	);
 	renderer_add_kawase(self, bloom, tmp, 0, 1);
 	renderer_add_kawase(self, bloom, tmp, 1, 2);
 	renderer_add_kawase(self, bloom, tmp, 2, 3);
 
 	renderer_add_pass(self, "bloom_1", "upsample", ref("quad"), ADD,
-			final, NULL, 0, ~0,
-		(bind_t[]){
-			{TEX, "buf", .buffer = bloom},
-			{INT, "level", .integer = 3},
-			{NUM, "alpha", .number = 0.5},
-			{NONE}
-		}
+			final, NULL, 0, ~0, 3,
+			opt_tex( "buf", bloom, NULL),
+			opt_int( "level", 3, NULL),
+			opt_num( "alpha", 0.5, NULL)
 	);
 	renderer_add_pass(self, "luminance_calc", NULL, -1, 0,
-			final, NULL, 0, ~0,
-		(bind_t[]){
-			{CALLBACK, .getter = (getter_cb)pass_process_brightness},
-			{SKIP, .integer = 16},
-			{NONE}
-		}
+			final, NULL, 0, ~0, 2,
+			opt_callback((getter_cb)pass_process_brightness),
+			opt_skip(16)
 	);
 
 	/* renderer_tex(self, ref(light))->mipmaped = 1; */
@@ -868,7 +802,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 	c_render_device_t *rd = c_render_device(&SYS);
 	if (!rd) return NULL;
 	c_render_device_rebind(rd, (rd_bind_cb)bind_pass, pass);
-	if (pass->binds && pass->binds[0].type == CALLBACK)
+	if (pass->binds && pass->binds[0].type == OPT_CALLBACK)
 	{
 		bind_pass(pass, NULL);
 		return NULL;
@@ -1161,6 +1095,113 @@ void renderer_toggle_pass(renderer_t *self, uint32_t hash, int active)
 	}
 }
 
+
+bind_t opt_none()
+{
+	bind_t bind;
+	bind.type = OPT_NONE;
+	return bind;
+}
+bind_t opt_tex(const char *name, texture_t *tex, getter_cb getter)
+{
+	bind_t bind;
+	strncpy(bind.name, name, sizeof(bind.name) - 1);
+	bind.type = OPT_TEX;
+	bind.buffer = tex;
+	bind.getter = getter;
+	return bind;
+}
+bind_t opt_num(const char *name, float value, getter_cb getter)
+{
+	bind_t bind;
+	strncpy(bind.name, name, sizeof(bind.name) - 1);
+	bind.type = OPT_NUM;
+	bind.number = value;
+	bind.getter = getter;
+	return bind;
+}
+bind_t opt_int(const char *name, int32_t value, getter_cb getter)
+{
+	bind_t bind;
+	strncpy(bind.name, name, sizeof(bind.name) - 1);
+	bind.type = OPT_INT;
+	bind.integer = value;
+	bind.getter = getter;
+	return bind;
+}
+bind_t opt_vec2(const char *name, vec2_t value, getter_cb getter)
+{
+	bind_t bind;
+	strncpy(bind.name, name, sizeof(bind.name) - 1);
+	bind.type = OPT_VEC2;
+	bind.vec2 = value;
+	bind.getter = getter;
+	return bind;
+}
+bind_t opt_vec3(const char *name, vec3_t value, getter_cb getter)
+{
+	bind_t bind;
+	strncpy(bind.name, name, sizeof(bind.name) - 1);
+	bind.type = OPT_VEC3;
+	bind.vec3 = value;
+	bind.getter = getter;
+	return bind;
+}
+bind_t opt_vec4(const char *name, vec4_t value, getter_cb getter)
+{
+	bind_t bind;
+	strncpy(bind.name, name, sizeof(bind.name) - 1);
+	bind.type = OPT_VEC4;
+	bind.vec4 = value;
+	bind.getter = getter;
+	return bind;
+}
+bind_t opt_cam(entity_t camera, getter_cb getter)
+{
+	bind_t bind;
+	bind.type = OPT_CAM;
+	bind.entity = camera;
+	bind.getter = getter;
+	return bind;
+}
+bind_t opt_clear_color(vec4_t color, getter_cb getter)
+{
+	bind_t bind;
+	bind.type = OPT_CLEAR_COLOR;
+	bind.vec4 = color;
+	bind.getter = getter;
+	return bind;
+}
+bind_t opt_clear_depth(float depth, getter_cb getter)
+{
+	bind_t bind;
+	bind.type = OPT_CLEAR_DEPTH;
+	bind.number = depth;
+	bind.getter = getter;
+	return bind;
+}
+bind_t opt_callback(getter_cb callback)
+{
+	bind_t bind;
+	bind.type = OPT_CALLBACK;
+	bind.getter = callback;
+	return bind;
+}
+bind_t opt_usrptr(void *ptr)
+{
+	bind_t bind;
+	bind.type = OPT_USRPTR;
+	bind.ptr = ptr;
+	return bind;
+}
+bind_t opt_skip(uint32_t ticks)
+{
+	bind_t bind;
+	bind.type = OPT_SKIP;
+	bind.integer = ticks;
+	return bind;
+}
+
 void renderer_add_pass(
 		renderer_t *self,
 		const char *name,
@@ -1171,8 +1212,10 @@ void renderer_add_pass(
 		texture_t *depth,
 		uint32_t framebuffer,
 		uint32_t after_pass,
-		bind_t binds[])
+		uint32_t num_opts,
+		...)
 {
+	va_list argptr;
 	if(!output) exit(1);
 	char buffer[32];
 	snprintf(buffer, sizeof(buffer), name, self->passes_size);
@@ -1253,44 +1296,44 @@ void renderer_add_pass(
 	pass->clear_depth = 1.0f;
 	strncpy(pass->name, buffer, sizeof(pass->name) - 1);
 
-	int bind_count;
-	for(bind_count = 0; binds[bind_count].type != NONE; bind_count++);
-
 	pass->draw_every = 1;
-	pass->binds = malloc(sizeof(bind_t) * bind_count);
+	pass->binds = malloc(sizeof(bind_t) * num_opts);
 	pass->binds_size = 0;
-	for(i = 0; i < bind_count; i++)
+
+    va_start(argptr, num_opts);
+	for (i = 0; i < num_opts; i++)
 	{
-		if(binds[i].type == USRPTR)
+		bind_t opt = va_arg(argptr, bind_t);
+		if(opt.type == OPT_USRPTR)
 		{
-			pass->usrptr = binds[i].ptr;
+			pass->usrptr = opt.ptr;
 			continue;
 		}
-		if(binds[i].type == CAM)
+		if(opt.type == OPT_CAM)
 		{
-			pass->camid = binds[i].integer;
+			pass->camid = opt.integer;
 			continue;
 		}
-		if(binds[i].type == CLEAR_COLOR)
+		if(opt.type == OPT_CLEAR_COLOR)
 		{
 			pass->clear |= GL_COLOR_BUFFER_BIT;
-			pass->clear_color = binds[i].vec4;
+			pass->clear_color = opt.vec4;
 			continue;
 		}
-		if(binds[i].type == CLEAR_DEPTH)
+		if(opt.type == OPT_CLEAR_DEPTH)
 		{
 			pass->clear |= GL_DEPTH_BUFFER_BIT;
-			pass->clear_depth = binds[i].number;
+			pass->clear_depth = opt.number;
 			continue;
 		}
-		if(binds[i].type == SKIP)
+		if(opt.type == OPT_SKIP)
 		{
-			pass->draw_every = binds[i].integer;
+			pass->draw_every = opt.integer;
 			continue;
 		}
 
 		bind_t *bind = &pass->binds[pass->binds_size++];
-		*bind = binds[i];
+		*bind = opt;
 
 		hash_bind_t *sb = &bind->vs_uniforms;
 
@@ -1302,6 +1345,8 @@ void renderer_add_pass(
 		}
 		bind->hash = ref(bind->name);
 	}
+	va_end(argptr);
+
 	pass->binds = realloc(pass->binds, sizeof(bind_t) * pass->binds_size);
 	self->ready = 0;
 	pass->active = 1;

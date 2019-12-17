@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_ASSERT(x)
@@ -73,14 +74,14 @@ void svp_init()
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max);
 	max = floorf(((float)max) / 129);
 	g_indir_sem = SDL_CreateSemaphore(1);
-	g_cache = texture_new_2D(g_cache_w * 129, g_cache_h * 129, TEX_INTERPOLATE,
+	g_cache = texture_new_2D(g_cache_w * 129, g_cache_h * 129, TEX_INTERPOLATE, 1,
 	                         buffer_new("color", false, 4));
 	g_cache_bound = calloc(g_cache_w * g_cache_h, sizeof(*g_cache_bound));
-	g_indir = texture_new_2D(g_indir_w, g_indir_h, 0,
+	g_indir = texture_new_2D(g_indir_w, g_indir_h, 0, 1,
 	                         buffer_new("indir", false, 3));
 	g_tiles = malloc(g_indir_w * g_indir_h * sizeof(tex_tile_t));
 
-	g_probe_cache = texture_new_2D(1024 * 4, 1024 * 6, 0,
+	g_probe_cache = texture_new_2D(1024 * 4, 1024 * 6, 0, 2,
 		buffer_new("depth", false, -1),
 		buffer_new("color", false, 4));
 
@@ -734,80 +735,69 @@ static int32_t texture_from_file_loader(texture_t *self)
 	return 1;
 }
 
-int32_t buffer_new(const char *name, int32_t is_float, int32_t dims)
+buffer_t buffer_new(const char *name, int32_t is_float, int32_t dims)
 {
+	buffer_t buffer = {0};
 #ifdef __EMSCRIPTEN__
 	is_float = false;
 #endif
-	texture_t *texture = _g_tex_creating;
 
-	int32_t i = texture->bufs_size++;
-	strncpy(texture->bufs[i].name, name, sizeof(texture->bufs[i].name) - 1);
-	texture->bufs[i].ready = 0;
-
-	if(texture->depth_buffer)
-	{
-		texture->prev_id = 1;
-		texture->draw_id = 1;
-	}
+	strncpy(buffer.name, name, sizeof(buffer.name) - 1);
+	buffer.ready = 0;
 
 	if(dims == 4)
 	{
-		texture->bufs[i].format   = GL_RGBA;
-		texture->bufs[i].internal = is_float ? GL_RGBA16F : GL_RGBA8;
-		texture->bufs[i].type = is_float ? GL_FLOAT : GL_UNSIGNED_BYTE;
+		buffer.format   = GL_RGBA;
+		buffer.internal = is_float ? GL_RGBA16F : GL_RGBA8;
+		buffer.type = is_float ? GL_FLOAT : GL_UNSIGNED_BYTE;
 	}
 	else if(dims == 3)
 	{
-		texture->bufs[i].format   = GL_RGB;
-		texture->bufs[i].internal = is_float ? GL_RGB16F : GL_RGB8;
-		texture->bufs[i].type = is_float ? GL_FLOAT : GL_UNSIGNED_BYTE;
+		buffer.format   = GL_RGB;
+		buffer.internal = is_float ? GL_RGB16F : GL_RGB8;
+		buffer.type = is_float ? GL_FLOAT : GL_UNSIGNED_BYTE;
 	}
 	else if(dims == 2)
 	{
-		texture->bufs[i].format   = GL_RG;
-		texture->bufs[i].internal = is_float ? GL_RG16F : GL_RG8;
-		texture->bufs[i].type = is_float ? GL_FLOAT : GL_UNSIGNED_BYTE;
+		buffer.format   = GL_RG;
+		buffer.internal = is_float ? GL_RG16F : GL_RG8;
+		buffer.type = is_float ? GL_FLOAT : GL_UNSIGNED_BYTE;
 	}
 	else if(dims == 1)
 	{
-		texture->bufs[i].format   = GL_RED;
-		texture->bufs[i].internal = is_float ? GL_R16F : GL_R8;
-		texture->bufs[i].type = is_float ? GL_FLOAT : GL_UNSIGNED_BYTE;
+		buffer.format   = GL_RED;
+		buffer.internal = is_float ? GL_R16F : GL_R8;
+		buffer.type = is_float ? GL_FLOAT : GL_UNSIGNED_BYTE;
 	}
 	else if(dims == -1)
 	{
-		if(i > 0) perror("Depth component must be added first\n");
-		texture->bufs[i].format = GL_DEPTH_COMPONENT;
+		buffer.format = GL_DEPTH_COMPONENT;
 /* #ifdef __EMSCRIPTEN__ */
-		/* texture->bufs[i].internal = GL_DEPTH_COMPONENT16; */
-		/* texture->bufs[i].type = GL_UNSIGNED_SHORT; */
+		/* buffer.internal = GL_DEPTH_COMPONENT16; */
+		/* buffer.type = GL_UNSIGNED_SHORT; */
 /* #else */
-		texture->bufs[i].internal = GL_DEPTH_COMPONENT32F;
-		texture->bufs[i].type = GL_FLOAT;
+		buffer.internal = GL_DEPTH_COMPONENT32F;
+		buffer.type = GL_FLOAT;
 /* #endif */
-		texture->depth_buffer = 1;
 	}
 
-	texture->bufs[i].dims = dims;
+	buffer.dims = dims;
 
-	texture_alloc_buffer(texture, i);
-
-
-	return i;
+	return buffer;
 }
 
-__thread texture_t *_g_tex_creating = NULL;
-
-texture_t *_texture_new_2D_pre
+texture_t *texture_new_2D
 (
 	uint32_t width,
 	uint32_t height,
-	uint32_t flags
+	uint32_t flags,
+	uint32_t buf_count,
+	...
 )
 {
+	va_list argptr;
+	uint32_t i;
 	texture_t *self = calloc(1, sizeof *self);
-	_g_tex_creating = self;
 
 	self->target = GL_TEXTURE_2D;
 	self->brightness = 0.3f;
@@ -821,16 +811,35 @@ texture_t *_texture_new_2D_pre
 	self->height = height;
 	self->sizes[0] = uvec2(width, height);
 
+    va_start(argptr, buf_count);
+	for (i = 0; i < buf_count; i++)
+	{
+		buffer_t buffer = va_arg(argptr, buffer_t);
+		int32_t n = self->bufs_size++;
+		self->bufs[n] = buffer;
+
+		if (buffer.dims == -1)
+		{
+			if(i > 0) perror("Depth component must be added first\n");
+			self->depth_buffer = 1;
+		}
+
+	}
+	va_end(argptr);
+
+	for (i = 0; i < buf_count; i++)
+	{
+		texture_alloc_buffer(self, i);
+	}
+
+	if(self->depth_buffer)
+	{
+		self->prev_id = 1;
+		self->draw_id = 1;
+	}
+
 	return self;
 }
-
-texture_t *_texture_new_2D_post(int32_t buffers[])
-{
-	texture_t *self = _g_tex_creating;
-	_g_tex_creating = NULL;
-	return self;
-}
-
 
 static void texture_new_3D_loader(texture_t *self)
 {

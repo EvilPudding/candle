@@ -245,8 +245,9 @@ static mesh_t *tool_torus_edit(mesh_t *mesh, struct conf_torus *conf)
 
 static vec2_t encode_normal(vec3_t n)
 {
+	float p;
 	n = vec3_norm(n);
-    float p = sqrtf(n.z * 8.0f + 8.0f);
+    p = sqrtf(n.z * 8.0f + 8.0f);
 	if(p == 0) return vec2(0.0f, 0.0f);
 	/* printf("%f ", p); vec3_print(n); */
     return vec2_add_number(vec2_div_number(vec3_xy(n), p), 0.5f);
@@ -291,12 +292,13 @@ struct int_int {int a, b;};
 static float interpret_scale(mesh_t *self, float x,
 		struct int_int *interpreters)
 {
-	float y = NAN;
-
-	emit(ref("expr_var"), &((struct set_var){"x", x}), NULL);
+	float y = 0.f/0.f;
+	struct set_var var = {"x"};
+	var.value = x;
+	emit(ref("expr_var"), &var, NULL);
 	emit(ref("expr_eval"), &interpreters->a, &y);
 
-	if(isnan(y)) return 0.0f;
+	if(y != y) return 0.0f;
 
 	return y;
 }
@@ -304,12 +306,14 @@ static float interpret_scale(mesh_t *self, float x,
 static float interpret_offset(mesh_t *self, float r,
 		struct int_int *interpreters)
 {
-	float y = NAN;
+	float y = 0.f/0.f;
+	struct set_var var = {"r"};
+	var.value = r;
 
-	emit(ref("expr_var"), &((struct set_var){"r", r}), NULL);
+	emit(ref("expr_var"), &var, NULL);
 	emit(ref("expr_eval"), &interpreters->b, &y);
 
-	if (isnan(y)) return 0.0f;
+	if (y != y) return 0.0f;
 
 	return y;
 }
@@ -319,9 +323,14 @@ static mesh_t *tool_extrude_edit(
 		mesh_t *last, struct conf_extrude *new,
 		mesh_t *state, struct conf_extrude *old)
 {
-
-	emit(ref("expr_var"), &((struct set_var){"r", 0}), NULL);
-	emit(ref("expr_var"), &((struct set_var){"x", 0}), NULL);
+	float result;
+	struct int_int args;
+	struct set_var var_r = {"r"};
+	struct set_var var_x = {"x"};
+	var_r.value = 0.0f;
+	var_x.value = 0.0f;
+	emit(ref("expr_var"), &var_r, NULL);
+	emit(ref("expr_var"), &var_x, NULL);
 	if(strcmp(new->scale_e, old->scale_e))
 	{
 		if(old->scale_f) emit(ref("expr_del"), &old->scale_f, NULL);
@@ -329,9 +338,9 @@ static mesh_t *tool_extrude_edit(
 		emit(ref("expr_load"), new->scale_e, &new->scale_f);
 		if(new->scale_f == 0) return state;
 
-		float result = NAN;
+		result = 0.f/0.f;
 		emit(ref("expr_eval"), &new->scale_f, &result);
-		if(isnan(result))
+		if(result != result)
 		{
 			new->scale_f = 0;
 			return state;
@@ -344,16 +353,17 @@ static mesh_t *tool_extrude_edit(
 		emit(ref("expr_load"), new->offset_e, &new->offset_f);
 		if(new->offset_f == -1) return state;
 
-		float result = NAN;
+		result = 0.f/0.f;
 		emit(ref("expr_eval"), &new->offset_f, &result);
-		if(isnan(result))
+		if(result != result)
 		{
 			new->offset_f = 0;
 			return state;
 		}
 	}
 	state = mesh_clone(last);
-	struct int_int args = {new->scale_f, new->offset_f};
+	args.a = new->scale_f;
+	args.b = new->offset_f;
 
 	mesh_lock(state);
 
@@ -388,14 +398,26 @@ static mesh_t *tool_extrude_edit(
 
 static int deform(mesh_t *mesh, vertex_t *vert, struct conf_deform *conf)
 {
-	float result = NAN;
-	vecN_t direction = /*conf->normal ? vert->n :*/ conf->direction;
-
-	emit(ref("expr_var"), &((struct set_var){"x", vert->pos.x}), NULL);
-	emit(ref("expr_var"), &((struct set_var){"y", vert->pos.y}), NULL);
-	emit(ref("expr_var"), &((struct set_var){"z", vert->pos.z}), NULL);
+	float result = 0.f/0.f;
+	struct set_var var_x = {"x"};
+	struct set_var var_y = {"y"};
+	struct set_var var_z = {"z"};
 #ifdef MESH4
-	emit(ref("expr_var"), &((struct set_var){"w", vert->pos.w}), NULL);
+	struct set_var_w = {"w"};
+#endif
+	vecN_t direction = /*conf->normal ? vert->n :*/ conf->direction;
+	var_x.value = vert->pos.x;
+	var_y.value = vert->pos.y;
+	var_z.value = vert->pos.z;
+#ifdef MESH4
+	var_w.value = vert->pos.w;
+#endif
+
+	emit(ref("expr_var"), &var_x, NULL);
+	emit(ref("expr_var"), &var_y, NULL);
+	emit(ref("expr_var"), &var_z, NULL);
+#ifdef MESH4
+	emit(ref("expr_var"), &var_w, NULL);
 #endif
 	emit(ref("expr_eval"), &conf->deform_s, &result);
 
@@ -403,7 +425,7 @@ static int deform(mesh_t *mesh, vertex_t *vert, struct conf_deform *conf)
 	{
 		vecN_(print)(vert->pos);
 	}
-	if(isnan(result)) return 1;
+	if(result != result) return 1;
 
 	vert->pos = vecN_(add)(vert->pos, vecN_(scale)(direction, result));
 
@@ -412,14 +434,28 @@ static int deform(mesh_t *mesh, vertex_t *vert, struct conf_deform *conf)
 
 static mesh_t *tool_deform_edit(
 		mesh_t *last, struct conf_deform *new,
-		mesh_t *state, struct conf_deform *old)
+		mesh_t *state, struct conf_deform *old) /* (struct conf_deform){0, VEC3(0, 1, 0), "1"} */
 {
-
-	emit(ref("expr_var"), &((struct set_var){"x", 0}), NULL);
-	emit(ref("expr_var"), &((struct set_var){"y", 0}), NULL);
-	emit(ref("expr_var"), &((struct set_var){"z", 0}), NULL);
+	float result;
+	struct set_var var_x = {"x"};
+	struct set_var var_y = {"y"};
+	struct set_var var_z = {"z"};
 #ifdef MESH4
-	emit(ref("expr_var"), &((struct set_var){"w", 0}), NULL);
+	struct set_var_w = {"w"};
+#endif
+	var_x.value = 0.0f;
+	var_y.value = 0.0f;
+	var_z.value = 0.0f;
+#ifdef MESH4
+	var_w.value = 0.0f;
+#endif
+
+
+	emit(ref("expr_var"), &var_x, NULL);
+	emit(ref("expr_var"), &var_y, NULL);
+	emit(ref("expr_var"), &var_z, NULL);
+#ifdef MESH4
+	emit(ref("expr_var"), &var_w, NULL);
 #endif
 	if(strcmp(new->deform_e, old->deform_e))
 	{
@@ -428,9 +464,9 @@ static mesh_t *tool_deform_edit(
 		emit(ref("expr_load"), new->deform_e, &new->deform_s);
 		if(new->deform_s == 0) return state;
 
-		float result = NAN;
+		result = 0.f/0.f;
 		emit(ref("expr_eval"), &new->deform_s, &result);
-		if(isnan(result))
+		if(result != result)
 		{
 			new->deform_s = 0;
 			return state;
@@ -535,8 +571,12 @@ void c_model_dirty(c_model_t *self)
 
 void c_model_propagate_edit(c_model_t *self, int cmd_id)
 {
+	int32_t i;
+	int32_t last_update_id;
+	mesh_t *last;
+
 	if(cmd_id >= vector_count(self->history)) return;
-	int last_update_id = 0;
+	last_update_id = 0;
 	if(self->mesh)
 	{
 		last_update_id = self->mesh->update_id;
@@ -547,7 +587,7 @@ void c_model_propagate_edit(c_model_t *self, int cmd_id)
 	{
 		self->base_mesh = mesh_clone(self->base_mesh);
 	}
-	mesh_t *last = self->base_mesh;
+	last = self->base_mesh;
 	if(cmd_id > 0)
 	{
 		mesh_history_t *prev = vector_get(self->history, cmd_id - 1);
@@ -557,7 +597,6 @@ void c_model_propagate_edit(c_model_t *self, int cmd_id)
 	{
 		last->update_id++;
 	}
-	int i;
 	for(i = cmd_id; i < vector_count(self->history); i++)
 	{
 		mesh_history_t *cmd = vector_get(self->history, i);
@@ -594,8 +633,11 @@ void c_model_remove_edit(c_model_t *self, int cmd_id)
 void c_model_edit(c_model_t *self, mesh_edit_t type, geom_t target)
 {
 	struct edit_tool *tool = &g_edit_tools[type];
-	mesh_history_t command = {NULL, target, type,
-		calloc(1, tool->size), calloc(1, tool->size)};
+	mesh_history_t command = {0};
+	command.target = target;
+	command.type = type;
+	command.conf_new = calloc(1, tool->size);
+	command.conf_old = calloc(1, tool->size);
 
 	if(tool->defaults)
 	{
@@ -799,6 +841,10 @@ int c_model_menu(c_model_t *self, void *ctx)
 	int i;
 	int new_value;
 	int changes = 0;
+	float smooth;
+	int cull_back;
+	int cull_front;
+	mesh_t *mesh;
 
 	new_value = nk_check_label(ctx, "Visible", self->visible);
 	if(new_value != self->visible)
@@ -842,7 +888,7 @@ int c_model_menu(c_model_t *self, void *ctx)
 		/* nk_tree_pop(ctx); */
 	/* } */
 
-		mesh_t *mesh = self->mesh;
+		mesh = self->mesh;
 
 		new_value = nk_check_label(ctx, "Wireframe",
 				mesh->wireframe);
@@ -862,7 +908,7 @@ int c_model_menu(c_model_t *self, void *ctx)
 			changes = 1;
 		}
 
-		float smooth = mesh->smooth_angle;
+		smooth = mesh->smooth_angle;
 		nk_property_float(ctx, "#smooth:", 0.0f, &smooth,
 				1.0f, 0.05f, 0.05f);
 		if(smooth != mesh->smooth_angle)
@@ -873,8 +919,8 @@ int c_model_menu(c_model_t *self, void *ctx)
 			mesh_update(mesh);
 		}
 
-		int cull_front = mesh->cull & 0x1;
-		int cull_back = mesh->cull >> 0x1;
+		cull_front = mesh->cull & 0x1;
+		cull_back = mesh->cull >> 0x1;
 
 		new_value = nk_check_label(ctx, "Cull front", cull_front);
 
@@ -958,7 +1004,11 @@ static int c_model_pre_draw(c_model_t *self)
 void add_tool(char *name, tool_gui_cb gui, tool_edit_cb edit, size_t size,
 		void *defaults, int require_sys)
 {
-	struct edit_tool tool = {gui, edit, size};
+	struct edit_tool tool = {0};
+	tool.gui = gui;
+	tool.edit = edit;
+	tool.size = size;
+
 	strcpy(tool.name, name);
 	tool.ref = ref(name);
 	tool.require_sys = require_sys;
@@ -972,8 +1022,8 @@ void add_tool(char *name, tool_gui_cb gui, tool_edit_cb edit, size_t size,
 
 static void c_model_destroy(c_model_t *self)
 {
-	drawable_set_mesh(&self->draw, NULL);
 	int i;
+	drawable_set_mesh(&self->draw, NULL);
 	for(i = 0; i < vector_count(self->history); i++)
 	{
 		mesh_history_t *cmd = vector_get(self->history, i);
@@ -988,11 +1038,21 @@ static void c_model_destroy(c_model_t *self)
 
 REG()
 {
-	signal_init(sig("model_changed"), sizeof(mesh_t));
+	struct conf_circle circle_opts = {2, 10};
+	struct conf_cube cube_opts = {1.0f};
+	struct conf_torus torus_opts = {1.0f, 0.2f, 30, 20};
+	struct conf_disk disk_opts = {2.0f, 0.2f, 10};
+	struct conf_ico ico_opts = {1.0f, 0};
+	struct conf_extrude extrude_opts = {VEC3i(0.0f, 2.0f, 0.0f), 1.0f, 1};
+	struct conf_spherize spherize_opts = {1, 1};
+	struct conf_subdivide subdivide_opts = {1};
+	struct conf_deform deform_opts = {0, VEC3i(0, 1, 0), "1"};
 
-	/* TODO destroyer */
 	ct_t *ct = ct_new("model", sizeof(c_model_t),
-			c_model_init, c_model_destroy, 1, ref("node"));
+			(init_cb)c_model_init, (destroy_cb)c_model_destroy, 1, ref("node"));
+
+
+	signal_init(sig("model_changed"), sizeof(mesh_t));
 
 	ct_listener(ct, ENTITY, 0, sig("entity_created"), c_model_created);
 
@@ -1004,40 +1064,40 @@ REG()
 
 	add_tool("circle", (tool_gui_cb)tool_circle_gui,
 			(tool_edit_cb)tool_circle_edit,
-		sizeof(struct conf_circle), &(struct conf_circle){2, 10}, 1);
+		sizeof(struct conf_circle), &circle_opts, 1);
 
 	add_tool("sphere", (tool_gui_cb)tool_sphere_gui,
 			(tool_edit_cb)tool_sphere_edit, sizeof(struct conf_sphere), NULL, 1);
 
 	add_tool("cube", (tool_gui_cb)tool_cube_gui, (tool_edit_cb)tool_cube_edit,
 		sizeof(struct conf_cube),
-		&(struct conf_cube){1.0f}, 1);
+		&cube_opts, 1);
 
 	add_tool("torus", (tool_gui_cb)tool_torus_gui, (tool_edit_cb)tool_torus_edit,
 		sizeof(struct conf_torus),
-		&(struct conf_torus){1.0f, 0.2f, 30, 20}, 1);
+		&torus_opts, 1);
 
 	add_tool("disk", (tool_gui_cb)tool_disk_gui, (tool_edit_cb)tool_disk_edit,
 		sizeof(struct conf_disk),
-		&(struct conf_disk){2.0f, 0.2f, 10}, 1);
+		&disk_opts, 1);
 
 	add_tool("icosphere", (tool_gui_cb)tool_icosphere_gui,
 			(tool_edit_cb)tool_icosphere_edit, sizeof(struct conf_ico),
-			&(struct conf_ico){1.0f, 0}, 1);
+			&ico_opts, 1);
 
 	add_tool("extrude", (tool_gui_cb)tool_extrude_gui,
 		(tool_edit_cb)tool_extrude_edit, sizeof(struct conf_extrude),
-		&(struct conf_extrude){VEC3(0.0f, 2.0f, 0.0f), 1.0f, 1}, 0);
+		&extrude_opts, 0);
 
 	add_tool("spherize", (tool_gui_cb)tool_spherize_gui,
 		(tool_edit_cb)tool_spherize_edit, sizeof(struct conf_spherize),
-		&(struct conf_spherize){1, 1}, 0);
+		&spherize_opts, 0);
 
 	add_tool("subdivide", (tool_gui_cb)tool_subdivide_gui,
 		(tool_edit_cb)tool_subdivide_edit, sizeof(struct conf_subdivide),
-		&(struct conf_subdivide){1}, 0);
+		&subdivide_opts, 0);
 
 	add_tool("deform", (tool_gui_cb)tool_deform_gui,
 		(tool_edit_cb)tool_deform_edit, sizeof(struct conf_deform),
-		&(struct conf_deform){0, VEC3(0, 1, 0), "1"}, 0);
+		&deform_opts, 0);
 }

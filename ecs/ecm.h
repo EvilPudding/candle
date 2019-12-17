@@ -29,7 +29,7 @@ struct set_var
 
 #define IDENT_NULL UINT_MAX
 #define DEF_CASTER(ct, cn, nc_t) \
-	static inline nc_t *cn(void *entity)\
+	static nc_t *cn(void *entity)\
 { return (nc_t*)ct_get(ecm_get(ref(ct)), entity); }
 
 #define CONSTR_BEFORE_REG 102
@@ -191,17 +191,14 @@ void ecm_destroy_all(void);
 void ecm_add_entity(entity_t *entity);
 /* uint32_t ecm_register_system(ecm_t *self, void *system); */
 
-#define ct_new(name, size, init, destroy, ...) \
-	_ct_new(name, ref(name), size, (init_cb)init, (destroy_cb)destroy, \
-			__VA_ARGS__)
-ct_t *_ct_new(const char *name, uint32_t hash, uint32_t size, init_cb init,
+ct_t *ct_new(const char *name, uint32_t size, init_cb init,
 		destroy_cb destroy, int32_t depend_size, ...);
 
 void ct_add_dependency(ct_t *dep, uint32_t target);
 void ct_add_interaction(ct_t *dep, uint32_t target);
 
 
-static inline ct_t *ecm_get(uint32_t comp_type)
+static ct_t *ecm_get(uint32_t comp_type)
 {
 	khiter_t k = kh_get(ct, g_ecm->cts, comp_type);
 	if(k == kh_end(g_ecm->cts)) return NULL;
@@ -213,14 +210,15 @@ static inline ct_t *ecm_get(uint32_t comp_type)
 #define component_new(comp_type) _component_new(ref(comp_type))
 void *_component_new(uint32_t comp_type);
 
-static inline uint32_t entity_exists(entity_t self)
+static uint32_t entity_exists(entity_t self)
 {
+	entity_info_t info;
 	if(self == entity_null) return 0;
-	entity_info_t info = g_ecm->entities_info[entity_pos(self)];
+	info = g_ecm->entities_info[entity_pos(self)];
 	return info.uid == entity_uid(self);
 }
 
-static inline c_t *ct_get_nth(ct_t *self, int32_t n)
+static c_t *ct_get_nth(ct_t *self, int32_t n)
 {
 	khiter_t k;
 	for(k = kh_begin(self->cs); k != kh_end(self->cs); ++k)
@@ -238,18 +236,19 @@ static inline c_t *ct_get_nth(ct_t *self, int32_t n)
 	return NULL;
 }
 
-static inline c_t *ct_get(ct_t *self, entity_t *entity)
+static c_t *ct_get(ct_t *self, entity_t *entity)
 {
+	khiter_t k;
 	if(!self) return NULL;
 	if(!entity_exists(*entity)) return NULL;
-	khiter_t k = kh_get(c, self->cs, entity_uid(*entity));
+	k = kh_get(c, self->cs, entity_uid(*entity));
 	if(k == kh_end(self->cs)) return NULL;
 	return kh_value(self->cs, k);
 }
 
 
 /* TODO maybe this shouldn't be here */
-static inline uvec2_t entity_to_uvec2(entity_t self)
+static uvec2_t entity_to_uvec2(entity_t self)
 {
 	int32_t pos = entity_pos(self);
 
@@ -258,19 +257,20 @@ static inline uvec2_t entity_to_uvec2(entity_t self)
 		struct{
 			uint8_t r, g, b, a;
 		} _convert;
-	} convert = {.i = pos};
+	} convert;
+	convert.i = pos;
 
 	return uvec2(convert._convert.r, convert._convert.g);
 }
-static inline vec2_t entity_to_vec2(entity_t self)
+static vec2_t entity_to_vec2(entity_t self)
 {
 	uvec2_t v = entity_to_uvec2(self);
 	return vec2((float)v.x / 255.0f, (float)v.y / 255.0f);
 }
 
-#define SYS ((entity_t){0x0000000100000001ul})
+extern entity_t SYS;
 
-static inline int emit(uint32_t sig, void *input, void *output)
+static int emit(uint32_t sig, void *input, void *output)
 {
 	return entity_signal(entity_null, sig, input, output);
 }

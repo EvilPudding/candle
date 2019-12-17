@@ -52,16 +52,19 @@ int c_node_changed(c_node_t *self)
 
 int32_t c_node_propagate(c_node_t *self, node_cb cb, void *usrptr)
 {
+	uint32_t i;
 	int32_t res = cb(c_entity(self), usrptr);
 	if (res != CONTINUE) return res;
 
-	for(uint32_t i = 0; i < self->children_size; i++)
+	for(i = 0; i < self->children_size; i++)
 	{
+		c_node_t *child_node;
+		int32_t res;
 		entity_t child = self->children[i];
 		if (!entity_exists(child)) continue;
-		c_node_t *child_node = c_node(&child);
+		child_node = c_node(&child);
 		if (!child_node) continue;
-		int32_t res = c_node_propagate(child_node, cb, usrptr);
+		res = c_node_propagate(child_node, cb, usrptr);
 		if (res != CONTINUE) return res;
 	}
 	return CONTINUE;
@@ -127,8 +130,9 @@ void c_node_remove(c_node_t *self, entity_t child)
 	{
 		if (self->children[i] == child)
 		{
+			c_node_t *cn;
 			if (!entity_exists(self->children[i])) continue;
-			c_node_t *cn = c_node(&child);
+			cn = c_node(&child);
 			cn->cached = false;
 			cn->parent = entity_null;
 			if (--self->children_size)
@@ -146,6 +150,7 @@ void c_node_add(c_node_t *self, int num, ...)
 	va_start(children, num);
 	while(num--)
 	{
+		int32_t i;
 		entity_t child = va_arg(children, entity_t);
 		c_node_t *child_node = c_node(&child);
 		if (!child_node)
@@ -162,7 +167,7 @@ void c_node_add(c_node_t *self, int num, ...)
 			c_node_remove(c_node(&child_node->parent), child);
 		}
 
-		int i = self->children_size++;
+		i = self->children_size++;
 		self->children = realloc(self->children,
 				(sizeof *self->children) * self->children_size);
 		self->children[i] = child;
@@ -181,6 +186,7 @@ static void c_node_destroy(c_node_t *self)
 	{
 		entity_t child = self->children[i];
 		c_node_t *child_node = c_node(&child);
+		if (!child_node) continue;
 		child_node->parent = entity_null;
 		child_node->cached = false;
 		self->children[i] = entity_null;
@@ -195,10 +201,11 @@ static void c_node_destroy(c_node_t *self)
 
 void c_node_disable_inherit_transform(c_node_t *self)
 {
+	c_spatial_t *sc;
 	c_node_t *parent_node = entity_exists(self->parent) ? c_node(&self->parent) : NULL;
 	if (!parent_node) return;
 	c_node_update_model(parent_node);
-	c_spatial_t *sc = c_spatial(self);
+	sc = c_spatial(self);
 	c_spatial_lock(sc);
 	self->inherit_transform = false;
 	self->cached = false;
@@ -213,7 +220,7 @@ REG()
 {
 	/* TODO destroyer */
 	ct_t *ct = ct_new("node", sizeof(c_node_t),
-			c_node_init, c_node_destroy, 1, ref("spatial"));
+			(init_cb)c_node_init, (destroy_cb)c_node_destroy, 1, ref("spatial"));
 
 	signal_init(sig("node_changed"), 0);
 
@@ -223,13 +230,15 @@ REG()
 
 bool_t c_node_update_model(c_node_t *self)
 {
+	c_node_t *parent_node;
+	c_spatial_t *sc;
 	if (self->cached) return false;
 	self->cached = true;
 
-	c_spatial_t *sc = c_spatial(self);
+	sc = c_spatial(self);
 	if (!sc) return false;
 
-	c_node_t *parent_node = entity_exists(self->parent) ? c_node(&self->parent) : NULL;
+	parent_node = entity_exists(self->parent) ? c_node(&self->parent) : NULL;
 	if (parent_node && self->inherit_transform)
 	{
 		c_node_update_model(parent_node);
@@ -276,22 +285,25 @@ bool_t c_node_update_model(c_node_t *self)
 
 vec3_t c_node_pos_to_local(c_node_t *self, vec3_t vec)
 {
+	mat4_t inv;
 	c_node_update_model(self);
-	mat4_t inv = mat4_invert(self->model);
+	inv = mat4_invert(self->model);
 	return vec4_xyz(mat4_mul_vec4(inv, vec4(_vec3(vec), 1.0)));
 }
 
 vec3_t c_node_dir_to_local(c_node_t *self, vec3_t vec)
 {
+	mat4_t inv;
 	c_node_update_model(self);
-	mat4_t inv = mat4_invert(self->model);
+	inv = mat4_invert(self->model);
 	return vec4_xyz(mat4_mul_vec4(inv, vec4(_vec3(vec), 0.0)));
 }
 
 vec4_t c_node_rot_to_local(c_node_t *self, vec4_t rot)
 {
+	vec4_t inv;
 	c_node_update_model(self);
-	vec4_t inv = quat_invert(self->rot);
+	inv = quat_invert(self->rot);
 	return quat_mul(inv, rot);
 }
 

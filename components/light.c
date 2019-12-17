@@ -99,19 +99,17 @@ uint32_t get_level_size(uint32_t level);
 extern texture_t *g_probe_cache;
 static void c_light_create_renderer(c_light_t *self)
 {
+	texture_t *output;
 	renderer_t *renderer = renderer_new(1.0f);
 
 	self->tile = get_free_tile(0, &self->lod);
 
-	texture_t *output =	g_probe_cache;
+	output = g_probe_cache;
 
 	renderer_add_pass(renderer, "depth", "depth", self->visible_group,
-			CULL_DISABLE, output, output, 0, ~0,
-			(bind_t[]){
-				{CLEAR_DEPTH, .number = 1.0f},
-				{CLEAR_COLOR, .vec4 = vec4(0.343750, 0.996094, 0.996094, 0.000000)},
-				{NONE}
-			}
+			CULL_DISABLE, output, output, 0, ~0, 2,
+			opt_clear_depth(1.0f, NULL),
+			opt_clear_color(vec4(0.343750, 0.996094, 0.996094, 0.000000), NULL)
 	);
 	renderer->pos = self->tile.pos;
 	renderer->size = self->tile.size;
@@ -180,6 +178,10 @@ static int c_light_pre_draw(c_light_t *self)
 	}
 	else
 	{
+		c_node_t *node;
+		vec3_t pos;
+		mat4_t model;
+		float scale;
 		self->frames_passed++;
 		if(self->frames_passed >= self->shadow_cooldown)
 		{
@@ -200,10 +202,10 @@ static int c_light_pre_draw(c_light_t *self)
 		{
 			drawable_set_mesh(&self->draw, g_light);
 		}
-		c_node_t *node = c_node(self);
-		vec3_t pos = c_node_pos_to_global(node, vec3(0, 0, 0));
-		mat4_t model = mat4_translate(pos);
-		float scale = self->radius * 1.15f;
+		node = c_node(self);
+		pos = c_node_pos_to_global(node, vec3(0, 0, 0));
+		model = mat4_translate(pos);
+		scale = self->radius * 1.15f;
 		model = mat4_scale_aniso(model, vec3(scale, scale, scale));
 
 		drawable_set_transform(&self->draw, model);
@@ -219,16 +221,20 @@ static int c_light_pre_draw(c_light_t *self)
 
 int c_light_menu(c_light_t *self, void *ctx)
 {
+	int ambient;
+	struct nk_colorf *old;
+	union { struct nk_colorf nk; vec4_t v; } new;
 	nk_layout_row_dynamic(ctx, 0, 1);
 
-	int ambient = self->radius == -1.0f;
+	ambient = self->radius == -1.0f;
 	nk_checkbox_label(ctx, "ambient", &ambient);
 
 	if(!ambient)
 	{
+		float volum;
 		float rad = self->radius;
 		if (rad < 0.0f) rad = 0.0f;
-		float volum = self->volumetric_intensity;
+		volum = self->volumetric_intensity;
 		if(self->radius < 0.0f) self->radius = 0.01;
 		nk_property_float(ctx, "radius:", 0.01, &rad, 1000, 0.1, 0.05);
 		if(rad != self->radius)
@@ -252,9 +258,8 @@ int c_light_menu(c_light_t *self, void *ctx)
 
 	nk_layout_row_dynamic(ctx, 180, 1);
 
-	struct nk_colorf *old = (struct nk_colorf *)&self->color;
-	union { struct nk_colorf nk; vec4_t v; } new =
-		{ .nk = nk_color_picker(ctx, *old, NK_RGBA)};
+	old = (struct nk_colorf *)&self->color;
+	new.nk = nk_color_picker(ctx, *old, NK_RGBA);
 
 	if(memcmp(&new, &self->color, sizeof(vec4_t)))
 	{
@@ -294,8 +299,8 @@ static int c_light_editmode_toggle(c_light_t *self)
 
 REG()
 {
-	ct_t *ct = ct_new("light", sizeof(c_light_t), c_light_init,
-			c_light_destroy, 1, ref("node"));
+	ct_t *ct = ct_new("light", sizeof(c_light_t), (init_cb)c_light_init,
+			(destroy_cb)c_light_destroy, 1, ref("node"));
 
 	ct_listener(ct, WORLD, 0, sig("editmode_toggle"), c_light_editmode_toggle);
 	ct_listener(ct, WORLD, 0, sig("component_menu"), c_light_menu);

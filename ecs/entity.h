@@ -13,11 +13,11 @@ typedef int(*filter_cb)(struct c *self, struct c *accepted, void *data, void *ou
 extern __thread entity_t _g_creating[32];
 extern __thread int _g_creating_num;
 
-#define entity_new(...) \
-	(_entity_new_pre(),_entity_new_post((void*[]){NULL, __VA_ARGS__}))
+#define entity_new(components) \
+	entity_new_pre();components;entity_new_post()
 
-void _entity_new_pre(void);
-entity_t _entity_new_post(void *components[]);
+entity_t entity_new_pre(void);
+void entity_new_post(void);
 int entity_signal_same_TOPLEVEL(entity_t self, unsigned int signal, void *data, void *output);
 int entity_signal_TOPLEVEL(entity_t self, unsigned int signal, void *data, void *output);
 int component_signal_TOPLEVEL(struct c *comp, struct ct *ct, unsigned int signal, void *data, void *output);
@@ -37,13 +37,13 @@ void _entity_add_post(entity_t self, struct c *comp);
 
 void entity_destroy(entity_t self);
 
-static inline unsigned int entity_uid(entity_t self)
+static unsigned int entity_uid(entity_t self)
 {
 	struct { unsigned int pos, uid; } *separate = (void*)&self;
 	return separate->uid;
 }
 
-static inline unsigned int entity_pos(entity_t self)
+static unsigned int entity_pos(entity_t self)
 {
 	struct { unsigned int pos, unique_id; } *separate = (void*)&self;
 	return separate->pos;

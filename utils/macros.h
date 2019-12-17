@@ -19,10 +19,10 @@ typedef uint32_t bool_t;
 #define CAT2(a,b) CAT(a,b)
 
 #ifndef EMSCRIPTEN
-__attribute__((always_inline))
+/* __attribute__((always_inline)) */
 __attribute__((optimize("unroll-loops")))
 #endif
-static inline uint32_t murmur_hash(const void *key, int32_t len, uint32_t seed)
+static uint32_t murmur_hash(const void *key, int32_t len, uint32_t seed)
 {
     /* 32-Bit MurmurHash3: https://code.google.com/p/smhasher/wiki/MurmurHash3*/
     #define ROTL(x,r) ((x) << (r) | ((x) >> (32 - r)))
@@ -80,7 +80,11 @@ static inline uint32_t murmur_hash(const void *key, int32_t len, uint32_t seed)
     #undef ROTL
     return h1;
 }
-static inline uint32_t murmur_hash_step(uint32_t h1, uint32_t block)
+#ifndef EMSCRIPTEN
+/* __attribute__((always_inline)) */
+__attribute__((optimize("unroll-loops")))
+#endif
+static uint32_t murmur_hash_step(uint32_t h1, uint32_t block)
 {
     /* 32-Bit MurmurHash3: https://code.google.com/p/smhasher/wiki/MurmurHash3*/
     #define ROTL(x,r) ((x) << (r) | ((x) >> (32 - r)))
@@ -101,7 +105,11 @@ static inline uint32_t murmur_hash_step(uint32_t h1, uint32_t block)
     return h1;
 }
 
-static inline uint32_t hash_ptr(void *ptr)
+#ifndef EMSCRIPTEN
+/* __attribute__((always_inline)) */
+__attribute__((optimize("unroll-loops")))
+#endif
+static uint32_t hash_ptr(void *ptr)
 {
 	return murmur_hash(&ptr, sizeof(ptr), 0);
 }

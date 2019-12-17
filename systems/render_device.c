@@ -17,15 +17,17 @@
 
 void c_render_device_update_lights(c_render_device_t *self)
 {
-	ct_t *lights = ecm_get(ref("light"));
-	if (!lights) return;
 	khiter_t k;
+	ct_t *lights = ecm_get(ref("light"));
+	c_light_t *light;
+	struct gl_light *gllight;
+	if (!lights) return;
 	for(k = kh_begin(lights->cs); k != kh_end(lights->cs); ++k)
 	{
 		if(!kh_exist(lights->cs, k)) continue;
-		c_light_t *light = (c_light_t*)kh_value(lights->cs, k);
+		light = (c_light_t*)kh_value(lights->cs, k);
 
-		struct gl_light *gllight = &self->scene.lights[light->id];
+		gllight = &self->scene.lights[light->id];
 		gllight->color = vec4_xyz(light->color);
 		gllight->pos = light->tile.pos;
 		gllight->lod = light->lod;
@@ -100,6 +102,7 @@ shader_t *vs_bind(vs_t *vs, uint32_t fs_variation)
 	if(   !rd->shader || rd->shader->index != vs->index
 	   || rd->shader->fs_variation != fs_variation)
 	{
+		shader_t **sh;
 		fs_t *fs = rd->frag_bound;
 		if (!fs) return NULL;
 
@@ -107,7 +110,7 @@ shader_t *vs_bind(vs_t *vs, uint32_t fs_variation)
 		{
 			fs_variation = 0;
 		}
-		shader_t **sh = &fs->variations[fs_variation].combinations[vs->index];
+		sh = &fs->variations[fs_variation].combinations[vs->index];
 		if (!*sh) *sh = shader_new(fs, fs_variation, vs);
 		rd->shader = *sh; 
 	}
@@ -224,7 +227,7 @@ void c_render_device_destroy(c_render_device_t *self)
 REG()
 {
 	ct_t *ct = ct_new("render_device", sizeof(c_render_device_t),
-			NULL, c_render_device_destroy, 1, ref("window"));
+			NULL, (destroy_cb)c_render_device_destroy, 1, ref("window"));
 
 	ct_listener(ct, WORLD, 0, ref("world_update"), c_render_device_update);
 

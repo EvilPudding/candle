@@ -22,6 +22,7 @@ void c_decal_init(c_decal_t *self)
 
 c_decal_t *c_decal_new(mat_t *mat, int visible, int selectable)
 {
+	c_model_t *mc;
 	c_decal_t *self = component_new("decal");
 
 	self->mat = mat;
@@ -29,7 +30,7 @@ c_decal_t *c_decal_new(mat_t *mat, int visible, int selectable)
 	entity_add_component(c_entity(self),
 			c_model_new(g_decal_mesh, mat, 0, visible));
 
-	c_model_t *mc = c_model(self);
+	mc = c_model(self);
 	c_model_set_groups(mc, ref("decals"), 0, ref("transparent_decals"),
 			selectable ? ref("selectable") : 0);
 
@@ -39,7 +40,7 @@ c_decal_t *c_decal_new(mat_t *mat, int visible, int selectable)
 REG()
 {
 	/* ct_t *ct = */ ct_new("decal", sizeof(c_decal_t),
-			c_decal_init, NULL, 1, ref("node"));
+			(init_cb)c_decal_init, NULL, 1, ref("node"));
 
 }
 
