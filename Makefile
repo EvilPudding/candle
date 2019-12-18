@@ -8,8 +8,8 @@ emscripten: LD = emcc
 emscripten: AR = emar
 
 DIR = build
-
-DEPS_REL = $(shell sdl2-config --libs) -lm -lGL -lGLEW
+# EXTS = ARB_texture_cube_map,EXT_framebuffer_object,TEXTURE_RECTANGLE_ARB
+DEPS_REL = $(shell sdl2-config --libs) -lm -lGL
 DEPS_DEB = $(DEPS_REL)
 SHAD_SRC = $(patsubst %.glsl, $(DIR)/%.glsl.c, $(wildcard shaders/*.glsl))
 
@@ -21,9 +21,9 @@ OBJS_REL = $(patsubst %.c, $(DIR)/%.o, $(SRCS))
 OBJS_DEB = $(patsubst %.c, $(DIR)/%.debug.o, $(SRCS))
 OBJS_EMS = $(patsubst %.c, $(DIR)/%.emscripten.o, $(SRCS))
 
-CFLAGS = $(shell sdl2-config --cflags) -Wall -I. -Wuninitialized -Wno-unused-function \
-		 -Wno-unused-function -Wstrict-prototypes -Wno-format-truncation \
-		 -Wno-stringop-truncation $(PARENTCFLAGS)
+CFLAGS = $(shell sdl2-config --cflags) -Wall -I. -Wuninitialized \
+		 -Wno-unused-function -Wno-unused-function -Wstrict-prototypes \
+		 -Wno-format-truncation -Wno-stringop-truncation $(PARENTCFLAGS)
 
 CFLAGS_REL = $(CFLAGS) -O3
 
@@ -49,6 +49,10 @@ $(DIR)/shaders_reg.o: $(DIR)/shaders_reg.c
 
 $(DIR)/%.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS_REL)
+
+# utils/gl.c:
+# 	galogen gl.xml --api gl --ver 3.0 --profile core --exts $(EXTS)
+# 	mv gl.c gl.h utils/
 
 ##############################################################################
 

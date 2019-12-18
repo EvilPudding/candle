@@ -4,7 +4,7 @@
 #ifndef __OPENCL_C_VERSION__
 #include <math.h>
 #include <float.h>
-#include <stdint.h>
+#include <utils/stdint.h>
 #include <stdlib.h>
 #define CONST static const
 void sincosf(float x, float *sin, float *cos);

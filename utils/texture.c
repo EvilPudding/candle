@@ -1320,8 +1320,8 @@ int32_t texture_target_sub(texture_t *self, texture_t *depth, int32_t fb,
 			printf("Failed to create framebuffer!\n");
 			switch(status)
 			{
-				case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_EXT:
-					printf("incomplete dimensions\n"); break;
+				/* case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_EXT: */
+				/* 	printf("incomplete dimensions\n"); break; */
 				case GL_FRAMEBUFFER_UNSUPPORTED:
 					printf("unsupported\n"); break;
 				case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:

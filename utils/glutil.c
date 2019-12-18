@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <utils/gl.h>
 
 void _check_gl_error(const char *file, int line)
 {
@@ -58,21 +59,22 @@ SDL_Window *mainWindow = NULL;
 
 void glInit()
 {
-	GLenum err;
-
-	glewExperimental = GL_TRUE; 
-	err = glewInit();
-
-	if (err != GLEW_OK)
+	if(ogl_LoadFunctions() == ogl_LOAD_FAILED)
 	{
-		printf("Glew failed to initialize.\n");
 		exit(1);
 	}
-	if (!GLEW_VERSION_2_1)  /* check that the machine supports the 2.1 API. */
-	{
-		printf("Glew version.\n");
-		exit(1);
-	}
+	/* GLenum err; */
+
+	/* if (err != GLEW_OK) */
+	/* { */
+	/* 	printf("Glew failed to initialize.\n"); */
+	/* 	exit(1); */
+	/* } */
+	/* if (!GLEW_VERSION_2_1)  /1* check that the machine supports the 2.1 API. *1/ */
+	/* { */
+	/* 	printf("Glew version.\n"); */
+	/* 	exit(1); */
+	/* } */
 	/* glSem = SDL_CreateSemaphore(1); */
 }
 

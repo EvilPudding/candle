@@ -128,7 +128,7 @@ int main() {
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
-#include <stdint.h>
+#include <utils/stdint.h>
 
 /* compiler specific configuration */
 

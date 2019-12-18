@@ -4,7 +4,16 @@
 #include <stdarg.h>
 #include <SDL2/SDL.h>
 
-#define NK_INCLUDE_FIXED_TYPES
+#include <utils/stdint.h>
+#define NK_INT8 int8_t
+#define NK_UINT8 uint8_t
+#define NK_INT16 int16_t
+#define NK_UINT16 uint16_t
+#define NK_INT32 int32_t
+#define NK_UINT32 uint32_t
+#define NK_SIZE_TYPE uintptr_t
+#define NK_POINTER_TYPE uintptr_t
+
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_STANDARD_VARARGS
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
