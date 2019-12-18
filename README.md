@@ -2,7 +2,6 @@
 A C Game Engine (early development stages)
 
 ## Dependencies
-* GLEW
 * SDL2
 
 
