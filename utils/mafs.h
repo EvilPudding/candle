@@ -2,9 +2,9 @@
 #define MAFS_H
 
 #ifndef __OPENCL_C_VERSION__
+#include <SDL2/SDL.h>
 #include <math.h>
 #include <float.h>
-#include <utils/stdint.h>
 #include <stdlib.h>
 #define CONST static const
 void sincosf(float x, float *sin, float *cos);

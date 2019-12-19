@@ -2,3 +2,6 @@
 [submodule "utils/nuklear"]
 	path = utils/nuklear
 	url = https://github.com/vurtun/nuklear
+[submodule "utils/tinydir"]
+	path = utils/tinydir
+	url = https://github.com/cxong/tinydir

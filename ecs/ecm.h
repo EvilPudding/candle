@@ -2,7 +2,6 @@
 #define ECM_H
 
 #include <assert.h>
-#include <utils/stdint.h>
 #include <limits.h>
 #include "utils/material.h"
 #include "utils/texture.h"

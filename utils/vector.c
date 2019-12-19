@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include <utils/stdint.h>
 
 struct element
 {
@@ -22,7 +21,7 @@ typedef struct vector
 	int fixed_order;
 
 	int data_size;
-	uint32_t elem_size;
+	unsigned int elem_size;
 	struct element *elements;
 	void *fallback;
 
@@ -72,7 +71,7 @@ vector_t *vector_clone(vector_t *self)
 static struct element *_vector_get(vector_t *self, int i)
 {
 	if(i < 0 || i >= self->count) return NULL;
-	return (struct element *)(((uintptr_t)self->elements) + i * self->elem_size);
+	return (struct element *)(((size_t)self->elements) + i * self->elem_size);
 }
 
 void *vector_get(vector_t *self, int i)

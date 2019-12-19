@@ -3,11 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ecs/ecm.h>
+#include <utils/tinydir/tinydir.h>
 
-void path_join(char *path, uint64_t size, const char *other)
+void path_join(char *path, size_t size, const char *other)
 {
 	char buffer[1024];
-	uint64_t len;
+	size_t len;
 
 	/* printf("\t\t%s + %s\n", path, other); */
 	if(other == NULL) return;
@@ -65,5 +66,15 @@ char *filter_sauce_name(char *path_name)
 	/* if(dot) *dot = '\0'; */
 	to_lower_case(path_name);
 	return path_name;
+}
+
+int is_dir(const char *f)
+{
+	tinydir_file file;
+	if (tinydir_file_open(&file, f) == -1)
+	{
+		return 0;
+	}
+	return file.is_dir;
 }
 

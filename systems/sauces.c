@@ -4,6 +4,7 @@
 #include <utils/file.h>
 #include <string.h>
 #include <stdlib.h>
+#include <utils/tinydir/tinydir.h>
 
 #include <components/model.h>
 #include <components/timeline.h>
@@ -187,34 +188,51 @@ void *c_sauces_get(c_sauces_t *self, const char *name)
 
 int c_sauces_index_dir(c_sauces_t *self, const char *dir_name)
 {
-	struct dirent *ent;
-	DIR *dir = opendir(dir_name);
-	if(dir == NULL) return 0;
+	tinydir_dir dir;
+	if (tinydir_open(&dir, dir_name) == -1) return false;
 
-	while((ent = readdir(dir)) != NULL)
+	while (dir.has_next)
 	{
+		tinydir_file file;
 		char *dot;
 		char path[512];
 		char buffer[64];
 
-		if(ent->d_name[0] == '.') continue;
+		if (tinydir_readfile(&dir, &file) == -1)
+		{
+			perror("Error getting file");
+			goto bail;
+		}
+		printf("%s\n", file.name);
 
+		if(file.name[0] == '.') goto next;;
 		strncpy(path, dir_name, sizeof(path) - 1);
-		path_join(path, sizeof(path), ent->d_name);
-		if(c_sauces_index_dir(self, path)) continue;
+		path_join(path, sizeof(path), file.name);
 
-		strcpy(buffer, ent->d_name);
+		if (file.is_dir)
+		{
+			c_sauces_index_dir(self, path);
+			goto next;;
+		}
+
+		strcpy(buffer, file.name);
 		to_lower_case(buffer);
 
 		dot = strrchr(buffer, '.');
-		if(!dot || dot[1] == '\0') continue;
-		/* *dot = '\0'; */
-
+		if(!dot || dot[1] == '\0') goto next;;
 		c_sauces_register(self, buffer, path, NULL);
-	}
-	closedir(dir);
 
-	return 1;
+next:
+		if (tinydir_next(&dir) == -1)
+		{
+			perror("Error getting next file");
+			goto bail;
+		}
+	}
+
+bail:
+	tinydir_close(&dir);
+	return true;
 }
 
 

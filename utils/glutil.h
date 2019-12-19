@@ -6,12 +6,10 @@
 /* #include <GL/glew.h> */
 /* #include <SDL2/SDL_opengl.h> */
 #ifdef EMSCRIPTEN
-#elif LINUX
-#include <GL/glx.h>
 #else
+#include <utils/gl.h>
 #endif
 
-#include <utils/gl.h>
 
 #include "mafs.h"
 
