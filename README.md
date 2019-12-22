@@ -31,7 +31,7 @@ On BSD systems, in order to be able to compile and run *Candle*, you have to ins
 Candle loosely follows *Entity Component System* paradigm. Entities are a simple handle, which can be extended with the use of components.
 
 ```c
-entity_t entity = entity_new( /* component0, component1, ... */ );
+entity_t entity = entity_new({ /* component0, component1, ... */ });
 ```
 
 For example, to create a cube object, the following code may be used:
@@ -39,7 +39,7 @@ For example, to create a cube object, the following code may be used:
 mat_t *material = mat_new("cube material");
 mesh_t *mesh = mesh_new();
 mesh_cube(mesh, 1, 1);
-entity_t cube = entity_new(c_model_new(mesh, material, 0, 1));
+entity_t cube = entity_new({c_model_new(mesh, material, 0, 1)});
 /* this creates a cube that does not cast shadows but is visible */
 ```
 
@@ -56,7 +56,7 @@ c_spatial_rotate_Y(sc, M_PI); /* rotate the cube around the Y axis by ~3.1415 ra
 If I wish to make cube the a light source, I can add to the entity a ```c_light``` component by:
 
 ```c
-entity_add_component(cube, c_light_new(30.0f, vec4(1.0, 0.0, 0.0, 1.0), 512));
+entity_add_component(cube, c_light_new(30.0f, vec4(1.0, 0.0, 0.0, 1.0)));
 /* this creates a red light component of radius 30 */
 /* 512 is the resolution of the cubemap shadow */
 ```
