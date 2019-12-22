@@ -13,7 +13,6 @@ typedef struct
 	c_t super;
 
 	vec4_t color;
-	uint32_t shadow_size;
 	float radius;
 	float volumetric_intensity;
 
@@ -36,7 +35,7 @@ typedef struct
 
 DEF_CASTER("light", c_light, c_light_t)
 
-c_light_t *c_light_new(float radius, vec4_t color, uint32_t shadow_size);
+c_light_t *c_light_new(float radius, vec4_t color);
 void c_light_visible(c_light_t *self, uint32_t visible);
 void c_light_set_lod(c_light_t *self, uint32_t lod);
 void c_light_set_groups(c_light_t *self, uint32_t visible_group,

@@ -21,12 +21,11 @@ static mat_t *g_light_widget;
 static int c_light_position_changed(c_light_t *self);
 static int c_light_editmode_toggle(c_light_t *self);
 
-c_light_t *c_light_new(float radius, vec4_t color, uint32_t shadow_size)
+c_light_t *c_light_new(float radius, vec4_t color)
 {
 	c_light_t *self = component_new("light");
 
 	self->color = color;
-	self->shadow_size = shadow_size;
 	self->radius = radius;
 	self->volumetric_intensity = 0.0f;
 
@@ -36,7 +35,6 @@ c_light_t *c_light_new(float radius, vec4_t color, uint32_t shadow_size)
 void c_light_init(c_light_t *self)
 {
 	self->color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-	self->shadow_size = 512;
 	self->radius = 5.0f;
 	self->volumetric_intensity = 0.0f;
 	self->visible = 1;
@@ -113,9 +111,10 @@ static void c_light_create_renderer(c_light_t *self)
 	);
 	renderer->pos = self->tile.pos;
 	renderer->size = self->tile.size;
+	renderer->width = self->tile.size.x;
+	renderer->height = self->tile.size.y;
 	renderer->cubemap = true;
 
-	renderer_resize(renderer, self->shadow_size, self->shadow_size);
 	renderer->output = output;
 
 	/* renderer_set_output(renderer, output); */
