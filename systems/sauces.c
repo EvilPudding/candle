@@ -203,7 +203,6 @@ int c_sauces_index_dir(c_sauces_t *self, const char *dir_name)
 			perror("Error getting file");
 			goto bail;
 		}
-		printf("%s\n", file.name);
 
 		if(file.name[0] == '.') goto next;;
 		strncpy(path, dir_name, sizeof(path) - 1);
