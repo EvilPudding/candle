@@ -572,7 +572,7 @@ bool_t vifunc_load(vifunc_t *self, const char *filename)
 	{
 		vicall_t *root;
 		slot_t slot;
-		char field[64];
+		char field[128];
 		int ret = fscanf(fp, "%64s ", field);
 		if (ret < 0) goto fail;
 		slot = vifunc_slot_from_name(self, field, ".");
@@ -592,7 +592,7 @@ bool_t vifunc_load(vifunc_t *self, const char *filename)
 		else
 		{
 			vicall_t *call = vifunc_get_call(root->type, slot, 1, slot.depth);
-			char oper[8];
+			char oper[16];
 			ret = fscanf(fp, "%8s ", oper);
 			if (ret < 0) goto fail;
 			if (!strncmp(oper, "=", 8))
@@ -612,7 +612,7 @@ bool_t vifunc_load(vifunc_t *self, const char *filename)
 			}
 			else if (!strncmp(oper, "->", 8))
 			{
-				char into[256];
+				char into[512];
 				slot_t into_slot;
 				ret = fscanf(fp, "%256s\n", into);
 				if (ret < 0) goto fail;
