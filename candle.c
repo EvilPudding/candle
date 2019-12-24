@@ -364,8 +364,3 @@ void candle_init2()
 
 	/* candle_import_dir(candle, entity_null, "./"); */
 }
-
-static __attribute__((__used__)) void prevent_linker_removal(void)
-{
-	/* c_vimat_new(); */
-}
