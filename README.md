@@ -1,5 +1,7 @@
-# candle
-A C Game Engine (early development stages)
+![banner](https://imgur.com/lfeylu5.jpg)
+
+# Candle
+A Game Engine (C89 ANSI, early development stages)
 
 ## Dependencies
 * SDL2
@@ -22,7 +24,7 @@ In ```twinpeaks/main.c```, we can see how entities are created.
 
 On linux, if all dependencies are installed, run ```make```, additionally, you can run ```make run``` to compile and automatically run the result, or ```make gdb``` to compile a debug executable and run it through *gdb*.
 
-On windows, it is recommended to have an *msys* environment with *mingw*, after installing *glew* and *SDL2*, you can compile the project with ```make -f windows.mk```
+On windows, it is recommended to have an *msys* environment with *mingw*, after installing *SDL2*, you can compile the project with ```make -f windows.mk```
 
 On BSD systems, in order to be able to compile and run *Candle*, you have to install both its dependencies and GNU version of Make program, because the BSD version usually doesn't implement many required extensions. Therefore, instead of executing ```make``` you should use ```gmake``` on BSDs.
 
@@ -93,6 +95,7 @@ Features that aren't requirements for all projects, are split into plugins, the 
  * [bullet.candle](https://github.com/EvilPudding/bullet.candle) for physics
  * [filepicker.candle](https://github.com/EvilPudding/filepicker.candle) for a file picker dialog
  * [steam.candle](https://github.com/EvilPudding/steam.candle) for steam integration (currently only fetches nickname and profile picture)
+ * [mpv.candle](https://github.com/EvilPudding/mpv.candle) to be able to play videos
 
 Each plugin may require specific dependencies, and are added to a project through the use of *git submodules*, for example:
 
