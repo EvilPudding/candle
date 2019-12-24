@@ -32,6 +32,8 @@ void _entity_add_post(entity_t self, struct c *comp);
 #define entity_add_component(self, comp) \
 	(_entity_add_pre(self), _entity_add_post(self, (struct c*)comp))
 
+entity_t _entity_get_current(void);
+
 void entity_destroy(entity_t self);
 
 static unsigned int entity_uid(entity_t self)

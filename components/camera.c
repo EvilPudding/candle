@@ -17,8 +17,8 @@ static int c_camera_changed(c_camera_t *self);
 /* 	c_camera_t *clone = malloc(sizeof *clone); */
 
 /* 	clone->near = self->near; */
-/* 	clone->far = self->far; */
-/* 	clone->fov = self->fov; */
+/* 	clone->proj_far = self->proj_far; */
+/* 	clone->proj_fov = self->proj_fov; */
 /* 	clone->exposure = self->exposure; */
 
 /* 	c_camera_changed(clone); */
@@ -44,8 +44,8 @@ vec3_t c_camera_screen_pos(c_camera_t *self, vec3_t pos)
 
 float c_camera_unlinearize(c_camera_t *self, float depth)
 {
-	return self->renderer->far * (1.0f - (self->renderer->near / depth)) /
-		(self->renderer->far - self->renderer->near);
+	return self->renderer->proj_far * (1.0f - (self->renderer->proj_near / depth)) /
+		(self->renderer->proj_far - self->renderer->proj_near);
 }
 
 vec3_t c_camera_real_pos(c_camera_t *self, float depth, vec2_t coord)
@@ -56,26 +56,26 @@ vec3_t c_camera_real_pos(c_camera_t *self, float depth, vec2_t coord)
 
 int c_camera_component_menu(c_camera_t *self, void *ctx)
 {
-	float new = self->renderer->fov * (180.0f / M_PI);
+	float new = self->renderer->proj_fov * (180.0f / M_PI);
 	float before;
 
 	nk_property_float(ctx, "fov:", 1, &new, 179, 1, 1);
-	if(self->renderer->fov != new)
+	if(self->renderer->proj_fov != new)
 	{
-		self->renderer->fov = new * (M_PI / 180.0f);
+		self->renderer->proj_fov = new * (M_PI / 180.0f);
 		renderer_update_projection(self->renderer);
 	}
-	before = self->renderer->near;
-	nk_property_float(ctx, "near:", 0.01, &self->renderer->near,
-			self->renderer->far - 0.01, 0.01, 0.1);
-	if(self->renderer->near != before)
+	before = self->renderer->proj_near;
+	nk_property_float(ctx, "near:", 0.01, &self->renderer->proj_near,
+			self->renderer->proj_far - 0.01, 0.01, 0.1);
+	if(self->renderer->proj_near != before)
 	{
 		renderer_update_projection(self->renderer);
 	}
-	before = self->renderer->far;
-	nk_property_float(ctx, "far:", self->renderer->near + 0.01,
-			&self->renderer->far, 10000, 0.01, 0.1);
-	if(self->renderer->far != before)
+	before = self->renderer->proj_far;
+	nk_property_float(ctx, "far:", self->renderer->proj_near + 0.01,
+			&self->renderer->proj_far, 10000, 0.01, 0.1);
+	if(self->renderer->proj_far != before)
 	{
 		renderer_update_projection(self->renderer);
 	}
@@ -170,7 +170,7 @@ void ct_camera(ct_t *self)
 	ct_listener(self, WORLD, 0, sig("component_menu"), c_camera_component_menu);
 }
 
-c_camera_t *c_camera_new(float fov, float near, float far,
+c_camera_t *c_camera_new(float proj_fov, float proj_near, float proj_far,
 		int auto_exposure, int active, int window, renderer_t *renderer)
 {
 	c_camera_t *self = component_new(ct_camera);
@@ -184,9 +184,9 @@ c_camera_t *c_camera_new(float fov, float near, float far,
 	if(renderer)
 	{
 		self->renderer = renderer;
-		self->renderer->near = near;
-		self->renderer->far = far;
-		self->renderer->fov = fov * (M_PI / 180.0f);
+		self->renderer->proj_near = proj_near;
+		self->renderer->proj_far = proj_far;
+		self->renderer->proj_fov = proj_fov * (M_PI / 180.0f);
 		self->camid = self->renderer->camera_count++;
 
 		c_camera_assign(self);

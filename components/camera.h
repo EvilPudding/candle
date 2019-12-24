@@ -24,7 +24,7 @@ typedef struct
 void ct_camera(ct_t *self);
 DEF_CASTER(ct_camera, c_camera, c_camera_t)
 
-c_camera_t *c_camera_new(float fov, float near, float far,
+c_camera_t *c_camera_new(float proj_fov, float proj_near, float proj_far,
 		int auto_exposure, int active, int window, renderer_t *renderer);
 c_camera_t *c_camera_clone(c_camera_t *self);
 vec3_t c_camera_real_pos(c_camera_t *cam, float depth, vec2_t coord);

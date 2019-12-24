@@ -35,7 +35,7 @@ void *component_new(ct_id_t ct_id)
 {
 	int i;
 	c_t *self;
-	entity_t entity = _g_creating[_g_creating_num - 1];
+	entity_t entity = _entity_get_current();
 
 	ct_t *ct = ecm_get(ct_id);
 
