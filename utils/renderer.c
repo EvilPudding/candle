@@ -1248,14 +1248,14 @@ void renderer_add_pass(
 	/* TODO add pass replacement */
 	if (after_pass != ~0)
 	{
-		uint32_t pass_id, i;
+		uint32_t pass_id, j;
 		pass_t *after = renderer_pass(self, after_pass);
-
 		assert(after);
+
 		pass_id = after - self->passes;
-		for (i = self->passes_size; i > pass_id; --i)
+		for (j = self->passes_size; j > pass_id; --j)
 		{
-			self->passes[i] = self->passes[i - 1];
+			self->passes[j] = self->passes[j - 1];
 		}
 		self->passes_size++;
 		i = pass_id;
@@ -1268,6 +1268,9 @@ void renderer_add_pass(
 	{
 		printf("Replacing %s\n", name);
 	}
+
+	assert(self->passes_size < 64);
+
 
 	pass = &self->passes[i];
 	pass->hash = hash;

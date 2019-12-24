@@ -22,7 +22,7 @@ OBJS_DEB = $(patsubst %.c, $(DIR)/%.debug.o, $(SRCS))
 OBJS_EMS = $(patsubst %.c, $(DIR)/%.emscripten.o, $(SRCS))
 
 CFLAGS = $(shell sdl2-config --cflags) -Wall -I. -Wuninitialized \
-		 -Wno-unused-function -Wno-unused-function -Wstrict-prototypes \
+		 -Wno-unused-function -Wstrict-prototypes \
 		 -Wno-format-truncation -Wno-stringop-truncation $(PARENTCFLAGS)
 
 CFLAGS_REL = $(CFLAGS) -O3
