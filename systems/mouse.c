@@ -16,7 +16,7 @@ void c_mouse_init(c_mouse_t *self)
 
 c_mouse_t *c_mouse_new()
 {
-	return component_new("mouse");
+	return component_new(ct_mouse);
 }
 
 int32_t c_mouse_event(c_mouse_t *self, const SDL_Event *event)
@@ -154,13 +154,13 @@ void c_mouse_visible(c_mouse_t *self, bool_t visible)
 	}
 }
 
-REG()
+void ct_mouse(ct_t *self)
 {
-	ct_t *ct = ct_new("mouse", sizeof(c_mouse_t), (init_cb)c_mouse_init, NULL, 0);
-
-	signal_init(sig("mouse_move"), sizeof(mouse_move_data));
-	signal_init(sig("mouse_press"), sizeof(mouse_button_data));
-	signal_init(sig("mouse_release"), sizeof(mouse_button_data));
-	signal_init(sig("mouse_wheel"), sizeof(mouse_button_data));
-	ct_listener(ct, WORLD, -1, sig("event_handle"), c_mouse_event);
+	ct_init(self, "mouse", sizeof(c_mouse_t));
+	ct_set_init(self, (init_cb)c_mouse_init);
+	signal_init(ref("mouse_move"), sizeof(mouse_move_data));
+	signal_init(ref("mouse_press"), sizeof(mouse_button_data));
+	signal_init(ref("mouse_release"), sizeof(mouse_button_data));
+	signal_init(ref("mouse_wheel"), sizeof(mouse_button_data));
+	ct_listener(self, WORLD, -1, ref("event_handle"), c_mouse_event);
 }

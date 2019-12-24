@@ -65,7 +65,8 @@ typedef struct c_render_device
 	uint32_t bound_ubos[32];
 } c_render_device_t;
 
-DEF_CASTER("render_device", c_render_device, c_render_device_t)
+void ct_render_device(ct_t *self);
+DEF_CASTER(ct_render_device, c_render_device, c_render_device_t)
 
 c_render_device_t *c_render_device_new(void);
 void c_render_device_rebind(
@@ -75,6 +76,5 @@ void c_render_device_rebind(
 void world_changed(void);
 void c_render_device_bind_ubo(c_render_device_t *self, uint32_t base,
                               uint32_t ubo);
-
 
 #endif /* !RENDER_DEVICE_H */

@@ -165,4 +165,6 @@ void drawable_model_changed(drawable_t *self);
 
 void draw_group(uint32_t ref);
 
+void draw_groups_init(void);
+
 #endif /* !MESH_GL_H */

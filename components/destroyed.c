@@ -2,13 +2,12 @@
 #include <systems/editmode.h>
 #include "destroyed.h"
 
+void ct_destroyed(ct_t *self)
+{
+	ct_init(self, "destroyed", sizeof(c_destroyed_t));
+}
+
 c_destroyed_t *c_destroyed_new()
 {
-	return component_new("destroyed");
+	return component_new(ct_destroyed);
 }
-
-REG()
-{
-	ct_new("destroyed", sizeof(c_destroyed_t), NULL, NULL, 0);
-}
-

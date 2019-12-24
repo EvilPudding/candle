@@ -36,7 +36,8 @@ typedef struct c_mouse_t
 	bool_t left;
 } c_mouse_t;
 
-DEF_CASTER("mouse", c_mouse, c_mouse_t)
+void ct_mouse(ct_t *self);
+DEF_CASTER(ct_mouse, c_mouse, c_mouse_t)
 c_mouse_t *c_mouse_new(void);
 void c_mouse_visible(c_mouse_t *self, bool_t visible);
 bool_t c_mouse_active(const c_mouse_t *self);

@@ -526,28 +526,6 @@ void c_model_init_drawables(c_model_t *self)
 	drawable_set_vs(&self->draw, model_vs());
 }
 
-c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, bool_t cast_shadow, bool_t visible)
-{
-	c_model_t *self = component_new("model");
-	if(c_entity(self) == SYS)
-	{
-		self->super.ghost = 1;
-		c_spatial(self)->super.ghost = 1;
-	}
-
-	c_model_init_drawables(self);
-
-	c_model_set_mat(self, mat);
-
-	c_model_set_cast_shadow(self, cast_shadow);
-	c_model_set_mesh(self, mesh);
-	c_model_set_visible(self, visible);
-	c_model_position_changed(self);
-
-	return self;
-}
-
-
 void c_model_run_command(c_model_t *self, mesh_t *last, mesh_history_t *cmd)
 {
 	struct edit_tool *tool = &g_edit_tools[cmd->type];
@@ -1036,7 +1014,7 @@ static void c_model_destroy(c_model_t *self)
 	if(self->mesh) mesh_destroy(self->mesh);
 }
 
-REG()
+void ct_model(ct_t *self)
 {
 	struct conf_circle circle_opts = {2, 10};
 	struct conf_cube cube_opts = {1.0f};
@@ -1048,19 +1026,20 @@ REG()
 	struct conf_subdivide subdivide_opts = {1};
 	struct conf_deform deform_opts = {0, VEC3i(0, 1, 0), "1"};
 
-	ct_t *ct = ct_new("model", sizeof(c_model_t),
-			(init_cb)c_model_init, (destroy_cb)c_model_destroy, 1, ref("node"));
+	ct_init(self, "model", sizeof(c_model_t));
+	ct_set_init(self, (init_cb)c_model_init);
+	ct_set_destroy(self, (destroy_cb)c_model_destroy);
+	ct_dependency(self, ct_node);
 
+	signal_init(ref("model_changed"), sizeof(mesh_t));
 
-	signal_init(sig("model_changed"), sizeof(mesh_t));
+	ct_listener(self, ENTITY, 0, ref("entity_created"), c_model_created);
 
-	ct_listener(ct, ENTITY, 0, sig("entity_created"), c_model_created);
+	ct_listener(self, WORLD, 0, ref("component_menu"), c_model_menu);
+	ct_listener(self, WORLD, 0, ref("component_tool"), c_model_tool);
+	ct_listener(self, WORLD, 100, ref("world_pre_draw"), c_model_pre_draw);
 
-	ct_listener(ct, WORLD, 0, sig("component_menu"), c_model_menu);
-	ct_listener(ct, WORLD, 0, sig("component_tool"), c_model_tool);
-	ct_listener(ct, WORLD, 100, sig("world_pre_draw"), c_model_pre_draw);
-
-	ct_listener(ct, ENTITY, 0, sig("node_changed"), c_model_position_changed);
+	ct_listener(self, ENTITY, 0, ref("node_changed"), c_model_position_changed);
 
 	add_tool("circle", (tool_gui_cb)tool_circle_gui,
 			(tool_edit_cb)tool_circle_edit,
@@ -1101,3 +1080,25 @@ REG()
 		(tool_edit_cb)tool_deform_edit, sizeof(struct conf_deform),
 		&deform_opts, 0);
 }
+
+c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, bool_t cast_shadow, bool_t visible)
+{
+	c_model_t *self = component_new(ct_model);
+	if(c_entity(self) == SYS)
+	{
+		self->super.ghost = 1;
+		c_spatial(self)->super.ghost = 1;
+	}
+
+	c_model_init_drawables(self);
+
+	c_model_set_mat(self, mat);
+
+	c_model_set_cast_shadow(self, cast_shadow);
+	c_model_set_mesh(self, mesh);
+	c_model_set_visible(self, visible);
+	c_model_position_changed(self);
+
+	return self;
+}
+

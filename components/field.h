@@ -16,7 +16,8 @@ typedef struct
 	drawable_t draw;
 } c_field_t;
 
-DEF_CASTER("field", c_field, c_field_t)
+void ct_field(ct_t *self);
+DEF_CASTER(ct_field, c_field, c_field_t)
 
 vs_t *field_vs(void);
 mesh_t *field_mesh(void);

@@ -11,7 +11,8 @@ typedef struct
 	mat4_t offset;
 } c_attach_t;
 
-DEF_CASTER("attach", c_attach, c_attach_t)
+void ct_attach(ct_t *self);
+DEF_CASTER(ct_attach, c_attach, c_attach_t)
 
 c_attach_t *c_attach_new(entity_t target);
 

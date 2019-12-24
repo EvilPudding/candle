@@ -29,20 +29,18 @@ vec3_t c_spatial_upwards(c_spatial_t *self)
 	return vec3_norm(quat_mul_vec3(self->rot_quat, vec3(0.0f, 1.0f, 0.0f)));
 }
 
-c_spatial_t *c_spatial_new()
+void ct_spatial(ct_t *self)
 {
-	c_spatial_t *self = component_new("spatial");
+	ct_init(self, "spatial", sizeof(c_spatial_t));
 
-	return self;
+	ct_set_init(self, (init_cb)c_spatial_init);
+	signal_init(sig("spatial_changed"), sizeof(entity_t));
+	ct_listener(self, WORLD, 0, sig("component_menu"), c_spatial_menu);
 }
 
-REG()
+c_spatial_t *c_spatial_new()
 {
-	ct_t *ct = ct_new("spatial", sizeof(c_spatial_t), (init_cb)c_spatial_init, NULL, 0);
-
-	signal_init(sig("spatial_changed"), sizeof(entity_t));
-
-	ct_listener(ct, WORLD, 0, sig("component_menu"), c_spatial_menu);
+	return component_new(ct_spatial);
 }
 
 void c_spatial_unlock(c_spatial_t *self)

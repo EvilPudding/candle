@@ -65,4 +65,6 @@ void candle_skip_frame(int frames);
 
 extern candle_t *g_candle;
 
+void candle_init(void);
+
 #endif /* !CREST_H */

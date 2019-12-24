@@ -21,60 +21,6 @@ static void c_axis_init(c_axis_t *self)
 	}
 }
 
-c_axis_t *c_axis_new(int type, vecN_t dir)
-{
-	c_axis_t *self = component_new("axis");
-
-	mat_t *m = mat_new("m", "default");
-
-	mat4f(m, ref("emissive.color"), vec4(_vec3(dir), 0.8f));
-	mat4f(m, ref("albedo.color"), vec4(_vec3(dir), 0.8f));
-#ifdef MESH4
-	if(dir.w)
-	{
-		mat4f(m, ref("emissive.color"), vec4(1.0f, 0.0f, 0.9f, 0.8f));
-		mat4f(m, ref("albedo.color"), vec4(1.0f, 0.0f, 0.9f, 0.8f));
-	}
-#endif
-	/* mat4f(m, ref("albedo.color"), vec4(1.0f, 1.0f, 1.0f, 1.0f)); */
-	self->type = type;
-
-	if(type == 0)
-	{
-		self->dir_mesh = mesh_new();
-		mesh_lock(self->dir_mesh);
-		mesh_circle(self->dir_mesh, 0.03f, 8, dir);
-		mesh_extrude_edges(self->dir_mesh, 1, vecN_(scale)(dir, 0.5), 1.0f, NULL, NULL, NULL);
-		mesh_extrude_edges(self->dir_mesh, 1, ZN, 1.70f, NULL, NULL, NULL);
-		mesh_extrude_edges(self->dir_mesh, 1, vecN_(scale)(dir, 0.1), 0.01f, NULL, NULL, NULL);
-		mesh_unlock(self->dir_mesh);
-	}
-	else if(type == 1)
-	{
-		self->dir_mesh = g_rot_axis_mesh;
-	}
-	else if(type == 2)
-	{
-		vecN_t point;
-		self->dir_mesh = mesh_new();
-		mesh_lock(self->dir_mesh);
-		point = vecN_(scale)(dir, 0.5);
-		mesh_circle(self->dir_mesh, 0.03f, 8, dir);
-		mesh_extrude_edges(self->dir_mesh, 1, point, 1.0f, NULL, NULL, NULL);
-		mesh_translate(self->dir_mesh, vecN_xyz(point));
-		mesh_cube(self->dir_mesh, 0.1, 1.0f);
-		mesh_unlock(self->dir_mesh);
-	}
-
-	entity_add_component(c_entity(self), c_model_new(self->dir_mesh, m, 0, 0));
-	c_model_set_xray(c_model(self), 1);
-	c_model(self)->scale_dist = 0.2f;
-
-	self->dir = vecN_xyz(dir);
-
-	return self;
-}
-
 int c_axis_press(c_axis_t *self, model_button_data *event)
 {
 	c_mouse_t *mouse;
@@ -173,18 +119,71 @@ int c_axis_created(c_axis_t *self)
 	return CONTINUE;
 }
 
-REG()
+void ct_axis(ct_t *self)
 {
-	ct_t *ct = ct_new("axis", sizeof(c_axis_t),
-			(init_cb)c_axis_init, NULL, 2, ref("node"), ref("mouse"));
+	ct_init(self, "axis", sizeof(c_axis_t));
+	ct_set_init(self, (init_cb)c_axis_init);
+	ct_dependency(self, ct_node);
+	ct_dependency(self, ct_mouse);
 
-	ct_listener(ct, WORLD, 0, sig("editmode_toggle"), c_axis_editmode_toggle);
-
-	ct_listener(ct, ENTITY, 0, sig("entity_created"), c_axis_created);
-
-	ct_listener(ct, ENTITY, 0, sig("model_press"), c_axis_press);
-
-	ct_listener(ct, ENTITY, 0, sig("mouse_release"), c_axis_release);
-
-	ct_listener(ct, ENTITY, 0, sig("mouse_move"), c_axis_mouse_move);
+	ct_listener(self, WORLD, 0, sig("editmode_toggle"), c_axis_editmode_toggle);
+	ct_listener(self, ENTITY, 0, sig("entity_created"), c_axis_created);
+	ct_listener(self, ENTITY, 0, sig("model_press"), c_axis_press);
+	ct_listener(self, ENTITY, 0, sig("mouse_release"), c_axis_release);
+	ct_listener(self, ENTITY, 0, sig("mouse_move"), c_axis_mouse_move);
 }
+
+c_axis_t *c_axis_new(int type, vecN_t dir)
+{
+	c_axis_t *self = component_new(ct_axis);
+
+	mat_t *m = mat_new("m", "default");
+
+	mat4f(m, ref("emissive.color"), vec4(_vec3(dir), 0.8f));
+	mat4f(m, ref("albedo.color"), vec4(_vec3(dir), 0.8f));
+#ifdef MESH4
+	if(dir.w)
+	{
+		mat4f(m, ref("emissive.color"), vec4(1.0f, 0.0f, 0.9f, 0.8f));
+		mat4f(m, ref("albedo.color"), vec4(1.0f, 0.0f, 0.9f, 0.8f));
+	}
+#endif
+	/* mat4f(m, ref("albedo.color"), vec4(1.0f, 1.0f, 1.0f, 1.0f)); */
+	self->type = type;
+
+	if(type == 0)
+	{
+		self->dir_mesh = mesh_new();
+		mesh_lock(self->dir_mesh);
+		mesh_circle(self->dir_mesh, 0.03f, 8, dir);
+		mesh_extrude_edges(self->dir_mesh, 1, vecN_(scale)(dir, 0.5), 1.0f, NULL, NULL, NULL);
+		mesh_extrude_edges(self->dir_mesh, 1, ZN, 1.70f, NULL, NULL, NULL);
+		mesh_extrude_edges(self->dir_mesh, 1, vecN_(scale)(dir, 0.1), 0.01f, NULL, NULL, NULL);
+		mesh_unlock(self->dir_mesh);
+	}
+	else if(type == 1)
+	{
+		self->dir_mesh = g_rot_axis_mesh;
+	}
+	else if(type == 2)
+	{
+		vecN_t point;
+		self->dir_mesh = mesh_new();
+		mesh_lock(self->dir_mesh);
+		point = vecN_(scale)(dir, 0.5);
+		mesh_circle(self->dir_mesh, 0.03f, 8, dir);
+		mesh_extrude_edges(self->dir_mesh, 1, point, 1.0f, NULL, NULL, NULL);
+		mesh_translate(self->dir_mesh, vecN_xyz(point));
+		mesh_cube(self->dir_mesh, 0.1, 1.0f);
+		mesh_unlock(self->dir_mesh);
+	}
+
+	entity_add_component(c_entity(self), c_model_new(self->dir_mesh, m, 0, 0));
+	c_model_set_xray(c_model(self), 1);
+	c_model(self)->scale_dist = 0.2f;
+
+	self->dir = vecN_xyz(dir);
+
+	return self;
+}
+

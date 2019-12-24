@@ -105,18 +105,6 @@ int c_sprite_menu(c_sprite_t *self, void *ctx)
 	return CONTINUE;
 }
 
-c_sprite_t *c_sprite_new(mat_t *mat, int cast_shadow)
-{
-	c_sprite_t *self = component_new("sprite");
-
-	self->cast_shadow = cast_shadow;
-
-	c_sprite_set_mat(self, mat);
-
-	c_sprite_position_changed(self);
-	return self;
-}
-
 int c_sprite_created(c_sprite_t *self)
 {
 	entity_signal_same(c_entity(self), ref("mesh_changed"), NULL, NULL);
@@ -138,14 +126,26 @@ void c_sprite_destroy(c_sprite_t *self)
 	drawable_set_mesh(&self->draw, NULL);
 }
 
-REG()
+void ct_sprite(ct_t *self)
 {
-	ct_t *ct = ct_new("sprite", sizeof(c_sprite_t),
-			(init_cb)c_sprite_init, (destroy_cb)c_sprite_destroy, 1, ref("node"));
-
-	ct_listener(ct, ENTITY, 0, ref("entity_created"), c_sprite_created);
-
-	ct_listener(ct, WORLD, 0, ref("component_menu"), c_sprite_menu);
-
-	ct_listener(ct, ENTITY, 0, ref("node_changed"), c_sprite_position_changed);
+	ct_init(self, "sprite", sizeof(c_sprite_t));
+	ct_set_init(self, (init_cb)c_sprite_init);
+	ct_set_destroy(self, (destroy_cb)c_sprite_destroy);
+	ct_dependency(self, ct_node);
+	ct_listener(self, ENTITY, 0, ref("entity_created"), c_sprite_created);
+	ct_listener(self, WORLD, 0, ref("component_menu"), c_sprite_menu);
+	ct_listener(self, ENTITY, 0, ref("node_changed"), c_sprite_position_changed);
 }
+
+c_sprite_t *c_sprite_new(mat_t *mat, int cast_shadow)
+{
+	c_sprite_t *self = component_new(ct_sprite);
+
+	self->cast_shadow = cast_shadow;
+
+	c_sprite_set_mat(self, mat);
+
+	c_sprite_position_changed(self);
+	return self;
+}
+

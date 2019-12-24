@@ -72,13 +72,6 @@ static void c_skin_init(c_skin_t *self)
 	drawable_set_skin(&mc->draw, &self->info);
 }
 
-c_skin_t *c_skin_new()
-{
-	c_skin_t *self = component_new("skin");
-	self->info.update_id = 1;
-	return self;
-}
-
 void c_skin_changed(c_skin_t *self)
 {
 	self->modified = 1;
@@ -101,10 +94,18 @@ int c_skin_update_transforms(c_skin_t *self)
 	return CONTINUE;
 }
 
-REG()
+void ct_skin(ct_t *self)
 {
-	ct_t *ct = ct_new("skin", sizeof(c_skin_t),
-			(init_cb)c_skin_init, NULL, 1, ref("node"));
-	ct_listener(ct, WORLD, 0, sig("world_update"), c_skin_update_transforms);
+	ct_init(self, "skin", sizeof(c_skin_t));
+	ct_set_init(self, (init_cb)c_skin_init);
+	ct_dependency(self, ct_node);
+	ct_listener(self, WORLD, 0, sig("world_update"), c_skin_update_transforms);
+}
+
+c_skin_t *c_skin_new()
+{
+	c_skin_t *self = component_new(ct_skin);
+	self->info.update_id = 1;
+	return self;
 }
 

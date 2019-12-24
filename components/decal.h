@@ -14,7 +14,8 @@ typedef struct c_decal_t
 	mat_t *mat;
 } c_decal_t;
 
-DEF_CASTER("decal", c_decal, c_decal_t)
+void ct_decal(ct_t *self);
+DEF_CASTER(ct_decal, c_decal, c_decal_t)
 
 c_decal_t *c_decal_new(mat_t *mat, int visible, int selectable);
 void c_decal_destroy(c_decal_t *self);

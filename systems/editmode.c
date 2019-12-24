@@ -548,7 +548,7 @@ vec2_t c_editmode_bind_sel(pass_t *pass, c_editmode_t *self)
 /* entity_t p; */
 c_editmode_t *c_editmode_new()
 {
-	c_editmode_t *self = component_new("editmode");
+	c_editmode_t *self = component_new(ct_editmode);
 	return self;
 }
 
@@ -1367,7 +1367,7 @@ uint32_t levenshtein(const char *a, const char *b) {
   return result;
 }
 
-static void insert_ct(c_editmode_t *self, int32_t ct, int32_t dist)
+static void insert_ct(c_editmode_t *self, ct_id_t ct, int32_t dist)
 {
 	int32_t i;
 	for(i = 0; i < self->ct_list_size && i < 9; i++)
@@ -1587,7 +1587,7 @@ int32_t c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 			if(active)
 			{
 				ct_t *ct = ecm_get(self->ct_list[0].ct);
-				entity_add_component(ent, component_new_from_ref(ct->id));
+				entity_add_component(ent, component_new(ct->id));
 				nk_contextual_close(self->nk);
 			}
 			else
@@ -1600,8 +1600,7 @@ int32_t c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 						self->ct_search_bak[0] = '\0';
 						self->ct_search[0] = '\0';
 						self->ct_list_size = 0;
-						entity_add_component(ent,
-								component_new_from_ref(ct->id));
+						entity_add_component(ent, component_new(ct->id));
 					}
 				}
 			}
@@ -1732,10 +1731,12 @@ int32_t c_editmode_pick_save(c_editmode_t *self, const char *filter, char **outp
 	return STOP;
 }
 
-REG()
+void ct_editmode(ct_t *self)
 {
-	ct_t *ct = ct_new("editmode", sizeof(c_editmode_t), (init_cb)c_editmode_init,
-			NULL, 2, ref("node"), ref("mouse"));
+	ct_init(self, "editmode", sizeof(c_editmode_t));
+	ct_set_init(self, (init_cb)c_editmode_init);
+	ct_dependency(self, ct_node);
+	ct_dependency(self, ct_mouse);
 
 	signal_init(ref("component_menu"), sizeof(struct nk_context*));
 	signal_init(ref("component_tool"), sizeof(void*));
@@ -1745,29 +1746,18 @@ REG()
 	signal_init(ref("transform_start"), sizeof(void*));
 	signal_init(ref("transform_stop"), sizeof(void*));
 
-	ct_listener(ct, WORLD, 10, ref("key_up"), c_editmode_key_up);
-
-	ct_listener(ct, WORLD, 10, ref("key_down"), c_editmode_key_down);
-
-	ct_listener(ct, WORLD, 0, ref("pick_file_save"), c_editmode_pick_save);
-	ct_listener(ct, WORLD, 0, ref("pick_file_load"), c_editmode_pick_load);
-
-	ct_listener(ct, WORLD, 0, ref("mouse_move"), c_editmode_mouse_move);
-
-	ct_listener(ct, WORLD, 0, ref("world_draw"), c_editmode_draw);
-
-	ct_listener(ct, WORLD, 0, ref("world_update"), c_editmode_update);
-
-	ct_listener(ct, WORLD, 50, ref("component_menu"), c_editmode_component_menu);
-
-	ct_listener(ct, WORLD, 0, ref("mouse_press"), c_editmode_mouse_press);
-
-	ct_listener(ct, WORLD, 0, ref("mouse_release"), c_editmode_mouse_release);
-
-	ct_listener(ct, WORLD, 0, ref("events_begin"), c_editmode_events_begin);
-
-	ct_listener(ct, WORLD, 0, ref("events_end"), c_editmode_events_end);
-
-	/* ct_listener(ct, WORLD, 0, ref("window_resize"), c_editmode_resize); */
+	ct_listener(self, WORLD, 10, ref("key_up"), c_editmode_key_up);
+	ct_listener(self, WORLD, 10, ref("key_down"), c_editmode_key_down);
+	ct_listener(self, WORLD, 0, ref("pick_file_save"), c_editmode_pick_save);
+	ct_listener(self, WORLD, 0, ref("pick_file_load"), c_editmode_pick_load);
+	ct_listener(self, WORLD, 0, ref("mouse_move"), c_editmode_mouse_move);
+	ct_listener(self, WORLD, 0, ref("world_draw"), c_editmode_draw);
+	ct_listener(self, WORLD, 0, ref("world_update"), c_editmode_update);
+	ct_listener(self, WORLD, 50, ref("component_menu"), c_editmode_component_menu);
+	ct_listener(self, WORLD, 0, ref("mouse_press"), c_editmode_mouse_press);
+	ct_listener(self, WORLD, 0, ref("mouse_release"), c_editmode_mouse_release);
+	ct_listener(self, WORLD, 0, ref("events_begin"), c_editmode_events_begin);
+	ct_listener(self, WORLD, 0, ref("events_end"), c_editmode_events_end);
+	/* ct_listener(self, WORLD, 0, ref("window_resize"), c_editmode_resize); */
 }
 

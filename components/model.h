@@ -144,7 +144,8 @@ typedef struct
 	bool_t modified;
 } c_model_t;
 
-DEF_CASTER("model", c_model, c_model_t)
+void ct_model(ct_t *self);
+DEF_CASTER(ct_model, c_model, c_model_t)
 vs_t *model_vs(void);
 
 void c_model_edit(c_model_t *self, mesh_edit_t type, geom_t target);

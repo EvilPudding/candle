@@ -19,7 +19,7 @@ void c_editlook_init(c_editlook_t *self)
 
 c_editlook_t *c_editlook_new()
 {
-	c_editlook_t *self = component_new("editLook");
+	c_editlook_t *self = component_new(ct_editlook);
 
 	self->sensitivity = 0.8;
 
@@ -186,20 +186,16 @@ int c_editlook_controller(c_editlook_t *self, controller_axis_t *event)
 	return CONTINUE;
 }
 
-REG()
+void ct_editlook(ct_t *self)
 {
-	ct_t *ct = ct_new("editLook", sizeof(c_editlook_t),
-			(init_cb)c_editlook_init, NULL, 2, ref("spatial"), ref("mouse"));
-
-	ct_listener(ct, WORLD, 0, sig("mouse_wheel"), c_editlook_mouse_wheel);
-
-	ct_listener(ct, WORLD, 100, sig("mouse_move"), c_editlook_mouse_move);
-
-	ct_listener(ct, WORLD, 100, sig("controller_axis"), c_editlook_controller);
-
-	ct_listener(ct, WORLD, 0, sig("window_resize"), c_editlook_window_resize);
-
-	ct_listener(ct, ENTITY, 100, sig("mouse_release"), c_editlook_mouse_release);
-
+	ct_init(self, "editLook", sizeof(c_editlook_t));
+	ct_set_init(self, (init_cb)c_editlook_init);
+	ct_dependency(self, ct_spatial);
+	ct_dependency(self, ct_mouse);
+	ct_listener(self, WORLD, 0, sig("mouse_wheel"), c_editlook_mouse_wheel);
+	ct_listener(self, WORLD, 100, sig("mouse_move"), c_editlook_mouse_move);
+	ct_listener(self, WORLD, 100, sig("controller_axis"), c_editlook_controller);
+	ct_listener(self, WORLD, 0, sig("window_resize"), c_editlook_window_resize);
+	ct_listener(self, ENTITY, 100, sig("mouse_release"), c_editlook_mouse_release);
 }
 

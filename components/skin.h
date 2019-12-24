@@ -20,7 +20,8 @@ typedef struct
 	uint32_t modified;
 } c_skin_t;
 
-DEF_CASTER("skin", c_skin, c_skin_t)
+void ct_skin(ct_t *self);
+DEF_CASTER(ct_skin, c_skin, c_skin_t)
 
 c_skin_t *c_skin_new(void);
 void c_skin_changed(c_skin_t *self);

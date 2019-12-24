@@ -14,7 +14,8 @@ typedef struct
 	drawable_t draw;
 } c_sprite_t;
 
-DEF_CASTER("sprite", c_sprite, c_sprite_t)
+void ct_sprite(ct_t *self);
+DEF_CASTER(ct_sprite, c_sprite, c_sprite_t)
 
 vs_t *sprite_vs(void);
 mesh_t *sprite_mesh(void);

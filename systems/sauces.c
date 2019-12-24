@@ -31,7 +31,7 @@ static sauces_loader_cb c_sauces_get_loader(c_sauces_t *self, uint32_t ext);
 
 c_sauces_t *c_sauces_new()
 {
-	c_sauces_t *self = component_new("sauces");
+	c_sauces_t *self = component_new(ct_sauces);
 	self->sauces = kh_init(res);
 	self->generic = kh_init(res);
 	self->loaders = kh_init(loa);
@@ -259,9 +259,8 @@ int c_sauces_component_menu(c_sauces_t *self, void *ctx)
 }
 
 
-REG()
+void ct_sauces(ct_t *self)
 {
-	ct_t *ct = ct_new("sauces", sizeof(c_sauces_t), NULL, NULL, 0);
-
-	ct_listener(ct, WORLD, 0, sig("component_menu"), c_sauces_component_menu);
+	ct_init(self, "sauces", sizeof(c_sauces_t));
+	ct_listener(self, WORLD, 0, ref("component_menu"), c_sauces_component_menu);
 }

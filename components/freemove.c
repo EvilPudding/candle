@@ -8,17 +8,6 @@ extern int window_width, window_height;
 
 #define friction 0.1
 
-c_freemove_t *c_freemove_new(entity_t orientation, int plane_movement, entity_t force_down)
-{
-	c_freemove_t *self = component_new("freemove");
-	self->plane_movement = plane_movement;
-	self->force_down = force_down;
-
-	self->orientation = orientation;
-
-	return self;
-}
-
 static int c_freemove_update(c_freemove_t *self, float *dt)
 {
 	/* vec3_t rot = c_spatial(self->orientation)->rot; */
@@ -96,15 +85,23 @@ static int c_freemove_key_down(c_freemove_t *self, char *key)
 	return CONTINUE;
 }
 
-REG()
+void ct_freemove(ct_t *self)
 {
-	ct_t *ct = ct_new("freemove", sizeof(c_freemove_t),
-			NULL, NULL, 1, ref("velocity"));
+	ct_init(self, "freemove", sizeof(c_freemove_t));
+	ct_listener(self, WORLD, 0, ref("key_up"), c_freemove_key_up);
+	ct_listener(self, WORLD, 0, ref("key_down"), c_freemove_key_down);
+	ct_listener(self, WORLD, 0, ref("world_update"), c_freemove_update);
+}
 
-	ct_listener(ct, WORLD, 0, sig("key_up"), c_freemove_key_up);
+c_freemove_t *c_freemove_new(entity_t orientation, int plane_movement,
+                             entity_t force_down)
+{
+	c_freemove_t *self = component_new(ct_freemove);
+	self->plane_movement = plane_movement;
+	self->force_down = force_down;
 
-	ct_listener(ct, WORLD, 0, sig("key_down"), c_freemove_key_down);
+	self->orientation = orientation;
 
-	ct_listener(ct, WORLD, 0, sig("world_update"), c_freemove_update);
+	return self;
 }
 

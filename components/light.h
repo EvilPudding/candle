@@ -33,7 +33,8 @@ typedef struct
 	int32_t frames_passed;
 } c_light_t;
 
-DEF_CASTER("light", c_light, c_light_t)
+void ct_light(ct_t *self);
+DEF_CASTER(ct_light, c_light, c_light_t)
 
 c_light_t *c_light_new(float radius, vec4_t color);
 void c_light_visible(c_light_t *self, uint32_t visible);

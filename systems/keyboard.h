@@ -10,7 +10,8 @@ typedef struct c_keyboard_t
 	int ctrl;
 } c_keyboard_t;
 
-DEF_CASTER("keyboard", c_keyboard, c_keyboard_t)
+void ct_keyboard(ct_t *self);
+DEF_CASTER(ct_keyboard, c_keyboard, c_keyboard_t)
 c_keyboard_t *c_keyboard_new(void);
 
 #endif /* !KEYBOARD_H */

@@ -29,18 +29,7 @@ struct set_var
 #define IDENT_NULL UINT_MAX
 #define DEF_CASTER(ct, cn, nc_t) \
 	static nc_t *cn(void *entity)\
-{ return (nc_t*)ct_get(ecm_get(ref(ct)), entity); }
-
-#define CONSTR_BEFORE_REG 102
-#define CONSTR_REG 103
-#define CONSTR_AFTER_REG 104
-/* #define REG() \ */
-	/* static void _register(void); \ */
-	/* __attribute__((constructor (CONSTR_REG))) static void add_reg(void) \ */
-	/* { ecm_add_reg(_register); } \ */
-	/* static void _register(void) */
-#define REG() \
-	__attribute__((constructor (CONSTR_REG))) static void _register(void)
+{ return (nc_t*)ct_get(ecm_get(ct), entity); }
 
 #define ecm_foreach_c(vvar, code) { khint_t __i;		\
 	for (__i = kh_begin(g_ecm->cs); __i != kh_end(g_ecm->cs); ++__i) {		\
@@ -65,18 +54,20 @@ struct set_var
 
 /* #define RENDER_THREAD 0x02 */
 
+typedef void(*ct_id_t)(struct ct *self);
+
 typedef struct
 {
 	uint32_t signal;
 	signal_cb cb;
 	int32_t flags;
-	uint32_t target;
+	ct_id_t target;
 	int32_t priority;
 } listener_t;
 
 typedef struct
 {
-	uint32_t ct;
+	ct_id_t ct;
 	int32_t is_interaction;
 } dep_t;
 
@@ -89,7 +80,7 @@ struct comp_page
 typedef struct c
 {
 	entity_t entity;
-	uint32_t comp_type;
+	ct_id_t comp_type;
 	uint32_t ghost;
 } c_t;
 
@@ -102,7 +93,7 @@ typedef struct ct
 	init_cb init;
 	destroy_cb destroy;
 
-	uint32_t id;
+	ct_id_t id;
 	uint32_t size;
 
 	khash_t(c) *cs;
@@ -126,7 +117,7 @@ typedef struct
 } signal_t;
 
 KHASH_MAP_INIT_INT(sig, signal_t)
-KHASH_MAP_INIT_INT(ct, ct_t)
+KHASH_MAP_INIT_INT64(ct, ct_t)
 
 typedef struct
 {
@@ -190,24 +181,17 @@ void ecm_destroy_all(void);
 void ecm_add_entity(entity_t *entity);
 /* uint32_t ecm_register_system(ecm_t *self, void *system); */
 
-ct_t *ct_new(const char *name, uint32_t size, init_cb init,
-		destroy_cb destroy, int32_t depend_size, ...);
+void ct_init(ct_t *self, const char *name, uint32_t size);
+void ct_dependency(ct_t *dep, ct_id_t target);
+void ct_interaction(ct_t *dep, ct_id_t target);
+void ct_set_init(ct_t *dep, init_cb cb);
+void ct_set_destroy(ct_t *dep, destroy_cb cb);
 
-void ct_add_dependency(ct_t *dep, uint32_t target);
-void ct_add_interaction(ct_t *dep, uint32_t target);
 
-
-static ct_t *ecm_get(uint32_t comp_type)
-{
-	khiter_t k = kh_get(ct, g_ecm->cts, comp_type);
-	if(k == kh_end(g_ecm->cts)) return NULL;
-	return &kh_value(g_ecm->cts, k);
-}
+ct_t *ecm_get(ct_id_t id);
 /* void ecm_generate_hashes(ecm_t *self); */
 
-#define component_new_from_ref(comp_type) _component_new(comp_type)
-#define component_new(comp_type) _component_new(ref(comp_type))
-void *_component_new(uint32_t comp_type);
+void *component_new(void(*ct_reg)(ct_t*));
 
 static uint32_t entity_exists(entity_t self)
 {
