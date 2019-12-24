@@ -10,9 +10,6 @@ typedef uint64_t entity_t;
 typedef int(*filter_cb)(struct c *self, struct c *accepted, void *data, void *output);
 #define entity_null ((entity_t)0)
 
-extern __thread entity_t _g_creating[32];
-extern __thread int _g_creating_num;
-
 #define entity_new(components) \
 	entity_new_pre();components;entity_new_post()
 

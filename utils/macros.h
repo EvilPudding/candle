@@ -19,8 +19,10 @@ typedef uint32_t bool_t;
 #define CAT2(a,b) CAT(a,b)
 
 #ifndef EMSCRIPTEN
+#ifndef _MSC_VER
 /* __attribute__((always_inline)) */
 __attribute__((optimize("unroll-loops")))
+#endif
 #endif
 static uint32_t murmur_hash(const void *key, int32_t len, uint32_t seed)
 {
@@ -81,8 +83,9 @@ static uint32_t murmur_hash(const void *key, int32_t len, uint32_t seed)
     return h1;
 }
 #ifndef EMSCRIPTEN
-/* __attribute__((always_inline)) */
+#ifndef _MSC_VER
 __attribute__((optimize("unroll-loops")))
+#endif
 #endif
 static uint32_t murmur_hash_step(uint32_t h1, uint32_t block)
 {
@@ -106,8 +109,10 @@ static uint32_t murmur_hash_step(uint32_t h1, uint32_t block)
 }
 
 #ifndef EMSCRIPTEN
+#ifndef _MSC_VER
 /* __attribute__((always_inline)) */
 __attribute__((optimize("unroll-loops")))
+#endif
 #endif
 static uint32_t hash_ptr(void *ptr)
 {

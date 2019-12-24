@@ -836,7 +836,7 @@ texture_t *texture_new_2D
 	self->height = height;
 	self->sizes[0] = uvec2(width, height);
 
-    va_start(argptr, buf_count);
+	va_start(argptr, buf_count);
 	for (i = 0; i < buf_count; i++)
 	{
 		buffer_t buffer = va_arg(argptr, buffer_t);

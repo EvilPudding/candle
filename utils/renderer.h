@@ -173,14 +173,13 @@ struct gl_camera
 	float exposure;
 };
 
-typedef struct c_renderer_t
+typedef struct renderer
 {
 	int frame;
 	int update_frame;
 	float resolution;
 	int width, height;
-	float near, far;
-	float fov;
+	float proj_near, proj_far, proj_fov;
 
 	/* texture_t *perlin; */
 

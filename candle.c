@@ -14,12 +14,6 @@
 #include <components/node.h>
 #include <components/name.h>
 
-#ifndef WIN32
-#include <unistd.h>
-#endif
-#include <dirent.h>
-#include <fcntl.h>
-
 candle_t *g_candle;
 
 

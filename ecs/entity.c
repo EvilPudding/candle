@@ -8,20 +8,51 @@
 
 /* static void entity_check_missing_dependencies(entity_t self); */
 
-__thread entity_t _g_creating[32] = {0};
-__thread int _g_creating_num = 0;
+struct entity_creation {
+	entity_t entities[32];
+	uint32_t creating_num;
+}
+static SDL_SpinLock _g_tls_lock;
+static SDL_TLSID _g_creating_entity;
 
 extern SDL_sem *sem;
 
+static void g_creating_entity_update(struct entity_creation *value)
+{
+    if (!_g_creating_entity) {
+        SDL_AtomicLock(&_g_tls_lock);
+        if (!thread_local_storage) {
+            thread_local_storage = SDL_TLSCreate();
+        }
+        SDL_AtomicUnlock(&_g_tls_lock);
+    }
+    SDL_TLSSet(_g_creating_entity, value, 0);
+}
+
+static struct entity_creation *g_creating_entity_get(void)
+{
+    return SDL_TLSGet(_g_creating_entity);
+}
+
 void entity_new_post()
 {
+	struct entity_creation *ec = g_creating_entity_get();
+	ec->creating_num--;
+	g_creating_entity_update(ec);
+
 	entity_t self = _g_creating[--_g_creating_num];
 	entity_signal_same(self, sig("entity_created"), NULL, NULL);
 }
 
 entity_t entity_new_pre(void)
 {
-	return _g_creating[_g_creating_num++] = ecm_new_entity();
+	entity_t self = ecm_new_entity();
+
+	struct entity_creation *ec = g_creating_entity_get();
+	ec->entities[ec->creating_num++] = self;
+	g_creating_entity_update(ec);
+
+	return self;
 }
 
 int filter_listener(listener_t *self)
@@ -149,7 +180,9 @@ int entity_signal(entity_t self, uint32_t signal, void *data, void *output)
 
 void _entity_add_post(entity_t self, c_t *comp)
 {
-	--_g_creating_num;
+	struct entity_creation *ec = g_creating_entity_get();
+	ec->creating_num--;
+	g_creating_entity_update(ec);
 
 	if (comp)
 	{
@@ -160,7 +193,9 @@ void _entity_add_post(entity_t self, c_t *comp)
 
 void _entity_add_pre(entity_t entity)
 {
-	_g_creating[_g_creating_num++] = entity;
+	struct entity_creation *ec = g_creating_entity_get();
+	ec->entities[ec->creating_num++] = entity;
+	g_creating_entity_update(ec);
 }
 
 /* void _entity_add_component(entity_t self, c_t *comp, int on_creation) */

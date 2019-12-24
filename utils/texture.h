@@ -115,8 +115,6 @@ texture_t *texture_from_buffer(void *buffer, int32_t width, int32_t height,
 texture_t *texture_new_2D(uint32_t width, uint32_t height, uint32_t flags,
                           uint32_t buf_count, ...);
 
-extern __thread texture_t *_g_tex_creating;
-
 texture_t *texture_new_3D(uint32_t width, uint32_t height,
                           uint32_t depth, int32_t dims);
 

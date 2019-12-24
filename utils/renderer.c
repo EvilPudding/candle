@@ -721,9 +721,9 @@ void renderer_update_projection(renderer_t *self)
 	uint32_t f;
 
 	self->glvars[0].projection = mat4_perspective(
-			self->fov,
+			self->proj_fov,
 			((float)self->width) / self->height,
-			self->near, self->far
+			self->proj_near, self->proj_far
 	);
 	self->glvars[0].inv_projection = mat4_invert(self->glvars[0].projection); 
 	self->ubo_changed[0] = true;
@@ -1001,9 +1001,9 @@ renderer_t *renderer_new(float resolution)
 		self->glvars[f].projection = self->glvars[f].inv_projection =
 			self->glvars[f].previous_view = self->glvars[f].model = mat4();
 	}
-	self->near = 0.1f;
-	self->far = 100.0f;
-	self->fov = M_PI / 2.0f;
+	self->proj_near = 0.1f;
+	self->proj_far = 100.0f;
+	self->proj_fov = M_PI / 2.0f;
 	self->cubemap = false;
 
 	self->resolution = resolution;
