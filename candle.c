@@ -13,6 +13,12 @@
 #include <components/name.h>
 #include <components/node.h>
 
+#ifndef WIN32
+#include <unistd.h>
+#else
+#include <direct.h>
+#endif
+
 candle_t *g_candle;
 
 
