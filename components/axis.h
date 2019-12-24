@@ -12,7 +12,8 @@ typedef struct
 	int visible;
 } c_axis_t;
 
-DEF_CASTER("axis", c_axis, c_axis_t)
+void ct_axis(ct_t *self);
+DEF_CASTER(ct_axis, c_axis, c_axis_t)
 
 c_axis_t *c_axis_new(int type, vecN_t dir);
 

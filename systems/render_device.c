@@ -18,7 +18,7 @@
 void c_render_device_update_lights(c_render_device_t *self)
 {
 	khiter_t k;
-	ct_t *lights = ecm_get(ref("light"));
+	ct_t *lights = ecm_get(ct_light);
 	c_light_t *light;
 	struct gl_light *gllight;
 	if (!lights) return;
@@ -188,7 +188,7 @@ static int c_render_device_created(c_render_device_t *self)
 
 c_render_device_t *c_render_device_new()
 {
-	c_render_device_t *self = component_new("render_device");
+	c_render_device_t *self = component_new(ct_render_device);
 	SDL_AtomicSet((SDL_atomic_t*)&self->updates_ram, 1);
 	svp_init();
 
@@ -224,16 +224,17 @@ void c_render_device_destroy(c_render_device_t *self)
 	svp_destroy();
 }
 
-REG()
+void ct_render_device(ct_t *self)
 {
-	ct_t *ct = ct_new("render_device", sizeof(c_render_device_t),
-			NULL, (destroy_cb)c_render_device_destroy, 1, ref("window"));
+	ct_init(self, "render_device", sizeof(c_render_device_t));
+	ct_set_destroy(self, (destroy_cb)c_render_device_destroy);
+	ct_dependency(self, ct_window);
 
-	ct_listener(ct, WORLD, 0, ref("world_update"), c_render_device_update);
+	ct_listener(self, WORLD, 0, ref("world_update"), c_render_device_update);
 
-	ct_listener(ct, WORLD, 100, ref("world_draw"), c_render_device_draw);
+	ct_listener(self, WORLD, 100, ref("world_draw"), c_render_device_draw);
 
-	ct_listener(ct, ENTITY, 0, ref("entity_created"), c_render_device_created);
+	ct_listener(self, ENTITY, 0, ref("entity_created"), c_render_device_created);
 
-	signal_init(sig("world_pre_draw"), sizeof(void*));
+	signal_init(ref("world_pre_draw"), sizeof(void*));
 }

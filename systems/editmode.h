@@ -122,7 +122,7 @@ typedef struct c_editmode
 	} mode;
 
 	struct {
-		int32_t ct;
+		ct_id_t ct;
 		int32_t distance;
 	} ct_list[10];
 	int32_t ct_list_size;
@@ -136,7 +136,8 @@ typedef struct c_editmode
 	entity_t arrows, X, Y, Z, W, RX, RY, RZ, SX, SY, SZ;
 } c_editmode_t;
 
-DEF_CASTER("editmode", c_editmode, c_editmode_t)
+void ct_editmode(ct_t *self);
+DEF_CASTER(ct_editmode, c_editmode, c_editmode_t)
 
 c_editmode_t *c_editmode_new(void);
 void c_editmode_activate(c_editmode_t *self);
@@ -154,5 +155,6 @@ void c_editmode_add_tool(c_editmode_t *self, char key, const char *name,
                          mouse_tool_end_cb end,
                          void *usrptr,
                          uint32_t require_component);
+
 
 #endif /* !EDITMODE_H */

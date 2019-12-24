@@ -17,62 +17,6 @@ void c_controllers_rumble(c_controllers_t *self, uint32_t controller,
 	}
 }
 
-c_controllers_t *c_controllers_new()
-{
-	bool_t has_gamepads = false;
-	int n_joysticks, i;
-	c_controllers_t *self = component_new("controller");
-
-	if (SDL_WasInit(SDL_INIT_GAMECONTROLLER) == 1)
-		exit(1);
-	SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER);
-	SDL_InitSubSystem(SDL_INIT_HAPTIC);
-
-	n_joysticks = SDL_NumJoysticks();
-	for (i = 0; i < n_joysticks; i++)
-	{
-		if (SDL_IsGameController(i))
-		{
-			SDL_GameController *pad = SDL_GameControllerOpen(i);
-
-			if (SDL_GameControllerGetAttached(pad) == 1)
-			{
-				has_gamepads = true;
-			}
-		}
-	}
-
-	for (i = 0; i < 8; i++)
-	{
-		self->controllers[i].id = i;
-		self->controllers[i].axis_right.controller = i;
-		self->controllers[i].axis_left.controller = i;
-		self->controllers[i].axis_left.side = 0;
-		self->controllers[i].axis_right.side = 1;
-		self->controllers[i].up.controller = i;
-		self->controllers[i].down.controller = i;
-		self->controllers[i].left.controller = i;
-		self->controllers[i].right.controller = i;
-		self->controllers[i].a.controller = i;
-		self->controllers[i].b.controller = i;
-		self->controllers[i].x.controller = i;
-		self->controllers[i].y.controller = i;
-		self->controllers[i].trigger_left.controller = i;
-		self->controllers[i].trigger_right.controller = i;
-		self->controllers[i].shoulder_left.controller = i;
-		self->controllers[i].shoulder_right.controller = i;
-		self->controllers[i].start.controller = i;
-		self->controllers[i].back.controller = i;
-		self->controllers[i].guide.controller = i;
-	}
-
-	if (has_gamepads)
-	{
-		SDL_GameControllerEventState(SDL_ENABLE);
-	}
-	return self;
-}
-
 float normalize_axis(int32_t val)
 {
 	const int deadzone = 3000;
@@ -245,9 +189,9 @@ int32_t c_controllers_events_end(c_controllers_t *self)
 }
 
 
-REG()
+void ct_controller(ct_t *self)
 {
-	ct_t *ct = ct_new("controller", sizeof(c_controllers_t), NULL, NULL, 0);
+	ct_init(self, "controller", sizeof(c_controllers_t));
 
 	signal_init(ref("controller_connected"), sizeof(uint32_t));
 	signal_init(ref("controller_button_up"), sizeof(controller_button_t));
@@ -256,7 +200,62 @@ REG()
 
 	signal_init(ref("controller_axis"), sizeof(controller_axis_t));
 
-	ct_listener(ct, WORLD, 0, ref("event_handle"), c_controllers_event);
-	ct_listener(ct, WORLD, 0, ref("events_end"), c_controllers_events_end);
+	ct_listener(self, WORLD, 0, ref("event_handle"), c_controllers_event);
+	ct_listener(self, WORLD, 0, ref("events_end"), c_controllers_events_end);
 }
 
+c_controllers_t *c_controllers_new()
+{
+	bool_t has_gamepads = false;
+	int n_joysticks, i;
+	c_controllers_t *self = component_new(ct_controller);
+
+	if (SDL_WasInit(SDL_INIT_GAMECONTROLLER) == 1)
+		exit(1);
+	SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER);
+	SDL_InitSubSystem(SDL_INIT_HAPTIC);
+
+	n_joysticks = SDL_NumJoysticks();
+	for (i = 0; i < n_joysticks; i++)
+	{
+		if (SDL_IsGameController(i))
+		{
+			SDL_GameController *pad = SDL_GameControllerOpen(i);
+
+			if (SDL_GameControllerGetAttached(pad) == 1)
+			{
+				has_gamepads = true;
+			}
+		}
+	}
+
+	for (i = 0; i < 8; i++)
+	{
+		self->controllers[i].id = i;
+		self->controllers[i].axis_right.controller = i;
+		self->controllers[i].axis_left.controller = i;
+		self->controllers[i].axis_left.side = 0;
+		self->controllers[i].axis_right.side = 1;
+		self->controllers[i].up.controller = i;
+		self->controllers[i].down.controller = i;
+		self->controllers[i].left.controller = i;
+		self->controllers[i].right.controller = i;
+		self->controllers[i].a.controller = i;
+		self->controllers[i].b.controller = i;
+		self->controllers[i].x.controller = i;
+		self->controllers[i].y.controller = i;
+		self->controllers[i].trigger_left.controller = i;
+		self->controllers[i].trigger_right.controller = i;
+		self->controllers[i].shoulder_left.controller = i;
+		self->controllers[i].shoulder_right.controller = i;
+		self->controllers[i].start.controller = i;
+		self->controllers[i].back.controller = i;
+		self->controllers[i].guide.controller = i;
+	}
+
+	if (has_gamepads)
+	{
+		SDL_GameControllerEventState(SDL_ENABLE);
+	}
+	return self;
+}

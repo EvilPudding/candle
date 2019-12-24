@@ -98,14 +98,6 @@ static int c_bone_position_changed(c_bone_t *self)
 	return CONTINUE;
 }
 
-c_bone_t *c_bone_new(entity_t skin, mat4_t offset)
-{
-	c_bone_t *self = component_new("bone");
-	self->offset = offset;
-	self->skin = skin;
-	return self;
-}
-
 static void c_bone_destroy(c_bone_t *self)
 {
 	drawable_set_mesh(&self->draw, NULL);
@@ -113,10 +105,20 @@ static void c_bone_destroy(c_bone_t *self)
 }
 
 
-REG()
+void ct_bone(ct_t *self)
 {
-	ct_t *ct = ct_new("bone", sizeof(c_bone_t), (init_cb)c_bone_init,
-	                  (destroy_cb)c_bone_destroy, 1, ref("node"));
-	ct_listener(ct, ENTITY, 0, sig("node_changed"), c_bone_position_changed);
+	ct_init(self, "bone", sizeof(c_bone_t));
+	ct_set_init(self, (init_cb)c_bone_init);
+	ct_set_destroy(self, (destroy_cb)c_bone_destroy);
+	ct_dependency(self, ct_node);
+	ct_listener(self, ENTITY, 0, sig("node_changed"), c_bone_position_changed);
+}
+
+c_bone_t *c_bone_new(entity_t skin, mat4_t offset)
+{
+	c_bone_t *self = component_new(ct_bone);
+	self->offset = offset;
+	self->skin = skin;
+	return self;
 }
 

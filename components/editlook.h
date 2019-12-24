@@ -13,7 +13,8 @@ typedef struct
 	vec3_t pan_diff;
 } c_editlook_t;
 
-DEF_CASTER("editLook", c_editlook, c_editlook_t)
+void ct_editlook(ct_t *self);
+DEF_CASTER(ct_editlook, c_editlook, c_editlook_t)
 
 c_editlook_t *c_editlook_new(void);
 

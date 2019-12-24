@@ -15,16 +15,6 @@ static void c_freelook_init(c_freelook_t *self)
 	self->force_down = entity_null;
 }
 
-c_freelook_t *c_freelook_new(entity_t force_down, float sensitivity)
-{
-	c_freelook_t *self = component_new("freelook");
-	self->sensitivity = sensitivity;
-
-	self->force_down = force_down;
-
-	return self;
-}
-
 void c_freelook_set_controls(c_freelook_t *self,
 		entity_t x_control, entity_t y_control)
 {
@@ -83,15 +73,23 @@ static int c_freelook_mouse_move(c_freelook_t *self, mouse_move_data *event)
 	return CONTINUE;
 }
 
-REG()
+void ct_freelook(ct_t *self)
 {
-	ct_t *ct = ct_new("freelook", sizeof(c_freelook_t),
-			(init_cb)c_freelook_init, NULL, 1, ref("spatial"));
+	ct_init(self, "freelook", sizeof(c_freelook_t));
+	ct_set_init(self, (init_cb)c_freelook_init);
+	ct_dependency(self, ct_node);
+	ct_listener(self, WORLD, 0, sig("mouse_move"), c_freelook_mouse_move);
+	ct_listener(self, ENTITY, 0, sig("entity_created"), c_freelook_update);
+	ct_listener(self, WORLD, 0, sig("window_resize"), c_freelook_window_resize);
+}
 
-	ct_listener(ct, WORLD, 0, sig("mouse_move"), c_freelook_mouse_move);
+c_freelook_t *c_freelook_new(entity_t force_down, float sensitivity)
+{
+	c_freelook_t *self = component_new(ct_freelook);
+	self->sensitivity = sensitivity;
 
-	ct_listener(ct, ENTITY, 0, sig("entity_created"), c_freelook_update);
+	self->force_down = force_down;
 
-	ct_listener(ct, WORLD, 0, sig("window_resize"), c_freelook_window_resize);
+	return self;
 }
 

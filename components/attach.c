@@ -4,16 +4,6 @@
 #include <components/node.h>
 #include <math.h>
 
-c_attach_t *c_attach_new(entity_t target)
-{
-	c_attach_t *self = component_new("attach");
-
-	self->target = target;
-	self->offset = mat4();
-
-	return self;
-}
-
 void c_attach_target(c_attach_t *self, entity_t target)
 {
 	self->target = target;
@@ -37,10 +27,21 @@ static int c_attach_update(c_attach_t *self, float *dt)
 	return CONTINUE;
 }
 
-REG()
+void ct_attach(ct_t *self)
 {
-	ct_t *ct = ct_new("attach", sizeof(c_attach_t), NULL, NULL, 0);
+	ct_init(self, "attach", sizeof(c_attach_t));
+	ct_dependency(self, ct_node);
 
-	ct_listener(ct, WORLD, 0, sig("world_update"), c_attach_update);
+	ct_listener(self, WORLD, 0, sig("world_update"), c_attach_update);
+}
+
+c_attach_t *c_attach_new(entity_t target)
+{
+	c_attach_t *self = component_new(ct_attach);
+
+	self->target = target;
+	self->offset = mat4();
+
+	return self;
 }
 

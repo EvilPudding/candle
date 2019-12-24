@@ -1428,7 +1428,7 @@ void draw_group(uint32_t ref)
 	draw_group_draw(get_group(ref));
 }
 
-REG()
+void draw_groups_init()
 {
 	g_varrays = kh_init(varray);
 	g_group_semaphore = SDL_CreateSemaphore(1);

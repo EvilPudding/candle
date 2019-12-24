@@ -94,7 +94,7 @@ c_field_t *c_field_new(mat_t *mat, vec3_t start, vec3_t end, float cell_size,
 	vec3_t size;
 	uvec3_t segments;
 	uint32_t x, y, z;
-	c_field_t *self = component_new("field");
+	c_field_t *self = component_new(ct_field);
 
 	self->cast_shadow = cast_shadow;
 
@@ -151,14 +151,16 @@ void c_field_destroy(c_field_t *self)
 	drawable_set_mesh(&self->draw, NULL);
 }
 
-REG()
+void ct_field(ct_t *self)
 {
-	ct_t *ct = ct_new("field", sizeof(c_field_t),
-			(init_cb)c_field_init, (destroy_cb)c_field_destroy, 1, ref("node"));
+	ct_init(self, "field", sizeof(c_field_t));
+	ct_set_init(self, (init_cb)c_field_init);
+	ct_set_destroy(self, (destroy_cb)c_field_destroy);
+	ct_dependency(self, ct_node);
 
-	ct_listener(ct, ENTITY, 0, ref("entity_created"), c_field_created);
+	ct_listener(self, ENTITY, 0, ref("entity_created"), c_field_created);
 
-	ct_listener(ct, WORLD, 0, ref("component_menu"), c_field_menu);
+	ct_listener(self, WORLD, 0, ref("component_menu"), c_field_menu);
 
-	ct_listener(ct, ENTITY, 0, ref("node_changed"), c_field_position_changed);
+	ct_listener(self, ENTITY, 0, ref("node_changed"), c_field_position_changed);
 }

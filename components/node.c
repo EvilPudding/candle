@@ -26,13 +26,6 @@ int32_t c_node_created(c_node_t *self)
 	return CONTINUE;
 }
 
-c_node_t *c_node_new()
-{
-	c_node_t *self = component_new("node");
-
-	return self;
-}
-
 extern int g_update_id;
 int c_node_changed(c_node_t *self)
 {
@@ -216,18 +209,6 @@ void c_node_disable_inherit_transform(c_node_t *self)
 	c_spatial_unlock(sc);
 }
 
-REG()
-{
-	/* TODO destroyer */
-	ct_t *ct = ct_new("node", sizeof(c_node_t),
-			(init_cb)c_node_init, (destroy_cb)c_node_destroy, 1, ref("spatial"));
-
-	signal_init(sig("node_changed"), 0);
-
-	ct_listener(ct, ENTITY, 0, sig("entity_created"), c_node_created);
-	ct_listener(ct, ENTITY, 0, sig("spatial_changed"), c_node_changed);
-}
-
 bool_t c_node_update_model(c_node_t *self)
 {
 	c_node_t *parent_node;
@@ -323,5 +304,24 @@ vec4_t c_node_rot_to_global(c_node_t *self, vec4_t rot)
 {
 	c_node_update_model(self);
 	return quat_mul(self->rot, rot);
+}
+
+void ct_node(ct_t *self)
+{
+	ct_init(self, "node", sizeof(c_node_t));
+	ct_set_init(self, (init_cb)c_node_init);
+	ct_set_destroy(self, (destroy_cb)c_node_destroy);
+	ct_dependency(self, ct_spatial);
+
+	signal_init(ref("node_changed"), 0);
+
+	ct_listener(self, ENTITY, 0, ref("entity_created"), c_node_created);
+	ct_listener(self, ENTITY, 0, ref("spatial_changed"), c_node_changed);
+}
+
+c_node_t *c_node_new()
+{
+	c_node_t *self = component_new(ct_node);
+	return self;
 }
 

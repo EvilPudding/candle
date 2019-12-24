@@ -21,17 +21,6 @@ static mat_t *g_light_widget;
 static int c_light_position_changed(c_light_t *self);
 static int c_light_editmode_toggle(c_light_t *self);
 
-c_light_t *c_light_new(float radius, vec4_t color)
-{
-	c_light_t *self = component_new("light");
-
-	self->color = color;
-	self->radius = radius;
-	self->volumetric_intensity = 0.0f;
-
-	return self;
-}
-
 void c_light_init(c_light_t *self)
 {
 	self->color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -296,13 +285,27 @@ static int c_light_editmode_toggle(c_light_t *self)
 	return CONTINUE;
 }
 
-REG()
+void ct_light(ct_t *self)
 {
-	ct_t *ct = ct_new("light", sizeof(c_light_t), (init_cb)c_light_init,
-			(destroy_cb)c_light_destroy, 1, ref("node"));
+	ct_init(self, "light", sizeof(c_light_t));
+	ct_dependency(self, ct_node);
+	ct_set_init(self, (init_cb)c_light_init);
+	ct_set_destroy(self, (destroy_cb)c_light_destroy);
 
-	ct_listener(ct, WORLD, 0, sig("editmode_toggle"), c_light_editmode_toggle);
-	ct_listener(ct, WORLD, 0, sig("component_menu"), c_light_menu);
-	ct_listener(ct, WORLD, 0, sig("world_pre_draw"), c_light_pre_draw);
-	ct_listener(ct, ENTITY, 0, sig("node_changed"), c_light_position_changed);
+	ct_listener(self, WORLD, 0, sig("editmode_toggle"), c_light_editmode_toggle);
+	ct_listener(self, WORLD, 0, sig("component_menu"), c_light_menu);
+	ct_listener(self, WORLD, 0, sig("world_pre_draw"), c_light_pre_draw);
+	ct_listener(self, ENTITY, 0, sig("node_changed"), c_light_position_changed);
 }
+
+c_light_t *c_light_new(float radius, vec4_t color)
+{
+	c_light_t *self = component_new(ct_light);
+
+	self->color = color;
+	self->radius = radius;
+	self->volumetric_intensity = 0.0f;
+
+	return self;
+}
+

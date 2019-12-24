@@ -8,6 +8,7 @@
 #include "components/destroyed.h"
 
 
+static SDL_mutex *ct_mutex = NULL;
 static SDL_sem *sem1 = NULL;
 static SDL_sem *sem;
 
@@ -30,23 +31,22 @@ listener_t *ct_get_listener(ct_t *self, uint32_t signal)
 	return NULL;
 }
 
-void *_component_new(uint32_t comp_type)
+void *component_new(ct_id_t ct_id)
 {
+	int i;
+	c_t *self;
 	entity_t entity = _g_creating[_g_creating_num - 1];
 
-	ct_t *ct = ecm_get(comp_type);
+	ct_t *ct = ecm_get(ct_id);
 
-	/* printf("%ld << %s\n", entity, ct->name); */
-	c_t *self = ct_add(ct, entity);
+	self = ct_add(ct, entity);
 
-	int i;
 	for(i = 0; i < ct->depends_size; i++)
 	{
 		ct_t *ct2 = ecm_get(ct->depends[i].ct);
 		if(!ct_get(ct2, &entity))
 		{
-			/* printf("adding dependency %s\n", ct2->name); */
-			_component_new(ct2->id);
+			component_new(ct2->id);
 		}
 	}
 	if(ct->init) ct->init(self);
@@ -81,6 +81,8 @@ void ecm_init()
 		self->entities_info_size = 1;
 		self->entity_uid_counter = 1;
 	}
+
+	ct_mutex = SDL_CreateMutex();
 
 	sem = SDL_CreateSemaphore(1);
 
@@ -224,12 +226,11 @@ entity_t ecm_new_entity()
 	return ent;
 }
 
-void ct_add_interaction(ct_t *dep, uint32_t target)
+void ct_interaction(ct_t *dep, ct_id_t target)
 {
 	int32_t i;
 	ct_t *ct;
 
-	if(target == IDENT_NULL) return;
 	ct = ecm_get(target);
 	if(!ct) return;
 	if(!dep) return;
@@ -241,19 +242,14 @@ void ct_add_interaction(ct_t *dep, uint32_t target)
 	ct->depends[i].is_interaction = 1;
 }
 
-void ct_add_dependency(ct_t *dep, uint32_t target)
+void ct_dependency(ct_t *self, ct_id_t target)
 {
-	ct_t *ct;
 	int32_t i;
-
-	if (target == IDENT_NULL) return;
-	ct = ecm_get(target);
-	if (!ct) return;
-	if (!dep) return;
-	i = ct->depends_size++;
-	ct->depends = realloc(ct->depends, sizeof(*ct->depends) * ct->depends_size);
-	ct->depends[i].ct = dep->id;
-	ct->depends[i].is_interaction = 0;
+	if (!self) return;
+	i = self->depends_size++;
+	self->depends = realloc(self->depends, sizeof(*self->depends) * self->depends_size);
+	self->depends[i].ct = target;
+	self->depends[i].is_interaction = 0;
 }
 
 /* struct comp_page *ct_add_page(ct_t *self) */
@@ -268,55 +264,21 @@ void ct_add_dependency(ct_t *dep, uint32_t target)
 
 /* } */
 
-ct_t *ct_new(const char *name, uint32_t size, init_cb init,
-		destroy_cb destroy, int depend_size, ...)
+void ct_init(ct_t *self, const char *name, uint32_t size)
 {
-	int32_t ret;
-	uint32_t j;
-	uint32_t hash = ref(name);
-	va_list depends;
-	khiter_t k;
-	ct_t *ct;
+	self->cs = kh_init(c);
+	self->size = size;
+	strncpy(self->name, name, sizeof(self->name) - 1);
+}
 
-	va_start(depends, depend_size);
-	for(j = 0; j < depend_size; j++)
-	{
-		if(va_arg(depends, uint32_t) == IDENT_NULL) return NULL;
-	}
-	va_end(depends);
+void ct_set_init(ct_t *self, init_cb init)
+{
+	self->init = init;
+}
 
-	k = kh_put(ct, g_ecm->cts, hash, &ret);
-
-	ct = &kh_value(g_ecm->cts, k);
-	/* printf("%s %u\n", name, hash); */
-
-	ct->init = init;
-	ct->destroy = destroy;
-	ct->id = hash;
-	ct->size = size;
-	ct->cs = kh_init(c);
-	ct->depends = NULL;
-	ct->depends_size = depend_size,
-	ct->is_interaction = false;
-	strncpy(ct->name, name, sizeof(ct->name) - 1);
-
-	if(depend_size)
-	{
-		ct->depends = malloc(sizeof(*ct->depends) * depend_size),
-
-		va_start(depends, depend_size);
-		for(j = 0; j < depend_size; j++)
-		{
-			ct->depends[j].ct = va_arg(depends, uint32_t);
-			ct->depends[j].is_interaction = 0;
-		}
-		va_end(depends);
-	}
-	/* ct_add_page(ct); */
-
-	if(!ecm_get(hash)) exit(1);
-
-	return ct;
+void ct_set_destroy(ct_t *self, destroy_cb destroy)
+{
+	self->destroy = destroy;
 }
 
 void ecm_clean2(int force)
@@ -342,7 +304,7 @@ void ecm_clean2(int force)
 		goto end;
 	}
 
-	dest = ecm_get(ref("destroyed"));
+	dest = ecm_get(ct_destroyed);
 
 	for(k = kh_begin(dest->cs); k != kh_end(dest->cs); ++k)
 	{
@@ -429,5 +391,26 @@ c_t *ct_add(ct_t *self, entity_t entity)
 	(*comp)->entity = entity;
 	(*comp)->comp_type = self->id;
 	return *comp;
+}
+
+ct_t *ecm_get(ct_id_t id)
+{
+	uint64_t comp_type = (uint64_t)id;
+	khiter_t k = kh_get(ct, g_ecm->cts, comp_type);
+
+	if(k == kh_end(g_ecm->cts))
+	{
+		ct_t *ct;
+		int ret;
+		SDL_LockMutex(ct_mutex);
+		k = kh_put(ct, g_ecm->cts, comp_type, &ret);
+		assert(k != kh_end(g_ecm->cts));
+		ct = &kh_value(g_ecm->cts, k);
+		memset(ct, 0, sizeof(*ct));
+		ct->id = id;
+		id(ct);
+		SDL_UnlockMutex(ct_mutex);
+	}
+	return &kh_value(g_ecm->cts, k);
 }
 

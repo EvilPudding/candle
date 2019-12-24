@@ -21,7 +21,8 @@ typedef struct
 	int auto_transform;
 } c_camera_t;
 
-DEF_CASTER("camera", c_camera, c_camera_t)
+void ct_camera(ct_t *self);
+DEF_CASTER(ct_camera, c_camera, c_camera_t)
 
 c_camera_t *c_camera_new(float fov, float near, float far,
 		int auto_exposure, int active, int window, renderer_t *renderer);

@@ -6,7 +6,7 @@
 
 c_nodegraph_t *c_nodegraph_new()
 {
-	c_nodegraph_t *self = component_new("node graph");
+	c_nodegraph_t *self = component_new(ct_nodegraph);
 
 	return self;
 }
@@ -79,10 +79,9 @@ int c_nodegraph_component_menu(c_nodegraph_t *self, void *ctx)
 }
 
 
-REG()
+void ct_nodegraph(ct_t *self)
 {
-	ct_t *ct = ct_new("node graph", sizeof(c_nodegraph_t), NULL, NULL, 0);
-
-	ct_listener(ct, WORLD, 100, sig("component_menu"), c_nodegraph_component_menu);
+	ct_init(self, "node graph", sizeof(c_nodegraph_t));
+	ct_listener(self, WORLD, 100, sig("component_menu"), c_nodegraph_component_menu);
 }
 

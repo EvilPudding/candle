@@ -2,6 +2,7 @@
 #include <candle.h>
 #include <systems/keyboard.h>
 #include <components/spatial.h>
+#include <components/node.h>
 #include <math.h>
 
 struct frame_vec
@@ -20,25 +21,6 @@ struct frame_script
 {
 	float t;
 };
-
-
-
-c_timeline_t *c_timeline_new()
-{
-	c_timeline_t *self = component_new("timeline");
-	self->playing = 1;
-
-	self->keys_pos = vector_new(sizeof(struct frame_vec),
-			FIXED_ORDER, NULL, NULL);
-	self->keys_scale = vector_new(sizeof(struct frame_vec),
-			FIXED_ORDER, NULL, NULL);
-	self->keys_rot = vector_new(sizeof(struct frame_quat),
-			FIXED_ORDER, NULL, NULL);
-	self->keys_scripts = vector_new(sizeof(struct frame_script),
-			FIXED_ORDER, NULL, NULL);
-
-	return self;
-}
 
 void c_timeline_clear(c_timeline_t *self)
 {
@@ -187,11 +169,27 @@ static int c_timeline_update(c_timeline_t *self, float *dt)
 	return CONTINUE;
 }
 
-REG()
+void ct_timeline(ct_t *self)
 {
-	ct_t *ct = ct_new("timeline", sizeof(c_timeline_t),
-			NULL, NULL, 1, ref("node"));
+	ct_init(self, "timeline", sizeof(c_timeline_t));
+	ct_dependency(self, ct_node);
+	ct_listener(self, WORLD, 0, sig("world_update"), c_timeline_update);
+}
 
-	ct_listener(ct, WORLD, 0, sig("world_update"), c_timeline_update);
+c_timeline_t *c_timeline_new()
+{
+	c_timeline_t *self = component_new(ct_timeline);
+	self->playing = 1;
+
+	self->keys_pos = vector_new(sizeof(struct frame_vec),
+			FIXED_ORDER, NULL, NULL);
+	self->keys_scale = vector_new(sizeof(struct frame_vec),
+			FIXED_ORDER, NULL, NULL);
+	self->keys_rot = vector_new(sizeof(struct frame_quat),
+			FIXED_ORDER, NULL, NULL);
+	self->keys_scripts = vector_new(sizeof(struct frame_script),
+			FIXED_ORDER, NULL, NULL);
+
+	return self;
 }
 

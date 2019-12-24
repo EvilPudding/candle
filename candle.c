@@ -10,9 +10,8 @@
 #include <systems/render_device.h>
 #include <systems/sauces.h>
 #include <systems/nodegraph.h>
-
-#include <components/node.h>
 #include <components/name.h>
+#include <components/node.h>
 
 candle_t *g_candle;
 
@@ -134,7 +133,7 @@ static void render_loop_tick(void)
 		g_candle->last_tick = current;
 	}
 	glerr();
-	SDL_Delay(16);
+	/* SDL_Delay(16); */
 }
 
 #ifndef __EMSCRIPTEN__
@@ -167,6 +166,8 @@ void candle_register()
 	signal_init(sig("expr_eval"), sizeof(void*));
 	signal_init(sig("expr_var"), sizeof(void*));
 	signal_init(sig("expr_del"), sizeof(void*));
+
+	draw_groups_init();
 }
 
 static void ticker_loop_tick(void)
@@ -307,8 +308,8 @@ entity_t _c_new(entity_t root, int argc, char **argv)
 	return entity_null;
 }
 
-__attribute__((constructor (CONSTR_BEFORE_REG)))
-void candle_init(void)
+void candle_init2(void);
+void candle_init()
 {
 	SDL_SetMainReady();
 	g_candle = calloc(1, sizeof *g_candle);
@@ -330,10 +331,11 @@ void candle_init(void)
 	shaders_reg();
 
 	candle_register();
+
+	candle_init2();
 }
 
-__attribute__((constructor (CONSTR_AFTER_REG)))
-void candle_init2(void)
+void candle_init2()
 {
 	if(c_name(&SYS)) return;
 

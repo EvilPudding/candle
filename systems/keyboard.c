@@ -1,13 +1,6 @@
 #include <SDL2/SDL.h>
 #include "keyboard.h"
 
-c_keyboard_t *c_keyboard_new()
-{
-	c_keyboard_t *self = component_new("keyboard");
-
-	return self;
-}
-
 int32_t c_keyboard_event(c_keyboard_t *self, const SDL_Event *event)
 {
 	SDL_Keycode key;
@@ -56,13 +49,18 @@ int32_t c_keyboard_event(c_keyboard_t *self, const SDL_Event *event)
 	return CONTINUE;
 }
 
-REG()
+void ct_keyboard(ct_t *self)
 {
-	ct_t *ct = ct_new("keyboard", sizeof(c_keyboard_t), NULL, NULL, 0);
+	ct_init(self, "keyboard", sizeof(c_keyboard_t));
 
 	signal_init(sig("key_up"), sizeof(SDL_Keycode));
 	signal_init(sig("key_down"), sizeof(SDL_Keycode));
 
-	ct_listener(ct, WORLD, -1, sig("event_handle"), c_keyboard_event);
+	ct_listener(self, WORLD, -1, sig("event_handle"), c_keyboard_event);
+}
+
+c_keyboard_t *c_keyboard_new()
+{
+	return component_new(ct_keyboard);
 }
 

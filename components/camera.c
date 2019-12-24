@@ -12,31 +12,6 @@
 
 static int c_camera_changed(c_camera_t *self);
 
-c_camera_t *c_camera_new(float fov, float near, float far,
-		int auto_exposure, int active, int window, renderer_t *renderer)
-{
-	c_camera_t *self = component_new("camera");
-
-	self->auto_exposure = auto_exposure;
-	self->exposure = 0.25f;
-	self->active = active;
-	self->window = window;
-	self->auto_transform = 1;
-
-	if(renderer)
-	{
-		self->renderer = renderer;
-		self->renderer->near = near;
-		self->renderer->far = far;
-		self->renderer->fov = fov * (M_PI / 180.0f);
-		self->camid = self->renderer->camera_count++;
-
-		c_camera_assign(self);
-	}
-
-	return self;
-}
-
 /* c_camera_t *c_camera_clone(c_camera_t *self) */
 /* { */
 /* 	c_camera_t *clone = malloc(sizeof *clone); */
@@ -181,15 +156,42 @@ int c_camera_draw(c_camera_t *self)
 	return CONTINUE;
 }
 
-REG()
+void ct_camera(ct_t *self)
 {
-	ct_t *ct = ct_new("camera", sizeof(c_camera_t), NULL, NULL, 1, ref("node"));
+	ct_init(self, "camera", sizeof(c_camera_t));
+	ct_dependency(self, ct_node);
 
-	ct_listener(ct, ENTITY, 0, sig("node_changed"), c_camera_changed);
-	ct_listener(ct, WORLD, 0, sig("window_resize"), c_camera_resize);
-	ct_listener(ct, WORLD, 0, sig("world_update"), c_camera_update);
-	ct_listener(ct, WORLD, 50, sig("world_pre_draw"), c_camera_pre_draw);
-	ct_listener(ct, WORLD, 10, sig("world_draw"), c_camera_draw);
+	ct_listener(self, ENTITY, 0, sig("node_changed"), c_camera_changed);
+	ct_listener(self, WORLD, 0, sig("window_resize"), c_camera_resize);
+	ct_listener(self, WORLD, 0, sig("world_update"), c_camera_update);
+	ct_listener(self, WORLD, 50, sig("world_pre_draw"), c_camera_pre_draw);
+	ct_listener(self, WORLD, 10, sig("world_draw"), c_camera_draw);
 
-	ct_listener(ct, WORLD, 0, sig("component_menu"), c_camera_component_menu);
+	ct_listener(self, WORLD, 0, sig("component_menu"), c_camera_component_menu);
 }
+
+c_camera_t *c_camera_new(float fov, float near, float far,
+		int auto_exposure, int active, int window, renderer_t *renderer)
+{
+	c_camera_t *self = component_new(ct_camera);
+
+	self->auto_exposure = auto_exposure;
+	self->exposure = 0.25f;
+	self->active = active;
+	self->window = window;
+	self->auto_transform = 1;
+
+	if(renderer)
+	{
+		self->renderer = renderer;
+		self->renderer->near = near;
+		self->renderer->far = far;
+		self->renderer->fov = fov * (M_PI / 180.0f);
+		self->camid = self->renderer->camera_count++;
+
+		c_camera_assign(self);
+	}
+
+	return self;
+}
+

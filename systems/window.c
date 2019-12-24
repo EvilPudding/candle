@@ -211,6 +211,7 @@ void c_window_handle_resize(c_window_t *self, const void *event)
 
 int c_window_created(c_window_t *self)
 {
+	printf("\t\t\tCREATED %ld\n", c_entity(self));
 	init_context_b(self);
 
 #ifdef DEBUG
@@ -243,7 +244,7 @@ int c_window_created(c_window_t *self)
 
 c_window_t *c_window_new(int width, int height)
 {
-	c_window_t *self = component_new("window");
+	c_window_t *self = component_new(ct_window);
 	self->width = width ? width : window_width;
 	self->height = height ? height : window_height;
 	return self;
@@ -313,13 +314,14 @@ int32_t c_window_event(c_window_t *self, const SDL_Event *event)
 	return CONTINUE;
 }
 
-REG()
+void ct_window(ct_t *self)
 {
-	ct_t *ct = ct_new("window", sizeof(c_window_t), (init_cb)c_window_init, NULL, 0);
+	ct_init(self, "window", sizeof(c_window_t));
+	ct_set_init(self, (init_cb)c_window_init);
 
-	ct_listener(ct, ENTITY, 0, sig("entity_created"), c_window_created);
-	ct_listener(ct, WORLD, 5, sig("world_draw"), c_window_draw);
+	ct_listener(self, ENTITY, 0, ref("entity_created"), c_window_created);
+	ct_listener(self, WORLD, 5, ref("world_draw"), c_window_draw);
 
-	signal_init(sig("window_resize"), sizeof(window_resize_data));
-	ct_listener(ct, WORLD, 250, ref("event_handle"), c_window_event);
+	signal_init(ref("window_resize"), sizeof(window_resize_data));
+	ct_listener(self, WORLD, 250, ref("event_handle"), c_window_event);
 }
