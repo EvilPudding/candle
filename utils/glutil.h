@@ -3,9 +3,8 @@
 
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
-/* #include <GL/glew.h> */
-/* #include <SDL2/SDL_opengl.h> */
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
+#include <GL/glew.h>
 #else
 #include <utils/gl.h>
 #endif

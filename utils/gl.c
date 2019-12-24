@@ -1,3 +1,5 @@
+#if !defined(__EMSCRIPTEN__)
+
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
@@ -1259,3 +1261,4 @@ int ogl_IsVersionGEQ(int majorVersion, int minorVersion)
 	return 0;
 }
 
+#endif
