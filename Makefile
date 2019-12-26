@@ -35,6 +35,7 @@ CFLAGS_EMS = $(CFLAGS) -O3 \
 			 -s EMULATE_FUNCTION_POINTER_CASTS=1 \
 			 -s SAFE_HEAP=1 -s WASM=1
 
+emscripten: CFLAGS := $(CFLAGS_EMS)
 
 ##############################################################################
 

@@ -1125,7 +1125,7 @@ bind_t opt_none()
 }
 bind_t opt_tex(const char *name, texture_t *tex, getter_cb getter)
 {
-	bind_t bind;
+	bind_t bind = {0};
 	strncpy(bind.name, name, sizeof(bind.name) - 1);
 	bind.type = OPT_TEX;
 	bind.buffer = tex;
@@ -1134,7 +1134,7 @@ bind_t opt_tex(const char *name, texture_t *tex, getter_cb getter)
 }
 bind_t opt_num(const char *name, float value, getter_cb getter)
 {
-	bind_t bind;
+	bind_t bind = {0};
 	strncpy(bind.name, name, sizeof(bind.name) - 1);
 	bind.type = OPT_NUM;
 	bind.number = value;
@@ -1143,7 +1143,7 @@ bind_t opt_num(const char *name, float value, getter_cb getter)
 }
 bind_t opt_int(const char *name, int32_t value, getter_cb getter)
 {
-	bind_t bind;
+	bind_t bind = {0};
 	strncpy(bind.name, name, sizeof(bind.name) - 1);
 	bind.type = OPT_INT;
 	bind.integer = value;
@@ -1152,7 +1152,7 @@ bind_t opt_int(const char *name, int32_t value, getter_cb getter)
 }
 bind_t opt_vec2(const char *name, vec2_t value, getter_cb getter)
 {
-	bind_t bind;
+	bind_t bind = {0};
 	strncpy(bind.name, name, sizeof(bind.name) - 1);
 	bind.type = OPT_VEC2;
 	bind.vec2 = value;
@@ -1161,7 +1161,7 @@ bind_t opt_vec2(const char *name, vec2_t value, getter_cb getter)
 }
 bind_t opt_vec3(const char *name, vec3_t value, getter_cb getter)
 {
-	bind_t bind;
+	bind_t bind = {0};
 	strncpy(bind.name, name, sizeof(bind.name) - 1);
 	bind.type = OPT_VEC3;
 	bind.vec3 = value;
@@ -1170,7 +1170,7 @@ bind_t opt_vec3(const char *name, vec3_t value, getter_cb getter)
 }
 bind_t opt_vec4(const char *name, vec4_t value, getter_cb getter)
 {
-	bind_t bind;
+	bind_t bind = {0};
 	strncpy(bind.name, name, sizeof(bind.name) - 1);
 	bind.type = OPT_VEC4;
 	bind.vec4 = value;
@@ -1179,7 +1179,7 @@ bind_t opt_vec4(const char *name, vec4_t value, getter_cb getter)
 }
 bind_t opt_cam(entity_t camera, getter_cb getter)
 {
-	bind_t bind;
+	bind_t bind = {0};
 	bind.type = OPT_CAM;
 	bind.entity = camera;
 	bind.getter = getter;
@@ -1187,7 +1187,7 @@ bind_t opt_cam(entity_t camera, getter_cb getter)
 }
 bind_t opt_clear_color(vec4_t color, getter_cb getter)
 {
-	bind_t bind;
+	bind_t bind = {0};
 	bind.type = OPT_CLEAR_COLOR;
 	bind.vec4 = color;
 	bind.getter = getter;
@@ -1195,7 +1195,7 @@ bind_t opt_clear_color(vec4_t color, getter_cb getter)
 }
 bind_t opt_clear_depth(float depth, getter_cb getter)
 {
-	bind_t bind;
+	bind_t bind = {0};
 	bind.type = OPT_CLEAR_DEPTH;
 	bind.number = depth;
 	bind.getter = getter;
@@ -1203,21 +1203,21 @@ bind_t opt_clear_depth(float depth, getter_cb getter)
 }
 bind_t opt_callback(getter_cb callback)
 {
-	bind_t bind;
+	bind_t bind = {0};
 	bind.type = OPT_CALLBACK;
 	bind.getter = callback;
 	return bind;
 }
 bind_t opt_usrptr(void *ptr)
 {
-	bind_t bind;
+	bind_t bind = {0};
 	bind.type = OPT_USRPTR;
 	bind.ptr = ptr;
 	return bind;
 }
 bind_t opt_skip(uint32_t ticks)
 {
-	bind_t bind;
+	bind_t bind = {0};
 	bind.type = OPT_SKIP;
 	bind.integer = ticks;
 	return bind;
