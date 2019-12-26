@@ -94,25 +94,6 @@ int c_axis_mouse_move(c_axis_t *self, mouse_move_data *event)
 	return CONTINUE;
 }
 
-static int c_axis_editmode_toggle(c_axis_t *self)
-{
-	c_model_t *mc;
-	c_editmode_t *edit = c_editmode(&SYS);
-	if(!edit) return CONTINUE;
-
-	mc = c_model(self);
-	if(edit->control)
-	{
-		c_model_set_visible(mc, self->visible);
-	}
-	else
-	{
-		self->visible = mc->visible;
-		c_model_set_visible(mc, 0);
-	}
-	return CONTINUE;
-}
-
 int c_axis_created(c_axis_t *self)
 {
 	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL, NULL);
@@ -126,7 +107,6 @@ void ct_axis(ct_t *self)
 	ct_dependency(self, ct_node);
 	ct_dependency(self, ct_mouse);
 
-	ct_listener(self, WORLD, 0, sig("editmode_toggle"), c_axis_editmode_toggle);
 	ct_listener(self, ENTITY, 0, sig("entity_created"), c_axis_created);
 	ct_listener(self, ENTITY, 0, sig("model_press"), c_axis_press);
 	ct_listener(self, ENTITY, 0, sig("mouse_release"), c_axis_release);
@@ -179,6 +159,7 @@ c_axis_t *c_axis_new(int type, vecN_t dir)
 	}
 
 	entity_add_component(c_entity(self), c_model_new(self->dir_mesh, m, 0, 0));
+	c_model_set_groups(c_model(self), ref("widget"), ~0, ~0, ref("selectable"));
 	c_model_set_xray(c_model(self), 1);
 	c_model(self)->scale_dist = 0.2f;
 

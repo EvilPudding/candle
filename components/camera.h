@@ -19,6 +19,10 @@ typedef struct
 	int auto_exposure;
 	int modified;
 	int auto_transform;
+	float proj_near, proj_far, proj_fov;
+	drawable_t draw;
+	drawable_t frustum;
+	mesh_t *mesh;
 } c_camera_t;
 
 void ct_camera(ct_t *self);

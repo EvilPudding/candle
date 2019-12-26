@@ -298,6 +298,8 @@ void ecm_clean2(int force)
 					if(!kh_exist(ct->cs, k)) continue;
 					c = kh_value(ct->cs, k);
 					ct->destroy(c);
+
+					kh_del(c, ct->cs, k);
 				}
 			}
 		});
@@ -324,21 +326,19 @@ end:
 
 void ecm_clean(int force)
 {
-	int32_t rt;
-
 	if(!g_ecm->dirty && !force) return;
 
-	rt = SDL_ThreadID() == g_candle->loader->threadId;
-
-	if(g_ecm->safe && rt)
+	if (SDL_ThreadID() == g_candle->loader->threadId)
 	{
-		ecm_clean2(force);
+		if (g_ecm->safe)
+		{
+			ecm_clean2(force);
 #ifndef __EMSCRIPTEN__
-		SDL_SemPost(sem1);
+			SDL_SemPost(sem1);
 #endif
+		}
 	}
-
-	if(!rt)
+	else
 	{
 		SDL_AtomicIncRef((SDL_atomic_t*)&g_ecm->safe);
 #ifndef __EMSCRIPTEN__
@@ -356,8 +356,9 @@ c_t *ct_add(ct_t *self, entity_t entity)
 	c_t **comp;
 
 	if(!mut) SDL_CreateMutex();
-	SDL_LockMutex(mut);
 	if(!self) return NULL;
+
+	SDL_LockMutex(mut);
 
 	/* int page_id = self->pages_size - 1; */
 	/* struct comp_page *page = &self->pages[page_id]; */
@@ -403,12 +404,18 @@ ct_t *ecm_get(ct_id_t id)
 		ct_t *ct;
 		int ret;
 		SDL_LockMutex(ct_mutex);
-		k = kh_put(ct, g_ecm->cts, comp_type, &ret);
-		assert(k != kh_end(g_ecm->cts));
-		ct = &kh_value(g_ecm->cts, k);
-		memset(ct, 0, sizeof(*ct));
-		ct->id = id;
-		id(ct);
+
+		k = kh_get(ct, g_ecm->cts, comp_type);
+		if (k == kh_end(g_ecm->cts))
+		{
+			k = kh_put(ct, g_ecm->cts, comp_type, &ret);
+			assert(k != kh_end(g_ecm->cts));
+			ct = &kh_value(g_ecm->cts, k);
+			memset(ct, 0, sizeof(*ct));
+			ct->id = id;
+			id(ct);
+		}
+
 		SDL_UnlockMutex(ct_mutex);
 	}
 	return &kh_value(g_ecm->cts, k);

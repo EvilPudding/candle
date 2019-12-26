@@ -96,7 +96,6 @@ void entity_destroy(entity_t self)
 			if(k == kh_end(ct->cs)) continue;
 			c = kh_value(ct->cs, k);
 
-
 			if(ct->destroy) ct->destroy(c);
 			c->entity = entity_null;
 

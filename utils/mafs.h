@@ -628,6 +628,11 @@ static INLINE vec4_t mat4_mul_vec4(mat4_t M, vec4_t v)
 	}
 	return r;
 }
+static INLINE vec3_t mat4_project(mat4_t M, vec3_t v)
+{
+	vec4_t r = mat4_mul_vec4(M, vec4(_vec3(v), 1.0f));
+	return vec3_scale(XYZ(r), 1.0f / r.w);
+}
 static INLINE mat4_t mat4_translate(vec3_t pos)
 {
 	mat4_t T = mat4();

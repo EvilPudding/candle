@@ -25,17 +25,8 @@ khash_t(draw_group) *g_draw_groups;
 
 void drawable_init(drawable_t *self, uint32_t group)
 {
+	memset(self, 0, sizeof(*self));
 	self->transform = mat4();
-	self->mesh = NULL;
-	self->skin = NULL;
-	self->custom_texture = NULL;
-	self->xray = false;
-	self->mat = NULL;
-	self->entity = entity_null;
-	self->draw_callback = NULL;
-	self->usrptr = NULL;
-	self->vs = NULL;
-	self->bind_num = 0;
 
 	drawable_add_group(self, group);
 }
@@ -285,6 +276,7 @@ void drawable_set_mesh(drawable_t *self, mesh_t *mesh)
 			if (previous->ref_num == 0)
 			{
 				mesh_destroy(previous);
+				printf("destroying mesh\n");
 			}
 		}
 	}

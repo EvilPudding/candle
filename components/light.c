@@ -19,7 +19,6 @@ static int g_lights_num;
 static mat_t *g_light_widget;
 
 static int c_light_position_changed(c_light_t *self);
-static int c_light_editmode_toggle(c_light_t *self);
 
 void c_light_init(c_light_t *self)
 {
@@ -51,7 +50,7 @@ void c_light_init(c_light_t *self)
 	}
 	self->id = g_lights_num++;
 
-	drawable_init(&self->widget, ref("visible"));
+	drawable_init(&self->widget, ref("widget"));
 	drawable_add_group(&self->widget, ref("selectable"));
 	drawable_set_vs(&self->widget, sprite_vs());
 	drawable_set_mat(&self->widget, g_light_widget);
@@ -65,7 +64,6 @@ void c_light_init(c_light_t *self)
 	drawable_set_entity(&self->draw, c_entity(self));
 
 	c_light_position_changed(self);
-	c_light_editmode_toggle(self);
 	world_changed();
 
 }
@@ -269,22 +267,6 @@ static void c_light_destroy(c_light_t *self)
 	}
 }
 
-static int c_light_editmode_toggle(c_light_t *self)
-{
-	c_editmode_t *edit = c_editmode(&SYS);
-	if(!edit) return CONTINUE;
-
-	if(edit->control)
-	{
-		drawable_set_mesh(&self->widget, sprite_mesh());
-	}
-	else
-	{
-		drawable_set_mesh(&self->widget, NULL);
-	}
-	return CONTINUE;
-}
-
 void ct_light(ct_t *self)
 {
 	ct_init(self, "light", sizeof(c_light_t));
@@ -292,7 +274,6 @@ void ct_light(ct_t *self)
 	ct_set_init(self, (init_cb)c_light_init);
 	ct_set_destroy(self, (destroy_cb)c_light_destroy);
 
-	ct_listener(self, WORLD, 0, sig("editmode_toggle"), c_light_editmode_toggle);
 	ct_listener(self, WORLD, 0, sig("component_menu"), c_light_menu);
 	ct_listener(self, WORLD, 0, sig("world_pre_draw"), c_light_pre_draw);
 	ct_listener(self, ENTITY, 0, sig("node_changed"), c_light_position_changed);

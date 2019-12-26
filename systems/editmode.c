@@ -554,9 +554,11 @@ c_editmode_t *c_editmode_new()
 
 static renderer_t *editmode_renderer_new(c_editmode_t *self)
 {
-	texture_t *tmp;
+	texture_t *tmp, *gbuffer;
 	renderer_t *renderer = renderer_new(1.00f);
 	renderer_default_pipeline(renderer);
+
+	gbuffer = renderer_tex(renderer, ref("gbuffer"));
 
 	self->mouse_depth = texture_new_2D(1, 1, 0, 1,
 		buffer_new("color",	false, 4));
@@ -564,6 +566,9 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	tmp = texture_new_2D(0, 0, TEX_INTERPOLATE, 1,
 		buffer_new("color",	true, 4));
 	renderer_add_tex(renderer, "tmp", 1.0f, tmp);
+
+	renderer_add_pass(renderer, "widget", "gbuffer", ref("widget"),
+			0, gbuffer, gbuffer, 0, ref("decals_pass"), 0);
 
 	renderer_add_pass(renderer, "mouse_depth", "extract_depth", ref("quad"),
 			0, self->mouse_depth, NULL, 0, ref("selectable"), 4,
@@ -575,7 +580,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 
 	renderer_add_pass(renderer, "context", "context", ref("quad"),
 			0, renderer_tex(renderer, ref("final")), NULL, 0, ~0, 10,
-			opt_tex("gbuffer", renderer_tex(renderer, ref("gbuffer")), NULL),
+			opt_tex("gbuffer", gbuffer, NULL),
 			opt_tex("sbuffer", renderer_tex(renderer, ref("selectable")), NULL),
 			opt_tex("ssao", renderer_tex(renderer, ref("ssao")), NULL),
 			opt_vec2("over_id", Z2, (getter_cb)c_editmode_bind_over),
@@ -654,8 +659,6 @@ void c_editmode_activate(c_editmode_t *self)
 
 	c_camera(&self->camera)->active = true;
 	c_camera_assign(c_camera(&self->camera));
-
-	entity_signal(entity_null, ref("editmode_toggle"), NULL, NULL);
 
 	loader_push_wait(g_candle->loader, (loader_cb)c_editmode_activate_loader,
 			NULL, (c_t*)self);
@@ -1142,7 +1145,6 @@ int32_t c_editmode_key_up(c_editmode_t *self, SDL_Keycode *key)
 		c_camera(&self->camera)->active = false;
 		c_window(self)->renderer = self->backup_renderer;
 		c_mouse_deactivate(c_mouse(self));
-		entity_signal(entity_null, ref("editmode_toggle"), NULL, NULL);
 		return STOP;
 	}
 
@@ -1740,7 +1742,6 @@ void ct_editmode(ct_t *self)
 
 	signal_init(ref("component_menu"), sizeof(struct nk_context*));
 	signal_init(ref("component_tool"), sizeof(void*));
-	signal_init(ref("editmode_toggle"), sizeof(void*));
 	signal_init(ref("pick_file_save"), sizeof(void*));
 	signal_init(ref("pick_file_load"), sizeof(void*));
 	signal_init(ref("transform_start"), sizeof(void*));

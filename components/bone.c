@@ -38,8 +38,8 @@ static void c_bone_init(c_bone_t *self)
 		mesh_unlock(g_joint);
 	}
 
-	drawable_init(&self->draw, ref("visible"));
-	drawable_init(&self->joint, ref("visible"));
+	drawable_init(&self->draw, ref("widget"));
+	drawable_init(&self->joint, ref("widget"));
 	drawable_add_group(&self->draw, ref("selectable"));
 	drawable_add_group(&self->joint, ref("selectable"));
 
