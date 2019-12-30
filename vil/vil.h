@@ -12,7 +12,7 @@ struct vifunc;
 
 typedef float (*vifunc_gui_cb)(struct vicall *call, void *data, void *nk);
 typedef void  (*vicall_save_cb)(struct vicall *call, void *data, FILE *fp);
-typedef bool_t(*vicall_load_cb)(struct vicall *call, void *data, FILE *fp);
+typedef bool_t(*vicall_load_cb)(struct vicall *call, void *data, int argc, const char **argv);
 typedef void  (*vifunc_save_cb)(struct vifunc *func, FILE *fp);
 typedef bool_t(*vifunc_load_cb)(struct vifunc *func, FILE *fp);
 typedef void  (*vil_func_cb)(struct vifunc *func, void *usrptr);
@@ -95,8 +95,10 @@ typedef struct vicall
 
 	vec4_t bounds;
 
-	struct vil_arg input_args[256];
-	struct vil_ret output_args[256];
+	struct vil_arg *input_args;
+	uint32_t input_args_num;
+	struct vil_ret *output_args;
+	uint32_t output_args_num;
 
 	vil_call_cb     watcher;
 	void           *watcher_usrptr;

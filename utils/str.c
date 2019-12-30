@@ -315,13 +315,13 @@ void strrepl(const char *original, char *output,
 
 char *str_readline(FILE *fp)
 {
-    char *line = str_new(1024);
-	char block[1024];
+    char *line = str_new(512);
+	char block[512];
     while (1)
 	{
 		char *last_char;
 
-        if (fgets(block, 1024, fp) == NULL)
+        if (fgets(block, 512, fp) == NULL)
 		{
 			break;
 		}

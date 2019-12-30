@@ -4,6 +4,7 @@
 #include <utils/khash.h>
 #include <utils/mafs.h>
 #include <candle.h>
+#include <utils/str.h>
 
 static slot_t linking;
 vicall_t *g_dragging;
@@ -58,31 +59,54 @@ static bool_t slot_equal(slot_t a, slot_t b)
 struct vil_ret *vicall_get_ret(vicall_t *call, slot_t slot)
 {
 	uint32_t i;
-	for (i = 0; i < 256; i++)
+	struct vil_ret *ret = NULL;
+	for (i = 0; i < call->output_args_num; i++)
 	{
-		if (   slot_equal(call->output_args[i].from, slot)
-		    || call->output_args[i].from.depth == 0)
+		if (slot_equal(call->output_args[i].from, slot))
 		{
-			call->output_args[i].from = slot;
-			return &call->output_args[i];
+			ret = &call->output_args[i];
+			break;
 		}
 	}
-	assert(false);
+	if (!ret)
+	{
+		call->output_args_num++;
+
+		call->output_args = realloc(call->output_args,
+		                            sizeof(*ret) * call->output_args_num);
+		ret = &call->output_args[call->output_args_num - 1];
+		memset(ret, 0, sizeof(*ret));
+		ret->from = slot;
+	}
+	return ret;
 }
 
 struct vil_arg *vicall_get_arg(vicall_t *call, slot_t slot)
 {
 	uint32_t i;
-	for (i = 0; i < 256; i++)
+	struct vil_arg *arg = NULL;
+
+	for (i = 0; i < call->input_args_num; i++)
 	{
-		if (   slot_equal(call->input_args[i].into, slot)
-		    || call->input_args[i].into.depth == 0)
+		assert(call->input_args[i].into.depth > 0);
+		if (slot_equal(call->input_args[i].into, slot))
 		{
-			call->input_args[i].into = slot;
-			return &call->input_args[i];
+			arg = &call->input_args[i];
+			break;
 		}
 	}
-	assert(false);
+
+	if (!arg)
+	{
+		call->input_args_num++;
+		call->input_args = realloc(call->input_args,
+		                           sizeof(*arg) * call->input_args_num);
+		arg = &call->input_args[call->input_args_num - 1];
+		memset(arg, 0, sizeof(*arg));
+		arg->into = slot;
+	}
+
+	return arg;
 }
 
 static vicall_t *vifunc_get_call(vifunc_t *type, const slot_t slot,
@@ -125,12 +149,16 @@ char* strtok_r(char *str, const char *delim, char **nextp)
 }
 #endif
 
-slot_t vifunc_slot_from_name(vifunc_t *func, char *buffer,
+slot_t vifunc_slot_from_name(vifunc_t *func, const char *input,
                              const char *separator)
 {
+	char buffer[64];
 	slot_t slot = {0};
 	char *name;
-	char *rest = buffer;
+	char *rest;
+
+	strcpy(buffer, input);
+	rest = buffer;
 
 	while ((name = strtok_r(rest, separator, &rest)))
 	{
@@ -188,19 +216,26 @@ void _vicall_save(vicall_t *self, FILE *fp)
 	        self->is_linked, self->is_hidden, self->is_locked, self->data_offset);
 }
 
-bool_t _vicall_load(vifunc_t *parent, const char *name, FILE *fp)
+bool_t _vicall_load(vifunc_t *parent, int argc, const char **argv)
 {
-	char type[64];
+	const char *name;
+	const char *type;
 	vec2_t pos;
 	uint32_t color, data_offset, flags;
 	vicall_t *self;
 	bool_t is_input, is_output, is_linked, is_hidden, is_locked;
 
-	uint32_t ret = fscanf(fp, "%s %f %f %x %u %u %u %u %u %u\n", 
-	                      type, &pos.x, &pos.y,
-	                      &color, &is_input, &is_output,
-	                      &is_linked, &is_hidden, &is_locked, &data_offset);
-	if (ret < 0) return false;
+	name = argv[0];
+	type = argv[1];
+	pos.x = atof(argv[2]);
+	pos.y = atof(argv[3]);
+	color = (uint32_t)strtol(argv[4], NULL, 16);
+	is_input = argv[5][0] == '1';
+	is_output = argv[6][0] == '1';
+	is_linked = argv[7][0] == '1';
+	is_hidden = argv[8][0] == '1';
+	is_locked = argv[9][0] == '1';
+	data_offset = (uint32_t)atoi(argv[10]);
 
 	flags =   is_linked * V_LINKED | is_hidden * V_HID
 	        | is_output * V_OUT | is_input * V_IN;
@@ -208,6 +243,7 @@ bool_t _vicall_load(vifunc_t *parent, const char *name, FILE *fp)
 	self = vicall_new(parent, vil_get(parent->ctx, ref(type)),
 	                  name, pos, data_offset, flags);
 	self->color = color;
+	self->is_locked = is_locked;
 
 	return true;
 }
@@ -236,7 +272,7 @@ void vifunc_save(vifunc_t *self, const char *filename)
 		if (call->is_input)
 		{
 			uint32_t a;
-			for (a = 0; a < 256; a++)
+			for (a = 0; a < call->input_args_num; a++)
 			{
 				vicall_t *child;
 				char buffer[256];
@@ -291,7 +327,7 @@ slot_t vifunc_ref_to_slot(vifunc_t *self, uint32_t ref)
 	if (ref == ~0) return slot_empty();
 	for(it = self->begin; it; it = it->next)
 	{
-		for (i = 0; i < 256; i++)
+		for (i = 0; i < it->input_args_num; i++)
 		{
 			uint32_t arg_ref;
 			char buffer[256];
@@ -305,7 +341,7 @@ slot_t vifunc_ref_to_slot(vifunc_t *self, uint32_t ref)
 				return arg->into;
 			}
 		}
-		for (i = 0; i < 256; i++)
+		for (i = 0; i < it->output_args_num; i++)
 		{
 			uint32_t ret_ref;
 			char buffer[256];
@@ -332,16 +368,19 @@ int arg_changed(vicall_t *call)
 void vicall_update_initialized(vicall_t *call)
 {
 	uint32_t i;
-	for (i = 0; i < 256; i++)
+	for (i = 0; i < call->input_args_num; i++)
 	{
 		struct vil_arg *arg = &call->input_args[i];
 		assert(!arg->data_size || arg->previous_data);
-		if (arg->data_size && memcmp(arg->previous_data, arg->data,
-		                             arg->data_size))
+		if (arg->data_size)
 		{
+			assert(arg->data);
 			assert(arg->previous_data);
-			memcpy(arg->previous_data, arg->data, call->type->builtin_size);
-			arg->initialized = true;
+			if (memcmp(arg->previous_data, arg->data, arg->data_size))
+			{
+				memcpy(arg->previous_data, arg->data, call->type->builtin_size);
+				arg->initialized = true;
+			}
 		}
 	}
 }
@@ -349,7 +388,7 @@ void vicall_update_initialized(vicall_t *call)
 void vicall_set_arg(vicall_t *call, uint32_t ref, void *value)
 {
 	uint32_t i;
-	for (i = 0; i < 256; i++)
+	for (i = 0; i < call->input_args_num; i++)
 	{
 		uint32_t arg_ref;
 		char buffer[256];
@@ -468,7 +507,7 @@ static void vicall_propagate_changed_aux1(vicall_t *self, bool_t *iterated,
 	{
 		self->parent->watcher(self->parent, self->parent->watcher_usrptr);
 	}
-	for (i = 0; i < 256; i++)
+	for (i = 0; i < self->output_args_num; i++)
 	{
 		vicall_t *input;
 		struct vil_ret *output = &self->output_args[i];
@@ -553,6 +592,7 @@ void vifunc_link(vifunc_t *self, uint32_t from, uint32_t into)
 
 bool_t vifunc_load(vifunc_t *self, const char *filename)
 {
+	char *str = NULL;
 	FILE *fp;
 	vicall_t *it;
 	if (!self) return false;
@@ -562,27 +602,53 @@ bool_t vifunc_load(vifunc_t *self, const char *filename)
 	fp = fopen(filename, "r");
 	if (!fp) return false;
 
+	self->locked++;
+
 	if (self->ctx->builtin_load_func)
 	{
 		self->ctx->builtin_load_func(self, fp);
 	}
 
-	self->locked++;
-	while (!feof(fp))
+	while(!feof(fp))
 	{
 		vicall_t *root;
 		slot_t slot;
-		char field[128];
-		int ret = fscanf(fp, "%64s ", field);
-		if (ret < 0) goto fail;
-		slot = vifunc_slot_from_name(self, field, ".");
+		char separators[] = " ";
+		char *p;
+		char *argv[64];
+		int argc;
+
+		str = str_readline(fp);
+		if (str[str_len(str) - 1] == '\n')
+		{
+			str[str_len(str) - 1] = '\0';
+		}
+
+		p = strtok(str, separators);
+		argc = 0;
+
+		argv[argc++] = p;
+		if (!p)
+		{
+			str_free(str);
+			continue;
+		}
+		assert(p);
+
+		while((p = strtok(NULL, separators)) != NULL)
+		{
+			argv[argc++] = p;
+		}
+
+		if (argc < 1) goto fail;
+		slot = vifunc_slot_from_name(self, argv[0], ".");
 		root = vifunc_get_call(self, slot, 0, 1);
 
 		if (!root)
 		{
 			if (slot.depth <= 1)
 			{
-				_vicall_load(self, field, fp);
+				_vicall_load(self, argc, (const char **)argv);
 			}
 			else
 			{
@@ -592,17 +658,14 @@ bool_t vifunc_load(vifunc_t *self, const char *filename)
 		else
 		{
 			vicall_t *call = vifunc_get_call(root->type, slot, 1, slot.depth);
-			char oper[16];
-			ret = fscanf(fp, "%8s ", oper);
-			if (ret < 0) goto fail;
-			if (!strncmp(oper, "=", 8))
+			if (argc < 2) goto fail;
+			if (!strcmp(argv[1], "="))
 			{
 				struct vil_arg *arg = vicall_get_arg(root, slot);
 				if (call->type->builtin_load_call)
 				{
-					call->type->builtin_load_call(call, arg->data, fp);
-					ret = fscanf(fp, "\n");
-					if (ret < 0) goto fail;
+					call->type->builtin_load_call(call, arg->data, argc - 2,
+					                              (const char **)(argv + 2));
 				}
 				else
 				{
@@ -610,17 +673,18 @@ bool_t vifunc_load(vifunc_t *self, const char *filename)
 					       call->type->name);
 				}
 			}
-			else if (!strncmp(oper, "->", 8))
+			else if (!strcmp(argv[1], "->"))
 			{
-				char into[512];
 				slot_t into_slot;
-				ret = fscanf(fp, "%256s\n", into);
-				if (ret < 0) goto fail;
-				into_slot = vifunc_slot_from_name(self, into, ".");
+				if (argc < 3) goto fail;
+				into_slot = vifunc_slot_from_name(self, argv[2], ".");
 				_vifunc_link(self, slot, into_slot);
 			}
 		}
+
+		str_free(str);
 	}
+
 	for (it = self->begin; it; it = it->next)
 	{
 		if (it->is_linked || !it->is_input) continue;
@@ -667,7 +731,7 @@ void vil_add_domain(vil_t *self, const char *name, vec4_t color)
 void vicall_destroy(vicall_t *self)
 {
 	uint32_t a;
-	for (a = 0; a < 256; a++)
+	for (a = 0; a < self->input_args_num; a++)
 	{
 		struct vil_arg *it_arg = &self->input_args[a];
 		if (it_arg->into.depth == 0) break;
@@ -827,6 +891,7 @@ void propagate_data(vicall_t *root, vicall_t *call, slot_t parent_slot,
 	slot_t slot = parent_slot;
 	struct vil_arg *arg;
 	vicall_t *it;
+	void *data;
 
 	slot.calls[slot.depth++] = call->id;
 	assert(slot.depth < 16);
@@ -864,11 +929,12 @@ void propagate_data(vicall_t *root, vicall_t *call, slot_t parent_slot,
 	}
 
 	arg->data_size = call->type->builtin_size;
+	data = arg->data;
 
 	for (it = call->type->begin; it; it = it->next)
 	{
 		if (!it->is_input || it->is_linked) continue;
-		propagate_data(root, it, slot, arg->data);
+		propagate_data(root, it, slot, data);
 	}
 }
 
@@ -878,7 +944,7 @@ void vicall_copy_defaults(vicall_t *call)
 	for (it = call->type->begin; it; it = it->next)
 	{
 		uint32_t a;
-		for (a = 0; a < 256; a++)
+		for (a = 0; a < it->input_args_num; a++)
 		{
 			struct vil_arg *it_arg = &it->input_args[a];
 			struct vil_arg *call_arg;
@@ -900,7 +966,6 @@ void vicall_copy_defaults(vicall_t *call)
 
 			if (it_arg->data_size && !call_arg->initialized)
 			{
-				/* printf("%f\n", *((float*)it_arg->data)); */
 				memcpy(call_arg->data, it_arg->data, it_arg->data_size);
 				memcpy(call_arg->previous_data, it_arg->data, it_arg->data_size);
 			}
@@ -922,6 +987,10 @@ vicall_t *vicall_new(vifunc_t *parent, vifunc_t *type, const char *name,
 	call->bounds.y = pos.y;
 	call->bounds.z = 120;
 	call->bounds.w = 20;
+	call->input_args = NULL;
+	call->input_args_num = 0;
+	call->output_args = NULL;
+	call->output_args_num = 0;
 	call->type = type;
 	call->parent = parent;
 	call->color = nk_color_u32(nk_rgb(10, 10, 10));
@@ -1202,7 +1271,7 @@ void _vicall_iterate_dependencies(vicall_t *self,
 {
 	uint32_t i;
 	iterated[self->id] = true;
-	for (i = 0; i < 256; i++)
+	for (i = 0; i < self->input_args_num; i++)
 	{
 		struct vil_arg *input = &self->input_args[i];
 		bool_t included;
@@ -1560,7 +1629,7 @@ void vifunc_copy(vifunc_t *dst, vifunc_t *src)
 		vicall_t *copy = vicall_new(dst, it->type,
 				it->name, vec4_xy(it->bounds), it->data_offset, flags);
 		copy->color = it->color;
-		for (i = 0; i < 256; i++)
+		for (i = 0; i < it->input_args_num; i++)
 		{
 			struct vil_arg *it_arg = &it->input_args[i];
 			struct vil_arg *cp_arg = &copy->input_args[i];
