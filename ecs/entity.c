@@ -117,6 +117,7 @@ int listener_signal(listener_t *self, entity_t ent, void *data, void *output)
 {
 	khiter_t k;
 	ct_t *ct = ecm_get(self->target);
+	assert(ct->ready);
 
 	for(k = kh_begin(ct->cs); k != kh_end(ct->cs); ++k)
 	{

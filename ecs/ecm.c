@@ -397,27 +397,37 @@ c_t *ct_add(ct_t *self, entity_t entity)
 ct_t *ecm_get(ct_id_t id)
 {
 	uint64_t comp_type = (uint64_t)id;
-	khiter_t k = kh_get(ct, g_ecm->cts, comp_type);
+	khiter_t k;
+	ct_t *ct = NULL;
 
-	if(k == kh_end(g_ecm->cts))
+	SDL_LockMutex(ct_mutex);
+	k = kh_get(ct, g_ecm->cts, comp_type);
+
+	if (k != kh_end(g_ecm->cts))
 	{
-		ct_t *ct;
+		ct = kh_value(g_ecm->cts, k);
+	}
+
+	if (!ct)
+	{
 		int ret;
-		SDL_LockMutex(ct_mutex);
 
 		k = kh_get(ct, g_ecm->cts, comp_type);
 		if (k == kh_end(g_ecm->cts))
 		{
 			k = kh_put(ct, g_ecm->cts, comp_type, &ret);
 			assert(k != kh_end(g_ecm->cts));
-			ct = &kh_value(g_ecm->cts, k);
+			ct = calloc(1, sizeof(*ct));
+			kh_value(g_ecm->cts, k) = ct;
 			memset(ct, 0, sizeof(*ct));
 			ct->id = id;
 			id(ct);
+			ct->ready = true;
+			assert(ct->name[0]);
 		}
 
-		SDL_UnlockMutex(ct_mutex);
 	}
-	return &kh_value(g_ecm->cts, k);
+	SDL_UnlockMutex(ct_mutex);
+	return ct;
 }
 

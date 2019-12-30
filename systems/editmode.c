@@ -637,7 +637,6 @@ void c_editmode_activate(c_editmode_t *self)
 	c_spatial_t *sc;
 	c_editmode_open_entity(self, c_entity(self));
 
-	self->activated = 1;
 	self->control = 1;
 
 	self->backup_renderer = c_window(self)->renderer;
@@ -660,9 +659,12 @@ void c_editmode_activate(c_editmode_t *self)
 	c_camera(&self->camera)->active = true;
 	c_camera_assign(c_camera(&self->camera));
 
-	loader_push_wait(g_candle->loader, (loader_cb)c_editmode_activate_loader,
-			NULL, (c_t*)self);
-
+	if (!self->activated)
+	{
+		loader_push_wait(g_candle->loader, (loader_cb)c_editmode_activate_loader,
+				NULL, (c_t*)self);
+	}
+	self->activated = 1;
 }
 
 static int32_t c_editmode_activate_loader(c_editmode_t *self)

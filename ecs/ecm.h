@@ -41,7 +41,7 @@ struct set_var
 #define ecm_foreach_ct(vvar, code) { khint_t __i;		\
 	for (__i = kh_begin(g_ecm->cts); __i != kh_end(g_ecm->cts); ++__i) {		\
 		if (!kh_exist(g_ecm->cts,__i)) continue;						\
-		(vvar) = &kh_val(g_ecm->cts,__i);								\
+		(vvar) = kh_val(g_ecm->cts,__i);								\
 		code;												\
 	} }
 
@@ -104,7 +104,7 @@ typedef struct ct
 	uint32_t depends_size;
 
 	bool_t is_interaction;
-
+	bool_t ready;
 } ct_t;
 
 typedef struct
@@ -117,7 +117,7 @@ typedef struct
 } signal_t;
 
 KHASH_MAP_INIT_INT(sig, signal_t)
-KHASH_MAP_INIT_INT64(ct, ct_t)
+KHASH_MAP_INIT_INT64(ct, ct_t*)
 
 typedef struct
 {
