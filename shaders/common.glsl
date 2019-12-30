@@ -80,8 +80,8 @@ float mip_map_level(in vec2 texture_coordinate) // in texel units
 	return clamp(0.5 * log2(mip_map_scalar(texture_coordinate)), 0.0, float(MAX_MIPS - 1u));
 }
 
-#define g_indir_w 256u
-#define g_indir_h 64u
+#define g_indir_w 128u
+#define g_indir_h 128u
 #define g_cache_w 64u
 #define g_cache_h 32u
 

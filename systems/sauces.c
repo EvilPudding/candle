@@ -180,12 +180,6 @@ void *c_sauces_get(c_sauces_t *self, const char *name)
 	return c_sauces_get_data(self, &handle);
 }
 
-/* #define PNG 4215392736 */
-/* #define JPG 492009405 */
-/* #define TGA 519450434 */
-
-/* #define MAT 4225884277 */
-
 int c_sauces_index_dir(c_sauces_t *self, const char *dir_name)
 {
 	tinydir_dir dir;

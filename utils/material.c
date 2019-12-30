@@ -186,11 +186,14 @@ static void load_bot_tile(texture_t *tex, float *w, float *h)
 	load_tile(tex, mip, 1, 1, 1);
 }
 
-static bool_t _texture_load(vicall_t *call, _mat_sampler_t *texid, FILE *fp) 
+static bool_t _texture_load(vicall_t *call, _mat_sampler_t *texid,
+                            int argc, const char **argv) 
 {
 	char filename[256];
-	int ret = fscanf(fp, "%s", filename);
-	if (ret < 0) return false;
+
+	if (argc < 1) return false;
+
+	strcpy(filename, argv[0]);
 
 	texid->texture = sauces(filename);
 	if (!texid->texture)
@@ -326,9 +329,14 @@ static void _int_save(vicall_t *call, int *num, FILE *fp)
 	fprintf(fp, "%d", *num);
 }
 
-static bool_t _int_load(vicall_t *call, int *num, FILE *fp) 
+static bool_t _int_load(vicall_t *call, int *num, int argc, char **argv) 
 {
-	return fscanf(fp, "%d", num) >= 0;
+	if (argc < 1)
+	{
+		return false;
+	}
+	*num = atoi(argv[0]);
+	return true;
 }
 
 static float _vint_gui(vicall_t *call, int32_t *num, void *ctx) 
@@ -350,9 +358,15 @@ static void _number_save(vicall_t *call, float *num, FILE *fp)
 	fprintf(fp, "%f", *num);
 }
 
-static bool_t _number_load(vicall_t *call, float *num, FILE *fp) 
+static bool_t _number_load(vicall_t *call, float *num,
+                           int argc, const char **argv) 
 {
-	return fscanf(fp, "%f", num) >= 0;
+	if (argc < 1)
+	{
+		return false;
+	}
+	*num = atof(argv[0]);
+	return true;
 }
 
 static float _number_gui(vicall_t *call, float *num, void *ctx) 

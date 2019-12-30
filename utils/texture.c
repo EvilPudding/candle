@@ -52,8 +52,8 @@ texture_t *g_indir;
 tex_tile_t *g_tiles;
 const int g_cache_w = 64;
 const int g_cache_h = 32;
-const int g_indir_w = 256;
-const int g_indir_h = 256;
+const int g_indir_w = 128;
+const int g_indir_h = 128;
 int g_cache_n = 0;
 int g_indir_n = 1;
 

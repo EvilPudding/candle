@@ -468,7 +468,7 @@ void *pass_process_brightness(pass_t *self)
 {
 	uint32_t mip, size, count, i;
 	bool_t second_stage = true;
-	float *data;
+	uint8_t *data;
 	float brightness;
 
 	texture_t *tex = self->output;
@@ -480,7 +480,7 @@ void *pass_process_brightness(pass_t *self)
 	glGenerateMipmap(tex->target); glerr();
 
 	mip = MAX_MIPS - 1;
-	size = tex->sizes[mip].x * tex->sizes[mip].y * 4 * sizeof(float);
+	size = tex->sizes[mip].x * tex->sizes[mip].y * 4 * sizeof(uint8_t);
 	if (!tex->bufs[0].pbo)
 	{
 		glGenBuffers(1, &tex->bufs[0].pbo);
@@ -503,7 +503,7 @@ void *pass_process_brightness(pass_t *self)
 		glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0, size, data);
 	}
 	glReadPixels(0, 0, tex->sizes[mip].x, tex->sizes[mip].y, tex->bufs[0].format,
-			GL_FLOAT, NULL); glerr();
+			GL_UNSIGNED_BYTE, NULL); glerr();
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	brightness = 0.0f;
@@ -515,7 +515,7 @@ void *pass_process_brightness(pass_t *self)
 			brightness += data[i + 0] + data[i + 1] + data[i + 2];
 			count += 3;
 		}
-		brightness /= (float)count;
+		brightness /= (float)count * 255.0f;
 		tex->brightness = brightness;
 	}
 

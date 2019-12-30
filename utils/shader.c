@@ -51,7 +51,6 @@ void shaders_reg()
 
 	strcat(default_vs,
 	"#include \"uniforms.glsl\"\n"
-	"#line 2\n"
 #ifdef MESH4
 	"layout (location = 0) in vec4 P;\n"
 #else
@@ -456,16 +455,12 @@ static char *string_preprocess(const char *src, bool_t len, const char *filename
 		include_buffer = shader_preprocess(inc, false, has_gshader, false);
 #ifndef __EMSCRIPTEN__
 		str_catf(&include, "#line 1 \"%s\"\n", include_name);
-#else
-		str_catf(&include, "#line 1\n", include_name);
 #endif
 		str_cat(&include, include_buffer);
 		free(include_buffer);
 #ifndef __EMSCRIPTEN__
 		str_catf(&include, "\n#line %d \"%s\"\n", include_lines[include_num],
 		         filename);
-#else
-		str_catf(&include, "\n#line %d\n", include_lines[include_num]);
 #endif
 		
 		buffer = replace(buffer, offset, end_offset, include, &lsize);
