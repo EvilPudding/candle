@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ecs/ecm.h>
-#include <utils/tinydir/tinydir.h>
+#include <third_party/tinydir/tinydir.h>
 
 void path_join(char *path, size_t size, const char *other)
 {

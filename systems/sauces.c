@@ -4,7 +4,7 @@
 #include <utils/file.h>
 #include <string.h>
 #include <stdlib.h>
-#include <utils/tinydir/tinydir.h>
+#include <third_party/tinydir/tinydir.h>
 
 #include <components/model.h>
 #include <components/timeline.h>

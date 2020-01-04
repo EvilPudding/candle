@@ -10,7 +10,7 @@
 #define NK_INCLUDE_DEFAULT_FONT
 #define NK_IMPLEMENTATION
 #define NK_INCLUDE_COMMAND_USERDATA
-#include "nuklear/nuklear.h"
+#include <third_party/nuklear/nuklear.h>
 
 #define CAN_COLOR_MAP(NK_COLOR)\
     NK_COLOR(NK_COLOR_TEXT,                     175,175,175,255) \

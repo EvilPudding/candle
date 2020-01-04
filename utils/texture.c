@@ -9,9 +9,9 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_ASSERT(x)
-#include <utils/stb_image.h>
+#include <third_party/stb_image.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <utils/stb_image_write.h>
+#include <third_party/stb_image_write.h>
 
 static int32_t texture_cubemap_frame_buffer(texture_t *self);
 static int32_t texture_2D_frame_buffer(texture_t *self);
