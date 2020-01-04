@@ -9,6 +9,7 @@
 #include <systems/editmode.h>
 #include <systems/window.h>
 #include <candle.h>
+#define SCALE 0.25f
 
 static mesh_t *g_rot_axis_mesh = NULL;
 
@@ -16,7 +17,7 @@ static void c_axis_init(c_axis_t *self)
 {
 	if(!g_rot_axis_mesh)
 	{
-		g_rot_axis_mesh = mesh_torus(0.6f, 0.03f, 32, 3);
+		g_rot_axis_mesh = mesh_torus(0.5f * SCALE, 0.02f * SCALE, 32, 3);
 		g_rot_axis_mesh->has_texcoords = 0;
 	}
 }
@@ -135,10 +136,10 @@ c_axis_t *c_axis_new(int type, vecN_t dir)
 	{
 		self->dir_mesh = mesh_new();
 		mesh_lock(self->dir_mesh);
-		mesh_circle(self->dir_mesh, 0.03f, 8, dir);
-		mesh_extrude_edges(self->dir_mesh, 1, vecN_(scale)(dir, 0.5), 1.0f, NULL, NULL, NULL);
+		mesh_circle(self->dir_mesh, 0.02f * SCALE, 8, dir);
+		mesh_extrude_edges(self->dir_mesh, 1, vecN_(scale)(dir, 0.5f * SCALE), 1.0f, NULL, NULL, NULL);
 		mesh_extrude_edges(self->dir_mesh, 1, ZN, 1.70f, NULL, NULL, NULL);
-		mesh_extrude_edges(self->dir_mesh, 1, vecN_(scale)(dir, 0.1), 0.01f, NULL, NULL, NULL);
+		mesh_extrude_edges(self->dir_mesh, 1, vecN_(scale)(dir, 0.1f * SCALE), 0.01f, NULL, NULL, NULL);
 		mesh_unlock(self->dir_mesh);
 	}
 	else if(type == 1)
@@ -150,18 +151,18 @@ c_axis_t *c_axis_new(int type, vecN_t dir)
 		vecN_t point;
 		self->dir_mesh = mesh_new();
 		mesh_lock(self->dir_mesh);
-		point = vecN_(scale)(dir, 0.5);
-		mesh_circle(self->dir_mesh, 0.03f, 8, dir);
+		point = vecN_(scale)(dir, 0.5f * SCALE);
+		mesh_circle(self->dir_mesh, 0.03f * SCALE, 8, dir);
 		mesh_extrude_edges(self->dir_mesh, 1, point, 1.0f, NULL, NULL, NULL);
 		mesh_translate(self->dir_mesh, vecN_xyz(point));
-		mesh_cube(self->dir_mesh, 0.1, 1.0f);
+		mesh_cube(self->dir_mesh, 0.1 * SCALE, 1.0f);
 		mesh_unlock(self->dir_mesh);
 	}
 
 	entity_add_component(c_entity(self), c_model_new(self->dir_mesh, m, 0, 0));
 	c_model_set_groups(c_model(self), ref("widget"), ~0, ~0, ref("selectable"));
 	c_model_set_xray(c_model(self), 1);
-	c_model(self)->scale_dist = 0.2f;
+	c_model_set_vs(c_model(self), widget_vs());
 
 	self->dir = vecN_xyz(dir);
 

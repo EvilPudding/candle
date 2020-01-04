@@ -14,6 +14,7 @@ static int paint_3d(mesh_t *mesh, vertex_t *vert);
 static int paint_2d(mesh_t *mesh, vertex_t *vert);
 int c_model_menu(c_model_t *self, void *ctx);
 static vs_t *g_model_vs;
+static vs_t *g_widget_vs;
 
 struct edit_tool g_edit_tools[32];
 int g_edit_tools_count = 0;
@@ -31,8 +32,8 @@ vs_t *model_vs()
 			"#endif\n"
 
 			"		mat4 MV    = camera(view) * M;\n"
-			"		vertex_normal    = (MV * vec4( N, 0.0f)).xyz;\n"
-			"		vertex_tangent   = (MV * vec4(TG, 0.0f)).xyz;\n"
+			"		$vertex_normal    = (MV * vec4( N, 0.0f)).xyz;\n"
+			"		$vertex_tangent   = (MV * vec4(TG, 0.0f)).xyz;\n"
 			"		pos = M * pos;\n"
 			"		$vertex_world_position = pos.xyz;\n"
 			"		pos = camera(view) * pos;\n"
@@ -44,6 +45,35 @@ vs_t *model_vs()
 	}
 
 	return g_model_vs;
+}
+
+vs_t *widget_vs()
+{
+	if(!g_widget_vs)
+	{
+		g_widget_vs = vs_new("widget", false, 1, vertex_modifier_new(
+			"	{\n"
+			"#ifdef MESH4\n"
+			"		float Y = cos(ANG4);\n"
+			"		float W = sin(ANG4);\n"
+			"		pos = vec4(vec3(P.x, P.y * Y + P.w * W, P.z), 1.0);\n"
+			"#endif\n"
+
+			"		mat4 MV    = camera(view) * M;\n"
+			"		$vertex_normal    = (MV * vec4( N, 0.0f)).xyz;\n"
+			"		$vertex_tangent   = (MV * vec4(TG, 0.0f)).xyz;\n"
+			"		pos.xyz *= length($obj_pos - camera(pos));\n"
+			"		pos = M * pos;\n"
+			"		$vertex_world_position = pos.xyz;\n"
+			"		pos = camera(view) * pos;\n"
+			"		$vertex_position = pos.xyz;\n"
+
+			"		pos = camera(projection) * pos;\n"
+			"	}\n"
+		));
+	}
+
+	return g_widget_vs;
 }
 
 static int tool_circle_gui(void *ctx, struct conf_circle *conf)
@@ -945,6 +975,7 @@ static int c_model_position_changed(c_model_t *self)
 	return CONTINUE;
 }
 
+vs_t *sprite_vs(void);
 static int c_model_pre_draw(c_model_t *self)
 {
 	c_node_t *node = c_node(self);

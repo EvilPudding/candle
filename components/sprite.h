@@ -18,6 +18,7 @@ void ct_sprite(ct_t *self);
 DEF_CASTER(ct_sprite, c_sprite, c_sprite_t)
 
 vs_t *sprite_vs(void);
+vs_t *fixed_sprite_vs(void);
 mesh_t *sprite_mesh(void);
 
 c_sprite_t *c_sprite_new(mat_t *mat, int cast_shadow);

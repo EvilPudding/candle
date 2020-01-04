@@ -44,7 +44,7 @@ void c_light_init(c_light_t *self)
 
 		g_light_widget = mat_new("light_widget", "default");
 		mat1t(g_light_widget, ref("albedo.texture"),
-		      texture_from_memory(bulb_png, bulb_png_len));
+		      texture_from_memory("bulb", bulb_png, bulb_png_len));
 		mat1f(g_light_widget, ref("albedo.blend"), 1.0f);
 		mat4f(g_light_widget, ref("emissive.color"), vec4(1.0f, 1.0f, 1.0f, 1.0f));
 	}
@@ -56,6 +56,7 @@ void c_light_init(c_light_t *self)
 	drawable_set_mat(&self->widget, g_light_widget);
 	drawable_set_entity(&self->widget, c_entity(self));
 	drawable_set_xray(&self->widget, true);
+	drawable_set_mesh(&self->widget, g_quad_mesh);
 
 	drawable_init(&self->draw, self->light_group);
 	drawable_set_vs(&self->draw, model_vs());

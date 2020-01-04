@@ -9,6 +9,7 @@
 #include <candle.h>
 
 static vs_t *g_sprite_vs;
+static vs_t *g_fixed_sprite_vs;
 
 static int c_sprite_position_changed(c_sprite_t *self);
 static mesh_t *g_sprite_mesh;
@@ -29,24 +30,47 @@ vs_t *sprite_vs()
 	if(!g_sprite_vs)
 	{
 		g_sprite_vs = vs_new("sprite", false, 1, vertex_modifier_new(
-			"	{\n"
-			"		vec2 scale = vec2(length(M[0].xyz), length(M[1].xyz));\n"
-			"		pos = M * vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
-			"		$vertex_world_position = pos.xyz;\n"
-			"		pos = camera(view) * pos;\n"
-			"		$vertex_position = pos.xyz;\n"
-			"		pos = camera(projection) * pos;\n"
-			"		vec2 size = vec2(P.x * (screen_size.y / screen_size.x), P.y) * 0.5 * scale;\n"
-			"		pos = vec4(pos.xy + 0.5 * size, pos.z, pos.w);\n"
-
-			"		vertex_normal    = (vec4( N, 0.0f)).xyz;\n"
-			"		vertex_tangent   = (vec4(TG, 0.0f)).xyz;\n"
-			"		$texcoord = vec2(UV.x, 1.0f - UV.y);\n"
-
-			"	}\n"
+			"{\n"
+			"	vec2 scale = vec2(length(M[0].xyz), length(M[1].xyz));\n"
+			"	pos = M * vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
+			"	$vertex_world_position = pos.xyz;\n"
+			"	pos = camera(view) * pos;\n"
+			"	$vertex_position = pos.xyz;\n"
+			"	pos = camera(projection) * pos;\n"
+			"	vec2 size = vec2(P.x * (screen_size.y / screen_size.x), P.y) * 0.5 * scale;\n"
+			"	pos = vec4(pos.xy + 0.5 * size, pos.z, pos.w);\n"
+			"	$vertex_normal    = (vec4( N, 0.0f)).xyz;\n"
+			"	$vertex_tangent   = (vec4(TG, 0.0f)).xyz;\n"
+			"	$texcoord = vec2(UV.x, 1.0f - UV.y);\n"
+			"}\n"
 		));
 	}
 	return g_sprite_vs;
+}
+
+vs_t *fixed_sprite_vs()
+{
+	if(!g_fixed_sprite_vs)
+	{
+		g_fixed_sprite_vs = vs_new("fixed_sprite", false, 1, vertex_modifier_new(
+			"{\n"
+			"	vec2 scale = vec2(length(M[0].xyz), length(M[1].xyz));"
+			/* "   * length($obj_pos - camera(pos));\n" */
+			/* "	pos = vec4($obj_pos, 0.0);\n" */
+			"	pos = M * vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
+			"	$vertex_world_position = pos.xyz;\n"
+			"	pos = camera(view) * pos;\n"
+			"	$vertex_position = pos.xyz;\n"
+			"	pos = camera(projection) * pos;\n"
+			"	vec2 size = vec2(P.x * (screen_size.y / screen_size.x), P.y) * 0.5 * scale;\n"
+			"	pos = vec4(pos.xy + 0.5 * size, pos.z, pos.w);\n"
+			"	$vertex_normal    = (vec4( N, 0.0f)).xyz;\n"
+			"	$vertex_tangent   = (vec4(TG, 0.0f)).xyz;\n"
+			"	$texcoord = vec2(UV.x, 1.0f - UV.y);\n"
+			"}\n"
+		));
+	}
+	return g_fixed_sprite_vs;
 }
 
 static void c_sprite_init(c_sprite_t *self)

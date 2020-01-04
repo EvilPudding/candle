@@ -616,6 +616,9 @@ static int32_t texture_from_file_loader(texture_t *self)
 	int32_t tiles_x, m, y, x;
 	uint32_t tile_i, i;
 
+			if (!strcmp(self->name, "bulb"))
+				exit(1);
+
 	if (self->target != GL_TEXTURE_2D)
 	{
 		printf("PROBLEM '%s'\n", self->name);
@@ -1072,7 +1075,6 @@ int32_t texture_load_from_memory(texture_t *self, void *buffer, int32_t len)
 	}
 	*self = temp;
 
-	strncpy(self->name, "unnamed", sizeof(self->name) - 1);
 	texture_update_indir_info(self);
 	loader_push(g_candle->loader, (loader_cb)texture_from_file_loader,
 	            self, NULL);
@@ -1080,24 +1082,25 @@ int32_t texture_load_from_memory(texture_t *self, void *buffer, int32_t len)
 	return 1;
 }
 
-texture_t *texture_from_buffer(void *buffer, int32_t width, int32_t height,
-		int32_t Bpp)
+texture_t *texture_from_buffer(const char *name, void *buffer,
+                               int32_t width, int32_t height, int32_t Bpp)
 {
 	texture_t *self = texture_new_2D(width, height, TEX_INTERPOLATE, 0);
 
 	self->bufs[0].dims = Bpp;
 	self->bufs[0].data = buffer;
 
-	strncpy(self->name, "unnamed", sizeof(self->name) - 1);
+	strncpy(self->name, name, sizeof(self->name) - 1);
 	texture_update_indir_info(self);
 	loader_push(g_candle->loader, (loader_cb)texture_from_file_loader,
 	            self, NULL);
 	return self;
 }
 
-texture_t *texture_from_memory(void *buffer, int32_t len)
+texture_t *texture_from_memory(const char *name, void *buffer, int32_t len)
 {
 	texture_t *self = texture_new_2D(0, 0, TEX_INTERPOLATE, 0);
+	strcpy(self->name, name);
 	texture_load_from_memory(self, buffer, len);
 	return self;
 }

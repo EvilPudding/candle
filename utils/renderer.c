@@ -584,19 +584,19 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_tex(self, "selectable", 1.0f, selectable);
 	renderer_add_tex(self, "bloom",      1.0f, bloom);
 
-	renderer_add_pass(self, "query_mips", "query_mips", ref("visible"), 0,
+	renderer_add_pass(self, "query_visible", "query_mips", ref("visible"), 0,
 			query_mips, query_mips, 0, ~0, 3,
 			opt_clear_depth(1.0f, NULL),
 			opt_clear_color(Z4, NULL),
 			opt_skip(16)
 	);
 
-	renderer_add_pass(self, "query_mips", "query_mips", ref("decals"), 0,
+	renderer_add_pass(self, "query_decals", "query_mips", ref("decals"), 0,
 			query_mips, NULL, 0, ~0, 1,
 			opt_skip(16)
 	);
 
-	renderer_add_pass(self, "query_mips", "query_mips", ref("transparent"), 0,
+	renderer_add_pass(self, "query_transp", "query_mips", ref("transparent"), 0,
 			query_mips, query_mips, 0, ~0, 1,
 			opt_skip(16)
 	);

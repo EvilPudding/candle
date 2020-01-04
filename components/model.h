@@ -147,6 +147,7 @@ typedef struct
 void ct_model(ct_t *self);
 DEF_CASTER(ct_model, c_model, c_model_t)
 vs_t *model_vs(void);
+vs_t *widget_vs(void);
 
 void c_model_edit(c_model_t *self, mesh_edit_t type, geom_t target);
 /* void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset); */

@@ -554,11 +554,13 @@ c_editmode_t *c_editmode_new()
 
 static renderer_t *editmode_renderer_new(c_editmode_t *self)
 {
-	texture_t *tmp, *gbuffer;
+	texture_t *tmp, *gbuffer, *query_mips;
 	renderer_t *renderer = renderer_new(1.00f);
 	renderer_default_pipeline(renderer);
 
 	gbuffer = renderer_tex(renderer, ref("gbuffer"));
+
+	query_mips = renderer_tex(renderer, ref("query_mips"));
 
 	self->mouse_depth = texture_new_2D(1, 1, 0, 1,
 		buffer_new("color",	false, 4));
@@ -566,6 +568,9 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	tmp = texture_new_2D(0, 0, TEX_INTERPOLATE, 1,
 		buffer_new("color",	true, 4));
 	renderer_add_tex(renderer, "tmp", 1.0f, tmp);
+
+	renderer_add_pass(renderer, "query_widget", "query_mips", ref("widget"),
+			0, query_mips, query_mips, 0, ref("query_transp"), 0);
 
 	renderer_add_pass(renderer, "widget", "gbuffer", ref("widget"),
 			0, gbuffer, gbuffer, 0, ref("decals_pass"), 0);

@@ -29,7 +29,7 @@ typedef struct
 	vec3_t *col;	/* 5 */
 
 	vec4_t *bid;	/* 6 */
-	vec4_t  *wei;	/* 7 */
+	vec4_t *wei;	/* 7 */
 
 	vertid_t *ind;
 
@@ -71,9 +71,9 @@ struct draw_conf;
 struct draw_bind
 {
 	uint32_t grp;
-	struct draw_conf *conf;
 	int32_t instance_id;
-	uint8_t updates;
+	struct draw_conf *conf;
+	uint32_t updates;
 };
 
 typedef struct draw_conf
