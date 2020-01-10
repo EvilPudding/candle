@@ -1,28 +1,49 @@
-CC = cc -std=c89 -pedantic-errors
+CC = cc
 LD = cc
 AR = ar
-COMMA = ,
 
 emscripten: CC = emcc
 emscripten: LD = emcc
 emscripten: AR = emar
 
 DIR = build
-# EXTS = ARB_texture_cube_map,EXT_framebuffer_object,TEXTURE_RECTANGLE_ARB
-DEPS_REL = $(shell sdl2-config --libs) -lm -lGL
+DEPS_REL = $(shell sdl2-config --libs) -lm -lGL -pthread -ldl -lX11 -lrt
 DEPS_DEB = $(DEPS_REL)
+
 SHAD_SRC = $(patsubst %.glsl, $(DIR)/%.glsl.c, $(wildcard shaders/*.glsl))
+
+GLFW = third_party/glfw/src
+TINYCTHREAD = third_party/tinycthread/source
+
+THIRD_PARTY_SRC = \
+		   $(GLFW)/context.c \
+		   $(GLFW)/init.c \
+		   $(GLFW)/input.c \
+		   $(GLFW)/monitor.c \
+		   $(GLFW)/window.c \
+		   $(GLFW)/vulkan.c \
+		   $(GLFW)/egl_context.c \
+		   $(GLFW)/glx_context.c \
+		   $(GLFW)/linux_joystick.c \
+		   $(GLFW)/osmesa_context.c \
+		   $(GLFW)/posix_thread.c \
+		   $(GLFW)/posix_time.c \
+		   $(GLFW)/x11_init.c \
+		   $(GLFW)/x11_monitor.c \
+		   $(GLFW)/x11_window.c \
+		   $(GLFW)/xkb_unicode.c \
+		   $(TINYCTHREAD)/tinycthread.c
 
 SRCS = $(wildcard *.c) $(wildcard components/*.c) $(wildcard systems/*.c) \
 	   $(wildcard formats/*.c) $(wildcard utils/*.c) $(wildcard vil/*.c) \
 	   $(wildcard ecs/*.c) shaders_reg.c
 
-OBJS_REL = $(patsubst %.c, $(DIR)/%.o, $(SRCS))
-OBJS_DEB = $(patsubst %.c, $(DIR)/%.debug.o, $(SRCS))
+OBJS_REL = $(patsubst %.c, $(DIR)/%.o, $(THIRD_PARTY_SRC) $(SRCS))
+OBJS_DEB = $(patsubst %.c, $(DIR)/%.debug.o, $(THIRD_PARTY_SRC) $(SRCS))
 OBJS_EMS = $(patsubst %.c, $(DIR)/%.emscripten.o, $(SRCS))
 
-CFLAGS = $(shell sdl2-config --cflags) -Wall -I. -Wuninitialized \
-		 -Wno-unused-function -Wstrict-prototypes \
+CFLAGS = -std=c89 -pedantic -Wall -I. -Wno-unused-function \
+         -Ithird_party/glfw/include -I$(TINYCTHREAD) -D_GLFW_X11 \
 		 -Wno-format-truncation -Wno-stringop-truncation $(PARENTCFLAGS)
 
 CFLAGS_REL = $(CFLAGS) -O3
@@ -105,6 +126,8 @@ init:
 	mkdir -p $(DIR)/vil
 	mkdir -p $(DIR)/ecs
 	mkdir -p $(DIR)/shaders
+	mkdir -p $(DIR)/$(GLFW)
+	mkdir -p $(DIR)/$(TINYCTHREAD)
 
 install: all debug
 	cp $(DIR)/export.a /usr/lib/

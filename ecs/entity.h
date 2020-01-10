@@ -36,6 +36,8 @@ entity_t _entity_get_current(void);
 
 void entity_destroy(entity_t self);
 
+void entity_creation_init(void);
+
 static unsigned int entity_uid(entity_t self)
 {
 	struct { unsigned int pos, uid; } *separate = (void*)&self;

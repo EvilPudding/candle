@@ -204,7 +204,7 @@ int32_t scale_drag(struct edit_scale *self, vec3_t p, int32_t button, c_editmode
 	c_node_t *ns;
 	vec3_t obj_pos, proj;
 	float dist, radius;
-	if(button != SDL_BUTTON_LEFT) return CONTINUE;
+	if(button != CANDLE_MOUSE_BUTTON_LEFT) return CONTINUE;
 	cam = c_camera(&ec->camera);
 	sc = c_spatial(&ec->selected);
 	ns = c_node(sc);
@@ -236,7 +236,7 @@ int32_t rotate_release(struct edit_rotate *self, vec3_t p, int32_t button,
 		c_editmode_t *ec)
 {
 	c_camera_t *cam;
-	if(self->dragging && button == SDL_BUTTON_LEFT)
+	if(self->dragging && button == CANDLE_MOUSE_BUTTON_LEFT)
 	{
 		self->dragging = 0;
 		entity_signal_same(ec->selected, ref("transform_stop"), NULL, NULL);
@@ -250,7 +250,7 @@ int32_t rotate_release(struct edit_rotate *self, vec3_t p, int32_t button,
 int32_t scale_release(struct edit_scale *self, vec3_t p, int32_t button,
                       c_editmode_t *ec)
 {
-	if(self->dragging && button == SDL_BUTTON_LEFT)
+	if(self->dragging && button == CANDLE_MOUSE_BUTTON_LEFT)
 	{
 		self->dragging = 0;
 		entity_signal_same(ec->selected, ref("transform_stop"), NULL, NULL);
@@ -262,7 +262,7 @@ int32_t scale_release(struct edit_scale *self, vec3_t p, int32_t button,
 int32_t translate_release(struct edit_translate *self, vec3_t p, int32_t button,
                       c_editmode_t *ec)
 {
-	if(self->dragging && button == SDL_BUTTON_LEFT)
+	if(self->dragging && button == CANDLE_MOUSE_BUTTON_LEFT)
 	{
 		self->dragging = 0;
 		entity_signal_same(ec->selected, ref("transform_stop"), NULL, NULL);
@@ -279,7 +279,7 @@ int32_t translate_drag(struct edit_translate *self, vec3_t p, int32_t button, c_
 	c_camera_t *cam;
 	vec3_t obj_pos;
 
-	if(button != SDL_BUTTON_LEFT) return CONTINUE;
+	if(button != CANDLE_MOUSE_BUTTON_LEFT) return CONTINUE;
 	sc = c_spatial(&ec->selected);
 	ns = c_node(sc);
 	parent = entity_exists(ns->parent) ? c_node(&ns->parent) : NULL;
@@ -338,7 +338,7 @@ int32_t rotate_drag(struct edit_rotate *self, vec3_t p, int32_t button, c_editmo
 	vec3_t proj, cam_pos, to_cam, to_mouse, axis1, axis2;
 	vec2_t sp, dif;
 
-	if(button != SDL_BUTTON_LEFT) return CONTINUE;
+	if(button != CANDLE_MOUSE_BUTTON_LEFT) return CONTINUE;
 
 	sc = c_spatial(&ec->selected);
 	ns = c_node(sc);
@@ -775,7 +775,7 @@ int32_t c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 			if(c_mouse(self)->left && tool->mdrag)
 			{
 				int32_t res = tool->mdrag(tool->usrptr,
-						self->mouse_screen_pos, SDL_BUTTON_LEFT, self);
+						self->mouse_screen_pos, CANDLE_MOUSE_BUTTON_LEFT, self);
 				if(c_keyboard(self)->ctrl)
 				{
 					c_editmode_update_mouse(self, event->x, event->y);
@@ -824,7 +824,7 @@ int32_t c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 
 	if (nk_window_is_any_hovered(self->nk))
 	{
-		if (event->button == SDL_BUTTON_LEFT)
+		if (event->button == CANDLE_MOUSE_BUTTON_LEFT)
 		{
 			if (event->clicks > 1)
 			{
@@ -832,11 +832,11 @@ int32_t c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 			}
 			nk_input_button(self->nk, NK_BUTTON_LEFT, event->x, event->y, true);
 		}
-		else if (event->button == SDL_BUTTON_MIDDLE)
+		else if (event->button == CANDLE_MOUSE_BUTTON_MIDDLE)
 		{
 			nk_input_button(self->nk, NK_BUTTON_MIDDLE, event->x, event->y, true);
 		}
-		else if (event->button == SDL_BUTTON_RIGHT)
+		else if (event->button == CANDLE_MOUSE_BUTTON_RIGHT)
 		{
 			nk_input_button(self->nk, NK_BUTTON_RIGHT, event->x, event->y, true);
 		}
@@ -997,7 +997,7 @@ int32_t c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 
 	if(nk_window_is_any_hovered(self->nk) || nk_item_is_any_active(self->nk))
 	{
-		if (event->button == SDL_BUTTON_LEFT)
+		if (event->button == CANDLE_MOUSE_BUTTON_LEFT)
 		{
 			if (event->clicks > 1)
 			{
@@ -1006,12 +1006,12 @@ int32_t c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 			nk_input_button(self->nk, NK_BUTTON_LEFT, event->x, event->y, false);
 			return STOP;
 		}
-		else if (event->button == SDL_BUTTON_MIDDLE)
+		else if (event->button == CANDLE_MOUSE_BUTTON_MIDDLE)
 		{
 			nk_input_button(self->nk, NK_BUTTON_MIDDLE, event->x, event->y, false);
 			return STOP;
 		}
-		else if (event->button == SDL_BUTTON_RIGHT)
+		else if (event->button == CANDLE_MOUSE_BUTTON_RIGHT)
 		{
 			nk_input_button(self->nk, NK_BUTTON_RIGHT, event->x, event->y, false);
 			return STOP;
@@ -1019,7 +1019,7 @@ int32_t c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 	}
 
 	was_dragging = self->dragging;
-	if(event->button == SDL_BUTTON_LEFT)
+	if(event->button == CANDLE_MOUSE_BUTTON_LEFT)
 	{
 		self->dragging = 0;
 	}
@@ -1051,7 +1051,7 @@ int32_t c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 		}
 	}
 
-	if(!was_dragging && event->button == SDL_BUTTON_RIGHT)
+	if(!was_dragging && event->button == CANDLE_MOUSE_BUTTON_RIGHT)
 	{
 		self->menu_x = event->x;
 		self->menu_y = event->y;
@@ -1059,7 +1059,7 @@ int32_t c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 		nk_input_button(self->nk, NK_BUTTON_RIGHT, event->x, event->y, false);
 		return STOP;
 	}
-	if(event->button == SDL_BUTTON_LEFT)
+	if(event->button == CANDLE_MOUSE_BUTTON_LEFT)
 	{
 		/* if(self->tool == POLYPEN) */
 		/* { */
@@ -1142,7 +1142,7 @@ int32_t c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 /* 	return CONTINUE; */
 /* } */
 
-int32_t c_editmode_key_up(c_editmode_t *self, SDL_Keycode *key)
+int32_t c_editmode_key_up(c_editmode_t *self, candle_key_e *key)
 {
 	uint32_t i;
 	if (!self->control) return CONTINUE;
@@ -1228,7 +1228,7 @@ static void c_editmode_selected_delete(c_editmode_t *self)
 	entity_destroy(prev);
 }
 
-int32_t c_editmode_key_down(c_editmode_t *self, SDL_Keycode *key)
+int32_t c_editmode_key_down(c_editmode_t *self, candle_key_e *key)
 {
 	if (!self->control) return CONTINUE;
 	if (self->nk)

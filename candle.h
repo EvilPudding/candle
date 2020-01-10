@@ -1,5 +1,5 @@
-#ifndef CREST_H
-#define CREST_H
+#ifndef CANDLE_H
+#define CANDLE_H
 
 #include <utils/loader.h>
 #include <systems/sauces.h>
@@ -10,6 +10,7 @@
 #include <systems/controller.h>
 #include <systems/mouse.h>
 #include <utils/khash.h>
+#include <events.h>
 
 void candle_register(void);
 
@@ -29,7 +30,7 @@ typedef struct
 
 	int events[2];
 
-	char *firstDir;
+	char firstDir[256];
 
 	int exit;
 	int last_update;
@@ -39,15 +40,13 @@ typedef struct
 	khash_t(cmd) *cmds;
 
 	void *render_thr;
-	void *candle_thr;
 	void *ticker_thr;
 	int fps;
 #ifndef __EMSCRIPTEN__
-	uint64_t render_id;
-	void *sem;
+	void *mtx;
 #endif
 	int fps_count;
-	uint64_t last_tick;
+	double last_tick;
 
 } candle_t;
 
@@ -65,6 +64,7 @@ void candle_skip_frame(int frames);
 
 extern candle_t *g_candle;
 
-void candle_init(void);
+void candle_init(const char *path);
+bool_t is_render_thread(void);
 
-#endif /* !CREST_H */
+#endif /* !CANDLE_H */

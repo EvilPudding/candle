@@ -130,7 +130,6 @@ int main() {
 #include <limits.h>
 
 /* compiler specific configuration */
-#include <SDL2/SDL.h>
 
 #if UINT_MAX == 0xffffffffu
 typedef unsigned int khint32_t;
@@ -138,7 +137,8 @@ typedef unsigned int khint32_t;
 typedef unsigned long khint32_t;
 #endif
 
-typedef Uint64 khint64_t;
+#include <third_party/pstdint.h>
+typedef uint64_t khint64_t;
 
 #ifndef kh_inline
 # ifdef _MSC_VER

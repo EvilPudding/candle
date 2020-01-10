@@ -43,17 +43,13 @@ void _check_gl_error(const char *file, int line)
 		exit(1);
 	}
 #ifndef __EMSCRIPTEN__
-	if(SDL_ThreadID() != g_candle->render_id)
+	if(!is_render_thread())
 	{
 		printf("glerr called in non render thread\n");
 		exit(1);
 	}
 #endif
 }
-
-/* SDL_sem *glSem = NULL; */
-SDL_GLContext *context = NULL;
-SDL_Window *mainWindow = NULL;
 
 void glInit()
 {
@@ -77,23 +73,4 @@ void glInit()
 		exit(1);
 	}
 #endif
-	/* glSem = SDL_CreateSemaphore(1); */
 }
-
-/* void _glLock(const char *file, int line) */
-/* { */
-/* 	SDL_SemWait(glSem); */
-
-/* 	if(context) */
-/* 		SDL_GL_MakeCurrent(mainWindow, context); */ 
-/* 	else */
-/* 		printf("No context!\n"); */
-/* 	glerr(); */
-/* } */
-
-/* void _glUnlock(const char *file, int line) */
-/* { */
-/* 	glerr(); */
-/* 	SDL_SemPost(glSem); */
-/* } */
-

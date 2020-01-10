@@ -5,3 +5,9 @@
 [submodule "third_party/tinydir"]
 	path = third_party/tinydir
 	url = https://github.com/cxong/tinydir
+[submodule "third_party/glfw"]
+	path = third_party/glfw
+	url = https://github.com/EvilPudding/glfw.git
+[submodule "third_party/tinycthread"]
+	path = third_party/tinycthread
+	url = https://github.com/tinycthread/tinycthread

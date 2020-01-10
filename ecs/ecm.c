@@ -1,16 +1,16 @@
 #include <string.h>
 #include "ecm.h"
 #include <stdarg.h>
-#define SDL_MAIN_HANDLED
-#include <SDL2/SDL.h>
 
 #include "candle.h"
 #include "components/destroyed.h"
 
+#include <ecs/entity.h>
+#include <tinycthread.h>
 
-static SDL_mutex *ct_mutex = NULL;
-static SDL_sem *sem1 = NULL;
-static SDL_sem *sem;
+static mtx_t mtx;
+static mtx_t mtx1;
+static mtx_t cts_mtx;
 
 entity_t SYS = 0x0000000100000001ul;
 
@@ -21,7 +21,7 @@ listener_t *ct_get_listener(ct_t *self, uint32_t signal)
 	if(!self) return NULL;
 	for(i = 0; i < vector_count(sig->listener_types); i++)
 	{
-		listener_t *listener = vector_get(sig->listener_types, i);
+		listener_t *listener = *(listener_t**)vector_get(sig->listener_types, i);
 		if(listener->target == self->id)
 		{
 			return listener;
@@ -82,14 +82,15 @@ void ecm_init()
 		self->entity_uid_counter = 1;
 	}
 
-	ct_mutex = SDL_CreateMutex();
+	g_ecm->mtx = malloc(sizeof(mtx_t));
+	mtx_init(g_ecm->mtx, mtx_plain | mtx_recursive);
 
-	sem = SDL_CreateSemaphore(1);
+	mtx_init(&mtx, mtx_plain);
 
-	if(!sem1)
-	{
-		sem1 = SDL_CreateSemaphore(1);
-	}
+	mtx_init(&mtx1, mtx_plain);
+
+	mtx_init(&cts_mtx, mtx_plain);
+	entity_creation_init();
 
 }
 
@@ -124,10 +125,9 @@ signal_t *ecm_get_signal(uint32_t signal)
 
 		k = kh_put(sig, g_ecm->signals, signal, &ret);
 		sig = &kh_value(g_ecm->signals, k);
-		sig->listener_types = vector_new(sizeof(listener_t), 0, NULL,
+		sig->listener_types = vector_new(sizeof(listener_t*), 0, NULL,
 		                                 (vector_compare_cb)listeners_compare);
 		sig->size = 0;
-		sig->listener_comps = NULL;
 	}
 	return &kh_value(g_ecm->signals, k);
 }
@@ -135,16 +135,16 @@ signal_t *ecm_get_signal(uint32_t signal)
 void _ct_listener(ct_t *self, int32_t flags, int32_t priority, uint32_t signal,
                   signal_cb cb)
 {
-	listener_t lis;
+	listener_t *lis = malloc(sizeof(*lis));
 	signal_t *sig = ecm_get_signal(signal);
 	if(ct_get_listener(self, signal)) exit(1);
 
-	lis.signal = signal;
-	lis.cb = cb;
-	lis.flags = flags;
-	lis.target = self->id;
-	lis.priority = priority;
-
+	lis->signal = signal;
+	lis->cb = cb;
+	lis->flags = flags;
+	lis->target = self->id;
+	lis->priority = priority;
+	
 	vector_add(sig->listener_types, &lis);
 
 }
@@ -163,9 +163,8 @@ void _signal_init(uint32_t id, uint32_t size)
 	k = kh_put(sig, g_ecm->signals, id, &ret);
 	sig = &kh_value(g_ecm->signals, k);
 	sig->size = size;
-	sig->listener_types = vector_new(sizeof(listener_t), 0, NULL,
+	sig->listener_types = vector_new(sizeof(listener_t*), 0, NULL,
 	                                 (vector_compare_cb)listeners_compare);
-	sig->listener_comps = vector_new(sizeof(listener_t), FIXED_INDEX, NULL, NULL);
 }
 
 void ecm_destroy_all()
@@ -190,7 +189,7 @@ entity_t ecm_new_entity()
 	uint32_t i;
 
 #ifndef __EMSCRIPTEN__
-	SDL_SemWait(sem);
+	mtx_lock(&mtx);
 #endif
 
 	i = g_ecm->entities_info[0].next_free;
@@ -221,7 +220,7 @@ entity_t ecm_new_entity()
 	convert->uid = info->uid;
 
 #ifndef __EMSCRIPTEN__
-	SDL_SemPost(sem);
+	mtx_unlock(&mtx);
 #endif
 	return ent;
 }
@@ -328,26 +327,28 @@ void ecm_clean(int force)
 {
 	if(!g_ecm->dirty && !force) return;
 
-	if (SDL_ThreadID() == g_candle->loader->threadId)
+	if (is_render_thread())
 	{
 		if (g_ecm->safe)
 		{
 			ecm_clean2(force);
 #ifndef __EMSCRIPTEN__
-			SDL_SemPost(sem1);
+			mtx_unlock(&mtx1);
 #endif
 		}
 	}
 	else
 	{
-		SDL_AtomicIncRef((SDL_atomic_t*)&g_ecm->safe);
+		mtx_lock(&mtx);
+		g_ecm->safe++;
+		mtx_unlock(&mtx);
+
 #ifndef __EMSCRIPTEN__
-		SDL_SemWait(sem1);
+		mtx_lock(&mtx1);
 #endif
 	}
 }
 
-static SDL_mutex *mut = NULL;
 c_t *ct_add(ct_t *self, entity_t entity)
 {
 	int32_t ret;
@@ -355,10 +356,9 @@ c_t *ct_add(ct_t *self, entity_t entity)
 	khiter_t k;
 	c_t **comp;
 
-	if(!mut) SDL_CreateMutex();
 	if(!self) return NULL;
 
-	SDL_LockMutex(mut);
+	mtx_lock(&cts_mtx);
 
 	/* int page_id = self->pages_size - 1; */
 	/* struct comp_page *page = &self->pages[page_id]; */
@@ -385,7 +385,7 @@ c_t *ct_add(ct_t *self, entity_t entity)
 	/* { */
 		/* self->offsets_size = pos + 1; */
 	/* } */
-	SDL_UnlockMutex(mut);
+	mtx_unlock(&cts_mtx);
 
 	/* c_t *comp = (c_t*)&page->components[offset]; */
 	/* memset(comp, 0, self->size); */
@@ -400,7 +400,7 @@ ct_t *ecm_get(ct_id_t id)
 	khiter_t k;
 	ct_t *ct = NULL;
 
-	SDL_LockMutex(ct_mutex);
+	mtx_lock(g_ecm->mtx);
 	k = kh_get(ct, g_ecm->cts, comp_type);
 
 	if (k != kh_end(g_ecm->cts))
@@ -427,7 +427,7 @@ ct_t *ecm_get(ct_id_t id)
 		}
 
 	}
-	SDL_UnlockMutex(ct_mutex);
+	mtx_unlock(g_ecm->mtx);
 	return ct;
 }
 

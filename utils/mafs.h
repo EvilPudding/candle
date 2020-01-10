@@ -1,8 +1,9 @@
 #ifndef MAFS_H
 #define MAFS_H
 
+#include <third_party/pstdint.h>
+
 #ifndef __OPENCL_C_VERSION__
-#include <SDL2/SDL.h>
 #include <math.h>
 #include <float.h>
 #include <stdlib.h>
@@ -46,9 +47,12 @@ void sincosf(float x, float *sin, float *cos);
 #define cosf cos
 #define acosf acos
 #define atan2f atan2
+
+#if !defined(__EMSCRIPTEN__)
+/* #if !defined(_POSIX_C_SOURCE) */
 static float round(double n)
 {
-	return (n > (floor(n)+0.5f)) ? ceil(n) : floor(n);
+	return (n > (floor(n)+0.5)) ? ceil(n) : floor(n);
 }
 static float roundf(float n)
 {
@@ -60,6 +64,9 @@ static uint32_t log2(uint32_t x)
   while(x >>= 1) ans++;
   return ans;
 }
+/* #endif */
+#endif
+
 #else
 #define INLINE inline
 #endif

@@ -25,7 +25,7 @@ static void c_axis_init(c_axis_t *self)
 int c_axis_press(c_axis_t *self, model_button_data *event)
 {
 	c_mouse_t *mouse;
-	if(event->button != SDL_BUTTON_LEFT) return CONTINUE;
+	if(event->button != CANDLE_MOUSE_BUTTON_LEFT) return CONTINUE;
 	mouse = c_mouse(self);
 	c_mouse_visible(mouse, false);
 	c_mouse_activate(mouse);

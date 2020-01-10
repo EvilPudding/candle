@@ -13,11 +13,17 @@
 #include <components/name.h>
 #include <components/node.h>
 
+#include <GLFW/glfw3.h>
+
 #ifndef WIN32
 #include <unistd.h>
+#define candle_getcwd getcwd
 #else
 #include <direct.h>
+#define candle_getcwd _getcwd
 #endif
+
+#include <tinycthread.h>
 
 candle_t *g_candle;
 
@@ -61,19 +67,11 @@ void candle_reset_dir()
 
 static void candle_handle_events(void)
 {
-	SDL_Event event;
-	/* SDL_WaitEvent(&event); */
-	/* keySpec(state->key_state, state); */
 	entity_signal(entity_null, sig("events_begin"), NULL, NULL);
-	while(SDL_PollEvent(&event))
-	{
-		if(event.type == SDL_QUIT)
-		{
-			g_candle->exit = 1;
-			return;
-		}
-		entity_signal(entity_null, sig("event_handle"), &event, NULL);
-	}
+	glfwPollEvents();
+
+	/* entity_signal(entity_null, sig("event_handle"), &event, NULL); */
+
 	entity_signal(entity_null, sig("events_end"), NULL, NULL);
 }
 
@@ -83,25 +81,94 @@ void candle_skip_frame(int frames)
 	skip += frames;
 }
 
+bool_t is_render_thread()
+{
+#ifndef __EMSCRIPTEN__
+	return thrd_equal(thrd_current(), *(thrd_t*)g_candle->render_thr);
+#else
+	return true;
+#endif
+}
+
+static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
+{
+	candle_event_t event;
+	event.type = CANDLE_MOUSEMOTION;
+	event.mouse.x = (int)xpos;
+	event.mouse.y = (int)ypos;
+	entity_signal(entity_null, sig("event_handle"), &event, NULL);
+}
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	candle_event_t event;
+	if (action == GLFW_PRESS)
+	{
+		event.type = CANDLE_KEYDOWN;
+	}
+	else if (action == GLFW_RELEASE)
+	{
+		event.type = CANDLE_KEYUP;
+	}
+	else
+	{
+		return;
+	}
+
+	if (mods & GLFW_MOD_SUPER)
+	{
+		return;
+	}
+
+	if (!(mods & GLFW_MOD_SHIFT) && key >= 'A' && key <= 'Z')
+	{
+		key += 'a' - 'A';
+	}
+	event.key = key;
+	entity_signal(entity_null, sig("event_handle"), &event, NULL);
+}
+
+void window_resize_callback(GLFWwindow* window, int width, int height)
+{
+	candle_event_t event;
+	event.type = CANDLE_WINDOW_RESIZE;
+	event.window.width = width;
+	event.window.height = height;
+	entity_signal(entity_null, sig("event_handle"), &event, NULL);
+}
+
+void joystick_callback(int jid, int event)
+{
+	printf("joy event %d %d\n", jid, event);
+	if (event == GLFW_CONNECTED)
+	{
+		printf("joystick connected\n");
+	}
+	else if (event == GLFW_DISCONNECTED)
+	{
+		printf("joystick disconnected\n");
+	}
+}
+
 static void render_loop_init(void)
 {
-	loader_start(g_candle->loader);
-
-	g_candle->last_tick = SDL_GetTicks();
+	c_window_t *window;
+	g_candle->last_tick = glfwGetTime();
 	g_candle->fps_count = 0;
-#ifndef __EMSCRIPTEN__
-	g_candle->render_id = SDL_ThreadID();
-#endif
-	/* SDL_GL_MakeCurrent(state->renderer->window, state->renderer->context); */
-	/* SDL_LockMutex(g_candle->mut); */
 	entity_add_component(SYS, c_window_new(0, 0));
 	entity_add_component(SYS, c_render_device_new());
-	/* printf("unlock 2\n"); */
+
+	window = c_window(&SYS);
+
+	glfwSetCursorPosCallback(window->window, cursor_position_callback);
+	glfwSetKeyCallback(window->window, key_callback);
+	glfwSetWindowSizeCallback(window->window, window_resize_callback);
+	glfwSetJoystickCallback(joystick_callback);
 }
 
 static void render_loop_tick(void)
 {
-	int current;
+	double current;
 	candle_handle_events();
 
 	loader_update(g_candle->loader);
@@ -115,28 +182,29 @@ static void render_loop_tick(void)
 
 		ecm_clean(0);
 
-		if(!skip)
-		{
-			SDL_GL_SwapWindow(c_window(&SYS)->window);
-		}
-		else
-		{
-			skip--;
-		}
-
 		glerr();
 		g_candle->fps_count++;
 		/* candle_handle_events(self); */
 
 	}
 
-	current = SDL_GetTicks();
-	if(current - g_candle->last_tick > 1000)
+	current = glfwGetTime();
+	if(current - g_candle->last_tick > 1.0)
 	{
 		g_candle->fps = g_candle->fps_count;
 		g_candle->fps_count = 0;
 		printf("%d\n", g_candle->fps);
 		g_candle->last_tick = current;
+	}
+
+	if (glfwWindowShouldClose(c_window(&SYS)->window))
+	{
+		g_candle->exit = true;
+	}
+
+	{
+		struct timespec remaining = { 0, 8000000 };
+		thrd_sleep(&remaining, NULL);
 	}
 	glerr();
 }
@@ -145,7 +213,7 @@ static void render_loop_tick(void)
 static int render_loop(void)
 {
 	render_loop_init();
-	SDL_SemPost(g_candle->sem);
+	mtx_unlock(g_candle->mtx);
 
 	while(!g_candle->exit)
 	{
@@ -177,14 +245,19 @@ void candle_register()
 
 static void ticker_loop_tick(void)
 {
-	int current = SDL_GetTicks();
+	double current = glfwGetTime();
 	float dt = 16.0f / 1000.0f;
 	/* float dt = (current - g_candle->last_update) / 1000.0; */
+
 	entity_signal(entity_null, sig("world_update"), &dt, NULL);
+
 	ecm_clean(0);
 	g_candle->last_update = current;
 #ifndef __EMSCRIPTEN__
-	SDL_Delay(16);
+	{
+		struct timespec remaining = { 0, 16000000 };
+		thrd_sleep(&remaining, NULL);
+	}
 #endif
 }
 static void ticker_loop(void)
@@ -199,35 +272,21 @@ static void ticker_loop(void)
 #else
 	}
 	while(!g_candle->exit);
-#endif
 
 	ecm_clean(1);
+#endif
 }
-
-/* static int candle_loop(candle_t *self) */
-/* { */
-/* 	SDL_Event event; */
-
-/* 	ssize_t s; */
-/* 	while((s = read(candle->events[0], &event, sizeof(event))) > 0) */
-/* 	{ */
-/* 		/1* if(event.type == SDL_USEREVENT) break; *1/ */
-/* 		handle_event(self, event); */
-/* 	} */
-/* 	return 1; */
-/* } */
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
 void candle_wait(void)
 {
-	/* SDL_WaitThread(candle->candle_thr, NULL); */
 #ifdef __EMSCRIPTEN__
 	emscripten_set_main_loop(ticker_loop, 0, true);
 #else
-	SDL_WaitThread(g_candle->render_thr, NULL);
-	SDL_WaitThread(g_candle->ticker_thr, NULL);
+	thrd_join(*(thrd_t*)g_candle->render_thr, NULL);
+	thrd_join(*(thrd_t*)g_candle->ticker_thr, NULL);
 #endif
 }
 
@@ -314,14 +373,19 @@ entity_t _c_new(entity_t root, int argc, char **argv)
 }
 
 void candle_init2(void);
-void candle_init()
+void candle_init(const char *path)
 {
-	SDL_SetMainReady();
 	g_candle = calloc(1, sizeof *g_candle);
 	g_candle->loader = loader_new();
 
-	g_candle->firstDir = SDL_GetBasePath();
-	candle_reset_dir();
+	loader_start(g_candle->loader);
+
+	{
+		strcpy(g_candle->firstDir, path);
+		strrchr(g_candle->firstDir, '/')[0] = '\0';
+		printf("%s\n", g_candle->firstDir);
+		candle_reset_dir();
+	}
 
 	materials_init_vil();
 
@@ -338,6 +402,7 @@ void candle_init()
 	candle_register();
 
 	candle_init2();
+
 }
 
 void candle_init2()
@@ -359,10 +424,17 @@ void candle_init2()
 	materials_reg();
 
 #ifndef __EMSCRIPTEN__
-	g_candle->sem = SDL_CreateSemaphore(0);
-	g_candle->render_thr = SDL_CreateThread((int(*)(void*))render_loop, "render_loop", NULL);
-	g_candle->ticker_thr = SDL_CreateThread((int(*)(void*))ticker_loop, "ticker_loop", NULL);
-	SDL_SemWait(g_candle->sem);
+
+	g_candle->mtx = malloc(sizeof(mtx_t));
+	mtx_init(g_candle->mtx, mtx_plain);
+	mtx_lock(g_candle->mtx);
+
+	g_candle->render_thr = malloc(sizeof(thrd_t));
+	g_candle->ticker_thr = malloc(sizeof(thrd_t));
+
+	thrd_create(g_candle->render_thr, (thrd_start_t)render_loop, NULL);
+	thrd_create(g_candle->ticker_thr, (thrd_start_t)ticker_loop, NULL);
+	mtx_lock(g_candle->mtx);
 #else
 	render_loop_init();
 #endif

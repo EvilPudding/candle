@@ -3,8 +3,8 @@
 # Candle
 A Game Engine (C89 ANSI, early development stages)
 
-## Dependencies
-* SDL2
+## External Dependencies
+* no
 
 
 ## Getting Started
@@ -24,7 +24,7 @@ In ```twinpeaks/main.c```, we can see how entities are created.
 
 On linux, if all dependencies are installed, run ```make```, additionally, you can run ```make run``` to compile and automatically run the result, or ```make gdb``` to compile a debug executable and run it through *gdb*.
 
-On windows, it is recommended to have an *msys* environment with *mingw*, after installing *SDL2*, you can compile the project with ```make -f windows.mk```
+On windows, it is recommended to have an *msys* environment with *mingw*, you can compile the project with ```make -f windows.mk```
 
 On BSD systems, in order to be able to compile and run *Candle*, you have to install both its dependencies and GNU version of Make program, because the BSD version usually doesn't implement many required extensions. Therefore, instead of executing ```make``` you should use ```gmake``` on BSDs.
 
@@ -41,11 +41,11 @@ For example, to create a cube object, the following code may be used:
 mat_t *material = mat_new("cube material");
 mesh_t *mesh = mesh_new();
 mesh_cube(mesh, 1, 1);
-entity_t cube = entity_new({c_model_new(mesh, material, 0, 1)});
+entity_t cube = entity_new({c_model_new(mesh, material, false, true)});
 /* this creates a cube that does not cast shadows but is visible */
 ```
 
-All components in *Candle* use ```c_``` prefix.
+All components in *Candle* use ```c_``` prefix, and references to the component types use the ```ct_``` prefix.
 
 As seen above, the entity requires a ```c_model``` component to specify which mesh and material to use. The ```c_model``` component depends on ```c_spatial``` component, which is used to determine an object's position, scale and rotation.
 If I wish to change the cube's position, I can simply:
@@ -60,14 +60,13 @@ If I wish to make cube the a light source, I can add to the entity a ```c_light`
 ```c
 entity_add_component(cube, c_light_new(30.0f, vec4(1.0, 0.0, 0.0, 1.0)));
 /* this creates a red light component of radius 30 */
-/* 512 is the resolution of the cubemap shadow */
 ```
 
 This makes the cube emit light.
 
 ### Custom Components
 
-Documentation on how to create custom components will be added in the repo's wiki, until then, to learn how to create custom components, view the component directory in candle. Each component has it's own ```.h``` and ```.c``` file, the header specifies the structure and public methods, the source file implements the methods and registers listeners and signals for that component.
+Documentation on how to create custom components will be added in the repo's wiki, until then, to learn how to create custom components, look at the component directory in candle. Each component has it's own ```.h``` and ```.c``` file, the header specifies the structure and public methods, the source file implements the methods and registers listeners and signals for that component.
 
 
 ### Custom Rendering
@@ -97,7 +96,7 @@ Features that aren't requirements for all projects, are split into plugins, the 
  * [steam.candle](https://github.com/EvilPudding/steam.candle) for steam integration (currently only fetches nickname and profile picture)
  * [mpv.candle](https://github.com/EvilPudding/mpv.candle) to be able to play videos
 
-Each plugin may require specific dependencies, and are added to a project through the use of *git submodules*, for example:
+Each plugin may require specific external dependencies, and are added to a project through the use of *git submodules*, for example:
 
 ```git submodule add https://github.com/EvilPudding/assimp.candle```
 
@@ -108,9 +107,8 @@ The *Makefile* for the project will compile and link the plugin automatically.
 
 Anyone is welcome to contribute, there are many features missing:
 * Documentation is lacking.
-* Compilation on windows is a bit strange, and could be improved.
+* Compilation on windows is a work in progress.
 * I don't use any modern engines, so feature suggestions are welcome.
-* The shaders don't run on AMD cards, and the card gives no debugging information, could be fixed empirically, but I do not have access to an AMD card.
 
 ## Screenshots
 ![Screenshot](https://i.imgur.com/E2Qxp4Q.png)

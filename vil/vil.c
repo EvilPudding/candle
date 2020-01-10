@@ -5,6 +5,8 @@
 #include <utils/mafs.h>
 #include <candle.h>
 #include <utils/str.h>
+#include <stdlib.h>
+#include <string.h>
 
 static slot_t linking;
 vicall_t *g_dragging;
@@ -134,8 +136,7 @@ static vicall_t *vifunc_get_call(vifunc_t *type, const slot_t slot,
 	return NULL;
 }
 
-#ifdef WIN32
-char* strtok_r(char *str, const char *delim, char **nextp)
+char* my_strtok_r(char *str, const char *delim, char **nextp)
 {
     char *ret;
     if (str == NULL) str = *nextp;
@@ -147,7 +148,6 @@ char* strtok_r(char *str, const char *delim, char **nextp)
     *nextp = str;
     return ret;
 }
-#endif
 
 slot_t vifunc_slot_from_name(vifunc_t *func, const char *input,
                              const char *separator)
@@ -160,7 +160,7 @@ slot_t vifunc_slot_from_name(vifunc_t *func, const char *input,
 	strcpy(buffer, input);
 	rest = buffer;
 
-	while ((name = strtok_r(rest, separator, &rest)))
+	while ((name = my_strtok_r(rest, separator, &rest)))
 	{
 		vicall_t *it;
 		uint32_t id = ~0;
@@ -524,9 +524,10 @@ static void vicall_propagate_changed_aux1(vicall_t *self, bool_t *iterated,
 
 static void vicall_propagate_changed_aux0(vicall_t *self, bool_t data_only)
 {
-	bool_t *iterated = alloca(sizeof(bool_t) * self->parent->call_count);
+	bool_t *iterated = malloc(sizeof(bool_t) * self->parent->call_count);
 	memset(iterated, false, sizeof(bool_t) * self->parent->call_count);
 	vicall_propagate_changed_aux1(self, iterated, data_only);
+	free(iterated);
 }
 
 static void vicall_propagate_changed(vicall_t *self, bool_t data_only)
@@ -1308,7 +1309,7 @@ void vicall_iterate_dependencies(vicall_t *self,
 								 vil_link_cb link, vil_call_cb call,
 								 void *usrptr)
 {
-	bool_t *iterated = alloca(sizeof(bool_t) * self->parent->call_count);
+	bool_t *iterated = malloc(sizeof(bool_t) * self->parent->call_count);
 	memset(iterated, false, sizeof(bool_t) * self->parent->call_count);
 
 	printf("%d\n", vifunc_ref_to_slot(self->type, include).depth);
@@ -1316,6 +1317,7 @@ void vicall_iterate_dependencies(vicall_t *self,
 	                             vifunc_ref_to_slot(self->type, include),
 	                             vifunc_ref_to_slot(self->type, exclude),
 	                             link, call, usrptr);
+	free(iterated);
 }
 
 void vifunc_iterate_dependencies(vifunc_t *self,
@@ -1326,7 +1328,7 @@ void vifunc_iterate_dependencies(vifunc_t *self,
 	slot_t include_slot = vifunc_ref_to_slot(self, include);
 	slot_t exclude_slot = vifunc_ref_to_slot(self, exclude);
 	vicall_t *it;
-	bool_t *iterated = alloca(sizeof(bool_t) * self->call_count);
+	bool_t *iterated = malloc(sizeof(bool_t) * self->call_count);
 
 	memset(iterated, false, sizeof(bool_t) * self->call_count);
 
@@ -1345,6 +1347,7 @@ void vifunc_iterate_dependencies(vifunc_t *self,
 			if (include != ~0) break;
 		}
 	}
+	free(iterated);
 }
 
 void _vicall_foreach_unlinked_input(vicall_t *root,

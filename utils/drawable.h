@@ -97,7 +97,7 @@ typedef struct draw_conf
 	uint32_t skin;
 
 	struct conf_vars vars;
-	void *semaphore;
+	void *mtx;
 	int32_t trans_updates;
 	int32_t props_updates;
 	int32_t last_update_frame;

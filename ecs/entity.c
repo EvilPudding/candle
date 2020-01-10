@@ -5,6 +5,7 @@
 #include <candle.h>
 #include <components/name.h>
 #include <components/destroyed.h>
+#include <tinycthread.h>
 
 /* static void entity_check_missing_dependencies(entity_t self); */
 
@@ -12,30 +13,23 @@ struct entity_creation {
 	entity_t entities[32];
 	uint32_t creating_num;
 };
-static SDL_SpinLock _g_tls_lock;
-static SDL_TLSID _g_creating_entity;
-extern SDL_sem *sem;
+static tss_t _g_creating_entity;
 
-static struct entity_creation *g_creating_entity_init(void)
+void entity_creation_init()
 {
-	struct entity_creation *value = calloc(1, sizeof(*value));
-	SDL_AtomicLock(&_g_tls_lock);
-	if (!_g_creating_entity) {
-		_g_creating_entity = SDL_TLSCreate();
+	if (tss_create(&_g_creating_entity, (tss_dtor_t)free) != thrd_success)
+	{
+		assert(false);
 	}
-	SDL_AtomicUnlock(&_g_tls_lock);
-
-	SDL_TLSSet(_g_creating_entity, value, 0);
-
-	return value;
 }
 
 static struct entity_creation *g_creating_entity_get(void)
 {
-	struct entity_creation *value = SDL_TLSGet(_g_creating_entity);
+	struct entity_creation *value = tss_get(_g_creating_entity);
 	if (!value)
 	{
-		value = g_creating_entity_init();
+		value = calloc(1, sizeof(*value));
+		tss_set(_g_creating_entity, value);
 	}
     return value;
 }
@@ -113,7 +107,7 @@ void entity_destroy(entity_t self)
 	}
 }
 
-int listener_signal(listener_t *self, entity_t ent, void *data, void *output)
+int listener_signal(const listener_t *self, entity_t ent, void *data, void *output)
 {
 	khiter_t k;
 	ct_t *ct = ecm_get(self->target);
@@ -147,7 +141,12 @@ int listener_signal_same(listener_t *self, entity_t ent, void *data, void *outpu
 
 int component_signal(c_t *comp, ct_t *ct, uint32_t signal, void *data, void *output)
 {
-	listener_t *listener = ct_get_listener(ct, signal);
+	listener_t *listener;
+
+	mtx_lock(g_ecm->mtx);
+	listener = ct_get_listener(ct, signal);
+	mtx_unlock(g_ecm->mtx);
+
 	if(listener)
 	{
 		listener->cb(comp, data, output);
@@ -158,26 +157,50 @@ int component_signal(c_t *comp, ct_t *ct, uint32_t signal, void *data, void *out
 int entity_signal_same(entity_t self, uint32_t signal, void *data, void *output)
 {
 	int i;
-	signal_t *sig = ecm_get_signal(signal);
+	int response = CONTINUE;
+	signal_t *sig;
+
+	mtx_lock(g_ecm->mtx);
+	sig = ecm_get_signal(signal);
+	mtx_unlock(g_ecm->mtx);
+
 	for(i = vector_count(sig->listener_types) - 1; i >= 0; i--)
 	{
-		listener_t *lis = vector_get(sig->listener_types, i);
+		listener_t *lis = *(listener_t**)vector_get(sig->listener_types, i);
 		int res = listener_signal_same(lis, self, data, output);
-		if(res == STOP) return STOP;
+		if(res == STOP)
+		{
+			response = STOP;
+			break;
+		}
 	}
-	return CONTINUE;
+	return response;
 }
 
 int entity_signal(entity_t self, uint32_t signal, void *data, void *output)
 {
 	int i;
-	signal_t *sig = ecm_get_signal(signal);
-	for(i = vector_count(sig->listener_types) - 1; i >= 0; i--)
+	int response = CONTINUE;
+	signal_t *sig;
+	vector_t *listeners;
+
+	mtx_lock(g_ecm->mtx);
+	sig = ecm_get_signal(signal);
+	listeners = vector_clone(sig->listener_types);
+	mtx_unlock(g_ecm->mtx);
+
+	for(i = vector_count(listeners) - 1; i >= 0; i--)
 	{
-		listener_t *lis = vector_get(sig->listener_types, i);
-		if(listener_signal(lis, self, data, output) == STOP) return STOP;
+		listener_t *lis = *(listener_t**)vector_get(listeners, i);
+		if(listener_signal(lis, self, data, output) == STOP)
+		{
+			response = CONTINUE;
+			break;
+		}
 	}
-	return CONTINUE;
+	vector_destroy(listeners);
+
+	return response;
 }
 
 

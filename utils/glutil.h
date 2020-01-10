@@ -1,8 +1,6 @@
 #ifndef GLUTIL_H
 #define GLUTIL_H
 
-#define SDL_MAIN_HANDLED
-#include <SDL2/SDL.h>
 #ifdef __EMSCRIPTEN__
 #include <GL/glew.h>
 #else

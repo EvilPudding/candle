@@ -208,8 +208,7 @@ typedef struct mesh
 	int update_id;
 	int changes;
 
-	void *semaphore;
-	uint64_t owner_thread;
+	void *mtx;
 
 	/* DISPAY PROPERTIES */
 	int wireframe;
@@ -279,7 +278,6 @@ void mesh_scale_uv(mesh_t *self, float scale);
 
 void mesh_lock(mesh_t *self);
 void mesh_lock_write(mesh_t *self);
-void mesh_wait(mesh_t *self);
 void mesh_unlock(mesh_t *self);
 void mesh_unlock_write(mesh_t *self);
 void mesh_update(mesh_t *self);

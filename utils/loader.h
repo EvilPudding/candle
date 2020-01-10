@@ -11,16 +11,14 @@ typedef struct
 {
 	void *usrptr;
 	loader_cb cb;
-	void *semaphore;
+	void *cond;
 	c_t ct;
 } load_t;
 
 typedef struct
 {
-	void *thread;
-	uint64_t threadId;
 	void *context;
-	void *semaphore;
+	void *mutex;
 	int32_t done;
 	load_t stack[LOADER_STACK_SIZE];
 	int last;

@@ -112,7 +112,6 @@ typedef struct
 	uint32_t size;
 
 	vector_t *listener_types;
-	vector_t *listener_comps;
 
 } signal_t;
 
@@ -143,6 +142,7 @@ typedef struct ecm_t
 
 	int32_t dirty;
 	int32_t safe;
+	void *mtx;
 } ecm_t; /* Entity Component System */
 
 #define c_entity(c) (((c_t*)c)->entity)

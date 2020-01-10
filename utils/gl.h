@@ -70,7 +70,6 @@
 
 
 #include <stddef.h>
-#include <SDL2/SDL.h>
 #ifndef GLEXT_64_TYPES_DEFINED
 /* This code block is duplicated in glxext.h, so must be protected */
 #define GLEXT_64_TYPES_DEFINED
@@ -99,17 +98,19 @@ typedef void *GLhandleARB;
 #else
 typedef unsigned int GLhandleARB;
 #endif
+
+#include <third_party/pstdint.h>
 		typedef unsigned short GLhalfARB;
 		typedef unsigned short GLhalf;
 		typedef GLint GLfixed;
 		typedef ptrdiff_t GLintptr;
 		typedef ptrdiff_t GLsizeiptr;
-		typedef Sint64 GLint64;
-		typedef Uint64 GLuint64;
+		typedef int64_t GLint64;
+		typedef uint64_t GLuint64;
 		typedef ptrdiff_t GLintptrARB;
 		typedef ptrdiff_t GLsizeiptrARB;
-		typedef Sint64 GLint64EXT;
-		typedef Uint64 GLuint64EXT;
+		typedef int64_t GLint64EXT;
+		typedef uint64_t GLuint64EXT;
 		typedef struct __GLsync *GLsync;
 		struct _cl_context;
 		struct _cl_event;

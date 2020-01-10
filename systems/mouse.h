@@ -2,11 +2,7 @@
 #define MOUSE_H
 
 #include <ecs/ecm.h>
-
-typedef struct
-{
-	void *pedantic; /* Fix missing member warning */
-} mouse_t;
+#include <events.h>
 
 typedef struct
 {
@@ -16,7 +12,7 @@ typedef struct
 typedef struct
 {
 	float x, y, direction;
-	int button;
+	candle_key_e button;
 	int clicks;
 } mouse_button_data;
 
@@ -26,7 +22,7 @@ typedef struct
 	float x, y;
 } mouse_move_data;
 
-typedef struct c_mouse_t
+typedef struct c_mouse
 {
 	c_t super;
 	int x, y;

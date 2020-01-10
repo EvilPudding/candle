@@ -52,7 +52,7 @@ float fake_x;
 float fake_y;
 int c_editlook_mouse_release(c_editlook_t *self, mouse_button_data *event)
 {
-	if(event->button == SDL_BUTTON_RIGHT)
+	if(event->button == CANDLE_MOUSE_BUTTON_RIGHT)
 	{
 		self->panning = 0;
 		if (c_mouse_active(c_mouse(self)))

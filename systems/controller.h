@@ -16,7 +16,6 @@ typedef struct
 	uint32_t side;
 	float x, y;
 	controller_button_t button;
-	bool_t changed;
 } controller_axis_t;
 
 typedef struct controller_t
@@ -37,6 +36,7 @@ typedef struct c_controllers_t
 {
 	c_t super;
 	controller_t controllers[8];
+	void *states;
 	uint32_t num_controllers;
 } c_controllers_t;
 

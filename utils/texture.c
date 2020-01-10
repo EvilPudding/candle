@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <tinycthread.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_ASSERT(x)
@@ -61,7 +62,7 @@ bool_t *g_probe_tiles;
 uint32_t g_min_shadow_tile = 64;
 uint32_t g_max_probe_levels;
 uint32_t g_num_shadows;
-SDL_sem *g_indir_sem;
+mtx_t g_indir_mtx;
 
 uint32_t get_sum_tiles(uint32_t level)
 {
@@ -74,7 +75,7 @@ void svp_init()
 	uint32_t t;
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max);
 	max = floorf(((float)max) / 129);
-	g_indir_sem = SDL_CreateSemaphore(1);
+	mtx_init(&g_indir_mtx, mtx_plain);
 	g_cache = texture_new_2D(g_cache_w * 129, g_cache_h * 129, TEX_INTERPOLATE, 1,
 	                         buffer_new("color", false, 4));
 	g_cache_bound = calloc(g_cache_w * g_cache_h, sizeof(*g_cache_bound));
@@ -765,7 +766,8 @@ static int32_t texture_from_file_loader(texture_t *self)
 
 buffer_t buffer_new(const char *name, int32_t is_float, int32_t dims)
 {
-	buffer_t buffer = {0};
+	buffer_t buffer;
+	memset(&buffer, 0, sizeof(buffer));
 #ifdef __EMSCRIPTEN__
 	is_float = false;
 #endif
@@ -1005,7 +1007,7 @@ static void texture_update_indir_info(texture_t *self)
 				break;
 	}
 
-	SDL_SemWait(g_indir_sem);
+	mtx_lock(&g_indir_mtx);
 	self->bufs[0].indir_n = g_indir_n;
 	self->bufs[0].tiles = &g_tiles[g_indir_n];
 
@@ -1051,7 +1053,7 @@ static void texture_update_indir_info(texture_t *self)
 		if (tiles_x > 1)
 			tiles_x = tiles_x / 2;
 	}
-	SDL_SemPost(g_indir_sem);
+	mtx_unlock(&g_indir_mtx);
 
 	self->sparse_it = true;
 }
@@ -1059,7 +1061,8 @@ static void texture_update_indir_info(texture_t *self)
 
 int32_t texture_load_from_memory(texture_t *self, void *buffer, int32_t len)
 {
-	texture_t temp = {0};
+	texture_t temp;
+	memset(&temp, 0, sizeof(temp));
 
 	temp.target = GL_TEXTURE_2D;
 
@@ -1164,7 +1167,8 @@ int32_t save_tex_tile(tex_tile_t *tile)
 static void texture_disk_cacher_write(texture_t *self, tex_tile_t *tile)
 {
 #ifndef __EMSCRIPTEN__
-		SDL_CreateThread((int32_t(*)(void*))save_tex_tile, "save_tex_tile", tile);
+	thrd_t thrd;
+	thrd_create(&thrd, (thrd_start_t)save_tex_tile, tile);
 #else
 #endif
 }
@@ -1183,10 +1187,13 @@ static void texture_disk_cacher(texture_t *self, uint32_t mip,
 	if (tile_fp)
 	{
 		tex_tile_t *tile = texture_get_tile(self, mip, x, y);
+#ifndef __EMSCRIPTEN__
+		thrd_t thrd;
+#endif
 		fclose(tile_fp);
 		tile->loading = true;
 #ifndef __EMSCRIPTEN__
-		SDL_CreateThread((int32_t(*)(void*))load_tex_tile, "load_tex_tile", tile);
+		thrd_create(&thrd, (thrd_start_t)load_tex_tile, tile);
 #else
 		load_tex_tile(tile);
 #endif
@@ -1214,7 +1221,10 @@ static void texture_disk_cacher(texture_t *self, uint32_t mip,
 		}
 	}
 #ifndef __EMSCRIPTEN__
-	SDL_CreateThread((int32_t(*)(void*))load_tex, "load_tex", self);
+	{
+		thrd_t thrd;
+		thrd_create(&thrd, (thrd_start_t)load_tex, self);
+	}
 #else
 	load_tex(self);
 #endif

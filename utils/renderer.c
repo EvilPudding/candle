@@ -15,6 +15,7 @@
 #include <utils/noise.h>
 #include <utils/nk.h>
 #include <utils/material.h>
+#include <GLFW/glfw3.h>
 
 static int renderer_update_screen_texture(renderer_t *self);
 
@@ -387,10 +388,10 @@ void *pass_process_query_mips(pass_t *self)
 		second_stage = false;
 	}
 
-	mips[0] = alloca(size);
-	mips[1] = alloca(size);
-	mips[2] = alloca(size);
-	mips[3] = alloca(size);
+	mips[0] = malloc(size);
+	mips[1] = malloc(size);
+	mips[2] = malloc(size);
+	mips[3] = malloc(size);
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, tex->frame_buffer[0]); glerr();
@@ -460,6 +461,10 @@ void *pass_process_query_mips(pass_t *self)
 	}
 
 end:
+	free(mips[0]);
+	free(mips[1]);
+	free(mips[2]);
+	free(mips[3]);
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0); glerr();
 	return NULL;
 }
@@ -490,7 +495,7 @@ void *pass_process_brightness(pass_t *self)
 		second_stage = false;
 	}
 
-	data = alloca(size);
+	data = malloc(size);
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, tex->frame_buffer[mip]); glerr();
@@ -519,6 +524,7 @@ void *pass_process_brightness(pass_t *self)
 		tex->brightness = brightness;
 	}
 
+	free(data);
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0); glerr();
 	return NULL;
 }
@@ -833,7 +839,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 
 	if (profile)
 	{
-		*profile = SDL_GetTicks();
+		*profile = glfwGetTime() * 1000;
 		glFinish(); glerr();
 	}
 
@@ -951,7 +957,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 	if (profile)
 	{
 		glFinish(); glerr();
-		*profile = SDL_GetTicks() - (*profile);
+		*profile = ((long)(glfwGetTime() * 1000)) - (*profile);
 	}
 
 	return pass->output;

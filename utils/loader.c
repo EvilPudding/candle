@@ -1,9 +1,10 @@
+#include <candle.h>
 #include <utils/glutil.h>
 #include "loader.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <tinycthread.h>
 
-/* SDL_threadID glid; */
 loader_t *loader_new()
 {
 	loader_t *self = calloc(1, sizeof *self);
@@ -13,20 +14,25 @@ loader_t *loader_new()
 void loader_start(loader_t *self)
 {
 #ifndef __EMSCRIPTEN__
-	self->threadId = SDL_ThreadID();
-	self->semaphore = SDL_CreateSemaphore(1);
+	unsigned int i;
+	self->mutex = malloc(sizeof(mtx_t));
+	mtx_init(self->mutex, mtx_plain | mtx_recursive);
+	for (i = 0; i < LOADER_STACK_SIZE; i++)
+	{
+		self->stack[i].cond = NULL;
+	}
 #endif
 }
 
 void _loader_push_wait(loader_t *self, loader_cb cb, void *usrptr, c_t *c)
 {
 #ifndef __EMSCRIPTEN__
-	if (!self->semaphore)
+	if (!self->mutex)
 	{
 		printf("Loader not ready for push_wait.\n");
 	}
 #endif
-	if (!self->semaphore || SDL_ThreadID() == self->threadId)
+	if (!self->mutex || is_render_thread())
 	{
 		if(c)
 		{
@@ -39,21 +45,26 @@ void _loader_push_wait(loader_t *self, loader_cb cb, void *usrptr, c_t *c)
 	}
 	else
 	{
+		mtx_t mtx;
 		load_t *load;
 
-		SDL_SemWait(self->semaphore);
+		mtx_lock(self->mutex);
 			load = &self->stack[self->last];
 			load->usrptr = usrptr;
 			load->cb = cb;
 			if(c) load->ct = *c;
 			self->last = (self->last + 1) % LOADER_STACK_SIZE;
-		SDL_SemPost(self->semaphore);
 
-		load->semaphore = SDL_CreateSemaphore(0);
+			mtx_init(&mtx, mtx_plain);
+			mtx_lock(&mtx);
+			load->cond = malloc(sizeof(cnd_t));
+			cnd_init(load->cond);
 
-		SDL_SemWait(load->semaphore);
+		mtx_unlock(self->mutex);
 
-		SDL_DestroySemaphore(load->semaphore);
+		cnd_wait(load->cond, &mtx);
+		mtx_unlock(&mtx);
+		mtx_destroy(&mtx);
 	}
 }
 
@@ -61,24 +72,26 @@ void _loader_push_wait(loader_t *self, loader_cb cb, void *usrptr, c_t *c)
 void _loader_push(loader_t *self, loader_cb cb, void *usrptr, c_t *c)
 {
 	load_t *load;
-	bool_t same_thread = self->semaphore ? SDL_ThreadID() == self->threadId : true;
 
-	if(!same_thread) SDL_SemWait(self->semaphore);
+	mtx_lock(self->mutex);
 		load = &self->stack[self->last];
 		load->usrptr = usrptr;
 		load->cb = cb;
 		if(c) load->ct = *c;
-		load->semaphore = NULL;
+		if (load->cond)
+		{
+			cnd_destroy(load->cond);
+			load->cond = NULL;
+		}
 		self->last = (self->last + 1) % LOADER_STACK_SIZE;
-	if(!same_thread) SDL_SemPost(self->semaphore);
+	mtx_unlock(self->mutex);
 }
 
 int loader_update(loader_t *self)
 {
-	SDL_SemWait(self->semaphore);
+	mtx_lock(self->mutex);
 	while(self->first != self->last)
 	{
-
 		load_t *load = &self->stack[self->first];
 
 		if(load->usrptr)
@@ -91,33 +104,25 @@ int loader_update(loader_t *self)
 			load->cb(c);
 		}
 
-		if(load->semaphore)
-		{
-			SDL_SemPost(load->semaphore);
-		}
-
 		load->cb = NULL;
 		load->usrptr = NULL;
-		load->semaphore = NULL;
+		if (load->cond)
+		{
+			cnd_signal(load->cond);
+			cnd_destroy(load->cond);
+			load->cond = NULL;
+		}
 
 		self->first = (self->first + 1) % LOADER_STACK_SIZE;
 	}
-	SDL_SemPost(self->semaphore);
+	mtx_unlock(self->mutex);
 	return 1;
 }
 
 void loader_destroy(loader_t *self)
 {
-	SDL_DestroySemaphore(self->semaphore);  
+	mtx_destroy(self->mutex);
+	free(self->mutex);
 	
 	free(self);
-}
-
-void loader_wait(loader_t *self)
-{
-	while(self->last != self->first)
-	{
-		/* printf("%d %d\n", self->last, self->first); */
-		SDL_Delay(1);
-	}
 }

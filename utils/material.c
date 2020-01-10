@@ -798,7 +798,7 @@ void mat_changed(vicall_t *call, slot_t slot, void *usrptr)
 	uint32_t unpadded = vicall_get_size(call);
 	uint32_t size = ceilf(((float)unpadded) / 16) * 16;
 	mat_t *self = usrptr;
-	uint8_t *data = alloca(size);
+	uint8_t *data = malloc(size);
 	uint8_t *end = data;
 
 	vicall_foreach_unlinked_input(call, _generate_uniform_data, &end);
@@ -809,6 +809,7 @@ void mat_changed(vicall_t *call, slot_t slot, void *usrptr)
 		glBindBuffer(GL_UNIFORM_BUFFER, type->ubo); glerr();
 		glBufferSubData(GL_UNIFORM_BUFFER, size * self->id, unpadded, data); glerr();
 	}
+	free(data);
 }
 
 uint32_t mat_get_group(mat_t *self)
@@ -1612,7 +1613,6 @@ void mat1t(mat_t *self, uint32_t ref, texture_t *value)
 
 	for (i = 0; !value->bufs[0].indir_n; i++)
 	{
-		SDL_Delay(100);
 		if (i == 16)
 		{
 			printf("giving up on %s\n", (char*)value->usrptr);

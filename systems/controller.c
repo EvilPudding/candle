@@ -1,190 +1,294 @@
-#include <SDL2/SDL.h>
 #include "controller.h"
+#include <candle.h>
+#include <GLFW/glfw3.h>
 
-void c_controllers_rumble(c_controllers_t *self, uint32_t controller,
-                          float strength)
-{
-	SDL_Haptic *haptic = self->controllers[controller].haptic;
-	if (haptic == NULL) return;
-	if (SDL_HapticRumbleInit(haptic) != 0) return;
-	if (strength == 0.f)
-	{
-		SDL_HapticRumbleStop(haptic);
-	}
-	else
-	{
-		SDL_HapticRumblePlay(haptic, strength, 5000);
-	}
-}
+/* void c_controllers_rumble(c_controllers_t *self, uint32_t controller, */
+/*                           float strength) */
+/* { */
+/* 	sdl_Haptic *haptic = self->controllers[controller].haptic; */
+/* 	if (haptic == NULL) return; */
+/* 	if (sdl_HapticRumbleInit(haptic) != 0) return; */
+/* 	if (strength == 0.f) */
+/* 	{ */
+/* 		sdl_HapticRumbleStop(haptic); */
+/* 	} */
+/* 	else */
+/* 	{ */
+/* 		sdl_HapticRumblePlay(haptic, strength, 5000); */
+/* 	} */
+/* } */
 
-float normalize_axis(int32_t val)
+float normalize_axis(float val)
 {
-	const int deadzone = 3000;
+	const float deadzone = 0.09;
 	float value;
-	if (val == 0)
+	if (val == 0.0f)
 	{
 		value = 0.0f;
 	}
-	else if (val < 0)
+	else if (val < 0.0f)
 	{
-		value = ((float)val + deadzone) / (32768.0f - deadzone);
+		value = ((float)val + deadzone) / (1.0f - deadzone);
 		if (value > 0.f)
 			value = 0.f;
 	}
 	else
 	{
-		value = ((float)val - deadzone) / (32767.0f - deadzone);
+		value = ((float)val - deadzone) / (1.0f - deadzone);
 		if (value < 0.f)
 			value = 0.f;
 	}
 	return value;
 }
 
-int32_t c_controllers_event(c_controllers_t *self, const SDL_Event *event)
+int32_t c_controllers_event(c_controllers_t *self, const candle_event_t *event)
 {
-	float value;
-	uint32_t signal;
-	SDL_GameController *pad;
-	controller_t *controller = &self->controllers[event->cdevice.which];
-	controller_button_t *button;
 
-	switch(event->type)
+	if (   event->type != CANDLE_CONTROLLERDEVICEADDED
+	    && event->type != CANDLE_CONTROLLERBUTTONDOWN
+	    && event->type != CANDLE_CONTROLLERBUTTONUP
+		&& event->type != CANDLE_CONTROLLERAXISMOTION)
 	{
-		case SDL_CONTROLLERDEVICEADDED:
-
-			pad = SDL_GameControllerOpen(event->cdevice.which);
-			if (SDL_GameControllerGetAttached(pad) == 1)
-			{
-				if (event->cdevice.which >= self->num_controllers)
-				{
-					self->num_controllers = event->cdevice.which + 1;
-				}
-				controller->haptic = SDL_HapticOpenFromJoystick(SDL_GameControllerGetJoystick(pad));
-				controller->connected = true;
-			}
-			else
-			{
-				printf("SDL_GetError() = %s\n", SDL_GetError());
-			}
-			return STOP;
-		case SDL_CONTROLLERBUTTONDOWN:
-		case SDL_CONTROLLERBUTTONUP:
-			switch (event->cbutton.button)
-			{
-				case SDL_CONTROLLER_BUTTON_A:
-					button = &controller->a;
-					break;
-				case SDL_CONTROLLER_BUTTON_B:
-					button = &controller->b;
-					break;
-				case SDL_CONTROLLER_BUTTON_X:
-					button = &controller->x;
-					break;
-				case SDL_CONTROLLER_BUTTON_Y:
-					button = &controller->y;
-					break;
-				case SDL_CONTROLLER_BUTTON_BACK:
-					button = &controller->back;
-					break;
-				case SDL_CONTROLLER_BUTTON_GUIDE:
-					button = &controller->guide;
-					break;
-				case SDL_CONTROLLER_BUTTON_START:
-					button = &controller->start;
-					break;
-				case SDL_CONTROLLER_BUTTON_LEFTSTICK:
-					button = &controller->axis_left.button;
-					break;
-				case SDL_CONTROLLER_BUTTON_RIGHTSTICK:
-					button = &controller->axis_right.button;
-					break;
-				case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
-					button = &controller->shoulder_left;
-					break;
-				case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
-					button = &controller->shoulder_right;
-					break;
-				case SDL_CONTROLLER_BUTTON_DPAD_UP:
-					button = &controller->up;
-					break;
-				case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
-					button = &controller->down;
-					break;
-				case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
-					button = &controller->left;
-					break;
-				case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
-					button = &controller->right;
-					break;
-				default:
-					printf("wat\n");
-					return CONTINUE;
-			}
-			printf("button\n");
-			signal =   event->type == SDL_CONTROLLERBUTTONDOWN
-			                  ? ref("controller_button_down")
-			                  : ref("controller_button_up");
-			button->pressed = event->type == SDL_CONTROLLERBUTTONDOWN;
-			button->key = event->cbutton.button;
-			entity_signal(entity_null, signal, button, NULL);
-			return STOP;
-		case SDL_CONTROLLERAXISMOTION:
-			value = normalize_axis(event->caxis.value);
-			switch (event->caxis.axis)
-			{
-				case SDL_CONTROLLER_AXIS_LEFTX:
-					controller->axis_left.changed = true;
-					controller->axis_left.x = value;
-					break;
-				case SDL_CONTROLLER_AXIS_LEFTY:
-					controller->axis_left.changed = true;
-					controller->axis_left.y = value;
-					break;
-				case SDL_CONTROLLER_AXIS_RIGHTX:
-					controller->axis_right.changed = true;
-					controller->axis_right.x = value;
-					break;
-				case SDL_CONTROLLER_AXIS_RIGHTY:
-					controller->axis_right.changed = true;
-					controller->axis_right.y = value;
-					break;
-				case SDL_CONTROLLER_AXIS_TRIGGERLEFT:
-					controller->trigger_left.pressed = ((float)event->caxis.value) / 32767.0f;
-					break;
-				case SDL_CONTROLLER_AXIS_TRIGGERRIGHT:
-					controller->trigger_right.pressed = ((float)event->caxis.value) / 32767.0f;
-					break;
-				default:
-					printf("wat? %d\n", event->caxis.axis);
-			}
-			return STOP;
+		return CONTINUE;
 	}
+
+	/* controller = &self->controllers[event->controller.id]; */
+
 	return CONTINUE;
 }
 
 int32_t c_controllers_events_end(c_controllers_t *self)
 {
 	uint32_t i;
-	for (i = 0; i < self->num_controllers; i++)
+	for (i = 0; i < 8; i++)
 	{
 		controller_t *controller = &self->controllers[i];
-		if (!controller->connected) continue;
-		if (   controller->axis_left.changed
-		    || controller->axis_left.x != 0.f
-		    || controller->axis_left.y != 0.f)
+		GLFWgamepadstate state;
+		GLFWgamepadstate *cstate = &((GLFWgamepadstate*)self->states)[i];
+		if (!glfwJoystickIsGamepad(GLFW_JOYSTICK_1 + i))
 		{
-			controller->axis_left.changed = false;
-			entity_signal(entity_null, ref("controller_axis"), &controller->axis_left, NULL);
+			continue;
 		}
-		if (   controller->axis_right.changed
-		    || controller->axis_right.x != 0.f
-		    || controller->axis_right.y != 0.f)
+
+		if (glfwGetGamepadState(GLFW_JOYSTICK_1 + i, &state))
 		{
-			controller->axis_right.changed = false;
-			entity_signal(entity_null, ref("controller_axis"), &controller->axis_right, NULL);
+			controller_button_t *button;
+			uint32_t signal;
+			if (state.buttons[GLFW_GAMEPAD_BUTTON_A] != cstate->buttons[GLFW_GAMEPAD_BUTTON_A])
+			{
+				cstate->buttons[GLFW_GAMEPAD_BUTTON_A] = state.buttons[GLFW_GAMEPAD_BUTTON_A];
+				button = &controller->a;
+				button->key = CANDLE_CONTROLLER_BUTTON_A;
+				button->pressed = cstate->buttons[GLFW_GAMEPAD_BUTTON_A] == GLFW_PRESS;
+				signal = button->pressed ? ref("controller_button_down")
+					                     : ref("controller_button_up");
+				entity_signal(entity_null, signal, button, NULL);
+			}
+			if (state.buttons[GLFW_GAMEPAD_BUTTON_B] != cstate->buttons[GLFW_GAMEPAD_BUTTON_B])
+			{
+				cstate->buttons[GLFW_GAMEPAD_BUTTON_B] = state.buttons[GLFW_GAMEPAD_BUTTON_B];
+				button = &controller->b;
+				button->key = CANDLE_CONTROLLER_BUTTON_B;
+				button->pressed = cstate->buttons[GLFW_GAMEPAD_BUTTON_B] == GLFW_PRESS;
+				signal = button->pressed ? ref("controller_button_down")
+					                     : ref("controller_button_up");
+				entity_signal(entity_null, signal, button, NULL);
+			}
+			if (state.buttons[GLFW_GAMEPAD_BUTTON_X] != cstate->buttons[GLFW_GAMEPAD_BUTTON_X])
+			{
+				cstate->buttons[GLFW_GAMEPAD_BUTTON_X] = state.buttons[GLFW_GAMEPAD_BUTTON_X];
+				button = &controller->x;
+				button->key = CANDLE_CONTROLLER_BUTTON_X;
+				button->pressed = cstate->buttons[GLFW_GAMEPAD_BUTTON_X] == GLFW_PRESS;
+				signal = button->pressed ? ref("controller_button_down")
+					                     : ref("controller_button_up");
+				entity_signal(entity_null, signal, button, NULL);
+			}
+			if (state.buttons[GLFW_GAMEPAD_BUTTON_Y] != cstate->buttons[GLFW_GAMEPAD_BUTTON_Y])
+			{
+				cstate->buttons[GLFW_GAMEPAD_BUTTON_Y] = state.buttons[GLFW_GAMEPAD_BUTTON_Y];
+				button = &controller->y;
+				button->key = CANDLE_CONTROLLER_BUTTON_Y;
+				button->pressed = cstate->buttons[GLFW_GAMEPAD_BUTTON_Y] == GLFW_PRESS;
+				signal = button->pressed ? ref("controller_button_down")
+					                     : ref("controller_button_up");
+				entity_signal(entity_null, signal, button, NULL);
+			}
+
+			if (state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER] != cstate->buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER])
+			{
+				cstate->buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER] = state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER];
+				button = &controller->shoulder_left;
+				button->key = CANDLE_CONTROLLER_BUTTON_LEFTSHOULDER;
+				button->pressed = cstate->buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER] == GLFW_PRESS;
+				signal = button->pressed ? ref("controller_button_down")
+					                     : ref("controller_button_up");
+				entity_signal(entity_null, signal, button, NULL);
+			}
+
+			if (state.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER] != cstate->buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER])
+			{
+				cstate->buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER] = state.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER];
+				button = &controller->shoulder_right;
+				button->key = CANDLE_CONTROLLER_BUTTON_RIGHTSHOULDER;
+				button->pressed = cstate->buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER] == GLFW_PRESS;
+				signal = button->pressed ? ref("controller_button_down")
+					                     : ref("controller_button_up");
+				entity_signal(entity_null, signal, button, NULL);
+			}
+
+			if (state.buttons[GLFW_GAMEPAD_BUTTON_BACK] != cstate->buttons[GLFW_GAMEPAD_BUTTON_BACK])
+			{
+				cstate->buttons[GLFW_GAMEPAD_BUTTON_BACK] = state.buttons[GLFW_GAMEPAD_BUTTON_BACK];
+				button = &controller->back;
+				button->key = CANDLE_CONTROLLER_BUTTON_BACK;
+				button->pressed = cstate->buttons[GLFW_GAMEPAD_BUTTON_BACK] == GLFW_PRESS;
+				signal = button->pressed ? ref("controller_button_down")
+					                     : ref("controller_button_up");
+				entity_signal(entity_null, signal, button, NULL);
+			}
+
+			if (state.buttons[GLFW_GAMEPAD_BUTTON_START] != cstate->buttons[GLFW_GAMEPAD_BUTTON_START])
+			{
+				cstate->buttons[GLFW_GAMEPAD_BUTTON_START] = state.buttons[GLFW_GAMEPAD_BUTTON_START];
+				button = &controller->start;
+				button->key = CANDLE_CONTROLLER_BUTTON_START;
+				button->pressed = cstate->buttons[GLFW_GAMEPAD_BUTTON_START] == GLFW_PRESS;
+				signal = button->pressed ? ref("controller_button_down")
+					                     : ref("controller_button_up");
+				entity_signal(entity_null, signal, button, NULL);
+			}
+
+			if (state.buttons[GLFW_GAMEPAD_BUTTON_GUIDE] != cstate->buttons[GLFW_GAMEPAD_BUTTON_GUIDE])
+			{
+				cstate->buttons[GLFW_GAMEPAD_BUTTON_GUIDE] = state.buttons[GLFW_GAMEPAD_BUTTON_GUIDE];
+				button = &controller->guide;
+				button->key = CANDLE_CONTROLLER_BUTTON_GUIDE;
+				button->pressed = cstate->buttons[GLFW_GAMEPAD_BUTTON_GUIDE] == GLFW_PRESS;
+				signal = button->pressed ? ref("controller_button_down")
+					                     : ref("controller_button_up");
+				entity_signal(entity_null, signal, button, NULL);
+			}
+
+			if (state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_THUMB] != cstate->buttons[GLFW_GAMEPAD_BUTTON_LEFT_THUMB])
+			{
+				cstate->buttons[GLFW_GAMEPAD_BUTTON_LEFT_THUMB] = state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_THUMB];
+				button = &controller->axis_left.button;
+				button->key = CANDLE_CONTROLLER_AXIS_LEFT;
+				button->pressed = cstate->buttons[GLFW_GAMEPAD_BUTTON_LEFT_THUMB] == GLFW_PRESS;
+				signal = button->pressed ? ref("controller_button_down")
+					                     : ref("controller_button_up");
+				entity_signal(entity_null, signal, button, NULL);
+			}
+
+			if (state.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_THUMB] != cstate->buttons[GLFW_GAMEPAD_BUTTON_RIGHT_THUMB])
+			{
+				cstate->buttons[GLFW_GAMEPAD_BUTTON_RIGHT_THUMB] = state.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_THUMB];
+				button = &controller->axis_right.button;
+				button->key = CANDLE_CONTROLLER_AXIS_RIGHT;
+				button->pressed = cstate->buttons[GLFW_GAMEPAD_BUTTON_RIGHT_THUMB] == GLFW_PRESS;
+				signal = button->pressed ? ref("controller_button_down")
+					                     : ref("controller_button_up");
+				entity_signal(entity_null, signal, button, NULL);
+			}
+
+			if (state.buttons[GLFW_GAMEPAD_BUTTON_DPAD_UP] != cstate->buttons[GLFW_GAMEPAD_BUTTON_DPAD_UP])
+			{
+				cstate->buttons[GLFW_GAMEPAD_BUTTON_DPAD_UP] = state.buttons[GLFW_GAMEPAD_BUTTON_DPAD_UP];
+				button = &controller->up;
+				button->key = CANDLE_CONTROLLER_BUTTON_UP;
+				button->pressed = cstate->buttons[GLFW_GAMEPAD_BUTTON_DPAD_UP] == GLFW_PRESS;
+				signal = button->pressed ? ref("controller_button_down")
+					                     : ref("controller_button_up");
+				entity_signal(entity_null, signal, button, NULL);
+			}
+
+			if (state.buttons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT] != cstate->buttons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT])
+			{
+				cstate->buttons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT] = state.buttons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT];
+				button = &controller->right;
+				button->key = CANDLE_CONTROLLER_BUTTON_RIGHT;
+				button->pressed = cstate->buttons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT] == GLFW_PRESS;
+				signal = button->pressed ? ref("controller_button_down")
+					                     : ref("controller_button_up");
+				entity_signal(entity_null, signal, button, NULL);
+			}
+
+			if (state.buttons[GLFW_GAMEPAD_BUTTON_DPAD_DOWN] != cstate->buttons[GLFW_GAMEPAD_BUTTON_DPAD_DOWN])
+			{
+				cstate->buttons[GLFW_GAMEPAD_BUTTON_DPAD_DOWN] = state.buttons[GLFW_GAMEPAD_BUTTON_DPAD_DOWN];
+				button = &controller->down;
+				button->key = CANDLE_CONTROLLER_BUTTON_DOWN;
+				button->pressed = cstate->buttons[GLFW_GAMEPAD_BUTTON_DPAD_DOWN] == GLFW_PRESS;
+				signal = button->pressed ? ref("controller_button_down")
+					                     : ref("controller_button_up");
+				entity_signal(entity_null, signal, button, NULL);
+			}
+
+			if (state.buttons[GLFW_GAMEPAD_BUTTON_DPAD_LEFT ] != cstate->buttons[GLFW_GAMEPAD_BUTTON_DPAD_LEFT ])
+			{
+				cstate->buttons[GLFW_GAMEPAD_BUTTON_DPAD_LEFT ] = state.buttons[GLFW_GAMEPAD_BUTTON_DPAD_LEFT ];
+				button = &controller->left;
+				button->key = CANDLE_CONTROLLER_BUTTON_LEFT;
+				button->pressed = cstate->buttons[GLFW_GAMEPAD_BUTTON_DPAD_LEFT ] == GLFW_PRESS;
+				signal = button->pressed ? ref("controller_button_down")
+					                     : ref("controller_button_up");
+				entity_signal(entity_null, signal, button, NULL);
+			}
+
+			if (   state.axes[GLFW_GAMEPAD_AXIS_LEFT_X] != cstate->axes[GLFW_GAMEPAD_AXIS_LEFT_X]
+			    || state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y] != cstate->axes[GLFW_GAMEPAD_AXIS_LEFT_Y])
+			{
+				cstate->axes[GLFW_GAMEPAD_AXIS_LEFT_X] = state.axes[GLFW_GAMEPAD_AXIS_LEFT_X];
+				cstate->axes[GLFW_GAMEPAD_AXIS_LEFT_Y] = state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y];
+				controller->axis_left.x = normalize_axis(state.axes[GLFW_GAMEPAD_AXIS_LEFT_X]);
+				controller->axis_left.y = normalize_axis(state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y]);
+				if (controller->axis_left.x == 0.f && controller->axis_left.y == 0.f)
+				{
+					entity_signal(entity_null, ref("controller_axis"), &controller->axis_left, NULL);
+				}
+			}
+			if (controller->axis_left.x != 0.f || controller->axis_left.y != 0.f)
+			{
+				entity_signal(entity_null, ref("controller_axis"), &controller->axis_left, NULL);
+			}
+
+			if (   state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X] != cstate->axes[GLFW_GAMEPAD_AXIS_RIGHT_X]
+			    || state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y] != cstate->axes[GLFW_GAMEPAD_AXIS_RIGHT_Y])
+			{
+				cstate->axes[GLFW_GAMEPAD_AXIS_RIGHT_X] = state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X];
+				cstate->axes[GLFW_GAMEPAD_AXIS_RIGHT_Y] = state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y];
+				controller->axis_right.x = normalize_axis(state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X]);
+				controller->axis_right.y = normalize_axis(state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y]);
+				if (controller->axis_right.x == 0.f && controller->axis_right.y == 0.f)
+				{
+					entity_signal(entity_null, ref("controller_axis"), &controller->axis_right, NULL);
+				}
+			}
+			if (controller->axis_right.x != 0.f || controller->axis_right.y != 0.f)
+			{
+				entity_signal(entity_null, ref("controller_axis"), &controller->axis_right, NULL);
+			}
+
+			if (state.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER] != cstate->axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER])
+			{
+				cstate->buttons[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER] = state.buttons[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER];
+				button = &controller->trigger_right;
+				button->key = CANDLE_CONTROLLER_TRIGGERLEFT;
+				button->pressed = cstate->buttons[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER];
+				entity_signal(entity_null, ref("controller_button_changed"), button, NULL);
+			}
+			if (state.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER] != cstate->axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER])
+			{
+				cstate->buttons[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER] = state.buttons[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER];
+				button = &controller->trigger_right;
+				button->key = CANDLE_CONTROLLER_TRIGGERRIGHT;
+				button->pressed = cstate->buttons[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER];
+				entity_signal(entity_null, ref("controller_button_changed"), button, NULL);
+			}
+
 		}
 	}
-		
 	return CONTINUE;
 }
 
@@ -206,31 +310,34 @@ void ct_controller(ct_t *self)
 
 c_controllers_t *c_controllers_new()
 {
-	bool_t has_gamepads = false;
-	int n_joysticks, i;
+	int i;
 	c_controllers_t *self = component_new(ct_controller);
+	/* bool_t has_gamepads = false; */
+	/* int n_joysticks; */
 
-	if (SDL_WasInit(SDL_INIT_GAMECONTROLLER) == 1)
-		exit(1);
-	SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER);
-	SDL_InitSubSystem(SDL_INIT_HAPTIC);
+	/* if (sdl_WasInit(sdl_INIT_GAMECONTROLLER) == 1) */
+	/* 	exit(1); */
+	/* sdl_InitSubSystem(sdl_INIT_GAMECONTROLLER); */
+	/* sdl_InitSubSystem(sdl_INIT_HAPTIC); */
 
-	n_joysticks = SDL_NumJoysticks();
-	for (i = 0; i < n_joysticks; i++)
-	{
-		if (SDL_IsGameController(i))
-		{
-			SDL_GameController *pad = SDL_GameControllerOpen(i);
+	/* n_joysticks = sdl_NumJoysticks(); */
+	/* for (i = 0; i < n_joysticks; i++) */
+	/* { */
+	/* 	if (sdl_IsGameController(i)) */
+	/* 	{ */
+	/* 		sdl_GameController *pad = sdl_GameControllerOpen(i); */
 
-			if (SDL_GameControllerGetAttached(pad) == 1)
-			{
-				has_gamepads = true;
-			}
-		}
-	}
+	/* 		if (sdl_GameControllerGetAttached(pad) == 1) */
+	/* 		{ */
+	/* 			has_gamepads = true; */
+	/* 		} */
+	/* 	} */
+	/* } */
 
+	self->states = malloc(sizeof(GLFWgamepadstate) * 8);
 	for (i = 0; i < 8; i++)
 	{
+		GLFWgamepadstate *cstate = &((GLFWgamepadstate*)self->states)[i];
 		self->controllers[i].id = i;
 		self->controllers[i].axis_right.controller = i;
 		self->controllers[i].axis_left.controller = i;
@@ -251,11 +358,16 @@ c_controllers_t *c_controllers_new()
 		self->controllers[i].start.controller = i;
 		self->controllers[i].back.controller = i;
 		self->controllers[i].guide.controller = i;
+
+		if (glfwJoystickIsGamepad(GLFW_JOYSTICK_1 + i))
+		{
+			glfwGetGamepadState(GLFW_JOYSTICK_1 + i, cstate);
+		}
 	}
 
-	if (has_gamepads)
-	{
-		SDL_GameControllerEventState(SDL_ENABLE);
-	}
+	/* if (has_gamepads) */
+	/* { */
+	/* 	sdl_GameControllerEventState(sdl_ENABLE); */
+	/* } */
 	return self;
 }

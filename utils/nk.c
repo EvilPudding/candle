@@ -10,7 +10,10 @@
 #define NK_INCLUDE_DEFAULT_FONT
 #define NK_IMPLEMENTATION
 #define NK_INCLUDE_COMMAND_USERDATA
+#include <stdarg.h>
 #include <third_party/nuklear/nuklear.h>
+#include <GLFW/glfw3.h>
+#include <events.h>
 
 #define CAN_COLOR_MAP(NK_COLOR)\
     NK_COLOR(NK_COLOR_TEXT,                     175,175,175,255) \
@@ -84,7 +87,7 @@ struct img_info
 };
 
 static struct nk_can {
-    SDL_Window *win;
+    GLFWwindow *win;
     struct nk_can_device ogl;
     struct nk_context ctx;
     struct nk_font_atlas atlas;
@@ -538,13 +541,9 @@ static void checkShaderError(GLuint shader,
 NK_API void
 nk_can_device_create(void)
 {
-#ifdef __EMSCRIPTEN__
-	g_vertices = malloc((size_t)MAX_VERTEX_BUFFER);
-	g_elements = malloc((size_t)MAX_ELEMENT_BUFFER);
-#endif
-
     struct nk_can_device *dev = &can.ogl;
     GLint status;
+
     static const GLchar *vertex_shader =
         NK_SHADER_VERSION
         "uniform mat4 ProjMtx;\n"
@@ -637,6 +636,10 @@ nk_can_device_create(void)
         "       Out_Color = Frag_Color * textureLod(Texture, uv, 3.0f);\n"
         "}\n"
 	);
+#ifdef __EMSCRIPTEN__
+	g_vertices = malloc((size_t)MAX_VERTEX_BUFFER);
+	g_elements = malloc((size_t)MAX_ELEMENT_BUFFER);
+#endif
 
     nk_buffer_init_default(&dev->cmds);
     dev->prog = glCreateProgram();
@@ -731,115 +734,115 @@ nk_can_font_stash_end(void)
 
 }
 NK_API int
-nk_can_handle_key(struct nk_context *ctx, SDL_Keycode key, int down)
+nk_can_handle_key(struct nk_context *ctx, candle_key_e key, int down)
 {
 	/* key events */
-	const Uint8* state = SDL_GetKeyboardState(0);
-	switch(key)
-	{
-		case SDLK_RSHIFT:
-		case SDLK_LSHIFT:
-			nk_input_key(ctx, NK_KEY_SHIFT, down);
-			break;
-		case SDLK_DELETE:
-			nk_input_key(ctx, NK_KEY_DEL, down);
-			break;
-		case SDLK_RETURN:
-			nk_input_key(ctx, NK_KEY_ENTER, down);
-			break;
-		case SDLK_TAB:
-			nk_input_key(ctx, NK_KEY_TAB, down);
-			break;
-		case SDLK_BACKSPACE:
-			nk_input_key(ctx, NK_KEY_BACKSPACE, down);
-			break;
-		case SDLK_HOME:
-			nk_input_key(ctx, NK_KEY_TEXT_START, down);
-			nk_input_key(ctx, NK_KEY_SCROLL_START, down);
-			break;
-		case SDLK_END:
-			nk_input_key(ctx, NK_KEY_TEXT_END, down);
-			nk_input_key(ctx, NK_KEY_SCROLL_END, down);
-			break;
-		case SDLK_PAGEDOWN:
-			nk_input_key(ctx, NK_KEY_SCROLL_DOWN, down);
-			break;
-		case SDLK_PAGEUP:
-			nk_input_key(ctx, NK_KEY_SCROLL_UP, down);
-			break;
-		case SDLK_z:
-			nk_input_key(ctx, NK_KEY_TEXT_UNDO, down && state[SDL_SCANCODE_LCTRL]);
-			if (down)
-				nk_input_char(ctx, key);
-			break;
-		case SDLK_r:
-			nk_input_key(ctx, NK_KEY_TEXT_REDO, down && state[SDL_SCANCODE_LCTRL]);
-			if (down)
-				nk_input_char(ctx, key);
-			break;
-		case SDLK_c:
-			nk_input_key(ctx, NK_KEY_COPY, down && state[SDL_SCANCODE_LCTRL]);
-			if (down)
-				nk_input_char(ctx, key);
-			break;
-		case SDLK_v:
-			nk_input_key(ctx, NK_KEY_PASTE, down && state[SDL_SCANCODE_LCTRL]);
-			if (down)
-				nk_input_char(ctx, key);
-			break;
-		case SDLK_x:
-			nk_input_key(ctx, NK_KEY_CUT, down && state[SDL_SCANCODE_LCTRL]);
-			if (down)
-				nk_input_char(ctx, key);
-			break;
-		case SDLK_b:
-			nk_input_key(ctx, NK_KEY_TEXT_LINE_START, down && state[SDL_SCANCODE_LCTRL]);
-			if (down)
-				nk_input_char(ctx, key);
-			break;
-		case SDLK_e:
-			nk_input_key(ctx, NK_KEY_TEXT_LINE_END, down && state[SDL_SCANCODE_LCTRL]);
-			if (down)
-				nk_input_char(ctx, key);
-			break;
-		case SDLK_UP:
-			nk_input_key(ctx, NK_KEY_UP, down);
-			break;
-		case SDLK_DOWN:
-			nk_input_key(ctx, NK_KEY_DOWN, down);
-			break;
-		case SDLK_LEFT:
-			if (state[SDL_SCANCODE_LCTRL])
-				nk_input_key(ctx, NK_KEY_TEXT_WORD_LEFT, down);
-			else
-				nk_input_key(ctx, NK_KEY_LEFT, down);
-			break;
-		case SDLK_RIGHT:
-			if (state[SDL_SCANCODE_LCTRL])
-				nk_input_key(ctx, NK_KEY_TEXT_WORD_RIGHT, down);
-			else
-				nk_input_key(ctx, NK_KEY_RIGHT, down);
-			break;
-		default:
-			if (down)
-				nk_input_char(ctx, key);
-			return 0;
-	}
+	/* const Uint8* state = sdl_GetKeyboardState(0); */
+	/* switch(key) */
+	/* { */
+	/* 	case sdlK_RSHIFT: */
+	/* 	case sdlK_LSHIFT: */
+	/* 		nk_input_key(ctx, NK_KEY_SHIFT, down); */
+	/* 		break; */
+	/* 	case sdlK_DELETE: */
+	/* 		nk_input_key(ctx, NK_KEY_DEL, down); */
+	/* 		break; */
+	/* 	case sdlK_RETURN: */
+	/* 		nk_input_key(ctx, NK_KEY_ENTER, down); */
+	/* 		break; */
+	/* 	case sdlK_TAB: */
+	/* 		nk_input_key(ctx, NK_KEY_TAB, down); */
+	/* 		break; */
+	/* 	case sdlK_BACKSPACE: */
+	/* 		nk_input_key(ctx, NK_KEY_BACKSPACE, down); */
+	/* 		break; */
+	/* 	case sdlK_HOME: */
+	/* 		nk_input_key(ctx, NK_KEY_TEXT_START, down); */
+	/* 		nk_input_key(ctx, NK_KEY_SCROLL_START, down); */
+	/* 		break; */
+	/* 	case sdlK_END: */
+	/* 		nk_input_key(ctx, NK_KEY_TEXT_END, down); */
+	/* 		nk_input_key(ctx, NK_KEY_SCROLL_END, down); */
+	/* 		break; */
+	/* 	case sdlK_PAGEDOWN: */
+	/* 		nk_input_key(ctx, NK_KEY_SCROLL_DOWN, down); */
+	/* 		break; */
+	/* 	case sdlK_PAGEUP: */
+	/* 		nk_input_key(ctx, NK_KEY_SCROLL_UP, down); */
+	/* 		break; */
+	/* 	case sdlK_z: */
+	/* 		nk_input_key(ctx, NK_KEY_TEXT_UNDO, down && state[sdl_SCANCODE_LCTRL]); */
+	/* 		if (down) */
+	/* 			nk_input_char(ctx, key); */
+	/* 		break; */
+	/* 	case sdlK_r: */
+	/* 		nk_input_key(ctx, NK_KEY_TEXT_REDO, down && state[sdl_SCANCODE_LCTRL]); */
+	/* 		if (down) */
+	/* 			nk_input_char(ctx, key); */
+	/* 		break; */
+	/* 	case sdlK_c: */
+	/* 		nk_input_key(ctx, NK_KEY_COPY, down && state[sdl_SCANCODE_LCTRL]); */
+	/* 		if (down) */
+	/* 			nk_input_char(ctx, key); */
+	/* 		break; */
+	/* 	case sdlK_v: */
+	/* 		nk_input_key(ctx, NK_KEY_PASTE, down && state[sdl_SCANCODE_LCTRL]); */
+	/* 		if (down) */
+	/* 			nk_input_char(ctx, key); */
+	/* 		break; */
+	/* 	case sdlK_x: */
+	/* 		nk_input_key(ctx, NK_KEY_CUT, down && state[sdl_SCANCODE_LCTRL]); */
+	/* 		if (down) */
+	/* 			nk_input_char(ctx, key); */
+	/* 		break; */
+	/* 	case sdlK_b: */
+	/* 		nk_input_key(ctx, NK_KEY_TEXT_LINE_START, down && state[sdl_SCANCODE_LCTRL]); */
+	/* 		if (down) */
+	/* 			nk_input_char(ctx, key); */
+	/* 		break; */
+	/* 	case sdlK_e: */
+	/* 		nk_input_key(ctx, NK_KEY_TEXT_LINE_END, down && state[sdl_SCANCODE_LCTRL]); */
+	/* 		if (down) */
+	/* 			nk_input_char(ctx, key); */
+	/* 		break; */
+	/* 	case sdlK_UP: */
+	/* 		nk_input_key(ctx, NK_KEY_UP, down); */
+	/* 		break; */
+	/* 	case sdlK_DOWN: */
+	/* 		nk_input_key(ctx, NK_KEY_DOWN, down); */
+	/* 		break; */
+	/* 	case sdlK_LEFT: */
+	/* 		if (state[sdl_SCANCODE_LCTRL]) */
+	/* 			nk_input_key(ctx, NK_KEY_TEXT_WORD_LEFT, down); */
+	/* 		else */
+	/* 			nk_input_key(ctx, NK_KEY_LEFT, down); */
+	/* 		break; */
+	/* 	case sdlK_RIGHT: */
+	/* 		if (state[sdl_SCANCODE_LCTRL]) */
+	/* 			nk_input_key(ctx, NK_KEY_TEXT_WORD_RIGHT, down); */
+	/* 		else */
+	/* 			nk_input_key(ctx, NK_KEY_RIGHT, down); */
+	/* 		break; */
+	/* 	default: */
+	/* 		if (down) */
+	/* 			nk_input_char(ctx, key); */
+	/* 		return 0; */
+	/* } */
 	return 1;
 }
 
 NK_API int
-nk_can_handle_event(struct nk_context *ctx, SDL_Event *evt)
+nk_can_handle_event(struct nk_context *ctx, candle_event_t *evt)
 {
-    if (evt->type == SDL_KEYUP || evt->type == SDL_KEYDOWN) {
-    } else if (evt->type == SDL_MOUSEMOTION) {
-    } else if (evt->type == SDL_TEXTINPUT) {
+    if (evt->type == CANDLE_KEYUP || evt->type == CANDLE_KEYDOWN) {
+    } else if (evt->type == CANDLE_MOUSEMOTION) {
+    } else if (evt->type == CANDLE_TEXTINPUT) {
         /* text input */
         nk_glyph glyph;
-        memcpy(glyph, evt->text.text, NK_UTF_SIZE);
+        /* memcpy(glyph, evt->text.text, NK_UTF_SIZE); */
         nk_input_glyph(ctx, glyph);
         return 1;
-    } else if (evt->type == SDL_MOUSEWHEEL) {
+    } else if (evt->type == CANDLE_MOUSEWHEEL) {
         /* mouse wheel */
         nk_input_scroll(ctx,nk_vec2((float)evt->wheel.x,(float)evt->wheel.y));
         return 1;
@@ -851,9 +854,9 @@ nk_can_handle_event(struct nk_context *ctx, SDL_Event *evt)
 static void
 nk_can_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
-    const char *text = SDL_GetClipboardText();
-    if (text) nk_textedit_paste(edit, text, nk_strlen(text));
-    (void)usr;
+    /* const char *text = sdl_GetClipboardText(); */
+    /* if (text) nk_textedit_paste(edit, text, nk_strlen(text)); */
+    /* (void)usr; */
 }
 
 
@@ -867,13 +870,13 @@ nk_can_clipboard_copy(nk_handle usr, const char *text, int len)
     if (!str) return;
     memcpy(str, text, (size_t)len);
     str[len] = '\0';
-    SDL_SetClipboardText(str);
+    /* sdl_SetClipboardText(str); */
     free(str);
 }
 
 
 NK_API struct nk_context*
-nk_can_init(SDL_Window *win)
+nk_can_init(void *win)
 {
     can.win = win;
     nk_init_default(&can.ctx, 0);
@@ -1061,8 +1064,10 @@ void nk_can_render(enum nk_anti_aliasing AA)
         {0.0f, 0.0f,-1.0f, 0.0f},
         {-1.0f,1.0f, 0.0f, 1.0f},
     };
-    SDL_GetWindowSize(can.win, &width, &height);
-    SDL_GL_GetDrawableSize(can.win, &display_width, &display_height);
+	glfwGetWindowSize(can.win, &width, &height);
+	glfwGetFramebufferSize(can.win, &display_width, &display_height);
+	display_width = width;
+	display_height = height;
     ortho[0][0] /= (GLfloat)width;
     ortho[1][1] /= (GLfloat)height;
 

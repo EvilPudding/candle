@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <tinycthread.h>
+
 /* #if __has_include (<assimp/cimport.h>) */
 /* #include <assimp/cimport.h> */
 /* #include <assimp/scene.h> */
@@ -179,7 +181,8 @@ mesh_t *mesh_new()
 	vector_alloc(self->faces, 100);
 	vector_alloc(self->edges, 100);
 
-	self->semaphore = SDL_CreateSemaphore(1);
+	self->mtx = malloc(sizeof(mtx_t));
+	mtx_init(self->mtx, mtx_plain | mtx_recursive);
 
 	return self;
 }
@@ -274,8 +277,9 @@ void mesh_destroy(mesh_t *self)
 		{
 			mesh_lock(self);
 			_mesh_destroy(self);
-			SDL_DestroySemaphore(self->semaphore);
-			self->semaphore = NULL;
+			mtx_destroy(self->mtx);
+			free(self->mtx);
+			self->mtx = NULL;
 			free(self);
 		}
 	}
@@ -299,6 +303,7 @@ static vec3_t get_normal(vec3_t p1, vec3_t p2, vec3_t p3)
 void mesh_update_smooth_normals(mesh_t *self, float smooth_max)
 {
 	int i;
+	mesh_lock(self);
 	for(i = 0; i < vector_count(self->edges); i++)
 	{
 		edge_t *ee = m_edge(self, i);
@@ -377,6 +382,7 @@ void mesh_update_smooth_normals(mesh_t *self, float smooth_max)
 			if(!pair) break;
 		}
 	}
+	mesh_unlock(self);
 }
 
 
@@ -955,36 +961,30 @@ void mesh_paint(mesh_t *self, vec4_t color)
 
 void mesh_unlock_write(mesh_t *self)
 {
-	SDL_AtomicDecRef((SDL_atomic_t*)&self->locked_write);
-	if(self->locked_write == 0) SDL_SemPost(self->semaphore);
+	self->locked_write--;
+	if(self->locked_write == 0) mtx_unlock(self->mtx);
 }
 
 void mesh_lock_write(mesh_t *self)
 {
-	if(self->locked_write == 0) SDL_SemWait(self->semaphore);
-	SDL_AtomicIncRef((SDL_atomic_t*)&self->locked_write);
+	if(self->locked_write == 0) mtx_lock(self->mtx);
+	self->locked_write++;
 }
 
 void mesh_unlock(mesh_t *self)
 {
 	self->locked_read--;
-	if(self->locked_read == 0)
+	mtx_unlock(self->mtx);
+
+	if (self->locked_read == 0)
 	{
-		self->owner_thread = 0;
-		SDL_SemPost(self->semaphore);
+		mesh_update(self);
 	}
-	mesh_update(self);
 }
 
 void mesh_lock(mesh_t *self)
 {
-	uint64_t current_thread = SDL_ThreadID();
-	if(self->owner_thread != current_thread)
-	{
-		mesh_wait(self);
-		SDL_SemWait(self->semaphore);
-		self->owner_thread = current_thread;
-	}
+	mtx_lock(self->mtx);
 	self->locked_read++;
 }
 
@@ -1194,8 +1194,8 @@ int mesh_vert_has_face(mesh_t *self, vertex_t *vert, int face_id)
 void mesh_update(mesh_t *self)
 {
 	int i;
-	if(self->locked_read) return;
-	if(!self->changes) return;
+	if (!self->changes) return;
+	if (!mtx_trylock(self->mtx)) return;
 
 	for(i = 0; i < vector_count(self->faces); i++)
 	{
@@ -1211,6 +1211,7 @@ void mesh_update(mesh_t *self)
 	}
 	self->changes = 0;
 	self->update_id++;
+	mtx_unlock(self->mtx);
 }
 
 int mesh_add_vert(mesh_t *self, vecN_t pos)
@@ -2635,21 +2636,18 @@ void mesh_extrude_edges(mesh_t *self, int steps, vecN_t offset,
 
 void mesh_assign(mesh_t *self, mesh_t *other)
 {
-	void *semaphore;
-	uint64_t owner;
+	void *mtx;
 	int32_t locked_read;
 
 	mesh_lock(self);
 
-	semaphore = self->semaphore;
-	owner = self->owner_thread;
+	mtx = self->mtx;
 	locked_read = self->locked_read;
 
 	_mesh_destroy(self);
 	_mesh_clone(other, self);
 
-	self->semaphore = semaphore;
-	self->owner_thread = owner;
+	self->mtx = mtx;
 	self->locked_read = locked_read;
 
 	mesh_modified(self);
@@ -2690,10 +2688,11 @@ mesh_t *mesh_clone(mesh_t *self)
 	{
 		clone = malloc(sizeof(*self));
 		_mesh_clone(self, clone);
-		clone->semaphore = SDL_CreateSemaphore(1);
+		clone->mtx = malloc(sizeof(mtx_t));
+		mtx_init(clone->mtx, mtx_plain | mtx_recursive);
 		if(self->locked_read)
 		{
-			SDL_SemWait(clone->semaphore);
+			mtx_lock(clone->mtx);
 		}
 	}
 	else
@@ -2904,12 +2903,6 @@ void mesh_cube(mesh_t *self, float size, float tex_scale)
 	            vec3(size, size, size));
 }
 
-void mesh_wait(mesh_t *self)
-{
-	SDL_SemWait(self->semaphore);
-	SDL_SemPost(self->semaphore);
-}
-
 void mesh_load(mesh_t *self, const char *filename)
 {
 	char ext[16];
@@ -2974,10 +2967,13 @@ int load_mesh(mesh_t *mesh)
 void *mesh_loader(const char *path, const char *name, uint32_t ext)
 {
 	mesh_t *mesh = mesh_new();
+#ifndef __EMSCRIPTEN__
+	thrd_t thr;
+#endif
 	strcpy(mesh->name, path);
 
 #ifndef __EMSCRIPTEN__
-	SDL_CreateThread((int(*)(void*))load_mesh, "load_mesh", mesh);
+	thrd_create(&thr, (thrd_start_t)load_mesh, mesh);
 #else
 	load_mesh(mesh);
 #endif

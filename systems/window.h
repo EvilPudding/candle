@@ -24,8 +24,6 @@ typedef struct c_window_t
 	void *window;
 	void *context;
 
-	const unsigned char *key_state;
-
 	drawable_t draw;
 	renderer_t *renderer;
 } c_window_t;

@@ -1,9 +1,6 @@
 #ifndef NK_H
 #define NK_H
 
-#include <stdarg.h>
-#include <SDL2/SDL.h>
-
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_STANDARD_VARARGS
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
@@ -11,9 +8,11 @@
 #define NK_INCLUDE_FONT_BAKING
 #define NK_INCLUDE_DEFAULT_FONT
 #define NK_INCLUDE_COMMAND_USERDATA
+#include <stdarg.h>
 #include "third_party/nuklear/nuklear.h"
+#include <events.h>
 
-NK_API struct nk_context* nk_can_init(SDL_Window *win);
+NK_API struct nk_context* nk_can_init(void *win);
 
 void nk_can_render(enum nk_anti_aliasing AA);
 void nk_draw_image_ext(struct nk_command_buffer *b, struct nk_rect r,
@@ -28,7 +27,7 @@ NK_API void nk_tree_entity_pop(struct nk_context*);
 NK_API void nk_can_font_stash_begin(struct nk_font_atlas **atlas);
 NK_API void nk_can_font_stash_end(void);
 NK_API int nk_can_handle_event(struct nk_context *ctx, void *evt);
-NK_API int nk_can_handle_key(struct nk_context *ctx, SDL_Keycode key, int down);
+NK_API int nk_can_handle_key(struct nk_context *ctx, candle_key_e key, int down);
 NK_API int nk_can_begin_titled(struct nk_context *ctx, const char *name,
 		const char *title, struct nk_rect bounds, nk_flags flags);
 
