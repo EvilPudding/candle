@@ -828,7 +828,7 @@ nk_can_handle_key(struct nk_context *ctx, candle_key_e key, int down)
 	/* 			nk_input_char(ctx, key); */
 	/* 		return 0; */
 	/* } */
-	return 1;
+	return 0;
 }
 
 NK_API int

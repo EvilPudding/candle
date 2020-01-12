@@ -179,6 +179,7 @@ static void render_loop_tick(void)
 		/* candle_handle_events(self); */
 		/* printf("\t%ld\n", self->render_id); */
 		entity_signal(entity_null, sig("world_draw"), NULL, NULL);
+		entity_signal(entity_null, sig("world_draw_end"), NULL, NULL);
 
 		ecm_clean(0);
 
@@ -231,6 +232,7 @@ void candle_register()
 {
 	signal_init(sig("world_update"), sizeof(float));
 	signal_init(sig("world_draw"), sizeof(void*));
+	signal_init(sig("world_draw_end"), sizeof(void*));
 	signal_init(sig("event_handle"), sizeof(void*));
 	signal_init(sig("events_end"), sizeof(void*));
 	signal_init(sig("events_begin"), sizeof(void*));

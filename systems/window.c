@@ -181,6 +181,13 @@ void c_window_lock_fps(c_window_t *self, int32_t lock_fps)
 	glfwSwapInterval(lock_fps);
 }
 
+int c_window_draw_end(c_window_t *self)
+{
+	glfwSwapBuffers(self->window);
+
+	return CONTINUE;
+}
+
 int c_window_draw(c_window_t *self)
 {
 	texture_t *tex;
@@ -222,8 +229,6 @@ int c_window_draw(c_window_t *self)
 	glActiveTexture(GL_TEXTURE0); glerr();
 	glBindTexture(GL_TEXTURE_2D, 0); glerr();
 
-	glfwSwapBuffers(self->window);
-
 	return CONTINUE;
 }
 
@@ -257,6 +262,7 @@ void ct_window(ct_t *self)
 
 	ct_listener(self, ENTITY, 0, ref("entity_created"), c_window_created);
 	ct_listener(self, WORLD, 5, ref("world_draw"), c_window_draw);
+	ct_listener(self, WORLD, 5, ref("world_draw_end"), c_window_draw_end);
 
 	signal_init(ref("window_resize"), sizeof(window_resize_data));
 	ct_listener(self, WORLD, 250, ref("event_handle"), c_window_event);
