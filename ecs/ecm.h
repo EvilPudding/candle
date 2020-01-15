@@ -107,15 +107,9 @@ typedef struct ct
 	bool_t ready;
 } ct_t;
 
-typedef struct
-{
-	uint32_t size;
+typedef struct vector_t signal_t;
 
-	vector_t *listener_types;
-
-} signal_t;
-
-KHASH_MAP_INIT_INT(sig, signal_t)
+KHASH_MAP_INIT_INT(sig, vector_t*)
 KHASH_MAP_INIT_INT64(ct, ct_t*)
 
 typedef struct
@@ -155,7 +149,7 @@ typedef struct ecm_t
 	/* return (c_t*)&(self->pages[page].components[i * self->size]); */
 /* } */
 
-signal_t *ecm_get_signal(uint32_t signal);
+vector_t *ecm_get_listeners(uint32_t signal);
 
 void _ct_listener(ct_t *self, int32_t flags, int32_t priority, uint32_t signal, signal_cb cb);
 #define ct_listener(self, flags, priority, signal, cb) \

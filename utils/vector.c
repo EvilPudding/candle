@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <tinycthread.h>
 
 struct element
 {
@@ -8,8 +9,9 @@ struct element
 };
 
 typedef int(*vector_compare_cb)(const void *a, const void *b);
-#define FIXED_INDEX 0x01
-#define FIXED_ORDER 0x02
+#define FIXED_INDEX      0x01
+#define FIXED_ORDER      0x02
+#define VECTOR_REENTRANT 0x03
 
 typedef struct vector
 {
@@ -19,6 +21,7 @@ typedef struct vector
 
 	int fixed_index;
 	int fixed_order;
+	int reentrant;
 
 	int data_size;
 	unsigned int elem_size;
@@ -26,6 +29,7 @@ typedef struct vector
 	void *fallback;
 
 	vector_compare_cb compare;
+	mtx_t mtx;
 } vector_t;
 
 vector_t *vector_new(int data_size, int flags, void *fallback,
@@ -35,6 +39,7 @@ vector_t *vector_new(int data_size, int flags, void *fallback,
 
 	self->fixed_index = !!(flags & FIXED_INDEX);
 	self->fixed_order = !!(flags & FIXED_ORDER);
+	self->reentrant   = !!(flags & VECTOR_REENTRANT);
 
 	self->compare = compare;
 	self->data_size = data_size;
@@ -44,6 +49,10 @@ vector_t *vector_new(int data_size, int flags, void *fallback,
 	self->alloc = 0;
 	self->elements = NULL;
 	self->fallback = NULL;
+	if (self->reentrant)
+	{
+		mtx_init(&self->mtx, mtx_plain);
+	}
 	if(fallback)
 	{
 		self->fallback = malloc(data_size);
@@ -76,9 +85,14 @@ static struct element *_vector_get(vector_t *self, int i)
 
 void *vector_get(vector_t *self, int i)
 {
-	struct element *element = _vector_get(self, i);
-	if(element && element->set) return &element->data;
-	return NULL;
+	void *ret = NULL;
+	struct element *element;
+
+	if (self->reentrant) mtx_lock(&self->mtx);
+	element = _vector_get(self, i);
+	if(element && element->set) ret = &element->data;
+	if (self->reentrant) mtx_unlock(&self->mtx);
+	return ret;
 }
 
 void *_vector_value(vector_t *self, int i)
@@ -158,11 +172,15 @@ void vector_shift(vector_t *self, int id, int count)
 
 void vector_remove(vector_t *self, int i)
 {
-	struct element *element = _vector_get(self, i);
+	struct element *element;
+
+	if (self->reentrant) mtx_lock(&self->mtx);
+
+	element = _vector_get(self, i);
 
 	if(!element || !element->set)
 	{
-		return;
+		goto end;
 	}
 	if(self->fixed_index)
 	{
@@ -188,6 +206,8 @@ void vector_remove(vector_t *self, int i)
 		}
 		self->count--;
 	}
+end:
+	if (self->reentrant) mtx_unlock(&self->mtx);
 }
 
 int vector_index_of(vector_t *self, void *data)
@@ -294,8 +314,13 @@ int vector_reserve(vector_t *self)
 
 void vector_add(vector_t *self, void *value)
 {
-	int count = self->count;
-	int si = count;
+	int count;
+	int si;
+
+	if (self->reentrant) mtx_lock(&self->mtx);
+
+	count = self->count;
+	si = count;
 	if(self->compare) /* SORTED INSERT */
 	{
 		si = vector_get_insert(self, value);
@@ -308,6 +333,7 @@ void vector_add(vector_t *self, void *value)
 		vector_shift(self, si, 1);
 	}
 	memcpy(vector_get(self, si), value, self->data_size);
+	if (self->reentrant) mtx_unlock(&self->mtx);
 }
 
 void *vector_get_set(vector_t *self, int i)

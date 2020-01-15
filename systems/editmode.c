@@ -1542,12 +1542,12 @@ int32_t c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 
 		/* c_editmode_shell(self); */
 
-		signal_t *sig = ecm_get_signal(ref("component_menu"));
+		vector_t *listeners = ecm_get_listeners(ref("component_menu"));
 
 		/* for(i = 0; i < sig->cts_size; i++) */
-		for(i = vector_count(sig->listener_types) - 1; i >= 0; i--)
+		for(i = vector_count(listeners) - 1; i >= 0; i--)
 		{
-			listener_t *lis = vector_get(sig->listener_types, i);
+			listener_t *lis = *(listener_t**)vector_get(listeners, i);
 			ct_t *ct = ecm_get(lis->target);
 			c_t *comp = ct_get(ct, &ent);
 
