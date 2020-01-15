@@ -55,8 +55,8 @@ int32_t c_mouse_event(c_mouse_t *self, const candle_event_t *event)
 				return entity_signal_same(target, sig("mouse_wheel"), &bdata, NULL);
 			}
 		case CANDLE_MOUSEBUTTONUP:
-			bdata.x = event->mouse.x;
-			bdata.y = event->mouse.y;
+			bdata.x = self->x;
+			bdata.y = self->y;
 			bdata.direction = 0.0f;
 			bdata.button = event->key;
 			if (target == entity_null)
@@ -68,8 +68,8 @@ int32_t c_mouse_event(c_mouse_t *self, const candle_event_t *event)
 				return entity_signal_same(target, sig("mouse_release"), &bdata, NULL);
 			}
 		case CANDLE_MOUSEBUTTONDOWN:
-			bdata.x = event->mouse.x;
-			bdata.y = event->mouse.y;
+			bdata.x = self->x;
+			bdata.y = self->y;
 			bdata.direction = 0.0f;
 			bdata.button = event->key;
 			if (target == entity_null)

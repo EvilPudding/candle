@@ -150,6 +150,34 @@ void joystick_callback(int jid, int event)
 	}
 }
 
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+	candle_event_t event;
+	if (action == GLFW_PRESS)
+	{
+		event.type = CANDLE_MOUSEBUTTONDOWN;
+	}
+	else if (action == GLFW_RELEASE)
+	{
+		event.type = CANDLE_MOUSEBUTTONUP;
+	}
+
+	if (button == GLFW_MOUSE_BUTTON_LEFT)
+	{
+		event.key = CANDLE_MOUSE_BUTTON_LEFT;
+	}
+	else if (button == GLFW_MOUSE_BUTTON_RIGHT)
+	{
+		event.key = CANDLE_MOUSE_BUTTON_RIGHT;
+	}
+	else if (button == GLFW_MOUSE_BUTTON_MIDDLE)
+	{
+		event.key = CANDLE_MOUSE_BUTTON_MIDDLE;
+	}
+
+	entity_signal(entity_null, sig("event_handle"), &event, NULL);
+}
+
 static void render_loop_init(void)
 {
 	c_window_t *window;
@@ -160,6 +188,7 @@ static void render_loop_init(void)
 
 	window = c_window(&SYS);
 
+	glfwSetMouseButtonCallback(window->window, mouse_button_callback);
 	glfwSetCursorPosCallback(window->window, cursor_position_callback);
 	glfwSetKeyCallback(window->window, key_callback);
 	glfwSetWindowSizeCallback(window->window, window_resize_callback);
