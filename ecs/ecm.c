@@ -8,8 +8,8 @@
 #include <ecs/entity.h>
 #include <tinycthread.h>
 
-static mtx_t mtx;
-static mtx_t mtx1;
+static mtx_t entity_mtx;
+static mtx_t clean_mtx;
 static mtx_t cts_mtx;
 
 entity_t SYS = 0x0000000100000001ul;
@@ -17,16 +17,23 @@ entity_t SYS = 0x0000000100000001ul;
 listener_t *ct_get_listener(ct_t *self, uint32_t signal)
 {
 	uint32_t i;
-	signal_t *sig = ecm_get_signal(signal);
+	signal_t *sig;
+
 	if(!self) return NULL;
+
+	mtx_lock(g_ecm->mtx);
+	sig = ecm_get_signal(signal);
+
 	for(i = 0; i < vector_count(sig->listener_types); i++)
 	{
 		listener_t *listener = *(listener_t**)vector_get(sig->listener_types, i);
 		if(listener->target == self->id)
 		{
+			mtx_unlock(g_ecm->mtx);
 			return listener;
 		}
 	}
+	mtx_unlock(g_ecm->mtx);
 
 	return NULL;
 }
@@ -71,7 +78,6 @@ void ecm_init()
 	self->cts = kh_init(ct);
 	self->cs = kh_init(c);
 
-	signal_init(sig("entity_created"), 0);
 
 	/* create entity_null */
 	{
@@ -83,13 +89,13 @@ void ecm_init()
 	}
 
 	g_ecm->mtx = malloc(sizeof(mtx_t));
-	mtx_init(g_ecm->mtx, mtx_plain | mtx_recursive);
+	mtx_init(g_ecm->mtx, mtx_recursive);
 
-	mtx_init(&mtx, mtx_plain);
+	mtx_init(&entity_mtx, mtx_recursive);
 
-	mtx_init(&mtx1, mtx_plain);
+	mtx_init(&clean_mtx, mtx_plain);
 
-	mtx_init(&cts_mtx, mtx_plain);
+	mtx_init(&cts_mtx, mtx_recursive);
 	entity_creation_init();
 
 }
@@ -117,7 +123,9 @@ int listeners_compare(listener_t *a, listener_t *b)
 
 signal_t *ecm_get_signal(uint32_t signal)
 {
-	khiter_t k = kh_get(sig, g_ecm->signals, signal);
+	khiter_t k;
+
+	k = kh_get(sig, g_ecm->signals, signal);
 	if(k == kh_end(g_ecm->signals))
 	{
 		signal_t *sig;
@@ -149,24 +157,6 @@ void _ct_listener(ct_t *self, int32_t flags, int32_t priority, uint32_t signal,
 
 }
 
-void _signal_init(uint32_t id, uint32_t size)
-{
-	int ret;
-	khiter_t k;
-	signal_t *sig = ecm_get_signal(id);
-	if(sig)
-	{
-		ecm_get_signal(id)->size = size;
-		return;
-	}
-
-	k = kh_put(sig, g_ecm->signals, id, &ret);
-	sig = &kh_value(g_ecm->signals, k);
-	sig->size = size;
-	sig->listener_types = vector_new(sizeof(listener_t*), 0, NULL,
-	                                 (vector_compare_cb)listeners_compare);
-}
-
 void ecm_destroy_all()
 {
 	uint32_t i;
@@ -189,7 +179,7 @@ entity_t ecm_new_entity()
 	uint32_t i;
 
 #ifndef __EMSCRIPTEN__
-	mtx_lock(&mtx);
+	mtx_lock(&entity_mtx);
 #endif
 
 	i = g_ecm->entities_info[0].next_free;
@@ -220,7 +210,7 @@ entity_t ecm_new_entity()
 	convert->uid = info->uid;
 
 #ifndef __EMSCRIPTEN__
-	mtx_unlock(&mtx);
+	mtx_unlock(&entity_mtx);
 #endif
 	return ent;
 }
@@ -333,18 +323,18 @@ void ecm_clean(int force)
 		{
 			ecm_clean2(force);
 #ifndef __EMSCRIPTEN__
-			mtx_unlock(&mtx1);
+			mtx_unlock(&clean_mtx);
 #endif
 		}
 	}
 	else
 	{
-		mtx_lock(&mtx);
+		mtx_lock(&entity_mtx);
 		g_ecm->safe++;
-		mtx_unlock(&mtx);
+		mtx_unlock(&entity_mtx);
 
 #ifndef __EMSCRIPTEN__
-		mtx_lock(&mtx1);
+		mtx_lock(&clean_mtx);
 #endif
 	}
 }

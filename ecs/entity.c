@@ -141,15 +141,20 @@ int listener_signal_same(listener_t *self, entity_t ent, void *data, void *outpu
 
 int component_signal(c_t *comp, ct_t *ct, uint32_t signal, void *data, void *output)
 {
+	listener_t listener_copy;
 	listener_t *listener;
 
 	mtx_lock(g_ecm->mtx);
 	listener = ct_get_listener(ct, signal);
+	if (listener)
+	{
+		listener_copy = *listener;
+	}
 	mtx_unlock(g_ecm->mtx);
 
 	if(listener)
 	{
-		listener->cb(comp, data, output);
+		listener_copy.cb(comp, data, output);
 	}
 	return CONTINUE;
 }
@@ -159,14 +164,16 @@ int entity_signal_same(entity_t self, uint32_t signal, void *data, void *output)
 	int i;
 	int response = CONTINUE;
 	signal_t *sig;
+	vector_t *listeners;
 
 	mtx_lock(g_ecm->mtx);
 	sig = ecm_get_signal(signal);
+	listeners = vector_clone(sig->listener_types);
 	mtx_unlock(g_ecm->mtx);
 
-	for(i = vector_count(sig->listener_types) - 1; i >= 0; i--)
+	for(i = vector_count(listeners) - 1; i >= 0; i--)
 	{
-		listener_t *lis = *(listener_t**)vector_get(sig->listener_types, i);
+		listener_t *lis = *(listener_t**)vector_get(listeners, i);
 		int res = listener_signal_same(lis, self, data, output);
 		if(res == STOP)
 		{
@@ -174,6 +181,7 @@ int entity_signal_same(entity_t self, uint32_t signal, void *data, void *output)
 			break;
 		}
 	}
+	vector_destroy(listeners);
 	return response;
 }
 

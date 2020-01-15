@@ -236,6 +236,4 @@ void ct_render_device(ct_t *self)
 	ct_listener(self, WORLD, 100, ref("world_draw"), c_render_device_draw);
 
 	ct_listener(self, ENTITY, 0, ref("entity_created"), c_render_device_created);
-
-	signal_init(ref("world_pre_draw"), sizeof(void*));
 }

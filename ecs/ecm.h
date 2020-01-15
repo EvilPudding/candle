@@ -156,9 +156,6 @@ typedef struct ecm_t
 /* } */
 
 signal_t *ecm_get_signal(uint32_t signal);
-void _signal_init(uint32_t id, uint32_t size);
-#define signal_init(id, size) \
-	(_signal_init(id, size))
 
 void _ct_listener(ct_t *self, int32_t flags, int32_t priority, uint32_t signal, signal_cb cb);
 #define ct_listener(self, flags, priority, signal, cb) \

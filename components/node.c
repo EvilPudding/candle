@@ -313,8 +313,6 @@ void ct_node(ct_t *self)
 	ct_set_destroy(self, (destroy_cb)c_node_destroy);
 	ct_dependency(self, ct_spatial);
 
-	signal_init(ref("node_changed"), 0);
-
 	ct_listener(self, ENTITY, 0, ref("entity_created"), c_node_created);
 	ct_listener(self, ENTITY, 0, ref("spatial_changed"), c_node_changed);
 }

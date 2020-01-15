@@ -264,6 +264,5 @@ void ct_window(ct_t *self)
 	ct_listener(self, WORLD, 5, ref("world_draw"), c_window_draw);
 	ct_listener(self, WORLD, 5, ref("world_draw_end"), c_window_draw_end);
 
-	signal_init(ref("window_resize"), sizeof(window_resize_data));
 	ct_listener(self, WORLD, 250, ref("event_handle"), c_window_event);
 }

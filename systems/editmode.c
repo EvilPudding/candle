@@ -222,7 +222,6 @@ int32_t scale_drag(struct edit_scale *self, vec3_t p, int32_t button, c_editmode
 		self->start_scale = sc->scale;
 		self->dragging = 1;
 		self->start_radius = radius;
-		signal_init(ref("transform_start"), sizeof(void*));
 		entity_signal_same(ec->selected, ref("transform_start"), NULL, NULL);
 	}
 
@@ -1747,25 +1746,19 @@ void ct_editmode(ct_t *self)
 	ct_dependency(self, ct_node);
 	ct_dependency(self, ct_mouse);
 
-	signal_init(ref("component_menu"), sizeof(struct nk_context*));
-	signal_init(ref("component_tool"), sizeof(void*));
-	signal_init(ref("pick_file_save"), sizeof(void*));
-	signal_init(ref("pick_file_load"), sizeof(void*));
-	signal_init(ref("transform_start"), sizeof(void*));
-	signal_init(ref("transform_stop"), sizeof(void*));
-
 	ct_listener(self, WORLD, 10, ref("key_up"), c_editmode_key_up);
 	ct_listener(self, WORLD, 10, ref("key_down"), c_editmode_key_down);
 	ct_listener(self, WORLD, 0, ref("pick_file_save"), c_editmode_pick_save);
 	ct_listener(self, WORLD, 0, ref("pick_file_load"), c_editmode_pick_load);
-	ct_listener(self, WORLD, 0, ref("mouse_move"), c_editmode_mouse_move);
 	ct_listener(self, WORLD, 0, ref("world_draw"), c_editmode_draw);
 	ct_listener(self, WORLD, 0, ref("world_update"), c_editmode_update);
 	ct_listener(self, WORLD, 50, ref("component_menu"), c_editmode_component_menu);
+	ct_listener(self, WORLD, 0, ref("mouse_move"), c_editmode_mouse_move);
 	ct_listener(self, WORLD, 0, ref("mouse_press"), c_editmode_mouse_press);
 	ct_listener(self, WORLD, 0, ref("mouse_release"), c_editmode_mouse_release);
 	ct_listener(self, WORLD, 0, ref("events_begin"), c_editmode_events_begin);
 	ct_listener(self, WORLD, 0, ref("events_end"), c_editmode_events_end);
+
 	/* ct_listener(self, WORLD, 0, ref("window_resize"), c_editmode_resize); */
 }
 

@@ -9,11 +9,11 @@ int32_t c_keyboard_event(c_keyboard_t *self, const candle_event_t *event)
 	{
 		case CANDLE_KEYUP:
 			key = event->key;
-			if((char)key == -32)
+			if (key == CANDLE_KEY_LEFT_CONTROL || key == CANDLE_KEY_RIGHT_CONTROL)
 			{
 				self->ctrl = 0;
 			}
-			if((char)key == -31)
+			if (key == CANDLE_KEY_LEFT_SHIFT || key == CANDLE_KEY_RIGHT_SHIFT)
 			{
 				self->shift = 0;
 			}
@@ -28,13 +28,13 @@ int32_t c_keyboard_event(c_keyboard_t *self, const candle_event_t *event)
 			return STOP;
 		case CANDLE_KEYDOWN:
 			key = event->key;
-			if((char)key == -32)
+			if (key == CANDLE_KEY_LEFT_CONTROL || key == CANDLE_KEY_RIGHT_CONTROL)
 			{
-				self->ctrl = 1;
+				self->ctrl = true;
 			}
-			if((char)key == -31)
+			if (key == CANDLE_KEY_LEFT_SHIFT || key == CANDLE_KEY_RIGHT_SHIFT)
 			{
-				self->shift = 1;
+				self->shift = true;
 			}
 			if (target == entity_null)
 			{
@@ -54,9 +54,6 @@ int32_t c_keyboard_event(c_keyboard_t *self, const candle_event_t *event)
 void ct_keyboard(ct_t *self)
 {
 	ct_init(self, "keyboard", sizeof(c_keyboard_t));
-
-	signal_init(sig("key_up"), sizeof(candle_key_e));
-	signal_init(sig("key_down"), sizeof(candle_key_e));
 
 	ct_listener(self, WORLD, -1, sig("event_handle"), c_keyboard_event);
 }

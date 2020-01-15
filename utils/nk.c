@@ -14,6 +14,7 @@
 #include <third_party/nuklear/nuklear.h>
 #include <GLFW/glfw3.h>
 #include <events.h>
+#include <systems/keyboard.h>
 
 #define CAN_COLOR_MAP(NK_COLOR)\
     NK_COLOR(NK_COLOR_TEXT,                     175,175,175,255) \
@@ -736,119 +737,191 @@ nk_can_font_stash_end(void)
 NK_API int
 nk_can_handle_key(struct nk_context *ctx, candle_key_e key, int down)
 {
-	/* key events */
-	/* const Uint8* state = sdl_GetKeyboardState(0); */
-	/* switch(key) */
-	/* { */
-	/* 	case sdlK_RSHIFT: */
-	/* 	case sdlK_LSHIFT: */
-	/* 		nk_input_key(ctx, NK_KEY_SHIFT, down); */
-	/* 		break; */
-	/* 	case sdlK_DELETE: */
-	/* 		nk_input_key(ctx, NK_KEY_DEL, down); */
-	/* 		break; */
-	/* 	case sdlK_RETURN: */
-	/* 		nk_input_key(ctx, NK_KEY_ENTER, down); */
-	/* 		break; */
-	/* 	case sdlK_TAB: */
-	/* 		nk_input_key(ctx, NK_KEY_TAB, down); */
-	/* 		break; */
-	/* 	case sdlK_BACKSPACE: */
-	/* 		nk_input_key(ctx, NK_KEY_BACKSPACE, down); */
-	/* 		break; */
-	/* 	case sdlK_HOME: */
-	/* 		nk_input_key(ctx, NK_KEY_TEXT_START, down); */
-	/* 		nk_input_key(ctx, NK_KEY_SCROLL_START, down); */
-	/* 		break; */
-	/* 	case sdlK_END: */
-	/* 		nk_input_key(ctx, NK_KEY_TEXT_END, down); */
-	/* 		nk_input_key(ctx, NK_KEY_SCROLL_END, down); */
-	/* 		break; */
-	/* 	case sdlK_PAGEDOWN: */
-	/* 		nk_input_key(ctx, NK_KEY_SCROLL_DOWN, down); */
-	/* 		break; */
-	/* 	case sdlK_PAGEUP: */
-	/* 		nk_input_key(ctx, NK_KEY_SCROLL_UP, down); */
-	/* 		break; */
-	/* 	case sdlK_z: */
-	/* 		nk_input_key(ctx, NK_KEY_TEXT_UNDO, down && state[sdl_SCANCODE_LCTRL]); */
-	/* 		if (down) */
-	/* 			nk_input_char(ctx, key); */
-	/* 		break; */
-	/* 	case sdlK_r: */
-	/* 		nk_input_key(ctx, NK_KEY_TEXT_REDO, down && state[sdl_SCANCODE_LCTRL]); */
-	/* 		if (down) */
-	/* 			nk_input_char(ctx, key); */
-	/* 		break; */
-	/* 	case sdlK_c: */
-	/* 		nk_input_key(ctx, NK_KEY_COPY, down && state[sdl_SCANCODE_LCTRL]); */
-	/* 		if (down) */
-	/* 			nk_input_char(ctx, key); */
-	/* 		break; */
-	/* 	case sdlK_v: */
-	/* 		nk_input_key(ctx, NK_KEY_PASTE, down && state[sdl_SCANCODE_LCTRL]); */
-	/* 		if (down) */
-	/* 			nk_input_char(ctx, key); */
-	/* 		break; */
-	/* 	case sdlK_x: */
-	/* 		nk_input_key(ctx, NK_KEY_CUT, down && state[sdl_SCANCODE_LCTRL]); */
-	/* 		if (down) */
-	/* 			nk_input_char(ctx, key); */
-	/* 		break; */
-	/* 	case sdlK_b: */
-	/* 		nk_input_key(ctx, NK_KEY_TEXT_LINE_START, down && state[sdl_SCANCODE_LCTRL]); */
-	/* 		if (down) */
-	/* 			nk_input_char(ctx, key); */
-	/* 		break; */
-	/* 	case sdlK_e: */
-	/* 		nk_input_key(ctx, NK_KEY_TEXT_LINE_END, down && state[sdl_SCANCODE_LCTRL]); */
-	/* 		if (down) */
-	/* 			nk_input_char(ctx, key); */
-	/* 		break; */
-	/* 	case sdlK_UP: */
-	/* 		nk_input_key(ctx, NK_KEY_UP, down); */
-	/* 		break; */
-	/* 	case sdlK_DOWN: */
-	/* 		nk_input_key(ctx, NK_KEY_DOWN, down); */
-	/* 		break; */
-	/* 	case sdlK_LEFT: */
-	/* 		if (state[sdl_SCANCODE_LCTRL]) */
-	/* 			nk_input_key(ctx, NK_KEY_TEXT_WORD_LEFT, down); */
-	/* 		else */
-	/* 			nk_input_key(ctx, NK_KEY_LEFT, down); */
-	/* 		break; */
-	/* 	case sdlK_RIGHT: */
-	/* 		if (state[sdl_SCANCODE_LCTRL]) */
-	/* 			nk_input_key(ctx, NK_KEY_TEXT_WORD_RIGHT, down); */
-	/* 		else */
-	/* 			nk_input_key(ctx, NK_KEY_RIGHT, down); */
-	/* 		break; */
-	/* 	default: */
-	/* 		if (down) */
-	/* 			nk_input_char(ctx, key); */
-	/* 		return 0; */
-	/* } */
-	return 0;
+	c_keyboard_t *kb = c_keyboard(&SYS);
+	switch(key)
+	{
+		case CANDLE_KEY_LEFT_SHIFT:
+		case CANDLE_KEY_RIGHT_SHIFT:
+			nk_input_key(ctx, NK_KEY_SHIFT, down);
+			break;
+		case CANDLE_KEY_DELETE:
+			nk_input_key(ctx, NK_KEY_DEL, down);
+			break;
+		case CANDLE_KEY_ENTER:
+			nk_input_key(ctx, NK_KEY_ENTER, down);
+			break;
+		case CANDLE_KEY_TAB:
+			nk_input_key(ctx, NK_KEY_TAB, down);
+			break;
+		case CANDLE_KEY_BACKSPACE:
+			nk_input_key(ctx, NK_KEY_BACKSPACE, down);
+			break;
+		case CANDLE_KEY_HOME:
+			nk_input_key(ctx, NK_KEY_TEXT_START, down);
+			nk_input_key(ctx, NK_KEY_SCROLL_START, down);
+			break;
+		case CANDLE_KEY_END:
+			nk_input_key(ctx, NK_KEY_TEXT_END, down);
+			nk_input_key(ctx, NK_KEY_SCROLL_END, down);
+			break;
+		case CANDLE_KEY_PAGE_DOWN:
+			nk_input_key(ctx, NK_KEY_SCROLL_DOWN, down);
+			break;
+		case CANDLE_KEY_PAGE_UP:
+			nk_input_key(ctx, NK_KEY_SCROLL_UP, down);
+			break;
+		case CANDLE_KEY_z:
+			nk_input_key(ctx, NK_KEY_TEXT_UNDO, down && kb->ctrl);
+			if (down)
+				nk_input_char(ctx, key);
+			break;
+		case CANDLE_KEY_r:
+			nk_input_key(ctx, NK_KEY_TEXT_REDO, down && kb->ctrl);
+			if (down)
+				nk_input_char(ctx, key);
+			break;
+		case CANDLE_KEY_c:
+			nk_input_key(ctx, NK_KEY_COPY, down && kb->ctrl);
+			if (down)
+				nk_input_char(ctx, key);
+			break;
+		case CANDLE_KEY_v:
+			nk_input_key(ctx, NK_KEY_PASTE, down && kb->ctrl);
+			if (down)
+				nk_input_char(ctx, key);
+			break;
+		case CANDLE_KEY_x:
+			nk_input_key(ctx, NK_KEY_CUT, down && kb->ctrl);
+			if (down)
+				nk_input_char(ctx, key);
+			break;
+		case CANDLE_KEY_b:
+			nk_input_key(ctx, NK_KEY_TEXT_LINE_START, down && kb->ctrl);
+			if (down)
+				nk_input_char(ctx, key);
+			break;
+		case CANDLE_KEY_e:
+			nk_input_key(ctx, NK_KEY_TEXT_LINE_END, down && kb->ctrl);
+			if (down)
+				nk_input_char(ctx, key);
+			break;
+		case CANDLE_KEY_UP:
+			nk_input_key(ctx, NK_KEY_UP, down);
+			break;
+		case CANDLE_KEY_DOWN:
+			nk_input_key(ctx, NK_KEY_DOWN, down);
+			break;
+		case CANDLE_KEY_LEFT:
+			if (kb->ctrl)
+				nk_input_key(ctx, NK_KEY_TEXT_WORD_LEFT, down);
+			else
+				nk_input_key(ctx, NK_KEY_LEFT, down);
+			break;
+		case CANDLE_KEY_RIGHT:
+			if (kb->ctrl)
+				nk_input_key(ctx, NK_KEY_TEXT_WORD_RIGHT, down);
+			else
+				nk_input_key(ctx, NK_KEY_RIGHT, down);
+			break;
+		default:
+			if (down)
+				nk_input_char(ctx, key);
+			return 0;
+	}
+	return 1;
 }
 
-NK_API int
-nk_can_handle_event(struct nk_context *ctx, candle_event_t *evt)
-{
-    if (evt->type == CANDLE_KEYUP || evt->type == CANDLE_KEYDOWN) {
-    } else if (evt->type == CANDLE_MOUSEMOTION) {
-    } else if (evt->type == CANDLE_TEXTINPUT) {
-        /* text input */
-        nk_glyph glyph;
-        /* memcpy(glyph, evt->text.text, NK_UTF_SIZE); */
-        nk_input_glyph(ctx, glyph);
-        return 1;
-    } else if (evt->type == CANDLE_MOUSEWHEEL) {
-        /* mouse wheel */
-        nk_input_scroll(ctx,nk_vec2((float)evt->wheel.x,(float)evt->wheel.y));
-        return 1;
-    }
-    return 0;
-}
+/* NK_API int */
+/* nk_can_handle_event(struct nk_context *ctx, candle_event_t *evt) */
+/* { */
+/* 	c_keyboard_t *kb = c_keyboard(&SYS); */
+
+/*     if (evt->type == CANDLE_KEYUP || evt->type == CANDLE_KEYDOWN) { */
+/*         /1* key events *1/ */
+/* 		candle_key_e key = evt->key; */
+
+/*         int down = evt->type == CANDLE_KEYDOWN; */
+/*         if (key == CANDLE_KEY_LEFT_SHIFT || key == CANDLE_KEY_RIGHT_SHIFT) */
+/*             nk_input_key(ctx, NK_KEY_SHIFT, down); */
+/*         else if (key == CANDLE_KEY_DELETE) */
+/*             nk_input_key(ctx, NK_KEY_DEL, down); */
+/*         else if (key == CANDLE_KEY_ENTER) */
+/*             nk_input_key(ctx, NK_KEY_ENTER, down); */
+/*         else if (key == CANDLE_KEY_TAB) */
+/*             nk_input_key(ctx, NK_KEY_TAB, down); */
+/*         else if (key == CANDLE_KEY_BACKSPACE) */
+/*             nk_input_key(ctx, NK_KEY_BACKSPACE, down); */
+/*         else if (key == CANDLE_KEY_HOME) { */
+/*             nk_input_key(ctx, NK_KEY_TEXT_START, down); */
+/*             nk_input_key(ctx, NK_KEY_SCROLL_START, down); */
+/*         } else if (key == CANDLE_KEY_END) { */
+/*             nk_input_key(ctx, NK_KEY_TEXT_END, down); */
+/*             nk_input_key(ctx, NK_KEY_SCROLL_END, down); */
+/*         } else if (key == CANDLE_KEY_PAGE_DOWN) { */
+/*             nk_input_key(ctx, NK_KEY_SCROLL_DOWN, down); */
+/*         } else if (key == CANDLE_KEY_PAGE_UP) { */
+/*             nk_input_key(ctx, NK_KEY_SCROLL_UP, down); */
+/*         } else if (key == CANDLE_KEY_Z || key == CANDLE_KEY_z) */
+/*             nk_input_key(ctx, NK_KEY_TEXT_UNDO, down && kb->ctrl); */
+/*         else if (key == CANDLE_KEY_R || key == CANDLE_KEY_r) */
+/*             nk_input_key(ctx, NK_KEY_TEXT_REDO, down && kb->ctrl); */
+/*         else if (key == CANDLE_KEY_C || key == CANDLE_KEY_c) */
+/*             nk_input_key(ctx, NK_KEY_COPY, down && kb->ctrl); */
+/*         else if (key == CANDLE_KEY_V || key == CANDLE_KEY_v) */
+/*             nk_input_key(ctx, NK_KEY_PASTE, down && kb->ctrl); */
+/*         else if (key == CANDLE_KEY_X || key == CANDLE_KEY_x) */
+/*             nk_input_key(ctx, NK_KEY_CUT, down && kb->ctrl); */
+/*         else if (key == CANDLE_KEY_B || key == CANDLE_KEY_b) */
+/*             nk_input_key(ctx, NK_KEY_TEXT_LINE_START, down && kb->ctrl); */
+/*         else if (key == CANDLE_KEY_E || key == CANDLE_KEY_e) */
+/*             nk_input_key(ctx, NK_KEY_TEXT_LINE_END, down && kb->ctrl); */
+/*         else if (key == CANDLE_KEY_UP) */
+/*             nk_input_key(ctx, NK_KEY_UP, down); */
+/*         else if (key == CANDLE_KEY_DOWN) */
+/*             nk_input_key(ctx, NK_KEY_DOWN, down); */
+/*         else if (key == CANDLE_KEY_LEFT) { */
+/*             if (kb->ctrl) */
+/*                 nk_input_key(ctx, NK_KEY_TEXT_WORD_LEFT, down); */
+/*             else nk_input_key(ctx, NK_KEY_LEFT, down); */
+/*         } else if (key == CANDLE_KEY_RIGHT) { */
+/*             if (kb->ctrl) */
+/*                 nk_input_key(ctx, NK_KEY_TEXT_WORD_RIGHT, down); */
+/*             else nk_input_key(ctx, NK_KEY_RIGHT, down); */
+/*         } else return 0; */
+/*         return 1; */
+/*     } else if (evt->type == CANDLE_MOUSEBUTTONDOWN || evt->type == CANDLE_MOUSEBUTTONUP) { */
+/*         /1* mouse button *1/ */
+/*         int down = evt->type == CANDLE_MOUSEBUTTONDOWN; */
+/*         const int x = evt->button.x, y = evt->button.y; */
+/*         if (evt->button.button == CANDLE_MOUSE_BUTTON_LEFT) { */
+/*             /1* if (evt->button.clicks > 1) *1/ */
+/*                 /1* nk_input_button(ctx, NK_BUTTON_DOUBLE, x, y, down); *1/ */
+/*             nk_input_button(ctx, NK_BUTTON_LEFT, x, y, down); */
+/*         } else if (evt->button.button == CANDLE_MOUSE_BUTTON_MOUSE) */
+/*             nk_input_button(ctx, NK_BUTTON_MIDDLE, x, y, down); */
+/*         else if (evt->button.button == CANDLE_MOUSE_BUTTON_RIGHT) */
+/*             nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down); */
+/*         return 1; */
+/*     } else if (evt->type == CANDLE_MOUSEMOTION) { */
+/*         /1* mouse motion *1/ */
+/*         if (ctx->input.mouse.grabbed) { */
+/*             int x = (int)ctx->input.mouse.prev.x, y = (int)ctx->input.mouse.prev.y; */
+/*             nk_input_motion(ctx, x + evt->motion.xrel, y + evt->motion.yrel); */
+/*         } else nk_input_motion(ctx, evt->motion.x, evt->motion.y); */
+/*         return 1; */
+/*     } else if (evt->type == CANDLE_TEXTINPUT) { */
+/*         /1* text input *1/ */
+/*         nk_glyph glyph; */
+/*         /1* memcpy(glyph, evt->text.text, NK_UTF_SIZE); *1/ */
+/*         nk_input_glyph(ctx, glyph); */
+/*         return 1; */
+/*     } else if (evt->type == CANDLE_MOUSEWHEEL) { */
+/*         /1* mouse wheel *1/ */
+/*         nk_input_scroll(ctx,nk_vec2((float)evt->wheel.x,(float)evt->wheel.y)); */
+/*         return 1; */
+/*     } */
+/*     return 0; */
+/* } */
 
 
 static void

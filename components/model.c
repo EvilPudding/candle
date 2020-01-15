@@ -1062,8 +1062,6 @@ void ct_model(ct_t *self)
 	ct_set_destroy(self, (destroy_cb)c_model_destroy);
 	ct_dependency(self, ct_node);
 
-	signal_init(ref("model_changed"), sizeof(mesh_t));
-
 	ct_listener(self, ENTITY, 0, ref("entity_created"), c_model_created);
 
 	ct_listener(self, WORLD, 0, ref("component_menu"), c_model_menu);

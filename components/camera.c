@@ -299,6 +299,7 @@ void c_camera_destroy(c_camera_t *self)
 	if (self->renderer)
 	{
 		renderer_destroy(self->renderer);
+		self->renderer = NULL;
 	}
 	drawable_set_mesh(&self->draw, NULL);
 	drawable_set_mesh(&self->frustum, NULL);
