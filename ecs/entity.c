@@ -163,13 +163,9 @@ int entity_signal_same(entity_t self, uint32_t signal, void *data, void *output)
 {
 	int i;
 	int response = CONTINUE;
-	signal_t *sig;
 	vector_t *listeners;
 
-	mtx_lock(g_ecm->mtx);
-	sig = ecm_get_signal(signal);
-	listeners = vector_clone(sig->listener_types);
-	mtx_unlock(g_ecm->mtx);
+	listeners = ecm_get_listeners(signal);
 
 	for(i = vector_count(listeners) - 1; i >= 0; i--)
 	{
@@ -181,7 +177,6 @@ int entity_signal_same(entity_t self, uint32_t signal, void *data, void *output)
 			break;
 		}
 	}
-	vector_destroy(listeners);
 	return response;
 }
 
@@ -189,13 +184,9 @@ int entity_signal(entity_t self, uint32_t signal, void *data, void *output)
 {
 	int i;
 	int response = CONTINUE;
-	signal_t *sig;
 	vector_t *listeners;
 
-	mtx_lock(g_ecm->mtx);
-	sig = ecm_get_signal(signal);
-	listeners = vector_clone(sig->listener_types);
-	mtx_unlock(g_ecm->mtx);
+	listeners = ecm_get_listeners(signal);
 
 	for(i = vector_count(listeners) - 1; i >= 0; i--)
 	{
@@ -206,7 +197,6 @@ int entity_signal(entity_t self, uint32_t signal, void *data, void *output)
 			break;
 		}
 	}
-	vector_destroy(listeners);
 
 	return response;
 }

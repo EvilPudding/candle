@@ -11,29 +11,27 @@
 static mtx_t entity_mtx;
 static mtx_t clean_mtx;
 static mtx_t cts_mtx;
+static mtx_t signals_mtx;
 
 entity_t SYS = 0x0000000100000001ul;
 
 listener_t *ct_get_listener(ct_t *self, uint32_t signal)
 {
 	uint32_t i;
-	signal_t *sig;
+	vector_t *listeners;
 
 	if(!self) return NULL;
 
-	mtx_lock(g_ecm->mtx);
-	sig = ecm_get_signal(signal);
+	listeners = ecm_get_listeners(signal);
 
-	for(i = 0; i < vector_count(sig->listener_types); i++)
+	for(i = 0; i < vector_count(listeners); i++)
 	{
-		listener_t *listener = *(listener_t**)vector_get(sig->listener_types, i);
+		listener_t *listener = *(listener_t**)vector_get(listeners, i);
 		if(listener->target == self->id)
 		{
-			mtx_unlock(g_ecm->mtx);
 			return listener;
 		}
 	}
-	mtx_unlock(g_ecm->mtx);
 
 	return NULL;
 }
@@ -96,6 +94,7 @@ void ecm_init()
 	mtx_init(&clean_mtx, mtx_plain);
 
 	mtx_init(&cts_mtx, mtx_recursive);
+	mtx_init(&signals_mtx, mtx_recursive);
 	entity_creation_init();
 
 }
@@ -121,30 +120,29 @@ int listeners_compare(listener_t *a, listener_t *b)
 	return a->priority - b->priority;
 }
 
-signal_t *ecm_get_signal(uint32_t signal)
+vector_t *ecm_get_listeners(uint32_t signal)
 {
 	khiter_t k;
 
+	mtx_lock(&signals_mtx);
 	k = kh_get(sig, g_ecm->signals, signal);
 	if(k == kh_end(g_ecm->signals))
 	{
-		signal_t *sig;
 		int ret;
 
 		k = kh_put(sig, g_ecm->signals, signal, &ret);
-		sig = &kh_value(g_ecm->signals, k);
-		sig->listener_types = vector_new(sizeof(listener_t*), 0, NULL,
-		                                 (vector_compare_cb)listeners_compare);
-		sig->size = 0;
+		kh_value(g_ecm->signals, k) = vector_new(sizeof(listener_t*), VECTOR_REENTRANT, NULL,
+		                                         (vector_compare_cb)listeners_compare);
 	}
-	return &kh_value(g_ecm->signals, k);
+	mtx_unlock(&signals_mtx);
+	return kh_value(g_ecm->signals, k);
 }
 
 void _ct_listener(ct_t *self, int32_t flags, int32_t priority, uint32_t signal,
                   signal_cb cb)
 {
 	listener_t *lis = malloc(sizeof(*lis));
-	signal_t *sig = ecm_get_signal(signal);
+	vector_t *listeners = ecm_get_listeners(signal);
 	if(ct_get_listener(self, signal)) exit(1);
 
 	lis->signal = signal;
@@ -153,7 +151,7 @@ void _ct_listener(ct_t *self, int32_t flags, int32_t priority, uint32_t signal,
 	lis->target = self->id;
 	lis->priority = priority;
 	
-	vector_add(sig->listener_types, &lis);
+	vector_add(listeners, &lis);
 
 }
 
