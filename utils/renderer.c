@@ -472,9 +472,6 @@ end:
 void *pass_process_brightness(pass_t *self)
 {
 	uint32_t mip, size, count, i;
-	bool_t second_stage = true;
-	uint8_t *data;
-	float brightness;
 
 	texture_t *tex = self->output;
 	if (tex->width == 0 || tex->height == 0 || tex->bufs[0].ready == 0)
@@ -484,6 +481,8 @@ void *pass_process_brightness(pass_t *self)
 	texture_bind(tex, 0);
 	glGenerateMipmap(tex->target); glerr();
 
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
+
 	mip = MAX_MIPS - 1;
 	size = tex->sizes[mip].x * tex->sizes[mip].y * 4 * sizeof(uint8_t);
 	if (!tex->bufs[0].pbo)
@@ -492,29 +491,19 @@ void *pass_process_brightness(pass_t *self)
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[0].pbo); glerr();
 		glBufferData(GL_PIXEL_PACK_BUFFER, size, 0, GL_STREAM_READ);
 		glerr();
-		second_stage = false;
 	}
-
-	data = malloc(size);
-
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, tex->frame_buffer[mip]); glerr();
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1); glerr();
-
-	glReadBuffer(GL_COLOR_ATTACHMENT0); glerr();
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[0].pbo); glerr();
-	if (second_stage)
+	else
 	{
+		float brightness;
+		uint8_t *data;
+
+		data = malloc(size);
+
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, tex->bufs[0].pbo); glerr();
 		glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0, size, data);
-	}
-	glReadPixels(0, 0, tex->sizes[mip].x, tex->sizes[mip].y, tex->bufs[0].format,
-			GL_UNSIGNED_BYTE, NULL); glerr();
+		brightness = 0.0f;
+		count = 0u;
 
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-	brightness = 0.0f;
-	count = 0u;
-	if (second_stage)
-	{
 		for (i = 0; i < size / 4; i += 4)
 		{
 			brightness += data[i + 0] + data[i + 1] + data[i + 2];
@@ -522,9 +511,16 @@ void *pass_process_brightness(pass_t *self)
 		}
 		brightness /= (float)count * 255.0f;
 		tex->brightness = brightness;
+		free(data);
 	}
 
-	free(data);
+	/* glPixelStorei(GL_UNPACK_ALIGNMENT, 1); glerr(); */
+
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, tex->frame_buffer[mip]); glerr();
+	glReadBuffer(GL_COLOR_ATTACHMENT0); glerr();
+	glReadPixels(0, 0, tex->sizes[mip].x, tex->sizes[mip].y, tex->bufs[0].format,
+			GL_UNSIGNED_BYTE, NULL); glerr();
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0); glerr();
 	return NULL;
 }
@@ -816,6 +812,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 	c_render_device_t *rd;
 
 	if(!pass->active) return NULL;
+	if (self->frame % pass->draw_every != 0) return NULL;
 	if (pass->shader_name[0] && !pass->shader)
 	{
 		pass->shader = fs_new(pass->shader_name);
@@ -831,7 +828,6 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 		bind_pass(pass, NULL);
 		return NULL;
 	}
-	if (self->frame % pass->draw_every != 0) return NULL;
 	if(pass->shader)
 	{
 		fs_bind(pass->shader);

@@ -18,27 +18,15 @@
 /* 	} */
 /* } */
 
-float normalize_axis(float val)
+vec2_t normalize_axis(float x, float y)
 {
-	const float deadzone = 0.09;
-	float value;
-	if (val == 0.0f)
-	{
-		value = 0.0f;
-	}
-	else if (val < 0.0f)
-	{
-		value = ((float)val + deadzone) / (1.0f - deadzone);
-		if (value > 0.f)
-			value = 0.f;
-	}
-	else
-	{
-		value = ((float)val - deadzone) / (1.0f - deadzone);
-		if (value < 0.f)
-			value = 0.f;
-	}
-	return value;
+	const float deadzone = 0.15;
+	const vec2_t v = vec2(x, y);
+	const vec2_t d = vec2_norm(v);
+	float len = (vec2_len(v) - deadzone) / (1.0f - deadzone);
+	if (len < 0.0f)
+		len = 0.0f;
+	return vec2_scale(d, len);
 }
 
 int32_t c_controllers_event(c_controllers_t *self, const candle_event_t *event)
@@ -239,10 +227,12 @@ int32_t c_controllers_events_end(c_controllers_t *self)
 			if (   state.axes[GLFW_GAMEPAD_AXIS_LEFT_X] != cstate->axes[GLFW_GAMEPAD_AXIS_LEFT_X]
 			    || state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y] != cstate->axes[GLFW_GAMEPAD_AXIS_LEFT_Y])
 			{
+				const vec2_t axis = normalize_axis(state.axes[GLFW_GAMEPAD_AXIS_LEFT_X],
+				                                   state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y]);
 				cstate->axes[GLFW_GAMEPAD_AXIS_LEFT_X] = state.axes[GLFW_GAMEPAD_AXIS_LEFT_X];
 				cstate->axes[GLFW_GAMEPAD_AXIS_LEFT_Y] = state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y];
-				controller->axis_left.x = normalize_axis(state.axes[GLFW_GAMEPAD_AXIS_LEFT_X]);
-				controller->axis_left.y = normalize_axis(state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y]);
+				controller->axis_left.x = axis.x;
+				controller->axis_left.y = axis.y;
 				if (controller->axis_left.x == 0.f && controller->axis_left.y == 0.f)
 				{
 					entity_signal(entity_null, ref("controller_axis"), &controller->axis_left, NULL);
@@ -256,10 +246,12 @@ int32_t c_controllers_events_end(c_controllers_t *self)
 			if (   state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X] != cstate->axes[GLFW_GAMEPAD_AXIS_RIGHT_X]
 			    || state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y] != cstate->axes[GLFW_GAMEPAD_AXIS_RIGHT_Y])
 			{
+				const vec2_t axis = normalize_axis(state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X],
+				                                   state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y]);
 				cstate->axes[GLFW_GAMEPAD_AXIS_RIGHT_X] = state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X];
 				cstate->axes[GLFW_GAMEPAD_AXIS_RIGHT_Y] = state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y];
-				controller->axis_right.x = normalize_axis(state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X]);
-				controller->axis_right.y = normalize_axis(state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y]);
+				controller->axis_right.x = axis.x;
+				controller->axis_right.y = axis.y;
 				if (controller->axis_right.x == 0.f && controller->axis_right.y == 0.f)
 				{
 					entity_signal(entity_null, ref("controller_axis"), &controller->axis_right, NULL);

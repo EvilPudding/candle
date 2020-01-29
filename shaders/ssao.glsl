@@ -34,8 +34,8 @@ void main(void)
 	vec2 rnd = normalize(vec2(rand(tc), ditherValue));
 	float z = clamp((n.z + 0.5), 0.0, 1.0);
 
-	uint taps = 8u;
-	float iterations = 3.0;
+	uint taps = 7u;
+	float iterations = 4.0;
 	/* uint j = 2u; */
 	for (uint j = 0u; j < taps; ++j)
 	/* for (float j = 0.0; j < M_PI; j += M_PI / 40.0) */

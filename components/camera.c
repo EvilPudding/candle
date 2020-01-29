@@ -167,7 +167,7 @@ int c_camera_update(c_camera_t *self, float *dt)
 			targetExposure = min_exposure;
 		}
 
-		step = (targetExposure - self->exposure) / 30.0f;
+		step = (targetExposure - self->exposure) / 20.0f;
 		if(step > 0.3f) step = 0.3f;
 		if(step < -0.3f) step = -0.3f;
 		self->exposure += step;

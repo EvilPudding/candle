@@ -58,12 +58,12 @@ vec4 upsample()
 		vec3 downscaledVolum = texelFetch(volum.color, coord, 0).rgb;
 		float downscaledDepth = linearize(texelFetch(gbuffer.depth, coord * 2, 0).r);
 
-		float currentWeight = max(0.0, 1.0f - 0.5 * abs(downscaledDepth - frag_depth));
+		float currentWeight = max(0.0, 1.0 - 0.5 * abs(downscaledDepth - frag_depth));
 		if (ssao_power > 0.05)
 		{
 			vec2 sampled = texelFetch(ssao.occlusion, coord, 0).rg;
 			float downscaledSsao = sampled.r;
-			ssao_factor += (1.0f - downscaledSsao) * currentWeight;
+			ssao_factor += (1.0 - downscaledSsao) * currentWeight;
 		}
 		/* float currentWeight = abs(downscaledDepth - frag_depth) > 0.3 ? 0.0 : 1.0; */
 
@@ -72,7 +72,7 @@ vec4 upsample()
 
 	}
 
-	const float epsilon = 0.0001f;
+	const float epsilon = 0.0001;
 	float factor = totalWeight + epsilon;
 	return vec4(volumetric, factor - ssao_factor * ssao_power) / factor;
 }
@@ -149,16 +149,9 @@ void main(void)
 
 	vec3 final = cc.rgb + ssred.rgb * (ssred.a * ssr_power) + emissive + volum_ssao.xyz;
 
-
-	/* FragColor = vec4(cc.xyz, 1.0); return; */
-	/* FragColor = vec4(ssred.rgb, 1.0); return; */
-
-	/* final = clamp(final * 1.6 - 0.10, 0.0, 3.0); */
 	final = final * pow(2.0, camera(exposure));
-	float dist = length(get_position(gbuffer.depth));
-
-	/* final.b += (clamp(dist - 5.0, 0.0, 1.0)) / 70.0; */
-
+	/* float dist = length(get_position(gbuffer.depth)); */
+	/* float fog = (clamp(dist - 5.0, 0.0, 1.0)) / 70.0; */
 	FragColor = vec4(final, 1.0);
     /* FragColor.xyz = vec3(texelFetch(ssao.occlusion, fc, 0).r); */
 }
