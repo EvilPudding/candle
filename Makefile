@@ -40,20 +40,19 @@ SRCS = $(wildcard *.c) $(wildcard components/*.c) $(wildcard systems/*.c) \
 
 OBJS_REL = $(patsubst %.c, $(DIR)/%.o, $(THIRD_PARTY_SRC) $(SRCS))
 OBJS_DEB = $(patsubst %.c, $(DIR)/%.debug.o, $(THIRD_PARTY_SRC) $(SRCS))
-OBJS_EMS = $(patsubst %.c, $(DIR)/%.emscripten.o, $(SRCS))
+OBJS_EMS = $(patsubst %.c, $(DIR)/%.emscripten.o, $(TINYCTHREAD)/tinycthread.c $(SRCS))
 
 CFLAGS = -std=c89 -pedantic -Wall -I. -Wno-unused-function \
          -Ithird_party/glfw/include -I$(TINYCTHREAD) -D_GLFW_X11 \
 		 -Wno-format-truncation -Wno-stringop-truncation $(PARENTCFLAGS)
 
-CFLAGS_REL = $(CFLAGS) -O3
+CFLAGS_REL = $(CFLAGS) -O3 -DTHREADED
 
-CFLAGS_DEB = $(CFLAGS) -g3 -DDEBUG
+CFLAGS_DEB = $(CFLAGS) -g3 -DTHREADED -DDEBUG
 
 CFLAGS_EMS = $(CFLAGS) \
-			 -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1 -s USE_WEBGL2=1 \
-			 -s FULL_ES3=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 \
-			 -s EMULATE_FUNCTION_POINTER_CASTS=1
+			 -s USE_GLFW=3 -s ALLOW_MEMORY_GROWTH=1 -s USE_WEBGL2=1 \
+			 -s FULL_ES3=1 -s EMULATE_FUNCTION_POINTER_CASTS=1
 
 emscripten: CFLAGS := $(CFLAGS_EMS)
 
