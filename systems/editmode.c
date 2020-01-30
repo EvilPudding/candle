@@ -662,23 +662,14 @@ void c_editmode_activate(c_editmode_t *self)
 
 	c_camera(&self->camera)->active = true;
 	c_camera_assign(c_camera(&self->camera));
-
-	if (!self->activated)
-	{
-		loader_push_wait(g_candle->loader, (loader_cb)c_editmode_activate_loader,
-				NULL, (c_t*)self);
-	}
-	self->activated = 1;
 }
 
-static int32_t c_editmode_activate_loader(c_editmode_t *self)
+static void c_editmode_init_nk(c_editmode_t *self)
 {
 	struct nk_font_atlas *atlas; 
 	self->nk = nk_can_init(c_window(self)->window); 
 	nk_can_font_stash_begin(&atlas); 
 	nk_can_font_stash_end(); 
-
-	return CONTINUE;
 }
 
 void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
@@ -821,14 +812,10 @@ int32_t c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 	ent = renderer_entity_at_pixel(renderer, event->x, event->y, NULL);
 	geom = renderer_geom_at_pixel(renderer, event->x, event->y, NULL);
 
-	if (nk_window_is_any_hovered(self->nk))
+	if (self->nk && nk_window_is_any_hovered(self->nk))
 	{
 		if (event->button == CANDLE_MOUSE_BUTTON_LEFT)
 		{
-			if (event->clicks > 1)
-			{
-				nk_input_button(self->nk, NK_BUTTON_DOUBLE, event->x, event->y, true);
-			}
 			nk_input_button(self->nk, NK_BUTTON_LEFT, event->x, event->y, true);
 		}
 		else if (event->button == CANDLE_MOUSE_BUTTON_MIDDLE)
@@ -983,6 +970,55 @@ void c_editmode_select(c_editmode_t *self, entity_t select)
 
 }
 
+int32_t c_editmode_mouse_wheel(c_editmode_t *self, mouse_button_data *event)
+{
+	if (!c_mouse_active(c_mouse(self))) return CONTINUE;
+
+	if(self->nk && (nk_window_is_any_hovered(self->nk) || nk_item_is_any_active(self->nk)))
+	{
+		nk_input_scroll(self->nk, nk_vec2(event->x, event->y));
+		return STOP;
+	}
+	return CONTINUE;
+}
+
+int32_t c_editmode_mouse_click_double(c_editmode_t *self, mouse_button_data *event)
+{
+	if(self->nk && (nk_window_is_any_hovered(self->nk) || nk_item_is_any_active(self->nk)))
+	{
+		if (event->button == CANDLE_MOUSE_BUTTON_LEFT)
+		{
+			nk_input_button(self->nk, NK_BUTTON_DOUBLE, event->x, event->y, false);
+			return STOP;
+		}
+		else
+		{
+			return CONTINUE;
+		}
+	}
+	else
+	{
+		renderer_t *renderer = c_camera(&self->camera)->renderer;
+		entity_t result = renderer_entity_at_pixel(renderer, event->x, event->y, NULL);
+		if (!entity_exists(result))
+		{
+			const entity_t context = self->context;
+			if (entity_exists(context) && context != SYS)
+			{
+				c_editmode_leave_context(self);
+				c_editmode_select(self, context);
+			}
+		}
+		else
+		{
+			c_editmode_select(self, result);
+			c_editmode_enter_context(self);
+		}
+	}
+
+	return CONTINUE;
+}
+
 int32_t c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 {
 	renderer_t *renderer;
@@ -994,27 +1030,21 @@ int32_t c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 	if(!entity_exists(self->camera)) return CONTINUE;
 	renderer = c_camera(&self->camera)->renderer;
 
-	if(nk_window_is_any_hovered(self->nk) || nk_item_is_any_active(self->nk))
+	if(self->nk && (nk_window_is_any_hovered(self->nk) || nk_item_is_any_active(self->nk)))
 	{
 		if (event->button == CANDLE_MOUSE_BUTTON_LEFT)
 		{
-			if (event->clicks > 1)
-			{
-				nk_input_button(self->nk, NK_BUTTON_DOUBLE, event->x, event->y, false);
-			}
 			nk_input_button(self->nk, NK_BUTTON_LEFT, event->x, event->y, false);
-			return STOP;
 		}
 		else if (event->button == CANDLE_MOUSE_BUTTON_MIDDLE)
 		{
 			nk_input_button(self->nk, NK_BUTTON_MIDDLE, event->x, event->y, false);
-			return STOP;
 		}
 		else if (event->button == CANDLE_MOUSE_BUTTON_RIGHT)
 		{
 			nk_input_button(self->nk, NK_BUTTON_RIGHT, event->x, event->y, false);
-			return STOP;
 		}
+		return STOP;
 	}
 
 	was_dragging = self->dragging;
@@ -1089,15 +1119,6 @@ int32_t c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 		{
 			entity_t result = renderer_entity_at_pixel(renderer,
 					event->x, event->y, NULL);
-			if (!entity_exists(result))
-			{
-				entity_t context = self->context;
-				if (entity_exists(context))
-				{
-					c_editmode_leave_context(self);
-					result = context;
-				}
-			}
 			c_editmode_select(self, result);
 		}
 		else if(self->mode != EDIT_OBJECT)
@@ -1154,14 +1175,11 @@ int32_t c_editmode_key_up(c_editmode_t *self, candle_key_e *key)
 		return STOP;
 	}
 
-	if (self->nk)
+	if (self->nk && (nk_window_is_any_hovered(self->nk) || nk_item_is_any_active(self->nk)))
 	{
-		if (nk_window_is_any_hovered(self->nk) || nk_item_is_any_active(self->nk))
+		if (nk_can_handle_key(self->nk, *key, false))
 		{
-			if (nk_can_handle_key(self->nk, *key, false))
-			{
-				return STOP;
-			}
+			return STOP;
 		}
 	}
 	if(!entity_exists(self->selected) || self->selected == SYS)
@@ -1193,7 +1211,7 @@ int32_t c_editmode_key_up(c_editmode_t *self, candle_key_e *key)
 	}
 	switch(*key)
 	{
-		case 127: c_editmode_selected_delete(self); break;
+		case CANDLE_KEY_DEL: c_editmode_selected_delete(self); break;
 		case 'c':
 			if(entity_exists(self->selected) && self->mode == EDIT_OBJECT)
 			{
@@ -1213,8 +1231,7 @@ int32_t c_editmode_key_up(c_editmode_t *self, candle_key_e *key)
 				self->mode = EDIT_OBJECT; 
 			}
 			break;
-		case '\r': c_editmode_enter_context(self); break;
-		case 27: c_editmode_select(self, SYS); break;
+		case CANDLE_KEY_ESCAPE: c_editmode_select(self, SYS); break;
 		default: return CONTINUE;
 	}
 	return STOP;
@@ -1230,13 +1247,10 @@ static void c_editmode_selected_delete(c_editmode_t *self)
 int32_t c_editmode_key_down(c_editmode_t *self, candle_key_e *key)
 {
 	if (!self->control) return CONTINUE;
-	if (self->nk)
+	if (self->nk && (nk_window_is_any_hovered(self->nk) || nk_item_is_any_active(self->nk)))
 	{
-		if (nk_window_is_any_hovered(self->nk) || nk_item_is_any_active(self->nk))
-		{
-			nk_can_handle_key(self->nk, *key, true);
-			return STOP;
-		}
+		nk_can_handle_key(self->nk, *key, true);
+		return STOP;
 	}
 	return STOP;
 }
@@ -1247,6 +1261,11 @@ int32_t c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 	int32_t res;
 	char buffer[64];
 	char *title = buffer;
+
+	if (!self->nk)
+	{
+		c_editmode_init_nk(self);
+	}
 
 	sprintf(buffer, "TEX_%u", tex->bufs[0].id);
 	if(tex->name[0])
@@ -1498,6 +1517,11 @@ int32_t c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 	struct nk_rect bounds;
 	ct_t *ct;
 
+	if (!self->nk)
+	{
+		c_editmode_init_nk(self);
+	}
+
 #ifdef WIN32
 	sprintf(buffer, "ENT_%I64u", ent);
 #else
@@ -1530,6 +1554,7 @@ int32_t c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 			NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE);
 	if (res)
 	{
+
 		/* struct nk_image im = nk_image_id(back->bufs[back->prev_id].id); */
 
 		/* struct nk_command_buffer *canvas = nk_window_get_canvas(self->nk); */
@@ -1756,6 +1781,8 @@ void ct_editmode(ct_t *self)
 	ct_listener(self, WORLD, 0, ref("mouse_move"), c_editmode_mouse_move);
 	ct_listener(self, WORLD, 0, ref("mouse_press"), c_editmode_mouse_press);
 	ct_listener(self, WORLD, 0, ref("mouse_release"), c_editmode_mouse_release);
+	ct_listener(self, WORLD, 0, ref("mouse_wheel"), c_editmode_mouse_wheel);
+	ct_listener(self, WORLD, 0, ref("mouse_click_double"), c_editmode_mouse_click_double);
 	ct_listener(self, WORLD, 0, ref("events_begin"), c_editmode_events_begin);
 	ct_listener(self, WORLD, 0, ref("events_end"), c_editmode_events_end);
 

@@ -2,6 +2,9 @@
 #include "mouse.h"
 #include <GLFW/glfw3.h>
 
+#define DOUBLE_CLICK_LO 0.02
+#define DOUBLE_CLICK_HI 0.2
+
 entity_t g_active_mouse = 0x0000000100000001ul;
 
 void c_mouse_init(c_mouse_t *self)
@@ -19,20 +22,75 @@ c_mouse_t *c_mouse_new()
 	return component_new(ct_mouse);
 }
 
+int32_t c_mouse_handle_click(c_mouse_t *self, candle_key_e key)
+{
+	entity_t target = c_entity(self) == SYS ? entity_null : c_entity(self);
+	int *count;
+	mouse_button_data bdata;
+
+	bdata.x = self->x;
+	bdata.y = self->y;
+	bdata.button = key;
+	if (key == CANDLE_MOUSE_BUTTON_RIGHT)
+	{
+		count = &self->right_count;
+	}
+	else if (key == CANDLE_MOUSE_BUTTON_LEFT)
+	{
+		count = &self->left_count;
+	}
+	else
+	{
+		return CONTINUE;
+	}
+	if (*count >= 4)
+	{
+		*count = 0;
+		return entity_signal_same(target, sig("mouse_click_double"), &bdata, NULL);
+	}
+	else
+	{
+		return entity_signal_same(target, sig("mouse_click"), &bdata, NULL);
+	}
+	return CONTINUE;
+}
+
 int32_t c_mouse_event(c_mouse_t *self, const candle_event_t *event)
 {
 	mouse_button_data bdata;
 	mouse_move_data mdata;
 	entity_t target;
+
 	if (event->type == CANDLE_MOUSEBUTTONUP || event->type == CANDLE_MOUSEBUTTONDOWN)
 	{
+		const double time_now = glfwGetTime();
 		if (event->key == CANDLE_MOUSE_BUTTON_RIGHT)
 		{
+			const double dt = time_now - self->last_right_event;
 			self->right = event->type == CANDLE_MOUSEBUTTONDOWN;
+			if (dt > DOUBLE_CLICK_LO && dt < DOUBLE_CLICK_HI)
+			{
+				self->right_count++;
+			}
+			else
+			{
+				self->right_count = 1;
+			}
+			self->last_right_event = time_now;
 		}
 		if (event->key == CANDLE_MOUSE_BUTTON_LEFT)
 		{
+			const double dt = time_now - self->last_left_event;
 			self->left = event->type == CANDLE_MOUSEBUTTONDOWN;
+			self->last_left_event = time_now;
+			if (dt > DOUBLE_CLICK_LO && dt <DOUBLE_CLICK_HI)
+			{
+				self->left_count++;
+			}
+			else
+			{
+				self->left_count = 1;
+			}
 		}
 	}
 
@@ -46,40 +104,21 @@ int32_t c_mouse_event(c_mouse_t *self, const candle_event_t *event)
 			bdata.y = event->wheel.y;
 			bdata.direction = event->wheel.direction;
 			bdata.button = CANDLE_MOUSE_BUTTON_MIDDLE;
-			if (target == entity_null)
-			{
-				return entity_signal(target, sig("mouse_wheel"), &bdata, NULL);
-			}
-			else
-			{
-				return entity_signal_same(target, sig("mouse_wheel"), &bdata, NULL);
-			}
+			return entity_signal_same(target, sig("mouse_wheel"), &bdata, NULL);
 		case CANDLE_MOUSEBUTTONUP:
 			bdata.x = self->x;
 			bdata.y = self->y;
 			bdata.direction = 0.0f;
 			bdata.button = event->key;
-			if (target == entity_null)
-			{
-				return entity_signal(target, sig("mouse_release"), &bdata, NULL);
-			}
-			else
-			{
-				return entity_signal_same(target, sig("mouse_release"), &bdata, NULL);
-			}
+			if (entity_signal_same(target, sig("mouse_release"), &bdata, NULL) == STOP)
+				return STOP;
+			return c_mouse_handle_click(self, event->key);
 		case CANDLE_MOUSEBUTTONDOWN:
 			bdata.x = self->x;
 			bdata.y = self->y;
 			bdata.direction = 0.0f;
 			bdata.button = event->key;
-			if (target == entity_null)
-			{
-				return entity_signal(target, sig("mouse_press"), &bdata, NULL);
-			}
-			else
-			{
-				return entity_signal_same(target, sig("mouse_press"), &bdata, NULL);
-			}
+			return entity_signal_same(target, sig("mouse_press"), &bdata, NULL);
 		case CANDLE_MOUSEMOTION:
 			mdata.sx = event->mouse.x - self->x;
 			mdata.sy = event->mouse.y - self->y;
@@ -87,14 +126,7 @@ int32_t c_mouse_event(c_mouse_t *self, const candle_event_t *event)
 			self->y = event->mouse.y;
 			mdata.x = event->mouse.x;
 			mdata.y = event->mouse.y;
-			if (target == entity_null)
-			{
-				return entity_signal(target, sig("mouse_move"), &mdata, NULL);
-			}
-			else
-			{
-				return entity_signal_same(target, sig("mouse_move"), &mdata, NULL);
-			}
+			return entity_signal_same(target, sig("mouse_move"), &mdata, NULL);
 		default:
 			return CONTINUE;
 	}

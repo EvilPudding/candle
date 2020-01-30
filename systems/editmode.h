@@ -80,7 +80,6 @@ typedef struct c_editmode
 	int32_t control;
 	int32_t visible;
 	int32_t dragging;
-	int32_t activated;
 	int32_t tool;
 	struct mouse_tool tools[16];
 	int32_t tools_num;

@@ -114,6 +114,8 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 
 	if (shader)
 	{
+		if (!shader->ready)
+			return;
 		if (pass->output->target != GL_TEXTURE_2D)
 		{
 			glUniform2f(shader_cached_uniform(shader, ref("screen_size")),

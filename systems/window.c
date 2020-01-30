@@ -215,6 +215,9 @@ int c_window_draw(c_window_t *self)
 	glViewport(0, 0, self->width, self->height); glerr();
 
 	shader = vs_bind(g_quad_vs, 0);
+	if (!shader)
+		return CONTINUE;
+
 	uni = shader_cached_uniform(shader, ref("tex"));
 	glUniform1i(uni, 0);
 	glActiveTexture(GL_TEXTURE0);

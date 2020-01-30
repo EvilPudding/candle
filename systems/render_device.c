@@ -115,6 +115,9 @@ shader_t *vs_bind(vs_t *vs, uint32_t fs_variation)
 		rd->shader = *sh; 
 	}
 
+	if (!rd->shader->ready)
+		return NULL;
+
 	shader_bind(rd->shader);
 
 	loc = shader_cached_uniform(rd->shader, ref("g_cache"));

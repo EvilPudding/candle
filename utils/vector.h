@@ -17,6 +17,7 @@ vector_t *vector_new(int data_size, int flags, void *fallback,
 void vector_add(vector_t *self, void *value);
 vector_t *vector_clone(vector_t *self);
 void *vector_get(vector_t *self, int i);
+void vector_get_copy(vector_t *self, int i, void *copy);
 void *_vector_value(vector_t *self, int i);
 
 void *vector_get_set(vector_t *self, int i);

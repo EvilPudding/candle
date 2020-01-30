@@ -242,7 +242,7 @@ typedef struct
 
 typedef struct
 {
-	int x, y;
+	float x, y;
 	int direction;
 } candle_event_wheel_t;
 

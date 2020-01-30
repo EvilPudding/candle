@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include <tinycthread.h>
 
 struct element
@@ -9,9 +10,9 @@ struct element
 };
 
 typedef int(*vector_compare_cb)(const void *a, const void *b);
-#define FIXED_INDEX      0x01
-#define FIXED_ORDER      0x02
-#define VECTOR_REENTRANT 0x03
+#define FIXED_INDEX      (0x1 << 0x0)
+#define FIXED_ORDER      (0x1 << 0x1)
+#define VECTOR_REENTRANT (0x1 << 0x2)
 
 typedef struct vector
 {
@@ -33,7 +34,7 @@ typedef struct vector
 } vector_t;
 
 vector_t *vector_new(int data_size, int flags, void *fallback,
-		vector_compare_cb compare)
+                     vector_compare_cb compare)
 {
 	vector_t *self = malloc(sizeof(*self));
 
@@ -83,23 +84,37 @@ static struct element *_vector_get(vector_t *self, int i)
 	return (struct element *)(((size_t)self->elements) + i * self->elem_size);
 }
 
+void vector_get_copy(vector_t *self, int i, void *copy)
+{
+	struct element *element;
+
+	if (self->reentrant) mtx_lock(&self->mtx);
+	
+	element = _vector_get(self, i);
+
+	if (element && element->set)
+	{
+		void *data = &element->data;
+		memcpy(copy, data, self->data_size);
+	}
+
+	if (self->reentrant) mtx_unlock(&self->mtx);
+}
+
 void *vector_get(vector_t *self, int i)
 {
 	void *ret = NULL;
 	struct element *element;
 
-	if (self->reentrant) mtx_lock(&self->mtx);
-	element = _vector_get(self, i);
-	if(element && element->set) ret = &element->data;
-	if (self->reentrant) mtx_unlock(&self->mtx);
-	return ret;
-}
+	if (self->reentrant)
+	{
+		perror("vector_get cannot be used for reentrant vectors, use vector_get_copy\n");
+		exit(1);
+	}
 
-void *_vector_value(vector_t *self, int i)
-{
-	struct element *element = _vector_get(self, i);
-	if(element && element->set) return &element->data;
-	return self->fallback;
+	element = _vector_get(self, i);
+	if (element && element->set) ret = &element->data;
+	return ret;
 }
 
 void *vector_get_item(vector_t *self, void *item)
@@ -267,7 +282,7 @@ int vector_get_insert(vector_t *self, void *value)
 
 		cur = (upper + lower) / 2;
 		pivot = (struct element *)(base + cur * self->elem_size);
-		result = self->compare(pivot->data, value);
+		result = self->compare(&pivot->data, value);
 
 		if(result == 0)
 		{
@@ -286,7 +301,7 @@ int vector_get_insert(vector_t *self, void *value)
 	}
 }
 
-int vector_reserve(vector_t *self)
+int _vector_reserve(vector_t *self)
 {
 	int i;
 	struct element *element;
@@ -309,7 +324,21 @@ int vector_reserve(vector_t *self)
 			return i;
 		}
 	}
+
 	return -1;
+}
+
+int vector_reserve(vector_t *self)
+{
+	int ret;
+
+	if (self->reentrant) mtx_lock(&self->mtx);
+
+	ret = _vector_reserve(self);
+
+	if (self->reentrant) mtx_unlock(&self->mtx);
+
+	return ret;
 }
 
 void vector_add(vector_t *self, void *value)
@@ -326,13 +355,13 @@ void vector_add(vector_t *self, void *value)
 		si = vector_get_insert(self, value);
 	}
 
-	vector_reserve(self);
+	_vector_reserve(self);
 
 	if(si < count)
 	{
 		vector_shift(self, si, 1);
 	}
-	memcpy(vector_get(self, si), value, self->data_size);
+	memcpy(&_vector_get(self, si)->data, value, self->data_size);
 	if (self->reentrant) mtx_unlock(&self->mtx);
 }
 

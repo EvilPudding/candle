@@ -249,7 +249,7 @@ vs_t *vs_new(const char *name, bool_t has_skin, uint32_t num_modifiers, ...)
 
 	self->vmodifiers[self->vmodifier_num++] = vertex_modifier_new(default_vs_end);
 
-	loader_push_wait(g_candle->loader, (loader_cb)vs_new_loader, self, NULL);
+	loader_push(g_candle->loader, (loader_cb)vs_new_loader, self, NULL);
 
 	return self;
 }
@@ -546,7 +546,6 @@ static uint32_t shader_new_loader(shader_t *self)
 
 	glGetProgramiv(self->program, GL_LINK_STATUS, &isLinked);
 /* #endif */
-	self->ready = 1;
 	printf("shader %d ready f:%s v:%s %d\n", self->program, self->fs->filename,
 			g_vs[self->index].name, isLinked);
 	if (!isLinked)
@@ -585,6 +584,7 @@ static uint32_t shader_new_loader(shader_t *self)
 	self->cms_ubi = glGetUniformBlockIndex(self->program, "cms_t");
 	glerr();
 
+	self->ready = true;
 	return 1;
 }
 
@@ -645,7 +645,7 @@ void fs_update_variation(fs_t *self, uint32_t fs_variation)
 		var->combinations[i] = NULL;
 	}
 
-	fs_new_loader(var);
+	loader_push(g_candle->loader, (loader_cb)fs_new_loader, var, NULL);
 }
 
 void fs_push_variation(fs_t *self, const char *filename)
@@ -663,7 +663,7 @@ void fs_push_variation(fs_t *self, const char *filename)
 
 	strcpy(var->filename, filename);
 
-	loader_push_wait(g_candle->loader, (loader_cb)fs_new_loader, var, NULL);
+	loader_push(g_candle->loader, (loader_cb)fs_new_loader, var, NULL);
 }
 
 fs_t *fs_new(const char *filename)
@@ -702,7 +702,7 @@ shader_t *shader_new(fs_t *fs, uint32_t fs_variation, vs_t *vs)
 	self->has_skin = vs->has_skin;
 
 	self->ready = 0;
-	loader_push_wait(g_candle->loader, (loader_cb)shader_new_loader, self, NULL);
+	loader_push(g_candle->loader, (loader_cb)shader_new_loader, self, NULL);
 	return self;
 }
 

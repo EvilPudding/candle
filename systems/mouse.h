@@ -13,7 +13,6 @@ typedef struct
 {
 	float x, y, direction;
 	candle_key_e button;
-	int clicks;
 } mouse_button_data;
 
 typedef struct
@@ -30,6 +29,11 @@ typedef struct c_mouse
 	bool_t visible;
 	bool_t right;
 	bool_t left;
+
+	int right_count;
+    double last_right_event;
+	int left_count;
+    double last_left_event;
 } c_mouse_t;
 
 void ct_mouse(ct_t *self);

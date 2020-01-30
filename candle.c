@@ -90,7 +90,7 @@ bool_t is_render_thread()
 #endif
 }
 
-static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
+static void cursor_position_callback(GLFWwindow *window, double xpos, double ypos)
 {
 	candle_event_t event;
 	event.type = CANDLE_MOUSEMOTION;
@@ -99,7 +99,7 @@ static void cursor_position_callback(GLFWwindow* window, double xpos, double ypo
 	entity_signal(entity_null, sig("event_handle"), &event, NULL);
 }
 
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
 	candle_event_t event;
 	if (action == GLFW_PRESS)
@@ -128,7 +128,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	entity_signal(entity_null, sig("event_handle"), &event, NULL);
 }
 
-void window_resize_callback(GLFWwindow* window, int width, int height)
+void window_resize_callback(GLFWwindow *window, int width, int height)
 {
 	candle_event_t event;
 	event.type = CANDLE_WINDOW_RESIZE;
@@ -150,7 +150,7 @@ void joystick_callback(int jid, int event)
 	}
 }
 
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
 {
 	candle_event_t event;
 	if (action == GLFW_PRESS)
@@ -173,8 +173,19 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 	else if (button == GLFW_MOUSE_BUTTON_MIDDLE)
 	{
 		event.key = CANDLE_MOUSE_BUTTON_MIDDLE;
+		printf("middle\n");
 	}
 
+	entity_signal(entity_null, sig("event_handle"), &event, NULL);
+}
+
+void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
+{
+	candle_event_t event;
+	event.type = CANDLE_MOUSEWHEEL;
+	event.key = CANDLE_MOUSE_BUTTON_MIDDLE;
+	event.wheel.x = xoffset;
+	event.wheel.y = yoffset;
 	entity_signal(entity_null, sig("event_handle"), &event, NULL);
 }
 
@@ -189,6 +200,7 @@ static void render_loop_init(void)
 	window = c_window(&SYS);
 
 	glfwSetMouseButtonCallback(window->window, mouse_button_callback);
+	glfwSetScrollCallback(window->window, scroll_callback);
 	glfwSetCursorPosCallback(window->window, cursor_position_callback);
 	glfwSetKeyCallback(window->window, key_callback);
 	glfwSetWindowSizeCallback(window->window, window_resize_callback);

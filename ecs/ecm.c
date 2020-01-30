@@ -26,7 +26,8 @@ listener_t *ct_get_listener(ct_t *self, uint32_t signal)
 
 	for(i = 0; i < vector_count(listeners); i++)
 	{
-		listener_t *listener = *(listener_t**)vector_get(listeners, i);
+		listener_t *listener;
+		vector_get_copy(listeners, i, &listener);
 		if(listener->target == self->id)
 		{
 			return listener;
@@ -115,14 +116,15 @@ void ecm_register_all()
 	}
 }
 
-int listeners_compare(listener_t *a, listener_t *b)
+int listeners_compare(listener_t **a, listener_t **b)
 {
-	return a->priority - b->priority;
+	return (*a)->priority - (*b)->priority;
 }
 
 vector_t *ecm_get_listeners(uint32_t signal)
 {
 	khiter_t k;
+	vector_t *listeners;
 
 	mtx_lock(&signals_mtx);
 	k = kh_get(sig, g_ecm->signals, signal);
@@ -131,11 +133,16 @@ vector_t *ecm_get_listeners(uint32_t signal)
 		int ret;
 
 		k = kh_put(sig, g_ecm->signals, signal, &ret);
-		kh_value(g_ecm->signals, k) = vector_new(sizeof(listener_t*), VECTOR_REENTRANT, NULL,
-		                                         (vector_compare_cb)listeners_compare);
+		listeners = vector_new(sizeof(listener_t*), VECTOR_REENTRANT, NULL,
+		                       (vector_compare_cb)listeners_compare);
+		kh_value(g_ecm->signals, k) = listeners;
+	}
+	else
+	{
+		listeners = kh_value(g_ecm->signals, k);
 	}
 	mtx_unlock(&signals_mtx);
-	return kh_value(g_ecm->signals, k);
+	return listeners;
 }
 
 void _ct_listener(ct_t *self, int32_t flags, int32_t priority, uint32_t signal,

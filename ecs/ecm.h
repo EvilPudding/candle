@@ -58,11 +58,11 @@ typedef void(*ct_id_t)(struct ct *self);
 
 typedef struct
 {
+	int32_t priority;
 	uint32_t signal;
 	signal_cb cb;
 	int32_t flags;
 	ct_id_t target;
-	int32_t priority;
 } listener_t;
 
 typedef struct
