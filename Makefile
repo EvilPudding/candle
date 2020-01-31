@@ -44,15 +44,21 @@ OBJS_EMS = $(patsubst %.c, $(DIR)/%.emscripten.o, $(TINYCTHREAD)/tinycthread.c $
 
 CFLAGS = -std=c89 -pedantic -Wall -I. -Wno-unused-function \
          -Ithird_party/glfw/include -I$(TINYCTHREAD) -D_GLFW_X11 \
-		 -Wno-format-truncation -Wno-stringop-truncation $(PARENTCFLAGS)
+		 -Wno-format-truncation -Wno-stringop-truncation $(PARENTCFLAGS) \
+		 -DTHREADED
 
-CFLAGS_REL = $(CFLAGS) -O3 -DTHREADED
+CFLAGS_REL = $(CFLAGS) -O3
 
-CFLAGS_DEB = $(CFLAGS) -g3 -DTHREADED -DDEBUG
+CFLAGS_DEB = $(CFLAGS) -g3 -DDEBUG
 
-CFLAGS_EMS = $(CFLAGS) \
-			 -s USE_GLFW=3 -s ALLOW_MEMORY_GROWTH=1 -s USE_WEBGL2=1 \
-			 -s FULL_ES3=1 -s EMULATE_FUNCTION_POINTER_CASTS=1
+CFLAGS_EMS = -Wall -I. -Wno-unused-function \
+			 -Ithird_party/glfw/include -I$(TINYCTHREAD) -D_GLFW_X11 -DTHREADED \
+			 $(PARENTCFLAGS) \
+			 -s USE_GLFW=3 -s USE_WEBGL2=1 \
+			 -s FULL_ES3=1 -s ALLOW_MEMORY_GROWTH=1 \
+			 -s EMULATE_FUNCTION_POINTER_CASTS=1 -s USE_PTHREADS=1 \
+			 -s WASM_MEM_MAX=2GB -s WASM_MEM_MAX=2GB \
+			 -D_TTHREAD_POSIX_ -D_TTHREAD_PLATFORM_DEFINED_ -O3
 
 emscripten: CFLAGS := $(CFLAGS_EMS)
 

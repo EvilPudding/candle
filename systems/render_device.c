@@ -177,22 +177,13 @@ void c_render_device_rebind(
 	self->usrptr = usrptr;
 }
 
-static int c_render_device_gl(c_render_device_t *self)
-{
-	return 1;
-}
-
-static int c_render_device_created(c_render_device_t *self)
-{
-	loader_push(g_candle->loader, (loader_cb)c_render_device_gl, NULL,
-			(c_t*)self);
-	return CONTINUE;
-}
-
 c_render_device_t *c_render_device_new()
 {
 	c_render_device_t *self = component_new(ct_render_device);
-	self->updates_ram = 1;
+
+	c_render_device_update(self);
+	self->updates_ubo = 1;
+
 	svp_init();
 
 	return self;
@@ -237,6 +228,4 @@ void ct_render_device(ct_t *self)
 	ct_listener(self, WORLD, 0, ref("world_update"), c_render_device_update);
 
 	ct_listener(self, WORLD, 100, ref("world_draw"), c_render_device_draw);
-
-	ct_listener(self, ENTITY, 0, ref("entity_created"), c_render_device_created);
 }

@@ -17,14 +17,14 @@ typedef void  (*vifunc_save_cb)(struct vifunc *func, FILE *fp);
 typedef bool_t(*vifunc_load_cb)(struct vifunc *func, FILE *fp);
 typedef void  (*vil_func_cb)(struct vifunc *func, void *usrptr);
 
-enum {
+enum vicall_flags {
 	V_IN = 0x001,
 	V_OUT = 0x002,
 	V_BOTH = V_IN | V_OUT,
 	V_HID = 0x004,
 	V_ALL = 0x007,
 	V_LINKED = 0x008
-} vicall_flags;
+};
 
 KHASH_MAP_INIT_INT(vifunc, struct vifunc *)
 

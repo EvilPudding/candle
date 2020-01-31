@@ -183,9 +183,7 @@ entity_t ecm_new_entity()
 	struct { uint32_t pos, uid; } *convert;
 	uint32_t i;
 
-#ifndef __EMSCRIPTEN__
 	mtx_lock(&entity_mtx);
-#endif
 
 	i = g_ecm->entities_info[0].next_free;
 
@@ -214,9 +212,7 @@ entity_t ecm_new_entity()
 	convert->pos = i;
 	convert->uid = info->uid;
 
-#ifndef __EMSCRIPTEN__
 	mtx_unlock(&entity_mtx);
-#endif
 	return ent;
 }
 
@@ -327,9 +323,7 @@ void ecm_clean(int force)
 		if (g_ecm->safe)
 		{
 			ecm_clean2(force);
-#ifndef __EMSCRIPTEN__
 			mtx_unlock(&clean_mtx);
-#endif
 		}
 	}
 	else
@@ -338,9 +332,7 @@ void ecm_clean(int force)
 		g_ecm->safe++;
 		mtx_unlock(&entity_mtx);
 
-#ifndef __EMSCRIPTEN__
 		mtx_lock(&clean_mtx);
-#endif
 	}
 }
 

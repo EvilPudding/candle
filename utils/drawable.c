@@ -375,9 +375,7 @@ static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
 	int32_t i;
 	uvec2_t ent;
 
-#ifndef __EMSCRIPTEN__
 	mtx_lock(self->mtx);
-#endif
 
 	i = self->inst_num++;
 	/* if (draw->bind[gid].bind == ref("light")) */
@@ -399,9 +397,7 @@ static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
 	self->trans_updates++;
 	self->props_updates++;
 
-#ifndef __EMSCRIPTEN__
 	mtx_unlock(self->mtx);
-#endif
 	return i;
 }
 
@@ -625,9 +621,7 @@ static void draw_conf_remove_instance(draw_conf_t *self, int32_t id)
 		puts("??");
 		return;
 	}
-#ifndef __EMSCRIPTEN__
 	mtx_lock(self->mtx);
-#endif
 	last = --self->inst_num;
 
 	self->comps[id]->conf = NULL;
@@ -648,9 +642,7 @@ static void draw_conf_remove_instance(draw_conf_t *self, int32_t id)
 		self->props_updates++;
 	}
 
-#ifndef __EMSCRIPTEN__
 	mtx_unlock(self->mtx);
-#endif
 }
 
 varray_t *varray_get(mesh_t *mesh)
@@ -699,10 +691,8 @@ draw_conf_t *drawable_get_conf(drawable_t *self, uint32_t gid)
 		if (!self->bind[gid].conf)
 		{
 			result = calloc(1, sizeof(draw_conf_t));
-#ifndef __EMSCRIPTEN__
 			result->mtx = malloc(sizeof(mtx_t));
 			mtx_init(result->mtx, mtx_plain);
-#endif
 		}
 		else
 		{
@@ -724,10 +714,8 @@ draw_conf_t *drawable_get_conf(drawable_t *self, uint32_t gid)
 		k = kh_put(config, draw_group->configs, p, &ret);
 
 		result = kh_value(draw_group->configs, k) = calloc(1, sizeof(draw_conf_t));
-#ifndef __EMSCRIPTEN__
 		result->mtx = malloc(sizeof(mtx_t));
 		mtx_init(result->mtx, mtx_plain);
-#endif
 		result->vars = conf;
 	}
 	else
@@ -778,13 +766,9 @@ void drawable_model_changed(drawable_t *self)
 			*props = new_props;
 			if (!(bind->updates & MASK_PROPS))
 			{
-#ifndef __EMSCRIPTEN__
 				mtx_lock(conf->mtx);
-#endif
 				conf->props_updates++;
-#ifndef __EMSCRIPTEN__
 				mtx_unlock(conf->mtx);
-#endif
 				bind->updates |= MASK_PROPS;
 			}
 		}
@@ -1066,9 +1050,7 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	uint32_t primitive;
 
 	if (!self || !self->inst_num) return 0;
-#ifndef __EMSCRIPTEN__
 	mtx_lock(self->mtx);
-#endif
 	mesh = self->vars.mesh;
 	/* printf("%d %p %d %s\n", self->vars.transparent, self->vars.mesh, */
 			/* self->vars.xray, self->vars.vs->name); */
@@ -1180,9 +1162,7 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	if (cull_was_enabled) glEnable(GL_CULL_FACE);
 
 end:
-#ifndef __EMSCRIPTEN__
 	mtx_unlock(self->mtx);
-#endif
 
 	glDepthRange(0.0, 1.00); glerr();
 

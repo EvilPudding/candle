@@ -255,12 +255,10 @@ uint32_t texture_get_pixel(texture_t *self, int32_t buffer, int32_t x, int32_t y
 	if(depth)
 	{
 		/* float fetch_depth = 0.988937f; */
-/* #ifndef __EMSCRIPTEN__ */
 
 		/* glReadBuffer(GL_NONE); glerr(); */
 
 		/* glReadPixels(x, y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &fetch_depth); glerr(); */
-/* #endif */
 
 		/* *depth = fetch_depth; */
 	}
@@ -802,13 +800,8 @@ buffer_t buffer_new(const char *name, int32_t is_float, int32_t dims)
 	else if(dims == -1)
 	{
 		buffer.format = GL_DEPTH_COMPONENT;
-/* #ifdef __EMSCRIPTEN__ */
-		/* buffer.internal = GL_DEPTH_COMPONENT16; */
-		/* buffer.type = GL_UNSIGNED_SHORT; */
-/* #else */
 		buffer.internal = GL_DEPTH_COMPONENT32F;
 		buffer.type = GL_FLOAT;
-/* #endif */
 	}
 
 	buffer.dims = dims;
@@ -1166,7 +1159,7 @@ int32_t save_tex_tile(tex_tile_t *tile)
 
 static void texture_disk_cacher_write(texture_t *self, tex_tile_t *tile)
 {
-#ifndef __EMSCRIPTEN__
+#ifdef THREADED
 	thrd_t thrd;
 	thrd_create(&thrd, (thrd_start_t)save_tex_tile, tile);
 #else
@@ -1187,12 +1180,12 @@ static void texture_disk_cacher(texture_t *self, uint32_t mip,
 	if (tile_fp)
 	{
 		tex_tile_t *tile = texture_get_tile(self, mip, x, y);
-#ifndef __EMSCRIPTEN__
+#ifdef THREADED
 		thrd_t thrd;
 #endif
 		fclose(tile_fp);
 		tile->loading = true;
-#ifndef __EMSCRIPTEN__
+#ifdef THREADED
 		thrd_create(&thrd, (thrd_start_t)load_tex_tile, tile);
 #else
 		load_tex_tile(tile);
@@ -1220,7 +1213,7 @@ static void texture_disk_cacher(texture_t *self, uint32_t mip,
 			tiles_x = tiles_x / 2;
 		}
 	}
-#ifndef __EMSCRIPTEN__
+#ifdef THREADED
 	{
 		thrd_t thrd;
 		thrd_create(&thrd, (thrd_start_t)load_tex, self);

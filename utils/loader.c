@@ -13,7 +13,6 @@ loader_t *loader_new()
 
 void loader_start(loader_t *self)
 {
-#ifndef __EMSCRIPTEN__
 	unsigned int i;
 	self->mutex = malloc(sizeof(mtx_t));
 	mtx_init(self->mutex, mtx_plain | mtx_recursive);
@@ -21,17 +20,14 @@ void loader_start(loader_t *self)
 	{
 		self->stack[i].cond = NULL;
 	}
-#endif
 }
 
 void _loader_push_wait(loader_t *self, loader_cb cb, void *usrptr, c_t *c)
 {
-#ifndef __EMSCRIPTEN__
 	if (!self->mutex)
 	{
 		printf("Loader not ready for push_wait.\n");
 	}
-#endif
 	if (!self->mutex || is_render_thread())
 	{
 		if(c)

@@ -2967,12 +2967,12 @@ int load_mesh(mesh_t *mesh)
 void *mesh_loader(const char *path, const char *name, uint32_t ext)
 {
 	mesh_t *mesh = mesh_new();
-#ifndef __EMSCRIPTEN__
+#ifdef THREADED
 	thrd_t thr;
 #endif
 	strcpy(mesh->name, path);
 
-#ifndef __EMSCRIPTEN__
+#ifdef THREADED
 	thrd_create(&thr, (thrd_start_t)load_mesh, mesh);
 #else
 	load_mesh(mesh);

@@ -27,7 +27,6 @@
 
 candle_t *g_candle;
 
-
 entity_t candle_run_command_args(entity_t root, int argc, char **argv,
                                  bool_t *handled)
 {
@@ -83,7 +82,7 @@ void candle_skip_frame(int frames)
 
 bool_t is_render_thread()
 {
-#ifndef __EMSCRIPTEN__
+#if defined(THREADED)
 	return thrd_equal(thrd_current(), *(thrd_t*)g_candle->render_thr);
 #else
 	return true;
@@ -139,7 +138,6 @@ void window_resize_callback(GLFWwindow *window, int width, int height)
 
 void joystick_callback(int jid, int event)
 {
-	printf("joy event %d %d\n", jid, event);
 	if (event == GLFW_CONNECTED)
 	{
 		printf("joystick connected\n");
@@ -173,7 +171,6 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
 	else if (button == GLFW_MOUSE_BUTTON_MIDDLE)
 	{
 		event.key = CANDLE_MOUSE_BUTTON_MIDDLE;
-		printf("middle\n");
 	}
 
 	entity_signal(entity_null, sig("event_handle"), &event, NULL);
@@ -192,7 +189,7 @@ void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
 static void render_loop_init(void)
 {
 	c_window_t *window;
-	g_candle->last_tick = glfwGetTime();
+	g_candle->last_fps_tick = glfwGetTime();
 	g_candle->fps_count = 0;
 	entity_add_component(SYS, c_window_new(0, 0));
 	entity_add_component(SYS, c_render_device_new());
@@ -207,9 +204,37 @@ static void render_loop_init(void)
 	glfwSetJoystickCallback(joystick_callback);
 }
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#else
+
+/* FAKE EMSCRIPTEN */
+/* #define __EMSCRIPTEN__ */
+/* void emscripten_set_main_loop(void(*cb)(void), int fps, bool_t somfin) */
+/* { */
+/* 	while(!g_candle->exit) */
+/* 	{ */
+/* 		cb(); */
+/* 	} */
+/* } */
+
+#endif
+
+#ifndef __EMSCRIPTEN__
+bool_t first_frame = true;
+#endif
+
 static void render_loop_tick(void)
 {
 	double current;
+#ifndef __EMSCRIPTEN__
+	if (first_frame)
+	{
+		c_window_lock_fps(c_window(&SYS), 0);
+		first_frame = false;
+	}
+#endif
+
 	candle_handle_events();
 
 	loader_update(g_candle->loader);
@@ -231,12 +256,12 @@ static void render_loop_tick(void)
 	}
 
 	current = glfwGetTime();
-	if(current - g_candle->last_tick > 1.0)
+	if(current - g_candle->last_fps_tick > 1.0)
 	{
 		g_candle->fps = g_candle->fps_count;
 		g_candle->fps_count = 0;
 		printf("%d\n", g_candle->fps);
-		g_candle->last_tick = current;
+		g_candle->last_fps_tick = current;
 	}
 
 	if (glfwWindowShouldClose(c_window(&SYS)->window))
@@ -244,15 +269,11 @@ static void render_loop_tick(void)
 		g_candle->exit = true;
 	}
 
-	{
-		struct timespec remaining = { 0, 8000000 };
-		thrd_sleep(&remaining, NULL);
-	}
 	glerr();
 }
 
-#ifndef __EMSCRIPTEN__
-static int render_loop(void)
+#if defined(THREADED) && !defined(__EMSCRIPTEN__)
+static int render_loop(void *data)
 {
 	render_loop_init();
 	mtx_unlock(g_candle->mtx);
@@ -261,59 +282,82 @@ static int render_loop(void)
 	{
 		render_loop_tick();
 	}
+	printf("Exiting render loop\n");
 
 	ecm_clean(1);
 	loader_update(g_candle->loader);
 
-	return 1;
+	return 0;
 }
 #endif
 
 static void ticker_loop_tick(void)
 {
-	double current = glfwGetTime();
+	double current;
 	float dt = 16.0f / 1000.0f;
 	/* float dt = (current - g_candle->last_update) / 1000.0; */
 
 	entity_signal(entity_null, sig("world_update"), &dt, NULL);
 
 	ecm_clean(0);
-	g_candle->last_update = current;
-#ifndef __EMSCRIPTEN__
+
+	current = glfwGetTime();
+	if (current - g_candle->last_update < 0.016)
 	{
-		struct timespec remaining = { 0, 16000000 };
+		struct timespec remaining = { 0, 0 };
+		remaining.tv_nsec = (0.016 - (current - g_candle->last_update)) * 1000000000;
 		thrd_sleep(&remaining, NULL);
+		g_candle->last_update += 0.016;
 	}
-#endif
+	else
+	{
+		g_candle->last_update = current;
+	}
 }
-static void ticker_loop(void)
+
+static int ticker_loop(void *data)
 {
-#ifndef __EMSCRIPTEN__
 	do
 	{
-#endif
 		ticker_loop_tick();
-#ifdef __EMSCRIPTEN__
-		render_loop_tick();
-#else
 	}
 	while(!g_candle->exit);
 
 	ecm_clean(1);
-#endif
+	return 0;
 }
 
 #ifdef __EMSCRIPTEN__
-#include <emscripten.h>
+static void em_ticker_loop(void)
+{
+#ifndef THREADED
+	ticker_loop_tick();
 #endif
+	render_loop_tick();
+}
+#endif
+
 void candle_wait(void)
 {
 #ifdef __EMSCRIPTEN__
-	emscripten_set_main_loop(ticker_loop, 0, true);
-#else
+	emscripten_set_main_loop(em_ticker_loop, 0, true);
+#elif !defined(THREADED)
+	do
+	{
+		ticker_loop_tick();
+		render_loop_tick();
+	}
+	while(!g_candle->exit);
+#endif
+
+#ifdef THREADED
+#ifndef __EMSCRIPTEN__
 	thrd_join(*(thrd_t*)g_candle->render_thr, NULL);
+#endif
 	thrd_join(*(thrd_t*)g_candle->ticker_thr, NULL);
 #endif
+
+	ecm_clean(1);
 }
 
 void candle_reg_cmd(const char *key, cmd_cb cb)
@@ -449,18 +493,25 @@ void candle_init2()
 	meshes_reg();
 	materials_reg();
 
-#ifndef __EMSCRIPTEN__
-
 	g_candle->mtx = malloc(sizeof(mtx_t));
-	mtx_init(g_candle->mtx, mtx_plain);
-	mtx_lock(g_candle->mtx);
-
 	g_candle->render_thr = malloc(sizeof(thrd_t));
 	g_candle->ticker_thr = malloc(sizeof(thrd_t));
 
-	thrd_create(g_candle->render_thr, (thrd_start_t)render_loop, NULL);
-	thrd_create(g_candle->ticker_thr, (thrd_start_t)ticker_loop, NULL);
+#ifdef THREADED
+	thrd_create(g_candle->ticker_thr, ticker_loop, NULL);
+
+
+#ifndef __EMSCRIPTEN__
+	mtx_init(g_candle->mtx, mtx_plain);
 	mtx_lock(g_candle->mtx);
+	thrd_create(g_candle->render_thr, render_loop, NULL);
+	mtx_lock(g_candle->mtx);
+#else
+	*(thrd_t*)g_candle->render_thr = thrd_current();
+	render_loop_init();
+#endif
+
+
 #else
 	render_loop_init();
 #endif

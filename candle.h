@@ -33,7 +33,7 @@ typedef struct
 	char firstDir[256];
 
 	int exit;
-	int last_update;
+	double last_update;
 
 	entity_t input_owners[16];
 
@@ -42,11 +42,9 @@ typedef struct
 	void *render_thr;
 	void *ticker_thr;
 	int fps;
-#ifndef __EMSCRIPTEN__
 	void *mtx;
-#endif
 	int fps_count;
-	double last_tick;
+	double last_fps_tick;
 
 } candle_t;
 

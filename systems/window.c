@@ -61,11 +61,15 @@ static void init_context_b(c_window_t *self)
 
 	self->window = glfwCreateWindow(self->width, self->height, "Candle", NULL, NULL);
 	glfwMakeContextCurrent(self->window);
-	glfwSwapInterval(0);
     glfwGetWindowSize(self->window, &self->width, &self->height);
 	if (!self->window)
 	{
+		printf("Window failed to be created\n");
 		exit(1);
+	}
+	else
+	{
+		printf("Window created\n");
 	}
 
 	glInit();
@@ -146,7 +150,6 @@ int c_window_created(c_window_t *self)
 	return CONTINUE;
 }
 
-void breakpoint(void){}
 c_window_t *c_window_new(int width, int height)
 {
 	c_window_t *self = component_new(ct_window);
@@ -154,7 +157,6 @@ c_window_t *c_window_new(int width, int height)
 	self->height = height ? height : window_height;
 
 	init_context_b(self);
-	breakpoint();
 	if(!g_quad_vs)
 	{
 		g_quad_vs = vs_new("quad", false, 1, vertex_modifier_new(

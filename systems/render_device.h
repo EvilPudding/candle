@@ -17,22 +17,6 @@ struct gl_light
 	float radius;
 };
 
-struct gl_property
-{
-	vec4_t color;
-	uvec2_t size;
-	float blend;
-	float scale;
-	vec3_t padding;
-	uint32_t layer;
-};
-
-struct gl_pass
-{
-	vec2_t screen_size;
-	vec2_t padding;
-};
-
 struct gl_scene
 {
 	struct gl_light lights[62];

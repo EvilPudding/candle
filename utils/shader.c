@@ -363,9 +363,11 @@ static char *string_preprocess(const char *src, bool_t len, const char *filename
 {
 	size_t lsize = len;
 	const char *line;
+#ifdef DEBUG
 	uint32_t include_lines[128];
-	uint32_t line_num;
 	uint32_t include_lines_num;
+#endif
+	uint32_t line_num;
 	char *token = NULL;
 	uint32_t include_num = 0;
 
@@ -422,14 +424,18 @@ static char *string_preprocess(const char *src, bool_t len, const char *filename
 
 	line = src;
 	line_num = 1u;
+#ifdef DEBUG
 	include_lines_num = 0u;
+#endif
 
 	while(line)
 	{
+#ifdef DEBUG
 		if (!strncmp(line, "#include", strlen("#include")))
 		{
 			include_lines[include_lines_num++] = line_num;
 		}
+#endif
 		line_num++;
 		line = strchr(line, '\n');
 		if (line) line++;
@@ -453,12 +459,12 @@ static char *string_preprocess(const char *src, bool_t len, const char *filename
 
 		include = str_new(64);
 		include_buffer = shader_preprocess(inc, false, has_gshader, false);
-#ifndef __EMSCRIPTEN__
+#ifdef DEBUG
 		str_catf(&include, "#line 1 \"%s\"\n", include_name);
 #endif
 		str_cat(&include, include_buffer);
 		free(include_buffer);
-#ifndef __EMSCRIPTEN__
+#ifdef DEBUG
 		str_catf(&include, "\n#line %d \"%s\"\n", include_lines[include_num],
 		         filename);
 #endif
