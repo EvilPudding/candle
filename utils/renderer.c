@@ -360,6 +360,7 @@ void *pass_process_query_mips(pass_t *self)
 	uint32_t size;
 	texture_t *tex = self->output;
 	bool_t second_stage = true;
+	renderer_t *renderer = self->renderer;
 	struct{
 		uint16_t _[2];
 	} *mips[4];
@@ -389,11 +390,20 @@ void *pass_process_query_mips(pass_t *self)
 		glerr();
 		second_stage = false;
 	}
+	if (renderer->mips_buffer_size < size * 4)
+	{
+		if (renderer->mips)
+		{
+			free(renderer->mips);
+		}
+		renderer->mips = malloc(size * 4);
+		renderer->mips_buffer_size = size * 4;
+	}
 
-	mips[0] = malloc(size);
-	mips[1] = malloc(size);
-	mips[2] = malloc(size);
-	mips[3] = malloc(size);
+	mips[0] = (void*)&renderer->mips[size * 0];
+	mips[1] = (void*)&renderer->mips[size * 1];
+	mips[2] = (void*)&renderer->mips[size * 2];
+	mips[3] = (void*)&renderer->mips[size * 3];
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, tex->frame_buffer[0]); glerr();
@@ -463,10 +473,6 @@ void *pass_process_query_mips(pass_t *self)
 	}
 
 end:
-	free(mips[0]);
-	free(mips[1]);
-	free(mips[2]);
-	free(mips[3]);
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0); glerr();
 	return NULL;
 }
@@ -1277,6 +1283,7 @@ void renderer_add_pass(
 
 
 	pass = &self->passes[i];
+	pass->renderer = self;
 	pass->hash = hash;
 	pass->framebuffer_id = framebuffer;
 	pass->auto_mip = !!(flags & GEN_MIP);

@@ -156,11 +156,11 @@ void ct_field(ct_t *self)
 	ct_init(self, "field", sizeof(c_field_t));
 	ct_set_init(self, (init_cb)c_field_init);
 	ct_set_destroy(self, (destroy_cb)c_field_destroy);
-	ct_dependency(self, ct_node);
+	ct_add_dependency(self, ct_node);
 
-	ct_listener(self, ENTITY, 0, ref("entity_created"), c_field_created);
+	ct_add_listener(self, ENTITY, 0, ref("entity_created"), c_field_created);
 
-	ct_listener(self, WORLD, 0, ref("component_menu"), c_field_menu);
+	ct_add_listener(self, WORLD, 0, ref("component_menu"), c_field_menu);
 
-	ct_listener(self, ENTITY, 0, ref("node_changed"), c_field_position_changed);
+	ct_add_listener(self, ENTITY, 0, ref("node_changed"), c_field_position_changed);
 }

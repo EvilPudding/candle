@@ -7,7 +7,7 @@
 void ct_ambient(ct_t *self)
 {
 	ct_init(self, "ambient", sizeof(c_ambient_t));
-	ct_dependency(self, ct_node);
+	ct_add_dependency(self, ct_node);
 }
 
 c_ambient_t *c_ambient_new(int map_size)

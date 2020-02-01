@@ -311,10 +311,10 @@ void ct_node(ct_t *self)
 	ct_init(self, "node", sizeof(c_node_t));
 	ct_set_init(self, (init_cb)c_node_init);
 	ct_set_destroy(self, (destroy_cb)c_node_destroy);
-	ct_dependency(self, ct_spatial);
+	ct_add_dependency(self, ct_spatial);
 
-	ct_listener(self, ENTITY, 0, ref("entity_created"), c_node_created);
-	ct_listener(self, ENTITY, 0, ref("spatial_changed"), c_node_changed);
+	ct_add_listener(self, ENTITY, 0, ref("entity_created"), c_node_created);
+	ct_add_listener(self, ENTITY, 0, ref("spatial_changed"), c_node_changed);
 }
 
 c_node_t *c_node_new()

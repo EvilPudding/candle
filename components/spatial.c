@@ -34,7 +34,7 @@ void ct_spatial(ct_t *self)
 	ct_init(self, "spatial", sizeof(c_spatial_t));
 
 	ct_set_init(self, (init_cb)c_spatial_init);
-	ct_listener(self, WORLD, 0, sig("component_menu"), c_spatial_menu);
+	ct_add_listener(self, WORLD, 0, sig("component_menu"), c_spatial_menu);
 }
 
 c_spatial_t *c_spatial_new()

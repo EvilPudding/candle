@@ -145,8 +145,8 @@ vector_t *ecm_get_listeners(uint32_t signal)
 	return listeners;
 }
 
-void _ct_listener(ct_t *self, int32_t flags, int32_t priority, uint32_t signal,
-                  signal_cb cb)
+void _ct_add_listener(ct_t *self, int32_t flags, int32_t priority, uint32_t signal,
+                      signal_cb cb)
 {
 	listener_t *lis = malloc(sizeof(*lis));
 	vector_t *listeners = ecm_get_listeners(signal);
@@ -216,7 +216,7 @@ entity_t ecm_new_entity()
 	return ent;
 }
 
-void ct_interaction(ct_t *dep, ct_id_t target)
+void ct_add_interaction(ct_t *dep, ct_id_t target)
 {
 	int32_t i;
 	ct_t *ct;
@@ -232,7 +232,7 @@ void ct_interaction(ct_t *dep, ct_id_t target)
 	ct->depends[i].is_interaction = 1;
 }
 
-void ct_dependency(ct_t *self, ct_id_t target)
+void ct_add_dependency(ct_t *self, ct_id_t target)
 {
 	int32_t i;
 	if (!self) return;
@@ -256,7 +256,6 @@ void ct_dependency(ct_t *self, ct_id_t target)
 
 void ct_init(ct_t *self, const char *name, uint32_t size)
 {
-	self->cs = kh_init(c);
 	self->size = size;
 	strncpy(self->name, name, sizeof(self->name) - 1);
 }
@@ -408,6 +407,7 @@ ct_t *ecm_get(ct_id_t id)
 			kh_value(g_ecm->cts, k) = ct;
 			memset(ct, 0, sizeof(*ct));
 			ct->id = id;
+			ct->cs = kh_init(c);
 			id(ct);
 			ct->ready = true;
 			assert(ct->name[0]);

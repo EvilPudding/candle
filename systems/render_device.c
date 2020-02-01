@@ -223,9 +223,9 @@ void ct_render_device(ct_t *self)
 {
 	ct_init(self, "render_device", sizeof(c_render_device_t));
 	ct_set_destroy(self, (destroy_cb)c_render_device_destroy);
-	ct_dependency(self, ct_window);
+	ct_add_dependency(self, ct_window);
 
-	ct_listener(self, WORLD, 0, ref("world_update"), c_render_device_update);
+	ct_add_listener(self, WORLD, 0, ref("world_update"), c_render_device_update);
 
-	ct_listener(self, WORLD, 100, ref("world_draw"), c_render_device_draw);
+	ct_add_listener(self, WORLD, 100, ref("world_draw"), c_render_device_draw);
 }

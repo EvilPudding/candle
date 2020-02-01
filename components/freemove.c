@@ -88,9 +88,9 @@ static int c_freemove_key_down(c_freemove_t *self, char *key)
 void ct_freemove(ct_t *self)
 {
 	ct_init(self, "freemove", sizeof(c_freemove_t));
-	ct_listener(self, WORLD, 0, ref("key_up"), c_freemove_key_up);
-	ct_listener(self, WORLD, 0, ref("key_down"), c_freemove_key_down);
-	ct_listener(self, WORLD, 0, ref("world_update"), c_freemove_update);
+	ct_add_listener(self, WORLD, 0, ref("key_up"), c_freemove_key_up);
+	ct_add_listener(self, WORLD, 0, ref("key_down"), c_freemove_key_down);
+	ct_add_listener(self, WORLD, 0, ref("world_update"), c_freemove_update);
 }
 
 c_freemove_t *c_freemove_new(entity_t orientation, int plane_movement,

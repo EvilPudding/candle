@@ -160,6 +160,7 @@ typedef struct pass
 	/* int32_t sec; */
 	/* uint64_t nano; */
 	void *usrptr;
+	void *renderer;
 } pass_t;
 
 struct gl_camera
@@ -203,6 +204,9 @@ typedef struct renderer
 	bool_t cubemap;
 	ivec2_t pos;
 	uvec2_t size;
+
+	uint8_t *mips;
+	uint32_t mips_buffer_size;
 } renderer_t;
 
 renderer_t *renderer_new(float resolution);

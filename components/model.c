@@ -1060,15 +1060,15 @@ void ct_model(ct_t *self)
 	ct_init(self, "model", sizeof(c_model_t));
 	ct_set_init(self, (init_cb)c_model_init);
 	ct_set_destroy(self, (destroy_cb)c_model_destroy);
-	ct_dependency(self, ct_node);
+	ct_add_dependency(self, ct_node);
 
-	ct_listener(self, ENTITY, 0, ref("entity_created"), c_model_created);
+	ct_add_listener(self, ENTITY, 0, ref("entity_created"), c_model_created);
 
-	ct_listener(self, WORLD, 0, ref("component_menu"), c_model_menu);
-	ct_listener(self, WORLD, 0, ref("component_tool"), c_model_tool);
-	ct_listener(self, WORLD, 100, ref("world_pre_draw"), c_model_pre_draw);
+	ct_add_listener(self, WORLD, 0, ref("component_menu"), c_model_menu);
+	ct_add_listener(self, WORLD, 0, ref("component_tool"), c_model_tool);
+	ct_add_listener(self, WORLD, 100, ref("world_pre_draw"), c_model_pre_draw);
 
-	ct_listener(self, ENTITY, 0, ref("node_changed"), c_model_position_changed);
+	ct_add_listener(self, ENTITY, 0, ref("node_changed"), c_model_position_changed);
 
 	add_tool("circle", (tool_gui_cb)tool_circle_gui,
 			(tool_edit_cb)tool_circle_edit,

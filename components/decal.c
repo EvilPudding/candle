@@ -24,7 +24,7 @@ void ct_decal(ct_t *self)
 {
 	ct_init(self, "decal", sizeof(c_decal_t));
 	ct_set_init(self, (init_cb)c_decal_init);
-	ct_dependency(self, ct_node);
+	ct_add_dependency(self, ct_node);
 }
 
 c_decal_t *c_decal_new(mat_t *mat, int visible, int selectable)

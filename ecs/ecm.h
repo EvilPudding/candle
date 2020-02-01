@@ -151,9 +151,9 @@ typedef struct ecm_t
 
 vector_t *ecm_get_listeners(uint32_t signal);
 
-void _ct_listener(ct_t *self, int32_t flags, int32_t priority, uint32_t signal, signal_cb cb);
-#define ct_listener(self, flags, priority, signal, cb) \
-	(_ct_listener(self, flags, priority, signal, (signal_cb)cb))
+void _ct_add_listener(ct_t *self, int32_t flags, int32_t priority, uint32_t signal, signal_cb cb);
+#define ct_add_listener(self, flags, priority, signal, cb) \
+	(_ct_add_listener(self, flags, priority, signal, (signal_cb)cb))
 
 listener_t *ct_get_listener(ct_t *self, uint32_t signal);
 
@@ -173,8 +173,8 @@ void ecm_add_entity(entity_t *entity);
 /* uint32_t ecm_register_system(ecm_t *self, void *system); */
 
 void ct_init(ct_t *self, const char *name, uint32_t size);
-void ct_dependency(ct_t *dep, ct_id_t target);
-void ct_interaction(ct_t *dep, ct_id_t target);
+void ct_add_dependency(ct_t *dep, ct_id_t target);
+void ct_add_interaction(ct_t *dep, ct_id_t target);
 void ct_set_init(ct_t *dep, init_cb cb);
 void ct_set_destroy(ct_t *dep, destroy_cb cb);
 

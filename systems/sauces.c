@@ -255,5 +255,5 @@ int c_sauces_component_menu(c_sauces_t *self, void *ctx)
 void ct_sauces(ct_t *self)
 {
 	ct_init(self, "sauces", sizeof(c_sauces_t));
-	ct_listener(self, WORLD, 0, ref("component_menu"), c_sauces_component_menu);
+	ct_add_listener(self, WORLD, 0, ref("component_menu"), c_sauces_component_menu);
 }

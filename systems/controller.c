@@ -289,8 +289,8 @@ void ct_controller(ct_t *self)
 {
 	ct_init(self, "controller", sizeof(c_controllers_t));
 
-	ct_listener(self, WORLD, 0, ref("event_handle"), c_controllers_event);
-	ct_listener(self, WORLD, 0, ref("events_end"), c_controllers_events_end);
+	ct_add_listener(self, WORLD, 0, ref("event_handle"), c_controllers_event);
+	ct_add_listener(self, WORLD, 0, ref("events_end"), c_controllers_events_end);
 }
 
 c_controllers_t *c_controllers_new()

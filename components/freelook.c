@@ -77,10 +77,10 @@ void ct_freelook(ct_t *self)
 {
 	ct_init(self, "freelook", sizeof(c_freelook_t));
 	ct_set_init(self, (init_cb)c_freelook_init);
-	ct_dependency(self, ct_node);
-	ct_listener(self, WORLD, 0, sig("mouse_move"), c_freelook_mouse_move);
-	ct_listener(self, ENTITY, 0, sig("entity_created"), c_freelook_update);
-	ct_listener(self, WORLD, 0, sig("window_resize"), c_freelook_window_resize);
+	ct_add_dependency(self, ct_node);
+	ct_add_listener(self, WORLD, 0, sig("mouse_move"), c_freelook_mouse_move);
+	ct_add_listener(self, ENTITY, 0, sig("entity_created"), c_freelook_update);
+	ct_add_listener(self, WORLD, 0, sig("window_resize"), c_freelook_window_resize);
 }
 
 c_freelook_t *c_freelook_new(entity_t force_down, float sensitivity)

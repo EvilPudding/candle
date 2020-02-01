@@ -110,8 +110,8 @@ void ct_bone(ct_t *self)
 	ct_init(self, "bone", sizeof(c_bone_t));
 	ct_set_init(self, (init_cb)c_bone_init);
 	ct_set_destroy(self, (destroy_cb)c_bone_destroy);
-	ct_dependency(self, ct_node);
-	ct_listener(self, ENTITY, 0, sig("node_changed"), c_bone_position_changed);
+	ct_add_dependency(self, ct_node);
+	ct_add_listener(self, ENTITY, 0, sig("node_changed"), c_bone_position_changed);
 }
 
 c_bone_t *c_bone_new(entity_t skin, mat4_t offset)

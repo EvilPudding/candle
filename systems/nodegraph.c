@@ -82,6 +82,6 @@ int c_nodegraph_component_menu(c_nodegraph_t *self, void *ctx)
 void ct_nodegraph(ct_t *self)
 {
 	ct_init(self, "node graph", sizeof(c_nodegraph_t));
-	ct_listener(self, WORLD, 100, sig("component_menu"), c_nodegraph_component_menu);
+	ct_add_listener(self, WORLD, 100, sig("component_menu"), c_nodegraph_component_menu);
 }
 

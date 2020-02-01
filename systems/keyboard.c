@@ -55,7 +55,7 @@ void ct_keyboard(ct_t *self)
 {
 	ct_init(self, "keyboard", sizeof(c_keyboard_t));
 
-	ct_listener(self, WORLD, -1, sig("event_handle"), c_keyboard_event);
+	ct_add_listener(self, WORLD, -1, sig("event_handle"), c_keyboard_event);
 }
 
 c_keyboard_t *c_keyboard_new()

@@ -271,13 +271,13 @@ static void c_light_destroy(c_light_t *self)
 void ct_light(ct_t *self)
 {
 	ct_init(self, "light", sizeof(c_light_t));
-	ct_dependency(self, ct_node);
+	ct_add_dependency(self, ct_node);
 	ct_set_init(self, (init_cb)c_light_init);
 	ct_set_destroy(self, (destroy_cb)c_light_destroy);
 
-	ct_listener(self, WORLD, 0, sig("component_menu"), c_light_menu);
-	ct_listener(self, WORLD, 0, sig("world_pre_draw"), c_light_pre_draw);
-	ct_listener(self, ENTITY, 0, sig("node_changed"), c_light_position_changed);
+	ct_add_listener(self, WORLD, 0, sig("component_menu"), c_light_menu);
+	ct_add_listener(self, WORLD, 0, sig("world_pre_draw"), c_light_pre_draw);
+	ct_add_listener(self, ENTITY, 0, sig("node_changed"), c_light_position_changed);
 }
 
 c_light_t *c_light_new(float radius, vec4_t color)

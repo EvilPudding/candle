@@ -308,17 +308,17 @@ void c_camera_destroy(c_camera_t *self)
 void ct_camera(ct_t *self)
 {
 	ct_init(self, "camera", sizeof(c_camera_t));
-	ct_dependency(self, ct_node);
+	ct_add_dependency(self, ct_node);
 	ct_set_init(self, (init_cb)c_camera_init);
 	ct_set_destroy(self, (destroy_cb)c_camera_destroy);
 
-	ct_listener(self, ENTITY, 0, sig("node_changed"), c_camera_changed);
-	ct_listener(self, WORLD, 0, sig("window_resize"), c_camera_resize);
-	ct_listener(self, WORLD, 0, sig("world_update"), c_camera_update);
-	ct_listener(self, WORLD, 50, sig("world_pre_draw"), c_camera_pre_draw);
-	ct_listener(self, WORLD, 10, sig("world_draw"), c_camera_draw);
+	ct_add_listener(self, ENTITY, 0, sig("node_changed"), c_camera_changed);
+	ct_add_listener(self, WORLD, 0, sig("window_resize"), c_camera_resize);
+	ct_add_listener(self, WORLD, 0, sig("world_update"), c_camera_update);
+	ct_add_listener(self, WORLD, 50, sig("world_pre_draw"), c_camera_pre_draw);
+	ct_add_listener(self, WORLD, 10, sig("world_draw"), c_camera_draw);
 
-	ct_listener(self, WORLD, 0, sig("component_menu"), c_camera_component_menu);
+	ct_add_listener(self, WORLD, 0, sig("component_menu"), c_camera_component_menu);
 }
 
 c_camera_t *c_camera_new(float proj_fov, float proj_near, float proj_far,

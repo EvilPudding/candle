@@ -105,13 +105,13 @@ void ct_axis(ct_t *self)
 {
 	ct_init(self, "axis", sizeof(c_axis_t));
 	ct_set_init(self, (init_cb)c_axis_init);
-	ct_dependency(self, ct_node);
-	ct_dependency(self, ct_mouse);
+	ct_add_dependency(self, ct_node);
+	ct_add_dependency(self, ct_mouse);
 
-	ct_listener(self, ENTITY, 0, sig("entity_created"), c_axis_created);
-	ct_listener(self, ENTITY, 0, sig("model_press"), c_axis_press);
-	ct_listener(self, ENTITY, 0, sig("mouse_release"), c_axis_release);
-	ct_listener(self, ENTITY, 0, sig("mouse_move"), c_axis_mouse_move);
+	ct_add_listener(self, ENTITY, 0, sig("entity_created"), c_axis_created);
+	ct_add_listener(self, ENTITY, 0, sig("model_press"), c_axis_press);
+	ct_add_listener(self, ENTITY, 0, sig("mouse_release"), c_axis_release);
+	ct_add_listener(self, ENTITY, 0, sig("mouse_move"), c_axis_mouse_move);
 }
 
 c_axis_t *c_axis_new(int type, vecN_t dir)

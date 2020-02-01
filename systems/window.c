@@ -265,9 +265,9 @@ void ct_window(ct_t *self)
 	ct_init(self, "window", sizeof(c_window_t));
 	ct_set_init(self, (init_cb)c_window_init);
 
-	ct_listener(self, ENTITY, 0, ref("entity_created"), c_window_created);
-	ct_listener(self, WORLD, 5, ref("world_draw"), c_window_draw);
-	ct_listener(self, WORLD, 5, ref("world_draw_end"), c_window_draw_end);
+	ct_add_listener(self, ENTITY, 0, ref("entity_created"), c_window_created);
+	ct_add_listener(self, WORLD, 5, ref("world_draw"), c_window_draw);
+	ct_add_listener(self, WORLD, 5, ref("world_draw_end"), c_window_draw_end);
 
-	ct_listener(self, WORLD, 250, ref("event_handle"), c_window_event);
+	ct_add_listener(self, WORLD, 250, ref("event_handle"), c_window_event);
 }

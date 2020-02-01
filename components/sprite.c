@@ -155,10 +155,10 @@ void ct_sprite(ct_t *self)
 	ct_init(self, "sprite", sizeof(c_sprite_t));
 	ct_set_init(self, (init_cb)c_sprite_init);
 	ct_set_destroy(self, (destroy_cb)c_sprite_destroy);
-	ct_dependency(self, ct_node);
-	ct_listener(self, ENTITY, 0, ref("entity_created"), c_sprite_created);
-	ct_listener(self, WORLD, 0, ref("component_menu"), c_sprite_menu);
-	ct_listener(self, ENTITY, 0, ref("node_changed"), c_sprite_position_changed);
+	ct_add_dependency(self, ct_node);
+	ct_add_listener(self, ENTITY, 0, ref("entity_created"), c_sprite_created);
+	ct_add_listener(self, WORLD, 0, ref("component_menu"), c_sprite_menu);
+	ct_add_listener(self, ENTITY, 0, ref("node_changed"), c_sprite_position_changed);
 }
 
 c_sprite_t *c_sprite_new(mat_t *mat, int cast_shadow)

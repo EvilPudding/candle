@@ -107,6 +107,7 @@ void entity_destroy(entity_t self)
 	}
 }
 
+#include <GLFW/glfw3.h>
 int listener_signal(const listener_t *self, entity_t ent, void *data, void *output)
 {
 	khiter_t k;
@@ -115,7 +116,9 @@ int listener_signal(const listener_t *self, entity_t ent, void *data, void *outp
 
 	for(k = kh_begin(ct->cs); k != kh_end(ct->cs); ++k)
 	{
+		/* double start; */
 		c_t *c;
+		int ret;
 
 		if(!kh_exist(ct->cs, k)) continue;
 
@@ -123,18 +126,38 @@ int listener_signal(const listener_t *self, entity_t ent, void *data, void *outp
 		if(!c_entity(c)) continue;
 		if((self->flags & ENTITY) && c_entity(c) != ent) continue;
 
-		if(self->cb(c, data, output) == STOP) return STOP;
+		/* if (self->signal == ref("world_update")) */
+			/* start = glfwGetTime(); */
+
+		ret = self->cb(c, data, output);
+
+		/* if (self->signal == ref("world_update")) */
+			/* printf("%s %f\n", ct->name, glfwGetTime() - start); */
+
+		if(ret == STOP) return STOP;
 	}
 	return CONTINUE;
 }
 
 int listener_signal_same(listener_t *self, entity_t ent, void *data, void *output)
 {
-	c_t *c = ct_get(ecm_get(self->target), &ent);
+	ct_t *ct = ecm_get(self->target);
+	c_t *c = ct_get(ct, &ent);
 	if(c)
 	{
+		/* double start; */
+		int ret;
 		if(c_entity(c) != ent)  return CONTINUE;
-		return self->cb(c, data, output);
+
+		/* if (self->signal == ref("world_update")) */
+			/* start = glfwGetTime(); */
+
+		ret = self->cb(c, data, output);
+
+		/* if (self->signal == ref("world_update")) */
+			/* printf("%s %f\n", ct->name, glfwGetTime() - start); */
+
+		return ret;
 	}
 	return CONTINUE;
 }
@@ -147,7 +170,15 @@ int component_signal(c_t *comp, ct_t *ct, uint32_t signal, void *data, void *out
 
 	if(listener)
 	{
+		/* double start; */
+
+		/* if (signal == ref("world_update")) */
+			/* start = glfwGetTime(); */
+
 		listener->cb(comp, data, output);
+
+		/* if (signal == ref("world_update")) */
+			/* printf("%s %f\n", ct->name, glfwGetTime() - start); */
 	}
 	return CONTINUE;
 }
@@ -190,11 +221,17 @@ int entity_signal(entity_t self, uint32_t signal, void *data, void *output)
 
 	listeners = ecm_get_listeners(signal);
 
+
 	for(i = vector_count(listeners) - 1; i >= 0; i--)
 	{
+		int ret;
 		listener_t *lis;
+
 		vector_get_copy(listeners, i, &lis);
-		if(listener_signal(lis, self, data, output) == STOP)
+
+		ret = listener_signal(lis, self, data, output);
+
+		if(ret == STOP)
 		{
 			response = CONTINUE;
 			break;

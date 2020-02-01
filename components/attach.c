@@ -30,9 +30,9 @@ static int c_attach_update(c_attach_t *self, float *dt)
 void ct_attach(ct_t *self)
 {
 	ct_init(self, "attach", sizeof(c_attach_t));
-	ct_dependency(self, ct_node);
+	ct_add_dependency(self, ct_node);
 
-	ct_listener(self, WORLD, 0, sig("world_update"), c_attach_update);
+	ct_add_listener(self, WORLD, 0, sig("world_update"), c_attach_update);
 }
 
 c_attach_t *c_attach_new(entity_t target)

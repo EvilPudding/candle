@@ -190,12 +190,12 @@ void ct_editlook(ct_t *self)
 {
 	ct_init(self, "editLook", sizeof(c_editlook_t));
 	ct_set_init(self, (init_cb)c_editlook_init);
-	ct_dependency(self, ct_spatial);
-	ct_dependency(self, ct_mouse);
-	ct_listener(self, WORLD, 0, sig("mouse_wheel"), c_editlook_mouse_wheel);
-	ct_listener(self, WORLD, 100, sig("mouse_move"), c_editlook_mouse_move);
-	ct_listener(self, WORLD, 100, sig("controller_axis"), c_editlook_controller);
-	ct_listener(self, WORLD, 0, sig("window_resize"), c_editlook_window_resize);
-	ct_listener(self, ENTITY, 100, sig("mouse_release"), c_editlook_mouse_release);
+	ct_add_dependency(self, ct_spatial);
+	ct_add_dependency(self, ct_mouse);
+	ct_add_listener(self, WORLD, 0, sig("mouse_wheel"), c_editlook_mouse_wheel);
+	ct_add_listener(self, WORLD, 100, sig("mouse_move"), c_editlook_mouse_move);
+	ct_add_listener(self, WORLD, 100, sig("controller_axis"), c_editlook_controller);
+	ct_add_listener(self, WORLD, 0, sig("window_resize"), c_editlook_window_resize);
+	ct_add_listener(self, ENTITY, 100, sig("mouse_release"), c_editlook_mouse_release);
 }
 

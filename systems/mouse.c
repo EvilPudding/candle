@@ -195,5 +195,5 @@ void ct_mouse(ct_t *self)
 {
 	ct_init(self, "mouse", sizeof(c_mouse_t));
 	ct_set_init(self, (init_cb)c_mouse_init);
-	ct_listener(self, WORLD, -1, ref("event_handle"), c_mouse_event);
+	ct_add_listener(self, WORLD, -1, ref("event_handle"), c_mouse_event);
 }

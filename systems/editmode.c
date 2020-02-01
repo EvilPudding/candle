@@ -1647,6 +1647,7 @@ int32_t c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 
 int32_t c_editmode_update(c_editmode_t *self, float *dt)
 {
+	if (!self->control) return CONTINUE;
 	if (self->context != self->context_queued
 	    && entity_exists(self->context) && self->context != SYS
 	    && self->context_enter_phase > 0.0f)
@@ -1768,23 +1769,23 @@ void ct_editmode(ct_t *self)
 {
 	ct_init(self, "editmode", sizeof(c_editmode_t));
 	ct_set_init(self, (init_cb)c_editmode_init);
-	ct_dependency(self, ct_node);
-	ct_dependency(self, ct_mouse);
+	ct_add_dependency(self, ct_node);
+	ct_add_dependency(self, ct_mouse);
 
-	ct_listener(self, WORLD, 10, ref("key_up"), c_editmode_key_up);
-	ct_listener(self, WORLD, 10, ref("key_down"), c_editmode_key_down);
-	ct_listener(self, WORLD, 0, ref("pick_file_save"), c_editmode_pick_save);
-	ct_listener(self, WORLD, 0, ref("pick_file_load"), c_editmode_pick_load);
-	ct_listener(self, WORLD, 0, ref("world_draw"), c_editmode_draw);
-	ct_listener(self, WORLD, 0, ref("world_update"), c_editmode_update);
-	ct_listener(self, WORLD, 50, ref("component_menu"), c_editmode_component_menu);
-	ct_listener(self, WORLD, 0, ref("mouse_move"), c_editmode_mouse_move);
-	ct_listener(self, WORLD, 0, ref("mouse_press"), c_editmode_mouse_press);
-	ct_listener(self, WORLD, 0, ref("mouse_release"), c_editmode_mouse_release);
-	ct_listener(self, WORLD, 0, ref("mouse_wheel"), c_editmode_mouse_wheel);
-	ct_listener(self, WORLD, 0, ref("mouse_click_double"), c_editmode_mouse_click_double);
-	ct_listener(self, WORLD, 0, ref("events_begin"), c_editmode_events_begin);
-	ct_listener(self, WORLD, 0, ref("events_end"), c_editmode_events_end);
+	ct_add_listener(self, WORLD, 10, ref("key_up"), c_editmode_key_up);
+	ct_add_listener(self, WORLD, 10, ref("key_down"), c_editmode_key_down);
+	ct_add_listener(self, WORLD, 0, ref("pick_file_save"), c_editmode_pick_save);
+	ct_add_listener(self, WORLD, 0, ref("pick_file_load"), c_editmode_pick_load);
+	ct_add_listener(self, WORLD, 0, ref("world_draw"), c_editmode_draw);
+	ct_add_listener(self, WORLD, 0, ref("world_update"), c_editmode_update);
+	ct_add_listener(self, WORLD, 50, ref("component_menu"), c_editmode_component_menu);
+	ct_add_listener(self, WORLD, 0, ref("mouse_move"), c_editmode_mouse_move);
+	ct_add_listener(self, WORLD, 0, ref("mouse_press"), c_editmode_mouse_press);
+	ct_add_listener(self, WORLD, 0, ref("mouse_release"), c_editmode_mouse_release);
+	ct_add_listener(self, WORLD, 0, ref("mouse_wheel"), c_editmode_mouse_wheel);
+	ct_add_listener(self, WORLD, 0, ref("mouse_click_double"), c_editmode_mouse_click_double);
+	ct_add_listener(self, WORLD, 0, ref("events_begin"), c_editmode_events_begin);
+	ct_add_listener(self, WORLD, 0, ref("events_end"), c_editmode_events_end);
 
 	/* ct_listener(self, WORLD, 0, ref("window_resize"), c_editmode_resize); */
 }
