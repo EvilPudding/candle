@@ -171,6 +171,7 @@ int c_camera_update(c_camera_t *self, float *dt)
 		if(step < -0.3f) step = -0.3f;
 		self->exposure += step;
 		self->renderer->glvars[0].exposure = self->exposure;
+		self->modified = 1;
 	}
 	return CONTINUE;
 }

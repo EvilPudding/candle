@@ -284,7 +284,6 @@ static int render_loop(void *data)
 	}
 	printf("Exiting render loop\n");
 
-	ecm_clean(1);
 	loader_update(g_candle->loader);
 
 	return 0;
@@ -323,7 +322,8 @@ static int ticker_loop(void *data)
 	}
 	while(!g_candle->exit);
 
-	ecm_clean(1);
+	printf("Exiting ticker loop\n");
+
 	return 0;
 }
 
