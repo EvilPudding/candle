@@ -58,6 +58,16 @@ const int g_indir_h = 128;
 int g_cache_n = 0;
 int g_indir_n = 1;
 
+typedef struct
+{
+	thrd_t thread;
+	mtx_t mtx;
+	tex_tile_t *tile;
+} tile_worker_t;
+
+tile_worker_t g_tile_workers[8];
+int load_tex_tile_worker(void *usrptr);
+
 bool_t *g_probe_tiles;
 uint32_t g_min_shadow_tile = 64;
 uint32_t g_max_probe_levels;
@@ -93,6 +103,13 @@ void svp_init()
 	for (t = 0; t < g_num_shadows; t++)
 	{
 		g_probe_tiles[t] = false;
+	}
+	for (t = 0; t < sizeof(g_tile_workers) / sizeof(*g_tile_workers); t++)
+	{
+		mtx_init(&g_tile_workers[t].mtx, mtx_plain);
+		mtx_lock(&g_tile_workers[t].mtx);
+		thrd_create(&g_tile_workers[t].thread, load_tex_tile_worker,
+		            &g_tile_workers[t]);
 	}
 
 	glerr();
@@ -1166,6 +1183,37 @@ static void texture_disk_cacher_write(texture_t *self, tex_tile_t *tile)
 #endif
 }
 
+int load_tex_tile_worker(void *usrptr)
+{
+	tile_worker_t *worker = usrptr;
+
+	while (true) {
+		mtx_lock(&worker->mtx);
+		if (!worker->tile)
+		{
+			break;
+		}
+		load_tex_tile(worker->tile);
+		worker->tile = NULL;
+	}
+	return 0;
+}
+
+static void load_tex_tile_assign_worker(tex_tile_t *tile)
+{
+	uint32_t t;
+	for (t = 0; t < sizeof(g_tile_workers) / sizeof(*g_tile_workers); t++)
+	{
+		if (!g_tile_workers[t].tile)
+		{
+			tile->loading = true;
+			g_tile_workers[t].tile = tile;
+			mtx_unlock(&g_tile_workers[t].mtx);
+			return;
+		}
+	}
+}
+
 static void texture_disk_cacher(texture_t *self, uint32_t mip,
                                 uint32_t x, uint32_t y)
 {
@@ -1180,16 +1228,9 @@ static void texture_disk_cacher(texture_t *self, uint32_t mip,
 	if (tile_fp)
 	{
 		tex_tile_t *tile = texture_get_tile(self, mip, x, y);
-#ifdef THREADED
-		thrd_t thrd;
-#endif
 		fclose(tile_fp);
-		tile->loading = true;
-#ifdef THREADED
-		thrd_create(&thrd, (thrd_start_t)load_tex_tile, tile);
-#else
-		load_tex_tile(tile);
-#endif
+		load_tex_tile_assign_worker(tile);
+		/* thrd_create(&thrd, (thrd_start_t)load_tex_tile, tile); */
 		return;
 	}
 	assert(x < self->bufs[0].num_tiles[mip]);
