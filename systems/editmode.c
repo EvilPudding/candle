@@ -1572,9 +1572,13 @@ int32_t c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 		/* for(i = 0; i < sig->cts_size; i++) */
 		for(i = vector_count(listeners) - 1; i >= 0; i--)
 		{
-			listener_t *lis = *(listener_t**)vector_get(listeners, i);
-			ct_t *ct = ecm_get(lis->target);
-			c_t *comp = ct_get(ct, &ent);
+			listener_t *lis;
+			ct_t *ct;
+			c_t *comp;
+
+			vector_get_copy(listeners, i, &lis);
+			ct = ecm_get(lis->target);
+			comp = ct_get(ct, &ent);
 
 			if(comp && !comp->ghost)
 			{
@@ -1692,46 +1696,50 @@ int32_t c_editmode_update(c_editmode_t *self, float *dt)
 int32_t c_editmode_draw(c_editmode_t *self)
 {
 	int32_t e;
+	if (!self->control && !self->visible)
+		return CONTINUE;
 
-	if(self->nk && (self->visible || self->control))
+	if (!self->nk)
 	{
-		if(self->menu_x >= 0)
-		{
-			c_editmode_commands(self);
-		}
-		if(self->open_vil)
-		{
-			if (!vifunc_gui(self->open_vil, self->nk))
-			{
-				self->open_vil = NULL;
-			}
-		}
-
-		for(e = 0; e < self->open_textures_count; e++)
-		{
-			if(!c_editmode_texture_window(self, self->open_textures[e]))
-			{
-				self->open_textures_count--;
-				self->open_textures[e] =
-					self->open_textures[self->open_textures_count];
-				e--;
-			}
-		}
-		for(e = 0; e < self->open_entities_count; e++)
-		{
-			if(!c_editmode_entity_window(self, self->open_entities[e]))
-			{
-				/* self->open_entities_count--; */
-				/* self->open_entities[e] = */
-					/* self->open_entities[self->open_entities_count]; */
-				self->open_entities[e] = SYS;
-				/* e--; */
-				c_editmode_open_entity(self, c_entity(self));
-			}
-		}
-
-		nk_can_render(NK_ANTI_ALIASING_ON);
+		c_editmode_init_nk(self);
 	}
+
+	if(self->menu_x >= 0)
+	{
+		c_editmode_commands(self);
+	}
+	if(self->open_vil)
+	{
+		if (!vifunc_gui(self->open_vil, self->nk))
+		{
+			self->open_vil = NULL;
+		}
+	}
+
+	for(e = 0; e < self->open_textures_count; e++)
+	{
+		if(!c_editmode_texture_window(self, self->open_textures[e]))
+		{
+			self->open_textures_count--;
+			self->open_textures[e] =
+				self->open_textures[self->open_textures_count];
+			e--;
+		}
+	}
+	for(e = 0; e < self->open_entities_count; e++)
+	{
+		if(!c_editmode_entity_window(self, self->open_entities[e]))
+		{
+			/* self->open_entities_count--; */
+			/* self->open_entities[e] = */
+				/* self->open_entities[self->open_entities_count]; */
+			self->open_entities[e] = SYS;
+			/* e--; */
+			c_editmode_open_entity(self, c_entity(self));
+		}
+	}
+
+	nk_can_render(NK_ANTI_ALIASING_ON);
 	return CONTINUE;
 }
 
