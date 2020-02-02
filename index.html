@@ -24,7 +24,7 @@ body {
 }
 
 canvas {
-	width: 100%;
+	width:  100%;
 	height: 100%;
 }
 
@@ -50,6 +50,12 @@ canvas {
         },
         canvas: (function() {
           var canvas = document.getElementById('canvas');
+		  window.addEventListener("resize", function (e) {
+			  console.log("RESIZE", canvas.clientWidth, canvas.clientHeight);
+			  if (Module.canvas) {
+				  Module.setCanvasSize(canvas.clientWidth, canvas.clientHeight);
+			  }
+		  });
 
           // As a default initial behavior, pop up an alert when webgl context is lost. To make your
           // application robust, you may want to override this behavior before shipping!
