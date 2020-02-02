@@ -28,7 +28,7 @@ int c_axis_press(c_axis_t *self, model_button_data *event)
 	if(event->button != CANDLE_MOUSE_BUTTON_LEFT) return CONTINUE;
 	mouse = c_mouse(self);
 	c_mouse_visible(mouse, false);
-	c_mouse_activate(mouse);
+	c_mouse_activate(mouse, false);
 	return STOP;
 }
 

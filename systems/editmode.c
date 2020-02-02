@@ -645,7 +645,7 @@ void c_editmode_activate(c_editmode_t *self)
 
 	self->backup_renderer = c_window(self)->renderer;
 
-	c_mouse_activate(c_mouse(self));
+	c_mouse_activate(c_mouse(self), true);
 	if(!entity_exists(self->camera))
 	{
 		self->camera = entity_new((

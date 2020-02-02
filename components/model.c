@@ -689,7 +689,7 @@ void c_model_set_xray(c_model_t *self, bool_t xray)
 	drawable_set_xray(&self->draw, xray);
 }
 
-c_model_t *c_model_smooth(c_model_t *self, bool_t smooth)
+c_model_t *c_model_smooth(c_model_t *self, float smooth)
 {
 	/* self->layers[layer].smooth_angle = smooth; */
 	self->mesh->smooth_angle = smooth;

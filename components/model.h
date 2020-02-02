@@ -154,7 +154,7 @@ void c_model_edit(c_model_t *self, mesh_edit_t type, geom_t target);
 c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, bool_t cast_shadow, bool_t visible);
 c_model_t *c_model_cull_face(c_model_t *self, bool_t cull_front, bool_t cull_back);
 c_model_t *c_model_wireframe(c_model_t *self, bool_t wireframe);
-c_model_t *c_model_smooth(c_model_t *self, bool_t smooth);
+c_model_t *c_model_smooth(c_model_t *self, float smooth);
 c_model_t *c_model_paint(c_model_t *self, mat_t *mat);
 void c_model_set_xray(c_model_t *self, bool_t xray);
 void c_model_set_visible(c_model_t *self, bool_t visible);

@@ -41,7 +41,7 @@ DEF_CASTER(ct_mouse, c_mouse, c_mouse_t)
 c_mouse_t *c_mouse_new(void);
 void c_mouse_visible(c_mouse_t *self, bool_t visible);
 bool_t c_mouse_active(const c_mouse_t *self);
-void c_mouse_activate(c_mouse_t *self);
+void c_mouse_activate(c_mouse_t *self, bool_t restore_position);
 void c_mouse_deactivate(c_mouse_t *self);
 
 #endif /* !MOUSE_H */

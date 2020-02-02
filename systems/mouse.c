@@ -13,7 +13,7 @@ void c_mouse_init(c_mouse_t *self)
 	self->previous_active = entity_null;
 	if (!entity_exists(g_active_mouse))
 	{
-		c_mouse_activate(self);
+		c_mouse_activate(self, false);
 	}
 }
 
@@ -156,10 +156,14 @@ void c_mouse_deactivate(c_mouse_t *self)
 	}
 }
 
-void c_mouse_activate(c_mouse_t *self)
+void c_mouse_activate(c_mouse_t *self, bool_t restore_position)
 {
 	if (g_active_mouse != c_entity(self))
 	{
+		if (!restore_position) {
+			self->x = c_mouse(&g_active_mouse)->x;
+			self->y = c_mouse(&g_active_mouse)->y;
+		}
 		self->right = c_mouse(&g_active_mouse)->right;
 		self->left = c_mouse(&g_active_mouse)->left;
 		self->previous_active = g_active_mouse;

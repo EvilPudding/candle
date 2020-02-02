@@ -83,7 +83,7 @@ int c_editlook_mouse_move(c_editlook_t *self, mouse_move_data *event)
 	if (!c_mouse_active(c_mouse(self)))
 	{
 		if (!c_mouse(edit)->right) return CONTINUE;
-		c_mouse_activate(c_mouse(self));
+		c_mouse_activate(c_mouse(self), false);
 	}
 
 	if(c_keyboard(&SYS)->shift)
