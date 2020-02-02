@@ -6,6 +6,7 @@
 
 void _check_gl_error(const char *file, int line)
 {
+#ifdef DEBUG
 	static char last_error[512] = "";
 	static int count = 0;
 	char message[512];
@@ -48,6 +49,8 @@ void _check_gl_error(const char *file, int line)
 		printf("glerr called in non render thread\n");
 		exit(1);
 	}
+#endif
+
 #endif
 }
 

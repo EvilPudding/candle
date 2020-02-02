@@ -247,8 +247,6 @@ static void render_loop_tick(void)
 		entity_signal(entity_null, sig("world_draw"), NULL, NULL);
 		entity_signal(entity_null, sig("world_draw_end"), NULL, NULL);
 
-		ecm_clean(0);
-
 		glerr();
 		g_candle->fps_count++;
 		/* candle_handle_events(self); */
@@ -281,6 +279,7 @@ static int render_loop(void *data)
 	while(!g_candle->exit)
 	{
 		render_loop_tick();
+		ecm_clean(0);
 	}
 	printf("Exiting render loop\n");
 
@@ -290,7 +289,7 @@ static int render_loop(void *data)
 }
 #endif
 
-static void ticker_loop_tick(void)
+static void ticker_loop_tick(bool_t delay)
 {
 	double current;
 	float dt = 16.0f / 1000.0f;
@@ -298,10 +297,8 @@ static void ticker_loop_tick(void)
 
 	entity_signal(entity_null, sig("world_update"), &dt, NULL);
 
-	ecm_clean(0);
-
 	current = glfwGetTime();
-	if (current - g_candle->last_update < 0.016)
+	if (delay && current - g_candle->last_update < 0.016)
 	{
 		struct timespec remaining = { 0, 0 };
 		remaining.tv_nsec = (0.016 - (current - g_candle->last_update)) * 1000000000;
@@ -314,11 +311,13 @@ static void ticker_loop_tick(void)
 	}
 }
 
+#ifdef THREADED
 static int ticker_loop(void *data)
 {
 	do
 	{
-		ticker_loop_tick();
+		ticker_loop_tick(true);
+		ecm_clean(0);
 	}
 	while(!g_candle->exit);
 
@@ -326,14 +325,17 @@ static int ticker_loop(void *data)
 
 	return 0;
 }
+#endif
 
 #ifdef __EMSCRIPTEN__
 static void em_ticker_loop(void)
 {
 #ifndef THREADED
-	ticker_loop_tick();
+	ticker_loop_tick(false);
+	ticker_loop_tick(false);
 #endif
 	render_loop_tick();
+	ecm_clean(0);
 }
 #endif
 
@@ -344,8 +346,9 @@ void candle_wait(void)
 #elif !defined(THREADED)
 	do
 	{
-		ticker_loop_tick();
+		ticker_loop_tick(false);
 		render_loop_tick();
+		ecm_clean(0);
 	}
 	while(!g_candle->exit);
 #endif

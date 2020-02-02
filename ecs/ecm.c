@@ -316,6 +316,9 @@ end:
 void ecm_clean(int force)
 {
 	if(!g_ecm->dirty && !force) return;
+#ifndef THREADED
+	ecm_clean2(force);
+#else
 
 	if (is_render_thread())
 	{
@@ -333,6 +336,7 @@ void ecm_clean(int force)
 
 		mtx_lock(&clean_mtx);
 	}
+#endif
 }
 
 c_t *ct_add(ct_t *self, entity_t entity)
