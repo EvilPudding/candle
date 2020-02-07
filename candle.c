@@ -66,12 +66,9 @@ void candle_reset_dir()
 
 static void candle_handle_events(void)
 {
-	entity_signal(entity_null, sig("events_begin"), NULL, NULL);
+	entity_signal(entity_null, ref("events_begin"), NULL, NULL);
 	glfwPollEvents();
-
-	/* entity_signal(entity_null, sig("event_handle"), &event, NULL); */
-
-	entity_signal(entity_null, sig("events_end"), NULL, NULL);
+	entity_signal(entity_null, ref("events_end"), NULL, NULL);
 }
 
 static int skip = 0;
@@ -95,7 +92,7 @@ static void cursor_position_callback(GLFWwindow *window, double xpos, double ypo
 	event.type = CANDLE_MOUSEMOTION;
 	event.mouse.x = (int)xpos;
 	event.mouse.y = (int)ypos;
-	entity_signal(entity_null, sig("event_handle"), &event, NULL);
+	entity_signal(entity_null, ref("event_handle"), &event, NULL);
 }
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
@@ -124,7 +121,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 		key += 'a' - 'A';
 	}
 	event.key = key;
-	entity_signal(entity_null, sig("event_handle"), &event, NULL);
+	entity_signal(entity_null, ref("event_handle"), &event, NULL);
 }
 
 void window_resize_callback(GLFWwindow *window, int width, int height)
@@ -133,7 +130,7 @@ void window_resize_callback(GLFWwindow *window, int width, int height)
 	event.type = CANDLE_WINDOW_RESIZE;
 	event.window.width = width;
 	event.window.height = height;
-	entity_signal(entity_null, sig("event_handle"), &event, NULL);
+	entity_signal(entity_null, ref("event_handle"), &event, NULL);
 }
 
 void joystick_callback(int jid, int event)
@@ -173,7 +170,7 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
 		event.key = CANDLE_MOUSE_BUTTON_MIDDLE;
 	}
 
-	entity_signal(entity_null, sig("event_handle"), &event, NULL);
+	entity_signal(entity_null, ref("event_handle"), &event, NULL);
 }
 
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
@@ -183,7 +180,7 @@ void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
 	event.key = CANDLE_MOUSE_BUTTON_MIDDLE;
 	event.wheel.x = xoffset;
 	event.wheel.y = yoffset;
-	entity_signal(entity_null, sig("event_handle"), &event, NULL);
+	entity_signal(entity_null, ref("event_handle"), &event, NULL);
 }
 
 static void render_loop_init(void)
@@ -235,22 +232,21 @@ static void render_loop_tick(void)
 	}
 #endif
 
+#ifdef __EMSCRIPTEN__ /* HACK: emscripten does not update events on glfwPollEvents*/
+	entity_signal(entity_null, ref("events_end"), NULL, NULL);
+#else
 	candle_handle_events();
+#endif
 
 	loader_update(g_candle->loader);
 	glerr();
 
-	/* if(state->gameStarted) */
 	{
-		/* candle_handle_events(self); */
-		/* printf("\t%ld\n", self->render_id); */
-		entity_signal(entity_null, sig("world_draw"), NULL, NULL);
-		entity_signal(entity_null, sig("world_draw_end"), NULL, NULL);
+		entity_signal(entity_null, ref("world_draw"), NULL, NULL);
+		entity_signal(entity_null, ref("world_draw_end"), NULL, NULL);
 
 		glerr();
 		g_candle->fps_count++;
-		/* candle_handle_events(self); */
-
 	}
 
 	current = glfwGetTime();
@@ -258,9 +254,13 @@ static void render_loop_tick(void)
 	{
 		g_candle->fps = g_candle->fps_count;
 		g_candle->fps_count = 0;
-		printf("%d\n", g_candle->fps);
+		/* printf("%d\n", g_candle->fps); */
 		g_candle->last_fps_tick = current;
 	}
+
+#ifdef __EMSCRIPTEN__ /* HACK: emscripten does not update events on glfwPollEvents*/
+	entity_signal(entity_null, ref("events_begin"), NULL, NULL);
+#endif
 
 	if (glfwWindowShouldClose(c_window(&SYS)->window))
 	{
@@ -295,7 +295,7 @@ static void ticker_loop_tick(bool_t delay)
 	float dt = 16.0f / 1000.0f;
 	/* float dt = (current - g_candle->last_update) / 1000.0; */
 
-	entity_signal(entity_null, sig("world_update"), &dt, NULL);
+	entity_signal(entity_null, ref("world_update"), &dt, NULL);
 
 	current = glfwGetTime();
 	if (delay && current - g_candle->last_update < 0.016)
