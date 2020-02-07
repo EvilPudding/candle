@@ -104,6 +104,7 @@ void svp_init()
 	{
 		g_probe_tiles[t] = false;
 	}
+#ifdef THREADED
 	for (t = 0; t < sizeof(g_tile_workers) / sizeof(*g_tile_workers); t++)
 	{
 		mtx_init(&g_tile_workers[t].mtx, mtx_plain);
@@ -111,6 +112,7 @@ void svp_init()
 		thrd_create(&g_tile_workers[t].thread, load_tex_tile_worker,
 		            &g_tile_workers[t]);
 	}
+#endif
 
 	glerr();
 }
@@ -1229,8 +1231,12 @@ static void texture_disk_cacher(texture_t *self, uint32_t mip,
 	{
 		tex_tile_t *tile = texture_get_tile(self, mip, x, y);
 		fclose(tile_fp);
+#ifdef THREADED
 		load_tex_tile_assign_worker(tile);
-		/* thrd_create(&thrd, (thrd_start_t)load_tex_tile, tile); */
+#else
+		tile->loading = true;
+		load_tex_tile(tile);
+#endif
 		return;
 	}
 	assert(x < self->bufs[0].num_tiles[mip]);
