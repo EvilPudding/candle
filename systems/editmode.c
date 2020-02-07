@@ -113,7 +113,7 @@ int32_t rotate_init(struct edit_rotate *self, c_editmode_t *ec)
 		renderer = c_camera(&ec->camera)->renderer;
 
 		renderer_add_pass(renderer, "tool", "editmode", ref("quad"),
-				ADD, renderer_tex(renderer, ref("final")), NULL, 0, ~0, 6,
+				ADD, renderer_tex(renderer, ref("final")), NULL, 0, ~0, 5,
 				opt_vec2("mouse_pos", Z2, (getter_cb)bind_mouse_pos),
 				opt_num("start_radius", 0.f, (getter_cb)bind_start_radius),
 				opt_num("tool_fade", 0.f, (getter_cb)bind_tool_fade),
