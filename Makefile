@@ -7,7 +7,7 @@ emscripten: LD = emcc
 emscripten: AR = emar
 
 DIR = build
-DEPS_REL = $(shell sdl2-config --libs) -lm -lGL -pthread -ldl -lX11 -lrt
+DEPS_REL = -lm -lGL -pthread -ldl -lX11 -lrt
 DEPS_DEB = $(DEPS_REL)
 
 SHAD_SRC = $(patsubst %.glsl, $(DIR)/%.glsl.c, $(wildcard shaders/*.glsl))

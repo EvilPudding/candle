@@ -9,7 +9,7 @@
 #define NK_INCLUDE_DEFAULT_FONT
 #define NK_INCLUDE_COMMAND_USERDATA
 #include <stdarg.h>
-#include "third_party/nuklear/nuklear.h"
+#include <third_party/nuklear/nuklear.h>
 #include <events.h>
 
 NK_API struct nk_context* nk_can_init(void *win);
