@@ -8,6 +8,10 @@
 #include <stdarg.h>
 #include <tinycthread.h>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_ASSERT(x)
 #include <third_party/stb_image.h>
@@ -1153,7 +1157,17 @@ int32_t load_tex_tile(tex_tile_t *tile)
 	texture_tile_filename(tile->tex, tile->mip, tile->x, tile->y,
 	                      buffer, sizeof(buffer));
 
+	puts(buffer);
+#ifdef __EMSCRIPTEN__
+	EM_ASM_(
+	{
+		load_tile_js($0, $1, $2);
+	}, path, bytes, tile->loading);
+#else
 	bytes = stbi_load(buffer, &w, &h, &dims, 4);
+#endif
+	printf("%d %d\n", w, h);
+	dims = 4;
 	assert(w == 129 && h == 129);
 	memcpy(tile->bytes, bytes, w * h * 4);
 
