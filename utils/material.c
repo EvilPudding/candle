@@ -98,6 +98,7 @@ mat_t *mat_new(const char *name, const char *type_name)
 
 	sprintf(buffer, "_material%d_sandbox", self->global_id);
 	self->sandbox = vifunc_new(&g_mat_ctx, buffer, NULL, 0, false);
+	self->sandbox->usrptr = &g_mats[self->global_id];
 
 	if (type_name)
 	{
@@ -285,7 +286,13 @@ static float _color_gui(vicall_t *call, struct nk_colorf *color, void *ctx)
 
 static void _code_save(vifunc_t *func, FILE *fp) 
 {
-	/* fprintf(fp, "%%{\n%s}%%", code->string); */
+	struct mat_type *type = func->usrptr;
+	if (!type)
+	{
+		return;
+	}
+
+	fprintf(fp, "%%{\n%s}%%", type->code);
 }
 
 static bool_t _code_load(vifunc_t *func, FILE *fp) 
@@ -320,6 +327,7 @@ static bool_t _code_load(vifunc_t *func, FILE *fp)
 
 		if (end) break;
 	}
+	printf("loaded %s\n", type->code);
 
 	return true;
 }
@@ -1048,6 +1056,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	                            (vil_call_cb)material_generate_call, &gbuffer);
 	if (type->code)
 	{
+		printf("CAT CODE '%s'\n", type->code);
 		str_cat(&gbuffer, type->code);
 	}
 
