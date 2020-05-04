@@ -530,23 +530,9 @@ static void c_model_init(c_model_t *self)
 	self->transparent_group = ref("transparent");
 	self->selectable_group = ref("selectable");
 	self->visible = 1;
-	/* self->layers = malloc(sizeof(*self->layers) * 16); */
 	self->history = vector_new(sizeof(mesh_history_t), FIXED_ORDER, NULL, NULL);
 
 }
-
-/* void c_model_add_layer(c_model_t *self, mat_t *mat, int selection, float offset) */
-/* { */
-/* 	int i = self->layers_num++; */
-/* 	self->layers[i].mat = mat; */
-/* 	self->layers[i].selection = selection; */
-/* 	self->layers[i].cull_front = 0; */
-/* 	self->layers[i].cull_back = 1; */
-/* 	self->layers[i].wireframe = 0; */
-/* 	self->layers[i].offset = 0; */
-/* 	self->layers[i].smooth_angle = 0.2f; */
-/* 	entity_signal_same(c_entity(self), sig("mesh_changed"), NULL, NULL); */
-/* } */
 
 void c_model_init_drawables(c_model_t *self)
 {

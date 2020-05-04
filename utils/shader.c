@@ -13,7 +13,6 @@ static char default_vs[1024] = "";
 static char default_vs_end[] = 
 	"\n"
 	"	gl_Position = pos;\n"
-	"	$vertex_distance = length($vertex_position);\n"
 	"}\n";
 
 static char default_gs[1024];
@@ -77,7 +76,6 @@ void shaders_reg()
 	"flat out uvec2 $poly_id;\n"
 	"flat out vec3 $obj_pos;\n"
 	"flat out mat4 $model;\n"
-	"out float $vertex_distance;\n"
 	"out vec3 $poly_color;\n"
 	"out vec3 $vertex_position;\n"
 	"out vec3 $vertex_world_position;\n"
@@ -101,10 +99,13 @@ void shaders_reg()
 
 	strcat(default_gs,
 	"#version 300 es\n"
-	"#extension GL_EXT_geometry_shader4 : enable\n"
-	"#extension GL_EXT_gpu_shader4 : enable\n"
+	"#extension GL_EXT_geometry_shader : enable\n"
+	"#extension GL_OES_geometry_shader : enable\n"
 	"layout(points) in;\n"
-	"layout(triangle_strip, max_vertices = 3) out;\n"
+	"layout(triangle_strip, max_vertices = 15) out;\n"
+	"#include \"uniforms.glsl\"\n"
+	);
+	strcat(default_gs,
 	"flat in uvec2 $id[1];\n"
 	"flat in uint $matid[1];\n"
 	"flat in vec2 $object_id[1];\n"
@@ -112,11 +113,13 @@ void shaders_reg()
 	"flat in vec3 $obj_pos[1];\n"
 	"flat in mat4 $model[1];\n"
 	"in vec3 $poly_color[1];\n"
+	"in vec3 $vertex_position[1];\n"
+	"in vec3 $vertex_world_position[1];\n"
+	"in vec2 $texcoord[1];\n"
+	"in vec3 $vertex_normal[1];\n"
+	"in vec3 $vertex_tangent[1];\n"
 	);
 	strcat(default_gs,
-	"in vec3 $vertex_position[1];\n"
-	"in vec2 $texcoord[1];\n"
-	"in mat3 $TM[1];\n"
 	"flat out uvec2 id;\n"
 	"flat out uint matid;\n"
 	"flat out vec2 object_id;\n"
@@ -125,81 +128,89 @@ void shaders_reg()
 	"flat out mat4 model;\n"
 	"out vec3 poly_color;\n"
 	"out vec3 vertex_position;\n"
+	"out vec3 vertex_world_position;\n"
 	"out vec2 texcoord;\n"
-	"out mat3 TM;\n"
+	"out vec3 vertex_normal;\n"
+	"out vec3 vertex_tangent;\n"
 	);
-}
-
-vertex_modifier_t _vertex_modifier_new(bool_t has_skin, const char *code,
-                                       bool_t defines, bool_t has_gshader)
-{
-	vertex_modifier_t self;
-	self.type = 0;
-	self.code = string_preprocess(code, strlen(code), "vmodifier", defines, has_gshader,
-	                              has_skin);
-	return self;
 }
 
 vertex_modifier_t vertex_modifier_new(const char *code)
 {
-	return _vertex_modifier_new(false, code, false, false);
-}
-
-vertex_modifier_t _geometry_modifier_new(const char *code, bool_t defines)
-{
 	vertex_modifier_t self;
-	self.type = 1;
-	self.code = string_preprocess(code, strlen(code), "gmodifier", defines, true,
-	                              false);
+	self.type = 0;
+	self.code = str_dup(code);
 	return self;
 }
 
-
 vertex_modifier_t geometry_modifier_new(const char *code)
 {
-	return _geometry_modifier_new(code, false);
+	vertex_modifier_t self;
+	self.type = 1;
+	self.code = str_dup(code);
+	return self;
 }
 
 
 uint32_t vs_new_loader(vs_t *self)
 {
-	uint32_t i;
-	uint32_t vcode_size = 0;
-	uint32_t gcode_size = 0;
-
-	for(i = 0; i < self->vmodifier_num; i++)
+	if(self->vmodifier_num)
 	{
-		vcode_size += strlen(self->vmodifiers[i].code) + 1;
-	}
-
-	for(i = 0; i < self->gmodifier_num; i++)
-	{
-		gcode_size += strlen(self->gmodifiers[i].code) + 1;
-	}
-
-	if(vcode_size)
-	{
-		self->vcode = malloc(vcode_size); self->vcode[0] = '\0';
+		unsigned int i;
+		char *code = str_new(64);
+		char *ncode;
 		for(i = 0; i < self->vmodifier_num; i++)
 		{
-			strcat(self->vcode, self->vmodifiers[i].code);
+			str_cat(&code, self->vmodifiers[i].code);
 		}
+		ncode = string_preprocess(code, str_len(code), "vmodifier", true,
+		                          self->gmodifier_num > 0, self->has_skin);
 		self->vprogram = glCreateShader(GL_VERTEX_SHADER); glerr();
-		glShaderSource(self->vprogram, 1, (const GLchar**)&self->vcode, NULL);
+		glShaderSource(self->vprogram, 1, (const GLchar**)&ncode, NULL);
 		glCompileShader(self->vprogram); glerr();
-		checkShaderError(self->vprogram, self->name, self->vcode);
+		checkShaderError(self->vprogram, self->name, ncode);
+		str_free(code);
+		free(ncode);
 	}
-	if(gcode_size)
+	if(self->gmodifier_num)
 	{
-		self->gcode = malloc(gcode_size); self->gcode[0] = '\0';
+		unsigned int i;
+		char *code = str_new(64);
+		char *ncode;
 		for(i = 0; i < self->gmodifier_num; i++)
 		{
-			strcat(self->gcode, self->gmodifiers[i].code);
+			str_cat(&code, self->gmodifiers[i].code);
 		}
+		ncode = string_preprocess(code, str_len(code), "gmodifier", false,
+		                          true, self->has_skin);
+
+		/* { */
+		/* const char *line = ncode; */
+		/* uint32_t line_num = 1u; */
+		/* while (true) */
+		/* { */
+		/* 	char *next_line = strchr(line, '\n'); */
+		/* 	if (next_line) */
+		/* 	{ */
+		/* 		printf("%d	%.*s\n", line_num, (int)(next_line - line), line); */
+		/* 		line = next_line+1; */
+		/* 	} */
+		/* 	else */
+		/* 	{ */
+		/* 		printf("%d	%s\n", line_num, line); */
+		/* 		break; */
+		/* 	} */
+		/* 	line_num++; */
+		/* } */
+		/* } */
+
 		self->gprogram = glCreateShader(GL_GEOMETRY_SHADER); glerr();
-		glShaderSource(self->gprogram, 1, (const GLchar**)&self->gcode, NULL);
+		glShaderSource(self->gprogram, 1, (const GLchar**)&ncode, NULL);
 		glCompileShader(self->gprogram); glerr();
-		checkShaderError(self->gprogram, self->name, self->gcode);
+		checkShaderError(self->gprogram, self->name, ncode);
+		str_free(code);
+
+		free(ncode);
 	}
 	self->ready = 1;
 	printf("vs ready %s\n", self->name);
@@ -238,8 +249,7 @@ vs_t *vs_new(const char *name, bool_t has_skin, uint32_t num_modifiers, ...)
 	}
 	va_end(va);
 
-	self->vmodifiers[0] = _vertex_modifier_new(has_skin, default_vs, true,
-	                                           self->gmodifier_num > 0);
+	self->vmodifiers[0] = vertex_modifier_new(default_vs);
 
 	if(self->gmodifier_num > 0)
 	{
@@ -557,8 +567,6 @@ static uint32_t shader_new_loader(shader_t *self)
 	if (!isLinked)
 	{
 		printf("%u %u %u\n", fprogram, vprogram, gprogram);
-		printf("VS: %s\n", g_vs[self->index].vcode);
-		printf("GS: %s\n", g_vs[self->index].gcode);
 		exit(1);
 	}
 

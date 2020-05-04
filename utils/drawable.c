@@ -1141,6 +1141,7 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 		else
 		{
 			primitive = GL_POINTS;
+			glPointSize(5.f);
 		}
 	}
 	if (self->inst_num == 1) instance_id = 0;

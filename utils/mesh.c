@@ -2879,11 +2879,12 @@ void _mesh_point_grid(mesh_t *self, vecN_t start, vecN_t size,
 	else
 	{
 		uint32_t i;
+		uint32_t num_segments = ((uint32_t*)&segments)[dim];
 		vecN_t iter = start;
-		for (i = 0; i < ((uint32_t*)&segments)[dim]; i++)
+
+		for (i = 0; i < num_segments; i++)
 		{
-			((uint32_t*)&iter)[dim] = ((uint32_t*)&start)[dim]
-			                        + ((uint32_t*)&size)[dim] * i;
+			((float*)&iter)[dim] += ((float*)&size)[dim] / (float)num_segments;
 			_mesh_point_grid(self, iter, size, segments, dim + 1);
 		}
 	}

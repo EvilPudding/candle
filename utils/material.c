@@ -1106,7 +1106,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 				"	vec4 final = vec4(1.0);\n"
 				"	if (pbr_in.roughness > 0.0) {\n"
 				"		vec3 nor = get_normal(pbr_in.normal);\n"
-				"		vec2 coord = pp + nor.xy * (pbr_in.roughness * 0.03);\n"
+				"		vec2 coord = pp + nor.xy * (0.1 + pbr_in.roughness * 0.03);\n"
 				"		float mip = clamp(pbr_in.roughness * 3.0, 0.0, 3.0);\n"
 				"		vec3 refracted = textureLod(refr.color, coord.xy, mip).rgb;\n"
 				"		refracted = refracted * (1.0 - pbr_in.absorb);\n"
@@ -1114,6 +1114,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 				"	} else {\n"
 				"	}\n"
 				"	final.rgb += pbr_in.emissive;\n"
+				"	final.rgb *= poly_color;\n"
 				"	FragColor = final;\n");
 		}
 		str_cat(&gbuffer, "#else\n");
@@ -1159,27 +1160,6 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	str_cat(&gbuffer,
 		"#endif\n"
 		"}\n");
-
-	/* if (output_type == ref("opaque")) */
-	/* { */
-	/* 	const char *line = gbuffer; */
-	/* 	uint32_t line_num = 1u; */
-	/* 	while (true) */
-	/* 	{ */
-	/* 		char *next_line = strchr(line, '\n'); */
-	/* 		if (next_line) */
-	/* 		{ */
-	/* 			printf("%d	%.*s\n", line_num, (int)(next_line - line), line); */
-	/* 			line = next_line+1; */
-	/* 		} */
-	/* 		else */
-	/* 		{ */
-	/* 			printf("%d	%s\n", line_num, line); */
-	/* 			break; */
-	/* 		} */
-	/* 		line_num++; */
-	/* 	} */
-	/* } */
 
 	c_render_device(&SYS)->shader = NULL;
 	c_render_device(&SYS)->frag_bound = NULL;

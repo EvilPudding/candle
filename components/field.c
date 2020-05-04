@@ -1,4 +1,5 @@
 #include "field.h"
+#include "model.h"
 #include "node.h"
 #include "spatial.h"
 #include "light.h"
@@ -8,27 +9,24 @@
 #include <systems/editmode.h>
 #include <candle.h>
 
-static vs_t *g_field_vs;
-
 static int c_field_position_changed(c_field_t *self);
+
+static vs_t *g_field_vs;
 
 vs_t *field_vs()
 {
 	if (!g_field_vs)
 	{
-		g_field_vs = vs_new("field", false, 1, geometry_modifier_new(
-			"#include \"marching.glsl\"\n"
-		));
+		g_field_vs = vs_new("field", false, 1, geometry_modifier_new("#include \"marching.glsl\"\n"));
 	}
 	return g_field_vs;
 }
 
 static void c_field_init(c_field_t *self)
 {
-	field_vs();
 	drawable_init(&self->draw, ref("visible"));
 	drawable_add_group(&self->draw, ref("selectable"));
-	drawable_set_vs(&self->draw, g_field_vs);
+	drawable_set_vs(&self->draw, field_vs());
 	drawable_set_entity(&self->draw, c_entity(self));
 
 	self->visible = 1;
@@ -81,10 +79,10 @@ int c_field_menu(c_field_t *self, void *ctx)
 void c_field_pre_draw(c_field_t *self, shader_t *shader)
 {
 
-	uint32_t loc = shader_cached_uniform(shader, ref("values"));
-	glUniform1i(loc, 6);
-	glActiveTexture(GL_TEXTURE0 + 6);
-	texture_bind(self->values, 0);
+	/* uint32_t loc = shader_cached_uniform(shader, ref("values")); */
+	/* glUniform1i(loc, 16); */
+	/* glActiveTexture(GL_TEXTURE0 + 16); */
+	/* texture_bind(self->values, 0); */
 	glerr();
 }
 
@@ -93,7 +91,7 @@ c_field_t *c_field_new(mat_t *mat, vec3_t start, vec3_t end, float cell_size,
 {
 	vec3_t size;
 	uvec3_t segments;
-	uint32_t x, y, z;
+	/* uint32_t x, y, z; */
 	c_field_t *self = component_new(ct_field);
 
 	self->cast_shadow = cast_shadow;
@@ -102,28 +100,34 @@ c_field_t *c_field_new(mat_t *mat, vec3_t start, vec3_t end, float cell_size,
 	segments = uvec3(size.x / cell_size,
 	                 size.y / cell_size,
 	                 size.z / cell_size);
-	self->values = texture_new_3D(_vec3(segments), 1);
-	for (x = 0; x < segments.x; x++)
-		for (y = 0; y < segments.y; y++)
-			for (z = 0; z < segments.z; z++)
-	{
-		float fx = cell_size * x - start.x;
-		float fy = cell_size * y - start.y;
-		/* float fz = cell_size * z - start.z; */
-		uint32_t i = x + y * segments.x + z * (segments.x * segments.y);
-		float sx = sinf(fx);
-		float cy = cosf(fy);
-		if (sx < 0.0f) sx = 0.0f;
-		if (cy < 0.0f) cy = 0.0f;
+	/* self->values = texture_new_3D(_vec3(segments), 1); */
+	/* for (x = 0; x < segments.x; x++) */
+	/* 	for (y = 0; y < segments.y; y++) */
+	/* 		for (z = 0; z < segments.z; z++) */
+	/* { */
+	/* 	float fx = cell_size * x - start.x; */
+	/* 	float fy = cell_size * y - start.y; */
+	/* 	/1* float fz = cell_size * z - start.z; *1/ */
+	/* 	uint32_t i = x + y * segments.x + z * (segments.x * segments.y); */
+	/* 	float sx = sinf(fx); */
+	/* 	float cy = cosf(fy); */
+	/* 	if (sx < 0.0f) sx = 0.0f; */
+	/* 	if (cy < 0.0f) cy = 0.0f; */
 
-		self->values->bufs[0].data[i] =   sx * cy * 255.0f;
-	}
-	texture_update_gl(self->values);
+	/* 	self->values->bufs[0].data[i] =   sx * cy * 255.0f; */
+	/* } */
+	/* texture_update_gl(self->values); */
 
 	self->mesh = mesh_new();
+	self->mesh->has_texcoords = false;
 	mesh_point_grid(self->mesh, start, size, segments);
 	drawable_set_mesh(&self->draw, self->mesh);
-	drawable_set_callback(&self->draw, (draw_cb)c_field_pre_draw, self);
+	/* drawable_set_callback(&self->draw, (draw_cb)c_field_pre_draw, self); */
+	drawable_set_entity(&self->draw, c_entity(self));
+	if (cast_shadow)
+		drawable_add_group(&self->draw, ref("shadow"));
+	/* drawable_add_group(&self->draw, ref("selectable")); */
+
 	c_field_set_mat(self, mat);
 
 	c_field_position_changed(self);

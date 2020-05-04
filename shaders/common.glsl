@@ -28,7 +28,6 @@ in vec3 vertex_position;
 in vec3 vertex_tangent;
 in vec3 vertex_normal;
 in vec3 vertex_world_position;
-in float vertex_distance;
 in vec2 texcoord;
 
 vec2 sampleCube(const vec3 v, out uint faceIndex, out float z)

@@ -26,8 +26,6 @@ typedef struct
 	uint32_t vprogram;
 	uint32_t gprogram;
 	uint32_t ready;
-	char *vcode;
-	char *gcode;
 	bool_t has_skin;
 } vs_t;
 
