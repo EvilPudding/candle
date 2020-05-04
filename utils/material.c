@@ -487,6 +487,7 @@ void materials_reg()
 	sauces_loader(ref("mat"), mat_loader);
 	sauces_register("_default.mat", NULL, mat_new("_default.mat", "default"));
 	sauces_register("_parallax.mat", NULL, mat_new("_parallax.mat", "parallax"));
+	sauces_register("_transparent.mat", NULL, mat_new("_transparent.mat", "transparent"));
 	sauces_register("_decal.mat", NULL, mat_new("_decal.mat", "decal"));
 }
 
@@ -985,6 +986,15 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		str_cat(&gbuffer,
 			"#ifdef QUERY_PASS\n"
 			"	if (((int(gl_FragCoord.x) + int(gl_FragCoord.y)) & 1) == 0)\n"
+			"		discard;\n"
+			"#endif\n"
+		);
+	}
+	else
+	{
+		str_cat(&gbuffer,
+			"#ifdef QUERY_PASS\n"
+			"	if (((int(gl_FragCoord.x) + int(gl_FragCoord.y)) & 1) == 1)\n"
 			"		discard;\n"
 			"#endif\n"
 		);
