@@ -1166,7 +1166,6 @@ int32_t load_tex_tile(tex_tile_t *tile)
 #else
 	bytes = stbi_load(buffer, &w, &h, &dims, 4);
 #endif
-	printf("%d %d\n", w, h);
 	dims = 4;
 	assert(w == 129 && h == 129);
 	memcpy(tile->bytes, bytes, w * h * 4);
