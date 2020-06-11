@@ -42,7 +42,7 @@ typedef struct
 	int32_t ind_num_gl;
 
 	bool_t updating;
-	uint32_t vbo[24];
+	uint32_t vbo[9];
 
 	int32_t update_id_gl;
 	int32_t update_id_ram;
@@ -93,7 +93,7 @@ typedef struct draw_conf
 	/* ----------- */
 
 	uint32_t vao;
-	uint32_t vbo[24];
+	uint32_t vbo[5];
 	uint32_t skin;
 
 	struct conf_vars vars;

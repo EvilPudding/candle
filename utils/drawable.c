@@ -895,9 +895,9 @@ static void varray_update_buffers(varray_t *self)
 	if (self->ind_num > self->ind_num_gl)
 	{
 		self->ind_num_gl = self->ind_num;
-		if (!vbo[15]) glGenBuffers(1, &vbo[15]);
+		if (!vbo[8]) glGenBuffers(1, &vbo[8]);
 
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[15]);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[8]);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, self->ind_num *
 				sizeof(*self->ind), self->ind, GL_STATIC_DRAW);
 		glerr();
@@ -934,7 +934,7 @@ static void varray_update_buffers(varray_t *self)
 		}
 
 		/* INDEX BUFFER */
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[15]);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[8]);
 		glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
 				self->ind_num * sizeof(*self->ind), self->ind);
 		glerr();
@@ -992,26 +992,26 @@ static void varray_bind(varray_t *self)
 		bind_buffer(&vbo[7], 7, GL_FLOAT, 4, 0);
 	}
 
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[15]);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[8]);
 }
 
 static void draw_conf_update_vao(draw_conf_t *self)
 {
-	if (!self->vbo[8]) return;
+	if (!self->vbo[0]) return;
 
 	if (!self->vao) glGenVertexArrays(1, &self->vao);
 	glBindVertexArray(self->vao); glerr();
 	varray_bind(self->varray);
 
 	/* TRANSFORM BUFFER */
-	bind_buffer(&self->vbo[8], 8, GL_FLOAT, 16, 1);
+	bind_buffer(&self->vbo[0], 8, GL_FLOAT, 16, 1);
 
 	/* PROPERTY BUFFER */
-	bind_buffer(&self->vbo[12], 12, GL_FLOAT, 4, 1);
+	bind_buffer(&self->vbo[4], 12, GL_FLOAT, 4, 1);
 
 #ifdef MESH4
 	/* 4D ANGLE BUFFER */
-	bind_buffer(&self->vbo[13], 13, GL_FLOAT, 1, 1);
+	bind_buffer(&self->vbo[5], 13, GL_FLOAT, 1, 1);
 #endif
 	glBindVertexArray(0); glerr();
 }
@@ -1198,7 +1198,7 @@ static void draw_conf_update_props(draw_conf_t *self)
 {
 	uint32_t i;
 	/* PROPERTY BUFFER */
-	update_buffer(&self->vbo[12], self->props, 4, self->inst_num, 0); glerr();
+	update_buffer(&self->vbo[4], self->props, 4, self->inst_num, 0); glerr();
 	for(i = 0; i < self->inst_num; i++)
 	{
 		self->comps[i]->updates &= ~MASK_PROPS;
@@ -1209,11 +1209,11 @@ static void draw_conf_update_trans(draw_conf_t *self)
 {
 	uint32_t i;
 	/* TRANSFORM BUFFER */
-	update_buffer(&self->vbo[8], self->inst, 16, self->inst_num, 0); glerr();
+	update_buffer(&self->vbo[0], self->inst, 16, self->inst_num, 0); glerr();
 
 #ifdef MESH4
 	/* 4D ANGLE BUFFER */
-	update_buffer(&self->vbo[13], self->angle4, 1, self->inst_num, 0); glerr();
+	update_buffer(&self->vbo[5], self->angle4, 1, self->inst_num, 0); glerr();
 #endif
 
 	for(i = 0; i < self->inst_num; i++)
@@ -1227,7 +1227,7 @@ static void draw_conf_update_inst_props(draw_conf_t *self, int32_t id)
 	if (self->comps[id]->updates & MASK_PROPS)
 	{
 		/* PROPERTY BUFFER */
-		update_buffer(&self->vbo[12], &self->props[id], 4, 1, id); glerr();
+		update_buffer(&self->vbo[4], &self->props[id], 4, 1, id); glerr();
 	}
 	self->comps[id]->updates &= ~MASK_PROPS;
 }
@@ -1237,11 +1237,11 @@ static void draw_conf_update_inst_trans(draw_conf_t *self, int32_t id)
 	if (self->comps[id]->updates & MASK_TRANS)
 	{
 		/* TRANSFORM BUFFER */
-		update_buffer(&self->vbo[8], &self->inst[id], 16, 1, id); glerr();
+		update_buffer(&self->vbo[0], &self->inst[id], 16, 1, id); glerr();
 
 #ifdef MESH4
 		/* 4D ANGLE BUFFER */
-		update_buffer(&self->vbo[13], &self->angle4[id], 1, 1, id); glerr();
+		update_buffer(&self->vbo[5], &self->angle4[id], 1, 1, id); glerr();
 #endif
 	}
 
@@ -1257,14 +1257,14 @@ static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 		self->gl_inst_num = self->inst_num;
 
 		/* TRANSFORM BUFFER */
-		create_buffer(&self->vbo[8], self->inst, 16, self->inst_num, 1);
+		create_buffer(&self->vbo[0], self->inst, 16, self->inst_num, 1);
 
 		/* MATERIAL BUFFER */
-		create_buffer(&self->vbo[12], self->props, 4, self->inst_num, 1);
+		create_buffer(&self->vbo[4], self->props, 4, self->inst_num, 1);
 
 #ifdef MESH4
 		/* 4D ANGLE BUFFER */
-		create_buffer(&self->vbo[13], self->angle4, 1, self->inst_num, 1);
+		create_buffer(&self->vbo[5], self->angle4, 1, self->inst_num, 1);
 #endif
 		return;
 	}
@@ -1315,7 +1315,7 @@ static void draw_conf_update_inst(draw_conf_t *self, int32_t id)
 void varray_destroy(varray_t *self)
 {
 	int32_t i;
-	for(i = 0; i < 24; i++) if (self->vbo[i]) glDeleteBuffers(1, &self->vbo[i]);
+	for(i = 0; i < 9; i++) if (self->vbo[i]) glDeleteBuffers(1, &self->vbo[i]);
 	if (self->tex) free(self->tex);
 	if (self->nor) free(self->nor);
 	if (self->pos) free(self->pos);
@@ -1337,7 +1337,7 @@ void draw_conf_destroy(draw_conf_t *self)
 		glDeleteVertexArrays(1, &self->vao);
 	}
 	self->vao = 0;
-	for(i = 0; i < 24; i++) if (self->vbo[i]) glDeleteBuffers(1, &self->vbo[i]);
+	for(i = 0; i < 5; i++) if (self->vbo[i]) glDeleteBuffers(1, &self->vbo[i]);
 #ifdef MESH4
 	if (self->angle4) free(self->angle4);
 #endif
