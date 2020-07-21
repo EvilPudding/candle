@@ -925,7 +925,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	output_type = call->type->id;
 
 	gbuffer = str_new(128);
-	str_cat(&gbuffer, "#include \"common.glsl\"\n");
+	str_cat(&gbuffer, "#include \"candle:common.glsl\"\n");
 	vil_foreach_func(call->type->ctx, (vil_func_cb)material_generate_struct, &gbuffer);
 	vil_foreach_func(call->type->ctx, (vil_func_cb)material_generate_func, &gbuffer);
 
@@ -1187,43 +1187,43 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	str_cat(&transp, gbuffer);
 
 	id = type - g_mat_types;
-	str_catf(&d_name, "depth#%d", id);
-	str_catf(&d_name2, "depth#%d.glsl", id);
-	str_catf(&q_name, "query_mips#%d", id);
-	str_catf(&q_name2, "query_mips#%d.glsl", id);
-	str_catf(&s_name, "select#%d", id);
-	str_catf(&s_name2, "select#%d.glsl", id);
-	str_catf(&name, "gbuffer#%d", id);
-	str_catf(&name2, "gbuffer#%d.glsl", id);
-	str_catf(&t_name, "transparency#%d", id);
-	str_catf(&t_name2, "transparency#%d.glsl", id);
+	str_catf(&d_name, "candle:depth#%d", id);
+	str_catf(&d_name2, "candle:depth#%d.glsl", id);
+	str_catf(&q_name, "candle:query_mips#%d", id);
+	str_catf(&q_name2, "candle:query_mips#%d.glsl", id);
+	str_catf(&s_name, "candle:select#%d", id);
+	str_catf(&s_name2, "candle:select#%d.glsl", id);
+	str_catf(&name, "candle:gbuffer#%d", id);
+	str_catf(&name2, "candle:gbuffer#%d.glsl", id);
+	str_catf(&t_name, "candle:transparency#%d", id);
+	str_catf(&t_name2, "candle:transparency#%d.glsl", id);
 
 	if (type->src)
 	{
 		if (strcmp(type->src, gbuffer))
 		{
 			fs_t *fs;
-			shader_add_source(name2, (unsigned char*)gbuffer, str_len(gbuffer));
-			shader_add_source(q_name2, (unsigned char*)query, str_len(query));
-			shader_add_source(d_name2, (unsigned char*)depth, str_len(depth));
-			shader_add_source(s_name2, (unsigned char*)select, str_len(select));
-			shader_add_source(t_name2, (unsigned char*)transp, str_len(transp));
+			shader_add_source(name2, gbuffer, str_len(gbuffer));
+			shader_add_source(q_name2, query, str_len(query));
+			shader_add_source(d_name2, depth, str_len(depth));
+			shader_add_source(s_name2, select, str_len(select));
+			shader_add_source(t_name2, transp, str_len(transp));
 
 			str_free(type->src);
 			type->src = gbuffer;
-			fs = fs_new("gbuffer");
+			fs = fs_new("candle:gbuffer");
 			fs_update_variation(fs, id);
 
-			fs = fs_new("query_mips");
+			fs = fs_new("candle:query_mips");
 			fs_update_variation(fs, id);
 
-			fs = fs_new("depth");
+			fs = fs_new("candle:depth");
 			fs_update_variation(fs, id);
 
-			fs = fs_new("select");
+			fs = fs_new("candle:select");
 			fs_update_variation(fs, id);
 
-			fs = fs_new("transparency");
+			fs = fs_new("candle:transparency");
 			fs_update_variation(fs, id);
 		}
 		else
@@ -1236,26 +1236,26 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	{
 		fs_t *fs;
 
-		shader_add_source(name2, (unsigned char*)gbuffer, str_len(gbuffer));
-		shader_add_source(q_name2, (unsigned char*)query, str_len(query));
-		shader_add_source(d_name2, (unsigned char*)depth, str_len(depth));
-		shader_add_source(s_name2, (unsigned char*)select, str_len(select));
-		shader_add_source(t_name2, (unsigned char*)transp, str_len(transp));
+		shader_add_source(name2, gbuffer, str_len(gbuffer));
+		shader_add_source(q_name2, query, str_len(query));
+		shader_add_source(d_name2, depth, str_len(depth));
+		shader_add_source(s_name2, select, str_len(select));
+		shader_add_source(t_name2, transp, str_len(transp));
 
 		type->src = gbuffer;
-		fs = fs_new("gbuffer");
+		fs = fs_new("candle:gbuffer");
 		fs_push_variation(fs, name);
 
-		fs = fs_new("query_mips");
+		fs = fs_new("candle:query_mips");
 		fs_push_variation(fs, q_name);
 
-		fs = fs_new("depth");
+		fs = fs_new("candle:depth");
 		fs_push_variation(fs, d_name);
 
-		fs = fs_new("select");
+		fs = fs_new("candle:select");
 		fs_push_variation(fs, s_name);
 
-		fs = fs_new("transparency");
+		fs = fs_new("candle:transparency");
 		fs_push_variation(fs, t_name);
 	}
 

@@ -13,6 +13,7 @@
 #include <vil/vil.h>
 #include <stdlib.h>
 #include <utils/renderer.h>
+#include <utils/str.h>
 
 static int32_t c_editmode_activate_loader(c_editmode_t *self);
 static void c_editmode_open_entity(c_editmode_t *self, entity_t ent);
@@ -112,7 +113,7 @@ int32_t rotate_init(struct edit_rotate *self, c_editmode_t *ec)
 
 		renderer = c_camera(&ec->camera)->renderer;
 
-		renderer_add_pass(renderer, "tool", "editmode", ref("quad"),
+		renderer_add_pass(renderer, "tool", "editmode:tool_rotation", ref("quad"),
 				ADD, renderer_tex(renderer, ref("final")), NULL, 0, ~0, 5,
 				opt_vec2("mouse_pos", Z2, (getter_cb)bind_mouse_pos),
 				opt_num("start_radius", 0.f, (getter_cb)bind_start_radius),
@@ -551,11 +552,365 @@ c_editmode_t *c_editmode_new()
 	return self;
 }
 
+static void editmode_highlight_shader()
+{
+	char *shader_buffer = str_new(64);
+
+	str_cat(&shader_buffer,
+		"#include \"candle:common.glsl\"\n"
+		"layout (location = 0) out vec4 FragColor;\n"
+		"uniform vec2 over_id;\n"
+		"uniform vec2 sel_id;\n"
+		"uniform vec2 over_poly_id;\n"
+		"uniform vec2 context_id;\n"
+		"uniform int mode;\n"
+		"uniform vec3 context_pos;\n"
+		"uniform float context_phase;\n"
+		"#define EDIT_VERT	0\n"
+		"#define EDIT_EDGE	1\n"
+		"#define EDIT_FACE	2\n"
+		"#define EDIT_OBJECT	3\n"
+		"const vec2 zero = vec2(0.003922, 0.000000);\n");
+
+	str_cat(&shader_buffer,
+		"bool is_equal(vec2 a, vec2 b)\n"
+		"{\n"
+		"	a = round(a * 255.0); \n"
+		"	b = round(b * 255.0); \n"
+		"	return (b.x == a.x && b.y == a.y);\n"
+		"}\n"
+		"BUFFER {\n"
+		"	sampler2D ids;\n"
+		"} sbuffer;\n"
+		"BUFFER {\n"
+		"	sampler2D occlusion;\n"
+		"} ssao;\n");
+
+	str_cat(&shader_buffer,
+		"void main(void)\n"
+		"{\n"
+		"	vec2 c;\n"
+		"	vec2 c2;\n"
+		"	float occlusion = textureLod(ssao.occlusion, pixel_pos(), 0.0).r;\n"
+		"	vec4 both = textureLod(sbuffer.ids, pixel_pos(), 0.0);\n"
+		"	c = both.rg;\n"
+		"	c2 = both.ba;\n"
+		"	const vec3 over_poly_color = vec3(0.2, 0.02, 0.5);\n"
+		"	const vec3 over_color = vec3(0.05);\n"
+		"	vec3 final = vec3(0.0);\n"
+		"	if(is_equal(over_id, c))\n"
+		"	{\n"
+		"		if(mode != EDIT_OBJECT)\n"
+		"		{\n"
+		"			final += over_poly_color;\n"
+		"		}\n"
+		"		else\n"
+		"		{\n"
+		"			final += over_color;\n"
+		"		}\n"
+		"	}\n"
+		"	FragColor = vec4(final, 1.0);\n"
+		"}\n");
+
+	shader_add_source("editmode:highlight.glsl", shader_buffer,
+	                  str_len(shader_buffer));
+	str_free(shader_buffer);
+}
+
+static void editmode_border_shader()
+{
+	char *shader_buffer = str_new(64);
+
+	str_cat(&shader_buffer,
+		"#include \"candle:common.glsl\"\n"
+		"layout (location = 0) out vec4 FragColor;\n"
+		"uniform bool horizontal;\n"
+		"uniform vec2 sel_id;\n"
+		"float filtered(vec2 c, vec2 fil)\n"
+		"{\n"
+		"	fil = round(fil * 255.0); \n"
+		"	c = round(c * 255.0); \n"
+		"	if(c.x != fil.x || c.y != fil.y)\n"
+		"	{\n"
+		"		return 0.0;\n"
+		"	}\n"
+		"	return 1.0;\n"
+		"}\n"
+		"bool is_equal(vec2 a, vec2 b)\n"
+		"{\n"
+		"	a = round(a * 255.0); \n"
+		"	b = round(b * 255.0); \n"
+		"	return (b.x == a.x && b.y == a.y);\n"
+		"}\n"
+		"BUFFER {\n"
+		"	sampler2D depth;\n"
+		"	sampler2D ids;\n"
+		"} sbuffer;\n"
+		"BUFFER {\n"
+		"	sampler2D color;\n"
+		"} tmp;\n");
+
+	str_cat(&shader_buffer,
+		"void pixel_value(ivec2 coord, int offset, in out float accum_value, in out float accum_depth)\n"
+		"{\n"
+		"	const float weight[6] = float[] (0.382925, 0.24173, 0.060598, 0.005977, 0.000229, 0.000003);\n"
+		"	vec2 t = texelFetch(sbuffer.ids, coord, 0).rg;\n"
+		"	float value = is_equal(sel_id, t) ? weight[offset] : 0.0;\n"
+		"	accum_value += value;\n"
+		"	if (value > 0.0)\n"
+		"	{\n"
+		"		accum_depth = min(texelFetch(sbuffer.depth, coord, 0).r, accum_depth);\n"
+		"	}\n"
+		"}\n"
+		);
+
+	str_cat(&shader_buffer,
+		"void pixel_value2(ivec2 coord, int offset, in out float accum_value, in out float accum_depth)\n"
+		"{\n"
+		"	const float weight[6] = float[] (0.382925, 0.24173, 0.060598, 0.005977, 0.000229, 0.000003);\n"
+		"	vec2 tex = texelFetch(tmp.color, coord, 0).rg;\n"
+		"	float depth = tex.g;\n"
+		"	float value = tex.r * weight[offset];\n"
+		"	accum_value += value;\n"
+		"	if (value > 0.0)\n"
+		"	{\n"
+		"		accum_depth = min(depth, accum_depth);\n"
+		"	}\n"
+		"}\n"
+		);
+
+	str_cat(&shader_buffer,
+		"void accum_horiz(ivec2 tc, float center_value)\n"
+		"{\n"
+		"	float accum_value = center_value * 2.0, accum_depth = 2.0;\n"
+		"	for(int i = 1; i < 6; ++i)\n"
+		"	{\n"
+		"		float value, depth;\n"
+		"		ivec2 off = ivec2(i, 0);\n"
+		"		pixel_value(tc + off, i, accum_value, accum_depth);\n"
+		"		pixel_value(tc - off, i, accum_value, accum_depth);\n"
+		"	}\n"
+		"	FragColor = vec4(accum_value, accum_depth, 0.0, 0.0);\n"
+		"}\n");
+
+	str_cat(&shader_buffer,
+		"void accum_vertical(ivec2 tc)\n"
+		"{\n"
+		"	const vec3 color = vec3(0.8, 0.7, 0.2);\n"
+		"	float accum_value, accum_depth;\n"
+		"	pixel_value2(tc, 0, accum_value, accum_depth);\n"
+		"	for(int i = 1; i < 6; ++i)\n"
+		"	{\n"
+		"		ivec2 off = ivec2(0, i);\n"
+		"		pixel_value2(tc + off, i, accum_value, accum_depth);\n"
+		"		pixel_value2(tc - off, i, accum_value, accum_depth);\n"
+		"	}\n"
+		"	float depth = texelFetch(sbuffer.depth, tc, 0).r;\n"
+		"	FragColor = vec4((depth > accum_depth ? color : 1.0 - color) * 2.0,\n"
+		"                    accum_value);\n"
+		"}\n");
+
+	str_cat(&shader_buffer,
+		"void main(void)\n"
+		"{\n"
+		"	ivec2 tc = ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y));\n"
+		"	float center_value = 0., center_depth = 20.;\n"
+		"	pixel_value(tc, 0, center_value, center_depth);\n"
+		"	if(sel_id.x <= 0.0 && sel_id.y <= 0.0) discard;\n"
+		"	if(horizontal)\n"
+		"	{\n"
+		"		accum_horiz(tc, center_value);\n"
+		"	}\n"
+		"	else if(center_value < 0.1)\n"
+		"	{\n"
+		"		accum_vertical(tc);\n"
+		"	}\n"
+		"}\n");
+
+	shader_add_source("editmode:border.glsl", shader_buffer,
+	                  str_len(shader_buffer));
+	str_free(shader_buffer);
+}
+
+static void editmode_context_shader()
+{
+	char *shader_buffer = str_new(64);
+
+	str_cat(&shader_buffer,
+		"#include \"candle:common.glsl\"\n"
+		"layout (location = 0) out vec4 FragColor;\n"
+		"uniform vec2 sel_id;\n"
+		"uniform vec2 context_id;\n"
+		"uniform vec3 context_pos;\n"
+		"uniform float context_phase;\n"
+		"#define EDIT_VERT	0\n"
+		"#define EDIT_EDGE	1\n"
+		"#define EDIT_FACE	2\n"
+		"#define EDIT_OBJECT	3\n"
+		"const vec2 zero = vec2(0.003922, 0.000000);\n"
+		"BUFFER {\n"
+		"	sampler2D ids;\n"
+		"} sbuffer;\n"
+		"BUFFER {\n"
+		"	sampler2D occlusion;\n"
+		"} ssao;\n"
+		"BUFFER {\n"
+		"	sampler2D depth;\n"
+		"} gbuffer;\n");
+
+	str_cat(&shader_buffer,
+		"float filtered(vec2 c, vec2 fil)\n"
+		"{\n"
+		"	fil = round(fil * 255.0);\n"
+		"	c = round(c * 255.0);\n"
+		"	if(c.x != fil.x || c.y != fil.y)\n"
+		"	{\n"
+		"		return 0.0;\n"
+		"	}\n"
+		"	return 1.0;\n"
+		"}\n"
+		"bool is_equal(vec2 a, vec2 b)\n"
+		"{\n"
+		"	a = round(a * 255.0); \n"
+		"	b = round(b * 255.0); \n"
+		"	return (b.x == a.x && b.y == a.y);\n"
+		"}\n");
+
+	str_cat(&shader_buffer,
+		"void outside_context(vec3 w_pos)\n"
+		"{\n"
+		"	vec3 grid = abs(fract(w_pos - 0.5) - 0.5) / fwidth(w_pos);\n"
+		"	float line = 1.0 - min(min(grid.x, grid.y), grid.z);\n"
+		"	float checker;\n"
+		"	if ((int(floor(w_pos.x) + floor(w_pos.y) + floor(w_pos.z)) & 1) == 0)\n"
+		"	{\n"
+		"		checker = 1.0;\n"
+		"	}\n"
+		"	else\n"
+		"	{\n"
+		"		checker = 0.8;\n"
+		"	}\n"
+		"	float occlusion = textureLod(ssao.occlusion, pixel_pos(), 0.0).r;\n"
+		"	FragColor = vec4(vec3(occlusion) * checker * clamp(1.0 - line, 0.8, 1.0), 1.0);\n"
+		"}\n");
+
+	str_cat(&shader_buffer,
+		"void main(void)\n"
+		"{\n"
+		"	vec2 id = textureLod(sbuffer.ids, pixel_pos(), 0.0).rg;\n"
+		"	vec3 c_pos = get_position(gbuffer.depth);\n"
+		"	vec3 w_pos = (camera(model) * vec4(c_pos, 1.0)).xyz;\n"
+		"	w_pos += 0.0001;\n"
+		"	if (length(w_pos - context_pos) + dither_value() * 4.0 > pow(context_phase, 4.0) * 1000.0)\n"
+		"		discard;\n"
+		"	if (id.x == 0.0 && id.y == 0.0)\n"
+		"	{\n"
+		"		outside_context(w_pos);\n"
+		"	}\n"
+		"	discard;\n"
+		"}\n");
+
+	shader_add_source("editmode:context.glsl", shader_buffer,
+	                  str_len(shader_buffer));
+	str_free(shader_buffer);
+}
+
+static void editmode_tool_rotation_shader()
+{
+	char *shader_buffer = str_new(64);
+
+	str_cat(&shader_buffer,
+		"#include \"candle:common.glsl\"\n"
+		"layout (location = 0) out vec4 FragColor;\n"
+		"uniform int mode;\n"
+		"#define EDIT_VERT	0\n"
+		"#define EDIT_EDGE	1\n"
+		"#define EDIT_FACE	2\n"
+		"#define EDIT_OBJECT	3\n"
+		"uniform vec2 mouse_pos;\n"
+		"uniform vec3 selected_pos;\n"
+		"uniform float start_radius;\n"
+		"uniform float tool_fade;\n");
+
+	str_cat(&shader_buffer,
+		"vec3 real_pos(float depth, vec2 coord)\n"
+		"{\n"
+		"	float z = depth * 2.0 - 1.0;\n"
+		"	coord = (coord * 2.0) - 1.0;\n"
+		"	vec4 clipSpacePosition = vec4(coord, z, 1.0);\n"
+		"	vec4 viewSpacePosition = inverse(camera(projection)) * clipSpacePosition;\n"
+		"	viewSpacePosition = viewSpacePosition / viewSpacePosition.w;\n"
+		"	vec4 worldSpacePosition = (inverse(camera(view)) * viewSpacePosition);\n"
+		"	return worldSpacePosition.xyz;\n"
+		"}\n"
+		"float range(float v, float min, float max)\n"
+		"{\n"
+		"	return clamp((v - min) / (max - min), 0.0, 1.0);\n"
+		"}\n");
+
+	str_cat(&shader_buffer,
+		"void main(void)\n"
+		"{\n"
+		"	float intensity, proj_mouse;\n"
+		"	vec2 p = pixel_pos();\n"
+		"	float dist = -(camera(view) * vec4(selected_pos, 1.0)).z;\n"
+		"	dist = unlinearize(dist);\n"
+		"	proj_mouse = real_pos(dist, mouse_pos);\n"
+		"	vec3 proj_pixel = real_pos(dist, p);\n"
+		"	float d = length(proj_pixel - selected_pos);\n"
+		"	float dist_to_mouse = length(proj_mouse - proj_pixel);\n"
+		"	intensity = clamp(1.0 - abs((d - start_radius)/0.4), 0.0, 1.0);\n");
+	str_cat(&shader_buffer,
+		"	float md = clamp((0.4 - dist_to_mouse) / 0.4 - 0.1, 0.0, 1.0);\n"
+		"	intensity += pow(md, 2.0);\n"
+		"	intensity -= max(dist_to_mouse - (1.0 - tool_fade) * start_radius * 2.1, 0.0) * tool_fade;\n"
+		"	if(intensity < 0.9) intensity = 0.0;\n"
+		"	if(intensity > 1.0) intensity = 1.0;\n"
+		"	float rad = abs(length(proj_mouse - selected_pos) - start_radius);\n"
+		"	vec3 color;\n"
+		"	if(rad > 0.3) color = vec3(0.1, 0.1, 0.4);\n"
+		"	else color = vec3(0.2, 0.2, 0.7);\n"
+		"	FragColor = vec4(color * intensity, 1.0);\n"
+		"}\n");
+
+	shader_add_source("editmode:tool_rotation.glsl", shader_buffer,
+	                  str_len(shader_buffer));
+	str_free(shader_buffer);
+}
+
+static
+void editmode_extract_depth_shader()
+{
+	char *shader_buffer = str_new(64);
+
+	str_cat(&shader_buffer,
+		"layout (location = 0) out vec4 FragColor;\n"
+		"BUFFER {\n"
+		"	sampler2D depth;\n"
+		"} depthbuffer;\n"
+		"uniform vec2 position;\n"
+		"void main(void)\n"
+		"{\n"
+		"	float d = texelFetch(depthbuffer.depth, ivec2(position), 0).r * 256.;\n"
+		"	FragColor = vec4(fract(d) * 256., floor(d), 0.0, 0.0) / 255.0;\n"
+		"}\n");
+
+	shader_add_source("editmode:extract_depth.glsl", shader_buffer,
+	                  str_len(shader_buffer));
+	str_free(shader_buffer);
+}
+
 static renderer_t *editmode_renderer_new(c_editmode_t *self)
 {
 	texture_t *tmp, *gbuffer, *query_mips;
 	renderer_t *renderer = renderer_new(1.00f);
 	renderer_default_pipeline(renderer);
+
+	editmode_highlight_shader();
+	editmode_border_shader();
+	editmode_context_shader();
+	editmode_tool_rotation_shader();
+	editmode_extract_depth_shader();
 
 	gbuffer = renderer_tex(renderer, ref("gbuffer"));
 
@@ -568,13 +923,13 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 		buffer_new("color",	true, 4));
 	renderer_add_tex(renderer, "tmp", 1.0f, tmp);
 
-	renderer_add_pass(renderer, "query_widget", "query_mips", ref("widget"),
+	renderer_add_pass(renderer, "query_widget", "candle:query_mips", ref("widget"),
 			0, query_mips, query_mips, 0, ref("query_transp"), 0);
 
-	renderer_add_pass(renderer, "widget", "gbuffer", ref("widget"),
+	renderer_add_pass(renderer, "widget", "candle:gbuffer", ref("widget"),
 			0, gbuffer, gbuffer, 0, ref("decals_pass"), 0);
 
-	renderer_add_pass(renderer, "mouse_depth", "extract_depth", ref("quad"),
+	renderer_add_pass(renderer, "mouse_depth", "editmode:extract_depth", ref("quad"),
 			0, self->mouse_depth, NULL, 0, ref("selectable"), 4,
 			opt_clear_color(Z4, NULL),
 			opt_tex("depthbuffer", renderer_tex(renderer, ref("selectable")), NULL),
@@ -582,7 +937,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 			opt_usrptr(self)
 	);
 
-	renderer_add_pass(renderer, "context", "context", ref("quad"),
+	renderer_add_pass(renderer, "context", "editmode:context", ref("quad"),
 			0, renderer_tex(renderer, ref("final")), NULL, 0, ~0, 10,
 			opt_tex("gbuffer", gbuffer, NULL),
 			opt_tex("sbuffer", renderer_tex(renderer, ref("selectable")), NULL),
@@ -596,7 +951,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 			opt_usrptr(self)
 	);
 
-	renderer_add_pass(renderer, "highlight", "highlight", ref("quad"),
+	renderer_add_pass(renderer, "highlight", "editmode:highlight", ref("quad"),
 			ADD, renderer_tex(renderer, ref("final")), NULL, 0, ~0, 7,
 			opt_tex("sbuffer", renderer_tex(renderer, ref("selectable")), NULL),
 			opt_int("mode", 0, (getter_cb)c_editmode_bind_mode),
@@ -608,7 +963,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	);
 
 
-	renderer_add_pass(renderer, "highlights_0", "border", ref("quad"),
+	renderer_add_pass(renderer, "highlights_0", "editmode:border", ref("quad"),
 			0, tmp, NULL, 0, ~0, 8,
 			opt_clear_color(Z4, NULL),
 			opt_tex("sbuffer", renderer_tex(renderer, ref("selectable")), NULL),
@@ -620,7 +975,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 			opt_usrptr(self)
 	);
 
-	renderer_add_pass(renderer, "highlights_1", "border", ref("quad"),
+	renderer_add_pass(renderer, "highlights_1", "editmode:border", ref("quad"),
 			ADD, renderer_tex(renderer, ref("final")), NULL, 0, ~0, 8,
 			opt_tex("sbuffer", renderer_tex(renderer, ref("selectable")), NULL),
 			opt_tex("tmp", tmp, NULL),

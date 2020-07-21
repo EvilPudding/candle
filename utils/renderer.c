@@ -307,34 +307,34 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 		int from_mip, int to_mip)
 {
 	renderer_add_pass(self, "kawase_p",
-			to_mip == from_mip ? "copy" : "downsample",
+			to_mip == from_mip ? "copy" : "candle:downsample",
 			ref("quad"), 0, t2, NULL, to_mip, ~0, 2,
 			opt_tex("buf", t1, NULL),
 			opt_int("level", from_mip, NULL)
 	);
 
-	renderer_add_pass(self, "kawase_0", "kawase", ref("quad"), 0,
+	renderer_add_pass(self, "kawase_0", "candle:kawase", ref("quad"), 0,
 			t1, NULL, to_mip, ~0, 3,
 			opt_tex( "buf", t2, NULL),
 			opt_int( "distance", 0, NULL),
 			opt_int( "level", to_mip, NULL)
 	);
 
-	renderer_add_pass(self, "kawase_1", "kawase", ref("quad"), 0,
+	renderer_add_pass(self, "kawase_1", "candle:kawase", ref("quad"), 0,
 			t2, NULL, to_mip, ~0, 3,
 			opt_tex("buf", t1, NULL),
 			opt_int("distance", 1, NULL),
 			opt_int("level", to_mip, NULL)
 	);
 
-	renderer_add_pass(self, "kawase_2", "kawase", ref("quad"), 0,
+	renderer_add_pass(self, "kawase_2", "candle:kawase", ref("quad"), 0,
 			t1, NULL, to_mip, ~0, 3,
 			opt_tex("buf", t2, NULL),
 			opt_int("distance", 2, NULL),
 			opt_int("level", to_mip, NULL)
 	);
 
-/* 	renderer_add_pass(self, "kawase_3", "kawase", ref("quad"), 0, */
+/* 	renderer_add_pass(self, "kawase_3", "candle:kawase", ref("quad"), 0, */
 /* 			t2, NULL, to_mip, ~0, */
 /* 		(bind_t[]){ */
 /* 			{TEX, "buf", .buffer = t1}, */
@@ -344,7 +344,7 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 /* 		} */
 /* 	); */
 
-/* 	renderer_add_pass(self, "kawase_4", "kawase", ref("quad"), 0, */
+/* 	renderer_add_pass(self, "kawase_4", "candle:kawase", ref("quad"), 0, */
 /* 			t1, NULL, to_mip, ~0, */
 /* 		(bind_t[]){ */
 /* 			{TEX, "buf", .buffer = t2}, */
@@ -594,19 +594,19 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_tex(self, "selectable", 1.0f, selectable);
 	renderer_add_tex(self, "bloom",      1.0f, bloom);
 
-	renderer_add_pass(self, "query_visible", "query_mips", ref("visible"), 0,
+	renderer_add_pass(self, "query_visible", "candle:query_mips", ref("visible"), 0,
 			query_mips, query_mips, 0, ~0, 3,
 			opt_clear_depth(1.0f, NULL),
 			opt_clear_color(Z4, NULL),
 			opt_skip(16)
 	);
 
-	renderer_add_pass(self, "query_decals", "query_mips", ref("decals"), 0,
+	renderer_add_pass(self, "query_decals", "candle:query_mips", ref("decals"), 0,
 			query_mips, NULL, 0, ~0, 1,
 			opt_skip(16)
 	);
 
-	renderer_add_pass(self, "query_transp", "query_mips", ref("transparent"), 0,
+	renderer_add_pass(self, "query_transp", "candle:query_mips", ref("transparent"), 0,
 			query_mips, query_mips, 0, ~0, 1,
 			opt_skip(16)
 	);
@@ -617,40 +617,40 @@ void renderer_default_pipeline(renderer_t *self)
 			opt_skip(16)
 	);
 
-	renderer_add_pass(self, "gbuffer", "gbuffer", ref("visible"), 0, gbuffer,
+	renderer_add_pass(self, "gbuffer", "candle:gbuffer", ref("visible"), 0, gbuffer,
 			gbuffer, 0, ~0, 2,
 			opt_clear_depth(1.0f, NULL),
 			opt_clear_color(Z4, NULL)
 	);
 
-	renderer_add_pass(self, "framebuffer_pass", "framebuffer_draw", ref("framebuffer"), 0,
+	renderer_add_pass(self, "framebuffer_pass", "candle:framebuffer_draw", ref("framebuffer"), 0,
 			gbuffer, gbuffer, 0, ~0, 0
 	);
 
 	/* DECAL PASS */
-	renderer_add_pass(self, "decals_pass", "gbuffer", ref("decals"), BLEND,
+	renderer_add_pass(self, "decals_pass", "candle:gbuffer", ref("decals"), BLEND,
 			gbuffer, NULL, 0, ~0, 1,
 			opt_tex("gbuffer", gbuffer, NULL)
 	);
 
-	renderer_add_pass(self, "selectable", "select", ref("selectable"),
+	renderer_add_pass(self, "selectable", "candle:select", ref("selectable"),
 			0, selectable, selectable, 0, ~0, 2,
 			opt_clear_depth(1.0f, NULL),
 			opt_clear_color(Z4, NULL)
 	);
 
-	renderer_add_pass(self, "ambient_light_pass", "phong", ref("ambient"),
+	renderer_add_pass(self, "ambient_light_pass", "candle:pbr", ref("ambient"),
 			ADD, light, NULL, 0, ~0, 2,
 			opt_clear_color(Z4, NULL),
 			opt_tex("gbuffer", gbuffer, NULL)
 	);
 
-	renderer_add_pass(self, "render_pass", "phong", ref("light"),
+	renderer_add_pass(self, "render_pass", "candle:pbr", ref("light"),
 			ADD, light, NULL, 0, ~0, 1,
 			opt_tex("gbuffer", gbuffer, NULL)
 	);
 
-	renderer_add_pass(self, "volum_pass", "volum", ref("light"),
+	renderer_add_pass(self, "volum_pass", "candle:volum", ref("light"),
 			ADD | CULL_DISABLE, volum, NULL, 0, ~0, 2,
 			opt_tex("gbuffer", gbuffer, NULL),
 			opt_clear_color(Z4, NULL)
@@ -665,7 +665,7 @@ void renderer_default_pipeline(renderer_t *self)
 	/* 	} */
 	/* ); */
 
-	renderer_add_pass(self, "refraction", "copy", ref("quad"), 0,
+	renderer_add_pass(self, "refraction", "candle:copy", ref("quad"), 0,
 			refr, NULL, 0, ~0, 3,
 			opt_tex("buf", light, NULL),
 			opt_clear_color(Z4, NULL),
@@ -676,21 +676,21 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_kawase(self, refr, tmp, 1, 2);
 	renderer_add_kawase(self, refr, tmp, 2, 3);
 
-	renderer_add_pass(self, "transp_1", "gbuffer", ref("transparent"),
+	renderer_add_pass(self, "transp_1", "candle:gbuffer", ref("transparent"),
 			0, gbuffer, gbuffer, 0, ~0, 0);
 
-	renderer_add_pass(self, "transp_2", "transparency", ref("transparent"),
+	renderer_add_pass(self, "transp_2", "candle:transparency", ref("transparent"),
 			DEPTH_LOCK | DEPTH_EQUAL, light, gbuffer, 0, ~0, 1,
 			opt_tex("refr", refr, NULL)
 	);
 
-	renderer_add_pass(self, "ssao_pass", "ssao", ref("quad"), 0,
+	renderer_add_pass(self, "ssao_pass", "candle:ssao", ref("quad"), 0,
 			ssao, NULL, 0, ~0, 2,
 			opt_tex( "gbuffer", gbuffer, NULL),
 			opt_clear_color(Z4, NULL)
 	);
 
-	renderer_add_pass(self, "final", "ssr", ref("quad"), 0, final,
+	renderer_add_pass(self, "final", "candle:final", ref("quad"), 0, final,
 			NULL, 0, ~0, 7,
 			opt_tex("gbuffer", gbuffer, NULL),
 			opt_tex("light", light, NULL),
@@ -700,7 +700,7 @@ void renderer_default_pipeline(renderer_t *self)
 			opt_num("ssao_power", 0.6f, NULL),
 			opt_tex("volum", volum, NULL)
 	);
-	renderer_add_pass(self, "bloom_0", "bright", ref("quad"), 0,
+	renderer_add_pass(self, "bloom_0", "candle:bright", ref("quad"), 0,
 			bloom, NULL, 0, ~0, 1,
 			opt_tex("buf", final, NULL)
 	);
@@ -708,7 +708,7 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_kawase(self, bloom, tmp, 1, 2);
 	renderer_add_kawase(self, bloom, tmp, 2, 3);
 
-	renderer_add_pass(self, "bloom_1", "upsample", ref("quad"), ADD,
+	renderer_add_pass(self, "bloom_1", "candle:upsample", ref("quad"), ADD,
 			final, NULL, 0, ~0, 3,
 			opt_tex( "buf", bloom, NULL),
 			opt_int( "level", 3, NULL),

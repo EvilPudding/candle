@@ -8,6 +8,7 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <utils/str.h>
+#include <utils/shaders_default.h>
 
 static char default_vs[1024] = "";
 static char default_vs_end[] = 
@@ -43,13 +44,12 @@ static struct source *g_sources = NULL;
 
 static uint32_t g_sources_num = 0;
 
-void shaders_reg_glsl(void);
 void shaders_reg()
 {
-	shaders_reg_glsl();
+	shaders_candle();
 
 	strcat(default_vs,
-	"#include \"uniforms.glsl\"\n"
+	"#include \"candle:uniforms.glsl\"\n"
 #ifdef MESH4
 	"layout (location = 0) in vec4 P;\n"
 #else
@@ -103,7 +103,7 @@ void shaders_reg()
 	"#extension GL_OES_geometry_shader : enable\n"
 	"layout(points) in;\n"
 	"layout(triangle_strip, max_vertices = 15) out;\n"
-	"#include \"uniforms.glsl\"\n"
+	"#include \"candle:uniforms.glsl\"\n"
 	);
 	strcat(default_gs,
 	"flat in uvec2 $id[1];\n"
@@ -264,7 +264,7 @@ vs_t *vs_new(const char *name, bool_t has_skin, uint32_t num_modifiers, ...)
 	return self;
 }
 
-void shader_add_source(const char *name, unsigned char data[], uint32_t len)
+void shader_add_source(const char *name, char data[], uint32_t len)
 {
 	uint32_t i;
 	bool_t found = false;
@@ -398,6 +398,7 @@ static char *string_preprocess(const char *src, bool_t len, const char *filename
 #ifdef __EMSCRIPTEN__
 		, "#define EMSCRIPTEN\n"
 #endif
+		, "#define BUFFER uniform struct\n"
 		, "#endif\n"
 	};
 	uint32_t i;
@@ -695,11 +696,11 @@ fs_t *fs_new(const char *filename)
 	self->variations_num = 0;
 	strcpy(self->filename, filename);
 
-	if (   strncmp(filename, "gbuffer", strlen("gbuffer"))
-	    && strncmp(filename, "query_mips", strlen("query_mips"))
-	    && strncmp(filename, "select", strlen("select"))
-	    && strncmp(filename, "depth", strlen("depth"))
-	    && strncmp(filename, "transparency", strlen("transparency")))
+	if (   strncmp(filename, "candle:gbuffer", strlen("candle:gbuffer"))
+	    && strncmp(filename, "candle:query_mips", strlen("candle:query_mips"))
+	    && strncmp(filename, "candle:select", strlen("candle:select"))
+	    && strncmp(filename, "candle:depth", strlen("candle:depth"))
+	    && strncmp(filename, "candle:transparency", strlen("candle:transparency")))
 	{
 		fs_push_variation(self, filename);
 	}

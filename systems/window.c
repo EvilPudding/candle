@@ -141,11 +141,11 @@ c_window_t *c_window_new(int width, int height)
 	init_context_b(self);
 	if(!g_quad_vs)
 	{
-		g_quad_vs = vs_new("quad", false, 1, vertex_modifier_new(
+		g_quad_vs = vs_new("candle:quad", false, 1, vertex_modifier_new(
 			/* "texcoord *= screen_size;\n" */
 			""
 		));
-		g_quad_fs = fs_new("quad");
+		g_quad_fs = fs_new("candle:quad");
 	}
 
 	g_quad_mesh = mesh_new();

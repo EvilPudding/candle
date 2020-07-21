@@ -92,7 +92,7 @@ static void c_light_create_renderer(c_light_t *self)
 
 	output = g_probe_cache;
 
-	renderer_add_pass(renderer, "depth", "depth", self->visible_group,
+	renderer_add_pass(renderer, "depth", "candle:depth", self->visible_group,
 			CULL_DISABLE, output, output, 0, ~0, 2,
 			opt_clear_depth(1.0f, NULL),
 			opt_clear_color(vec4(0.343750, 0.996094, 0.996094, 0.000000), NULL)

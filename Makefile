@@ -10,8 +10,6 @@ DIR = build
 DEPS_REL = -lm -lGL -pthread -ldl -lX11 -lrt
 DEPS_DEB = $(DEPS_REL)
 
-SHAD_SRC = $(patsubst %.glsl, $(DIR)/%.glsl.c, $(wildcard shaders/*.glsl))
-
 GLFW = third_party/glfw/src
 TINYCTHREAD = third_party/tinycthread/source
 
@@ -36,7 +34,7 @@ THIRD_PARTY_SRC = \
 
 SRCS = $(wildcard *.c) $(wildcard components/*.c) $(wildcard systems/*.c) \
 	   $(wildcard formats/*.c) $(wildcard utils/*.c) $(wildcard vil/*.c) \
-	   $(wildcard ecs/*.c) shaders_reg.c
+	   $(wildcard ecs/*.c)
 
 OBJS_REL = $(patsubst %.c, $(DIR)/%.o, $(THIRD_PARTY_SRC) $(SRCS))
 OBJS_DEB = $(patsubst %.c, $(DIR)/%.debug.o, $(THIRD_PARTY_SRC) $(SRCS))
@@ -69,9 +67,6 @@ all: $(DIR)/export.a
 $(DIR)/export.a: init $(OBJS_REL) $(SHAD_REL)
 	$(AR) rs $@ $(OBJS_REL) $(SHAD_REL)
 
-$(DIR)/shaders_reg.o: $(DIR)/shaders_reg.c
-	$(CC) -o $@ -c $< $(CFLAGS_REL)
-
 $(DIR)/%.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS_REL)
 
@@ -87,9 +82,6 @@ debug: $(DIR)/export_debug.a
 $(DIR)/export_debug.a: init $(OBJS_DEB) $(SHAD_REL)
 	$(AR) rs $@ $(OBJS_DEB) $(SHAD_REL)
 
-$(DIR)/shaders_reg.debug.o: $(DIR)/shaders_reg.c
-	$(CC) -o $@ -c $< $(CFLAGS_REL)
-
 $(DIR)/%.debug.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS_DEB)
 
@@ -102,26 +94,12 @@ emscripten: $(DIR)/export_emscripten.a
 $(DIR)/export_emscripten.a: init $(OBJS_EMS) $(SHAD_EMS)
 	$(AR) rs $@ $(OBJS_EMS) $(SHAD_EMS)
 
-$(DIR)/shaders_reg.emscripten.o: $(DIR)/shaders_reg.c
-	$(CC) -o $@ -c $< $(CFLAGS_REL)
-
 $(DIR)/%.emscripten.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS_EMS)
 
 ##############################################################################
 
-$(DIR)/shaders_reg.c: $(SHAD_SRC)
-	printf "#include <utils/shader.h>\n" > $@
-	printf "$(patsubst %.c,#include<%.c>\n, $(SHAD_SRC))" >> $@
-	printf "void shaders_reg_glsl(void) { " >> $@
-	printf "$(patsubst $(DIR)/shaders/%.glsl.c, ADD_SRC(%);, $(SHAD_SRC))" >> $@
-	printf "}" >> $@
-
-$(DIR)/%.glsl.c: %.glsl
-	@xxd -i $< > $(DIR)/$<.c
-
 init:
-	# git submodule update
 	mkdir -p $(DIR)
 	mkdir -p $(DIR)/components
 	mkdir -p $(DIR)/systems
@@ -129,7 +107,6 @@ init:
 	mkdir -p $(DIR)/formats
 	mkdir -p $(DIR)/vil
 	mkdir -p $(DIR)/ecs
-	mkdir -p $(DIR)/shaders
 	mkdir -p $(DIR)/$(GLFW)
 	mkdir -p $(DIR)/$(TINYCTHREAD)
 
