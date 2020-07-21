@@ -851,17 +851,20 @@ static void editmode_tool_rotation_shader()
 	str_cat(&shader_buffer,
 		"void main(void)\n"
 		"{\n"
-		"	float intensity, proj_mouse;\n"
+		"	float intensity = 0.0;\n"
 		"	vec2 p = pixel_pos();\n"
 		"	float dist = -(camera(view) * vec4(selected_pos, 1.0)).z;\n"
 		"	dist = unlinearize(dist);\n"
-		"	proj_mouse = real_pos(dist, mouse_pos);\n"
 		"	vec3 proj_pixel = real_pos(dist, p);\n"
 		"	float d = length(proj_pixel - selected_pos);\n"
-		"	float dist_to_mouse = length(proj_mouse - proj_pixel);\n"
-		"	intensity = clamp(1.0 - abs((d - start_radius)/0.4), 0.0, 1.0);\n");
+		"	d = 1.0 - abs((d-start_radius)/0.4);\n"
+		"	d = clamp(d, 0.0, 1.0);\n"
+		"	intensity += pow(d, 1.0);\n"
+		"	vec3 proj_mouse = real_pos(dist, mouse_pos);\n"
+		"	float dist_to_mouse = length(proj_mouse - proj_pixel);\n");
+
 	str_cat(&shader_buffer,
-		"	float md = clamp((0.4 - dist_to_mouse) / 0.4 - 0.1, 0.0, 1.0);\n"
+		"	float md = clamp((0.4 - dist_to_mouse)/0.4 - 0.1, 0.0, 1.0);\n"
 		"	intensity += pow(md, 2.0);\n"
 		"	intensity -= max(dist_to_mouse - (1.0 - tool_fade) * start_radius * 2.1, 0.0) * tool_fade;\n"
 		"	if(intensity < 0.9) intensity = 0.0;\n"
