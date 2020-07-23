@@ -236,13 +236,11 @@ static void render_loop_tick(void)
 #endif
 
 	loader_update(g_candle->loader);
-	glerr();
 
 	{
 		entity_signal(entity_null, ref("world_draw"), NULL, NULL);
 		entity_signal(entity_null, ref("world_draw_end"), NULL, NULL);
 
-		glerr();
 		g_candle->fps_count++;
 	}
 
@@ -263,8 +261,6 @@ static void render_loop_tick(void)
 	{
 		g_candle->exit = true;
 	}
-
-	glerr();
 }
 
 #if defined(THREADED) && !defined(__EMSCRIPTEN__)
