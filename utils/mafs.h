@@ -7,7 +7,6 @@
 #include <math.h>
 #include <float.h>
 #include <stdlib.h>
-#define CONST static const
 void sincosf(float x, float *sin, float *cos);
 #else
 #define nextafterf nextafter
@@ -16,7 +15,6 @@ void sincosf(float x, float *sin, float *cos);
 #define powf pow
 #define sinf sin
 #define cosf cos
-#define CONST __constant
 #endif
 
 #if defined(__STDC__)

@@ -42,8 +42,8 @@ OBJS_EMS = $(patsubst %.c, $(DIR)/%.emscripten.o, $(TINYCTHREAD)/tinycthread.c $
 
 CFLAGS = -std=c89 -pedantic -Wall -I. -Wno-unused-function \
          -Ithird_party/glfw/include -I$(TINYCTHREAD) -D_GLFW_X11 \
-		 -Wno-format-truncation -Wno-stringop-truncation $(PARENTCFLAGS) \
-		 -DTHREADED
+         -Wno-format-truncation -Wno-stringop-truncation $(PARENTCFLAGS) \
+         -DTHREADED
 
 CFLAGS_REL = $(CFLAGS) -O3
 

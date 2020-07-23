@@ -1,4 +1,5 @@
 #include "drawable.h"
+#include <utils/glutil.h>
 #include <utils/loader.h>
 #include <candle.h>
 #include <string.h>
@@ -866,7 +867,7 @@ static void varray_update_buffers(varray_t *self)
 		self->vert_num_gl = self->vert_num;
 
 		/* VERTEX BUFFER */
-		create_buffer(&vbo[0], self->pos, N, self->vert_num, 0);
+		create_buffer(&vbo[0], self->pos, NDIMS, self->vert_num, 0);
 
 		/* NORMAL BUFFER */
 		create_buffer(&vbo[1], self->nor, 3, self->vert_num, 0);
@@ -907,7 +908,7 @@ static void varray_update_buffers(varray_t *self)
 	if (self->ind_num)
 	{
 		/* VERTEX BUFFER */
-		update_buffer(&vbo[0], self->pos, N, self->vert_num, 0); glerr();
+		update_buffer(&vbo[0], self->pos, NDIMS, self->vert_num, 0); glerr();
 
 		/* NORMAL BUFFER */
 		update_buffer(&vbo[1], self->nor, 3, self->vert_num, 0); glerr();
@@ -966,7 +967,7 @@ static void varray_bind(varray_t *self)
 {
 	uint32_t *vbo = self->vbo;
 	/* VERTEX BUFFER */
-	bind_buffer(&vbo[0], 0, GL_FLOAT, N, 0);
+	bind_buffer(&vbo[0], 0, GL_FLOAT, NDIMS, 0);
 
 	/* NORMAL BUFFER */
 	bind_buffer(&vbo[1], 1, GL_FLOAT, 3, 0);

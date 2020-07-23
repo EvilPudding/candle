@@ -2,6 +2,7 @@
 #define AXIS_H
 
 #include <ecs/ecm.h>
+#include <utils/mesh.h>
 
 typedef struct
 {

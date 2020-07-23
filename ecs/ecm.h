@@ -3,13 +3,11 @@
 
 #include <assert.h>
 #include <limits.h>
-#include "utils/material.h"
-#include "utils/texture.h"
-#include "utils/mesh.h"
 #include "entity.h"
 #include "utils/vector.h"
 #include "utils/khash.h"
 #include "utils/macros.h"
+#include "utils/mafs.h"
 
 struct ecm;
 

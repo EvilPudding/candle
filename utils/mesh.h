@@ -12,8 +12,8 @@ struct face;
 struct edge;
 
 typedef struct vec3_t(*support_cb)(struct mesh *self, const vec3_t dir);
-
 #ifdef MESH4
+
 #	define vecN vec4
 #	define vecN_t vec4_t
 #	define uvecN_t uvec4_t
@@ -26,7 +26,8 @@ static vec4_t VEC3(float x, float y, float z)
 #	define ZN Z4
 #	define _vecN(a) _vec4(a)
 #	define _uvecN(a) _uvec4(a)
-#	define N 4
+#	define NDIMS 4
+
 
 #	define dN d4
 #	define dN_t d4_t
@@ -46,7 +47,7 @@ static vec3_t VEC3(float x, float y, float z)
 
 #	define dN d3_t
 #	define D3(x, y, z) d3(x, y, z)
-#	define N 3
+#	define NDIMS 3
 #endif
 
 typedef float(*modifier_cb)(struct mesh *mesh, float percent, void *usrptr);

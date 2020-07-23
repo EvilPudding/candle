@@ -1,9 +1,9 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
+#include <utils/mesh.h>
 #include <utils/material.h>
 #include <utils/texture.h>
-#include <utils/mesh.h>
 #include <utils/shader.h>
 #include <utils/drawable.h>
 #include <ecs/ecm.h>

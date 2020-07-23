@@ -2,7 +2,6 @@
 #define WINDOW_H
 
 #include <ecs/ecm.h>
-#include <utils/shader.h>
 #include <utils/drawable.h>
 #include <utils/renderer.h>
 

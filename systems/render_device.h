@@ -1,11 +1,7 @@
 #ifndef RENDER_DEVICE_H
 #define RENDER_DEVICE_H
 
-#include <utils/glutil.h>
-#include <utils/texture.h>
-#include <utils/mesh.h>
 #include <utils/shader.h>
-#include <utils/drawable.h>
 #include <ecs/ecm.h>
 
 struct gl_light

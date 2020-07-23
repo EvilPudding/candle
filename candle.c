@@ -1,11 +1,8 @@
 #include "candle.h"
-#include <utils/file.h>
-#include <utils/glutil.h>
 #include <utils/str.h>
 
 #include <string.h>
 #include <stdlib.h>
-
 #include <systems/window.h>
 #include <systems/render_device.h>
 #include <systems/sauces.h>
@@ -15,7 +12,7 @@
 
 #include <GLFW/glfw3.h>
 
-#ifndef WIN32
+#ifndef _WIN32
 #include <unistd.h>
 #define candle_getcwd getcwd
 #else

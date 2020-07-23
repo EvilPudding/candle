@@ -6,6 +6,11 @@
 #include <utils/drawable.h>
 #include <candle.h>
 #include <systems/editmode.h>
+#ifdef _WIN32
+#define CANDLE_NAN NAN
+#else
+#define CANDLE_NAN (0.f / 0.f)
+#endif
 
 static mat_t *g_missing_mat = NULL;
 
@@ -322,7 +327,7 @@ struct int_int {int a, b;};
 static float interpret_scale(mesh_t *self, float x,
 		struct int_int *interpreters)
 {
-	float y = 0.f/0.f;
+	float y = CANDLE_NAN;
 	struct set_var var = {"x"};
 	var.value = x;
 	emit(ref("expr_var"), &var, NULL);
@@ -336,7 +341,7 @@ static float interpret_scale(mesh_t *self, float x,
 static float interpret_offset(mesh_t *self, float r,
 		struct int_int *interpreters)
 {
-	float y = 0.f/0.f;
+	float y = CANDLE_NAN;
 	struct set_var var = {"r"};
 	var.value = r;
 
@@ -368,7 +373,7 @@ static mesh_t *tool_extrude_edit(
 		emit(ref("expr_load"), new->scale_e, &new->scale_f);
 		if(new->scale_f == 0) return state;
 
-		result = 0.f/0.f;
+		result = CANDLE_NAN;
 		emit(ref("expr_eval"), &new->scale_f, &result);
 		if(result != result)
 		{
@@ -383,7 +388,7 @@ static mesh_t *tool_extrude_edit(
 		emit(ref("expr_load"), new->offset_e, &new->offset_f);
 		if(new->offset_f == -1) return state;
 
-		result = 0.f/0.f;
+		result = CANDLE_NAN;
 		emit(ref("expr_eval"), &new->offset_f, &result);
 		if(result != result)
 		{
@@ -428,7 +433,7 @@ static mesh_t *tool_extrude_edit(
 
 static int deform(mesh_t *mesh, vertex_t *vert, struct conf_deform *conf)
 {
-	float result = 0.f/0.f;
+	float result = CANDLE_NAN;
 	struct set_var var_x = {"x"};
 	struct set_var var_y = {"y"};
 	struct set_var var_z = {"z"};
@@ -494,7 +499,7 @@ static mesh_t *tool_deform_edit(
 		emit(ref("expr_load"), new->deform_e, &new->deform_s);
 		if(new->deform_s == 0) return state;
 
-		result = 0.f/0.f;
+		result = CANDLE_NAN;
 		emit(ref("expr_eval"), &new->deform_s, &result);
 		if(result != result)
 		{

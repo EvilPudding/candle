@@ -8,11 +8,11 @@
 #define MAX_WORD 4095
 
 enum value_type {
-	NONE,
-	FLOAT, DOUBLE,
-	UCHAR, CHAR,
-	INT8, INT, UINT8, UINT, LONG, ULONG,
-	LIST
+	PLY_NONE,
+	PLY_FLOAT, PLY_DOUBLE,
+	PLY_UCHAR, PLY_CHAR,
+	PLY_INT8, PLY_INT, PLY_UINT8, PLY_UINT, PLY_LONG, PLY_ULONG,
+	PLY_LIST
 };
 
 struct type_info
@@ -24,26 +24,26 @@ struct type_info
 
 static struct type_info g_types[] =
 {
-	{"float", 	FLOAT,	" %lf"},
-	{"float32", FLOAT,	" %lf"},
-	{"float64", DOUBLE,	" %lf"},
-	{"double", DOUBLE,	" %lf"},
+	{"float",   PLY_FLOAT,  " %lf"},
+	{"float32", PLY_FLOAT,  " %lf"},
+	{"float64", PLY_DOUBLE, " %lf"},
+	{"double",  PLY_DOUBLE, " %lf"},
 
-	{"uchar",	UCHAR,	" %c"},
-	{"char",	CHAR,	" %c"},
+	{"uchar",   PLY_UCHAR,  " %c"},
+	{"char",    PLY_CHAR,   " %c"},
 
-	{"int8",	INT8,	" %ld"},
-	{"int32",	INT,	" %ld"},
-	{"int",		INT,	" %ld"},
-	{"int64",	LONG,	" %ld"},
+	{"int8",    PLY_INT8,  " %ld"},
+	{"int32",   PLY_INT,   " %ld"},
+	{"int",     PLY_INT,   " %ld"},
+	{"int64",   PLY_LONG,  " %ld"},
 
-	{"uint8",	UINT8,	" %ld"},
-	{"uint32",	UINT,	" %ld"},
-	{"uint",	UINT,	" %ld"},
-	{"uint64",	ULONG,	" %ld"},
+	{"uint8",   PLY_UINT8, " %ld"},
+	{"uint32",  PLY_UINT,  " %ld"},
+	{"uint",    PLY_UINT,  " %ld"},
+	{"uint64",  PLY_ULONG, " %ld"},
 
-	{"list", LIST},
-	{"", NONE}
+	{"list", PLY_LIST},
+	{"", PLY_NONE}
 };
 
 
@@ -95,7 +95,7 @@ static int get_type(const char *name)
 	{
 		struct type_info type = g_types[i];
 
-		if(type.type == NONE) return -1;
+		if(type.type == PLY_NONE) return -1;
 
 		if(!strncmp(g_types[i].name, name, sizeof(g_types[i].name))) return i;
 	}
@@ -196,7 +196,7 @@ void mesh_load_ply(mesh_t *self, const char *filename)
 
 				props->type = get_type(word->chars); word++;
 
-				if(g_types[props->type].type == LIST)
+				if(g_types[props->type].type == PLY_LIST)
 				{
 					props->list_count_type = get_type(word->chars); word++;
 					props->list_element_type = get_type(word->chars); word++;
@@ -238,7 +238,7 @@ void mesh_load_ply(mesh_t *self, const char *filename)
 			{
 				struct property *prop = &el->props[k];
 				struct type_info *type = &g_types[prop->type];
-				if(type->type == LIST)
+				if(type->type == PLY_LIST)
 				{
 					if(face)
 					{

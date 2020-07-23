@@ -14,6 +14,7 @@ typedef uint32_t vertid_t;
 #define IDTYPE GL_UNSIGNED_INT
 #endif
 
+#include<utils/mesh.h>
 #include<utils/material.h>
 
 typedef void(*draw_cb)(void *usrptr, shader_t *shader);
@@ -21,15 +22,15 @@ typedef void(*draw_cb)(void *usrptr, shader_t *shader);
 typedef struct
 {
 	/* VERTEX DATA */
-	vecN_t *pos;	/* 0 */
-	vec3_t *nor;	/* 1 */
-	vec2_t *tex;	/* 2 */
-	vec3_t *tan;	/* 3 */
-	vec2_t *id;		/* 4 */
-	vec3_t *col;	/* 5 */
+	vecN_t *pos; /* 0 */
+	vec3_t *nor; /* 1 */
+	vec2_t *tex; /* 2 */
+	vec3_t *tan; /* 3 */
+	vec2_t *id;  /* 4 */
+	vec3_t *col; /* 5 */
 
-	vec4_t *bid;	/* 6 */
-	vec4_t *wei;	/* 7 */
+	vec4_t *bid; /* 6 */
+	vec4_t *wei; /* 7 */
 
 	vertid_t *ind;
 

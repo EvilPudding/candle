@@ -2872,7 +2872,7 @@ static
 void _mesh_point_grid(mesh_t *self, vecN_t start, vecN_t size,
                       uvecN_t segments, uint32_t dim)
 {
-	if (dim == N)
+	if (dim == NDIMS)
 	{
 		mesh_add_vert(self, start);
 	}

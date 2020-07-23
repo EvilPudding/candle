@@ -9,8 +9,8 @@
 #include "shader.h"
 #include <candle.h>
 #include <systems/editmode.h>
-#include <dirent.h>
 #include <systems/render_device.h>
+#include <utils/glutil.h>
 
 mat_t *g_mats[255];
 uint32_t g_mats_num;
