@@ -4,7 +4,7 @@
 #ifdef __EMSCRIPTEN__
 #include <GL/glew.h>
 #else
-#include <utils/gl.h>
+#include "gl.h"
 #endif
 
 

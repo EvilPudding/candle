@@ -1,7 +1,7 @@
 #ifndef LOADER_H
 #define LOADER_H
 
-#include <ecs/ecm.h>
+#include "../ecs/ecm.h"
 
 typedef int(*loader_cb)(void*);
 

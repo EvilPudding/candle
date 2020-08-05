@@ -1,8 +1,8 @@
 #ifndef NODE_H
 #define NODE_H
 
-#include <ecs/ecm.h>
-#include <components/spatial.h>
+#include "../ecs/ecm.h"
+#include "spatial.h"
 
 typedef int32_t(*node_cb)(entity_t entity, void *usrptr);
 

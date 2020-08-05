@@ -21,6 +21,7 @@ void str_cat(char **, const char *);
 void str_ncat(char **str1, const char *str2, size_t n);
 char *str_readline(FILE *fp);
 void str_catf(char **, const char *, ...);
+void str_clear(char *);
 char *str_dup(const char *);
 char *str_new_copy(const char *);
 char *str_set_chunk(char *, size_t);

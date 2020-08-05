@@ -1,7 +1,7 @@
 #ifndef SPACIAL_H
 #define SPACIAL_H
 
-#include <ecs/ecm.h>
+#include "../ecs/ecm.h"
 
 typedef struct
 {

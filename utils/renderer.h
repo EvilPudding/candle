@@ -1,12 +1,12 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
-#include <utils/mesh.h>
-#include <utils/material.h>
-#include <utils/texture.h>
-#include <utils/shader.h>
-#include <utils/drawable.h>
-#include <ecs/ecm.h>
+#include "mesh.h"
+#include "material.h"
+#include "texture.h"
+#include "shader.h"
+#include "drawable.h"
+#include "../ecs/ecm.h"
 
 struct pass;
 

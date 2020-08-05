@@ -1,11 +1,11 @@
 #ifndef MODEL_H
 #define MODEL_H
 
-#include <utils/macros.h>
-#include <ecs/ecm.h>
+#include "../utils/macros.h"
+#include "../ecs/ecm.h"
 #include "node.h"
-#include <utils/shader.h>
-#include <utils/drawable.h>
+#include "../utils/shader.h"
+#include "../utils/drawable.h"
 
 struct conf_sphere
 {

@@ -11,6 +11,7 @@
 #include <systems/editmode.h>
 #include <systems/render_device.h>
 #include <utils/glutil.h>
+#include <utils/nk.h>
 
 mat_t *g_mats[255];
 uint32_t g_mats_num;
@@ -477,6 +478,144 @@ int mat_menu(mat_t *self, void *ctx)
 	return ret;
 }
 
+static
+void materials_register_globals(vifunc_t *func)
+{
+	vifunc_t *tv3, *tv2, *tn;
+	tn = vil_get(&g_mat_ctx, ref("number"));
+	tv2 = vil_get(&g_mat_ctx, ref("vec2"));
+	tv3 = vil_get(&g_mat_ctx, ref("vec3"));
+	vicall_new(func, tv2, "tex_space", vec2(0, 100), ~0, V_OUT | V_LINKED);
+	vicall_new(func, tn, "time", vec2(0, 100), ~0, V_OUT | V_LINKED);
+	vicall_new(func, tv2, "screen_space", vec2(0, 300), ~0, V_OUT | V_LINKED);
+	vicall_new(func, tv3, "world_space", vec2(0, 400), ~0, V_OUT | V_LINKED);
+	vicall_new(func, tv3, "vertex_normal", vec2(0, 600), ~0, V_OUT | V_LINKED);
+	vicall_new(func, tv3, "obj_pos", vec2(0, 700), ~0, V_OUT | V_LINKED);
+}
+
+void matcall_set_number(vicall_t *call, uint32_t ref, float value)
+{ vicall_set_arg(call, ref, &value); }
+void matcall_set_vec2(vicall_t *call, uint32_t ref, vec2_t value)
+{ vicall_set_arg(call, ref, &value); }
+void matcall_set_vec3(vicall_t *call, uint32_t ref, vec3_t value)
+{ vicall_set_arg(call, ref, &value); }
+void matcall_set_vec4(vicall_t *call, uint32_t ref, vec4_t value)
+{ vicall_set_arg(call, ref, &value); }
+
+static
+void materials_register_defaults(void)
+{
+	vicall_t *albedo, *roughness, *metalness, *normal, *height;
+	vifunc_t *defaultmat, *transparent, *parallax, *decal,
+	         *pr1, *pr3, *pr4;
+
+	pr1 = vil_get(&g_mat_ctx, ref("property1"));
+	pr3 = vil_get(&g_mat_ctx, ref("property3"));
+	pr4 = vil_get(&g_mat_ctx, ref("property4"));
+
+	defaultmat = vifunc_new(&g_mat_ctx, "_default", NULL, 0, false);
+	vicall_new(defaultmat, vil_get(&g_mat_ctx, ref("opaque")), "pbr",
+	           vec2(600, 10),  ~0, V_IN);
+	materials_register_globals(defaultmat);
+	albedo = vicall_new(defaultmat, pr4, "albedo", vec2(208, 40), ~0, V_IN | V_OUT);
+		matcall_set_vec4(albedo, ref("color"), vec4(0.5f, 0.5f, 0.5f, 1.0f));
+	vicall_new(defaultmat, pr3, "emissive", vec2(368, 352), ~0, V_IN | V_OUT);
+	roughness = vicall_new(defaultmat, pr1, "roughness", vec2(193, 305), ~0, V_IN | V_OUT);
+		matcall_set_number(roughness, ref("value"), 0.2f);
+	metalness = vicall_new(defaultmat, pr1, "metalness", vec2(190, 440), ~0, V_IN | V_OUT);
+		matcall_set_number(metalness, ref("value"), 0.0f);
+	normal = vicall_new(defaultmat, pr3, "normal", vec2(364, 90), ~0, V_IN | V_OUT);
+		matcall_set_vec3(normal, ref("color"), vec3(0.5f, 0.5f, 1.0f));
+
+	vifunc_link(defaultmat, ref("tex_space"), ref("normal.texture.coord"));
+	vifunc_link(defaultmat, ref("tex_space"), ref("emissive.texture.coord"));
+	vifunc_link(defaultmat, ref("tex_space"), ref("metalness.texture.coord"));
+	vifunc_link(defaultmat, ref("tex_space"), ref("albedo.texture.coord"));
+	vifunc_link(defaultmat, ref("tex_space"), ref("roughness.texture.coord"));
+	vifunc_link(defaultmat, ref("normal.mix.result"), ref("pbr.normal"));
+	vifunc_link(defaultmat, ref("emissive.mix.result"), ref("pbr.emissive"));
+	vifunc_link(defaultmat, ref("roughness.mix.result"), ref("pbr.roughness"));
+	vifunc_link(defaultmat, ref("metalness.mix.result"), ref("pbr.metalness"));
+	vifunc_link(defaultmat, ref("albedo.mix.result"), ref("pbr.albedo"));
+
+	transparent = vifunc_new(&g_mat_ctx, "_transparent", NULL, 0, false);
+	vicall_new(transparent, vil_get(&g_mat_ctx, ref("transparent")), "pbr",
+	           vec2(600, 10),  ~0, V_IN);
+	materials_register_globals(transparent);
+
+	vicall_new(transparent, pr3, "emissive", vec2(368, 352), ~0, V_IN | V_OUT);
+	roughness = vicall_new(transparent, pr1, "roughness", vec2(193, 305), ~0, V_IN | V_OUT);
+		matcall_set_number(roughness, ref("value"), 0.2f);
+	normal = vicall_new(transparent, pr3, "normal", vec2(364, 90), ~0, V_IN | V_OUT);
+		matcall_set_vec3(normal, ref("color"), vec3(0.5f, 0.5f, 1.0f));
+	albedo = vicall_new(transparent, pr3, "absorb", vec2(190.0, 440.0f), ~0, V_IN | V_OUT);
+
+	vifunc_link(transparent, ref("tex_space"), ref("normal.texture.coord"));
+	vifunc_link(transparent, ref("tex_space"), ref("emissive.texture.coord"));
+	vifunc_link(transparent, ref("tex_space"), ref("absorb.texture.coord"));
+	vifunc_link(transparent, ref("tex_space"), ref("roughness.texture.coord"));
+	vifunc_link(transparent, ref("normal.mix.result"), ref("pbr.normal"));
+	vifunc_link(transparent, ref("emissive.mix.result"), ref("pbr.emissive"));
+	vifunc_link(transparent, ref("roughness.mix.result"), ref("pbr.roughness"));
+	vifunc_link(transparent, ref("absorb.mix.result"), ref("pbr.absorb"));
+
+	decal = vifunc_new(&g_mat_ctx, "_decal", NULL, 0, false);
+	vicall_new(decal, vil_get(&g_mat_ctx, ref("decal")), "pbr",
+	           vec2(600, 10),  ~0, V_IN);
+	materials_register_globals(decal);
+
+	albedo = vicall_new(decal, pr4, "albedo", vec2(208, 40), ~0, V_IN | V_OUT);
+		matcall_set_vec4(albedo, ref("color"), vec4(0.5f, 0.5f, 0.5f, 1.0f));
+	vicall_new(decal, pr3, "emissive", vec2(368, 352), ~0, V_IN | V_OUT);
+	roughness = vicall_new(decal, pr1, "roughness", vec2(193, 305), ~0, V_IN | V_OUT);
+		matcall_set_number(roughness, ref("value"), 0.2f);
+	metalness = vicall_new(decal, pr1, "metalness", vec2(190, 440), ~0, V_IN | V_OUT);
+		matcall_set_number(metalness, ref("value"), 0.0f);
+	normal = vicall_new(decal, pr3, "normal", vec2(364, 90), ~0, V_IN | V_OUT);
+		matcall_set_vec3(normal, ref("color"), vec3(0.5f, 0.5f, 1.0f));
+
+	vifunc_link(decal, ref("tex_space"), ref("normal.texture.coord"));
+	vifunc_link(decal, ref("tex_space"), ref("emissive.texture.coord"));
+	vifunc_link(decal, ref("tex_space"), ref("metalness.texture.coord"));
+	vifunc_link(decal, ref("tex_space"), ref("albedo.texture.coord"));
+	vifunc_link(decal, ref("tex_space"), ref("roughness.texture.coord"));
+	vifunc_link(decal, ref("normal.mix.result"), ref("pbr.normal"));
+	vifunc_link(decal, ref("emissive.mix.result"), ref("pbr.emissive"));
+	vifunc_link(decal, ref("roughness.mix.result"), ref("pbr.roughness"));
+	vifunc_link(decal, ref("metalness.mix.result"), ref("pbr.metalness"));
+	vifunc_link(decal, ref("albedo.mix.result"), ref("pbr.albedo"));
+
+	parallax = vifunc_new(&g_mat_ctx, "_parallax", NULL, 0, false);
+	vicall_new(parallax, vil_get(&g_mat_ctx, ref("parallax")), "pbr",
+	           vec2(600, 10),  ~0, V_IN);
+	materials_register_globals(parallax);
+
+	albedo = vicall_new(parallax, pr4, "albedo", vec2(208, 40), ~0, V_IN | V_OUT);
+		matcall_set_vec4(albedo, ref("color"), vec4(0.5f, 0.5f, 0.5f, 1.0f));
+	vicall_new(parallax, pr3, "emissive", vec2(368, 352), ~0, V_IN | V_OUT);
+	roughness = vicall_new(parallax, pr1, "roughness", vec2(193, 305), ~0, V_IN | V_OUT);
+		matcall_set_number(roughness, ref("value"), 0.2f);
+	metalness = vicall_new(parallax, pr1, "metalness", vec2(190, 440), ~0, V_IN | V_OUT);
+		matcall_set_number(metalness, ref("value"), 0.0f);
+	normal = vicall_new(parallax, pr3, "normal", vec2(364, 90), ~0, V_IN | V_OUT);
+		matcall_set_vec3(normal, ref("color"), vec3(0.5f, 0.5f, 1.0f));
+	height = vicall_new(parallax, pr1, "height", vec2(190, 440), ~0, V_IN | V_OUT);
+		matcall_set_number(height, ref("value"), 0.0f);
+
+	vifunc_link(parallax, ref("tex_space"), ref("normal.texture.coord"));
+	vifunc_link(parallax, ref("tex_space"), ref("emissive.texture.coord"));
+	vifunc_link(parallax, ref("tex_space"), ref("metalness.texture.coord"));
+	vifunc_link(parallax, ref("tex_space"), ref("albedo.texture.coord"));
+	vifunc_link(parallax, ref("tex_space"), ref("roughness.texture.coord"));
+	vifunc_link(parallax, ref("tex_space"), ref("height.texture.coord"));
+	vifunc_link(parallax, ref("normal.mix.result"), ref("pbr.normal"));
+	vifunc_link(parallax, ref("emissive.mix.result"), ref("pbr.emissive"));
+	vifunc_link(parallax, ref("roughness.mix.result"), ref("pbr.roughness"));
+	vifunc_link(parallax, ref("metalness.mix.result"), ref("pbr.metalness"));
+	vifunc_link(parallax, ref("albedo.mix.result"), ref("pbr.albedo"));
+	vifunc_link(parallax, ref("height.mix.result"), ref("pbr.height"));
+}
+
 void *mat_loader(const char *path, const char *name, uint32_t ext)
 {
 	return mat_from_file(path);
@@ -484,11 +623,13 @@ void *mat_loader(const char *path, const char *name, uint32_t ext)
 
 void materials_reg()
 {
+	materials_register_defaults();
 	sauces_loader(ref("mat"), mat_loader);
 	sauces_register("_default.mat", NULL, mat_new("_default.mat", "default"));
 	sauces_register("_parallax.mat", NULL, mat_new("_parallax.mat", "parallax"));
 	sauces_register("_transparent.mat", NULL, mat_new("_transparent.mat", "transparent"));
 	sauces_register("_decal.mat", NULL, mat_new("_decal.mat", "decal"));
+	mat_new("default_material", "default");
 }
 
 void material_foreach_input(vicall_t *call, slot_t slot, char **str)
@@ -1195,8 +1336,8 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	str_catf(&s_name2, "candle:select#%d.glsl", id);
 	str_catf(&name, "candle:gbuffer#%d", id);
 	str_catf(&name2, "candle:gbuffer#%d.glsl", id);
-	str_catf(&t_name, "candle:transparency#%d", id);
-	str_catf(&t_name2, "candle:transparency#%d.glsl", id);
+	str_catf(&t_name, "candle:transparent#%d", id);
+	str_catf(&t_name2, "candle:transparent#%d.glsl", id);
 
 	if (type->src)
 	{
@@ -1223,7 +1364,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 			fs = fs_new("candle:select");
 			fs_update_variation(fs, id);
 
-			fs = fs_new("candle:transparency");
+			fs = fs_new("candle:transparent");
 			fs_update_variation(fs, id);
 		}
 		else
@@ -1255,7 +1396,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		fs = fs_new("candle:select");
 		fs_push_variation(fs, s_name);
 
-		fs = fs_new("candle:transparency");
+		fs = fs_new("candle:transparent");
 		fs_push_variation(fs, t_name);
 	}
 
@@ -1332,16 +1473,6 @@ static void init_type(uint32_t tid, const char *type_name)
 	}
 
 }
-
-
-void matcall_set_number(vicall_t *call, uint32_t ref, float value)
-{ vicall_set_arg(call, ref, &value); }
-void matcall_set_vec2(vicall_t *call, uint32_t ref, vec2_t value)
-{ vicall_set_arg(call, ref, &value); }
-void matcall_set_vec3(vicall_t *call, uint32_t ref, vec3_t value)
-{ vicall_set_arg(call, ref, &value); }
-void matcall_set_vec4(vicall_t *call, uint32_t ref, vec4_t value)
-{ vicall_set_arg(call, ref, &value); }
 
 void materials_init_vil()
 {
@@ -1570,7 +1701,6 @@ void materials_init_vil()
 		matcall_set_vec4(albedo, ~0, vec4(0.5f, 0.5f, 0.5f, 1.0f));
 		matcall_set_vec3(normal, ~0, vec3(0.5f, 0.5f, 1.0f));
 		matcall_set_number(roughn, ~0, 0.5f);
-
 }
 
 void mat1i(mat_t *self, uint32_t ref, int32_t value)

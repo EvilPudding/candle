@@ -159,6 +159,12 @@ char *str_new_copy(const char *str)
 	return dup_str;
 }
 
+void str_clear(char *str)
+{
+	_str_head_ptr(str)->length = 0;
+	str[0] = '\0';
+}
+
 void str_free(const char *str)
 {
 	free(_str_head_ptr(str));

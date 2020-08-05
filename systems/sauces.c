@@ -4,7 +4,8 @@
 #include <utils/file.h>
 #include <string.h>
 #include <stdlib.h>
-#include <third_party/tinydir/tinydir.h>
+#include "../third_party/tinydir/tinydir.h"
+#include "../third_party/miniz.h"
 
 #include <components/model.h>
 #include <components/timeline.h>
@@ -93,6 +94,7 @@ void c_sauces_register(c_sauces_t *self, const char *name, const char *path, voi
 	char *dot;
 	sauces_loader_cb cb = NULL;
 	resource_t *sauce;
+	printf("reg %s %s\n", name, path);
 
 	strncpy(buffer, name, sizeof(buffer) - 1);
 	dot = strrchr(buffer, '.');
@@ -251,6 +253,38 @@ int c_sauces_component_menu(c_sauces_t *self, void *ctx)
 	return 1;
 }
 
+void c_sauces_me_a_zip(c_sauces_t *self, const unsigned char *bytes,
+                       uint64_t size)
+{
+	mz_zip_archive archive;
+	mz_bool status;
+	int i;
+
+	mz_zip_zero_struct(&archive);
+	status = mz_zip_reader_init_mem(&archive, bytes, size, 0);
+
+	status = mz_zip_reader_end(&archive);
+	for (i = 0; i < (int)mz_zip_reader_get_num_files(&archive); i++)
+	{
+		mz_zip_archive_file_stat file_stat;
+		if (!mz_zip_reader_file_stat(&archive, i, &file_stat))
+		{
+			printf("mz_zip_reader_file_stat() failed!\n");
+			mz_zip_reader_end(&archive);
+			return;
+		}
+
+		printf("Filename: \"%s\", Comment: \"%s\", Uncompressed size: %u, Compressed size: %u, Is Dir: %u\n", file_stat.m_filename, file_stat.m_comment, (uint32_t)file_stat.m_uncomp_size, (uint32_t)file_stat.m_comp_size, mz_zip_reader_is_file_a_directory(&archive, i));
+
+		if (!strcmp(file_stat.m_filename, "directory/"))
+		{
+			if (!mz_zip_reader_is_file_a_directory(&archive, i))
+			{
+				return;
+			}
+		}
+	}
+}
 
 void ct_sauces(ct_t *self)
 {

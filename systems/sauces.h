@@ -1,7 +1,7 @@
 #ifndef RESAUCES_H
 #define RESAUCES_H
 
-#include <ecs/ecm.h>
+#include "../ecs/ecm.h"
 
 typedef void*(*sauces_loader_cb)(const char *path, const char *name, uint32_t ext);
 
@@ -43,6 +43,8 @@ c_sauces_t *c_sauces_new(void);
 void c_sauces_register(c_sauces_t *self, const char *name, const char *path,
 		void *data);
 
+void c_sauces_me_a_zip(c_sauces_t *self, const unsigned char *bytes,
+                       uint64_t size);
 void c_sauces_loader(c_sauces_t *self, uint32_t ref, sauces_loader_cb loader);
 void *c_sauces_get(c_sauces_t *self, const char *name);
 int c_sauces_index_dir(c_sauces_t *self, const char *dir_name);

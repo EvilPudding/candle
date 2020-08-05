@@ -3,6 +3,7 @@
 #include <components/node.h>
 #include <components/name.h>
 #include "editmode.h"
+#include <utils/nk.h>
 
 c_nodegraph_t *c_nodegraph_new()
 {

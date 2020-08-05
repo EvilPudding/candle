@@ -679,7 +679,7 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_pass(self, "transp_1", "candle:gbuffer", ref("transparent"),
 			0, gbuffer, gbuffer, 0, ~0, 0);
 
-	renderer_add_pass(self, "transp_2", "candle:transparency", ref("transparent"),
+	renderer_add_pass(self, "transp_2", "candle:transparent", ref("transparent"),
 			DEPTH_LOCK | DEPTH_EQUAL, light, gbuffer, 0, ~0, 1,
 			opt_tex("refr", refr, NULL)
 	);

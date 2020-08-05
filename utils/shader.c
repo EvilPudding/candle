@@ -700,7 +700,7 @@ fs_t *fs_new(const char *filename)
 	    && strncmp(filename, "candle:query_mips", strlen("candle:query_mips"))
 	    && strncmp(filename, "candle:select", strlen("candle:select"))
 	    && strncmp(filename, "candle:depth", strlen("candle:depth"))
-	    && strncmp(filename, "candle:transparency", strlen("candle:transparency")))
+	    && strncmp(filename, "candle:transparent", strlen("candle:transparent")))
 	{
 		fs_push_variation(self, filename);
 	}

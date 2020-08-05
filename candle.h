@@ -1,16 +1,16 @@
 #ifndef CANDLE_H
 #define CANDLE_H
 
-#include <utils/loader.h>
-#include <systems/sauces.h>
+#include "utils/loader.h"
+#include "systems/sauces.h"
 
-#include <utils/texture.h>
+#include "utils/texture.h"
 
-#include <systems/keyboard.h>
-#include <systems/controller.h>
-#include <systems/mouse.h>
-#include <utils/khash.h>
-#include <events.h>
+#include "systems/keyboard.h"
+#include "systems/controller.h"
+#include "systems/mouse.h"
+#include "utils/khash.h"
+#include "events.h"
 
 void candle_register(void);
 

@@ -2,6 +2,7 @@
 #include "node.h"
 #include "spatial.h"
 #include "model.h"
+#include <utils/nk.h>
 #include <utils/drawable.h>
 #include <candle.h>
 #include <systems/editmode.h>

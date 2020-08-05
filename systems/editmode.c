@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <utils/renderer.h>
 #include <utils/str.h>
+#include <utils/nk.h>
 
 static int32_t c_editmode_activate_loader(c_editmode_t *self);
 static void c_editmode_open_entity(c_editmode_t *self, entity_t ent);

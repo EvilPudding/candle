@@ -438,9 +438,14 @@ entity_t _c_new(entity_t root, int argc, char **argv)
 	return entity_null;
 }
 
-void candle_init2(void);
+/* extern uint8_t data[]     __asm__("_binary_candle_build_data_zip_start"); */
+/* extern uint8_t data_end[] __asm__("_binary_candle_build_data_zip_end"); */
+extern uint8_t _binary_candle_build_data_zip_start[];
+extern uint8_t _binary_candle_build_data_zip_end[];
 void candle_init(const char *path)
 {
+	uint64_t sauces_size;
+	const unsigned char *sauces_bytes;
 	g_candle = calloc(1, sizeof *g_candle);
 	g_candle->loader = loader_new();
 
@@ -457,7 +462,6 @@ void candle_init(const char *path)
 
 	ecm_init();
 
-	mat_new("default_material", "default");
 	entity_new({});
 
 	g_candle->cmds = kh_init(cmd);
@@ -467,12 +471,6 @@ void candle_init(const char *path)
 
 	draw_groups_init();
 
-	candle_init2();
-
-}
-
-void candle_init2()
-{
 	if(c_name(&SYS)) return;
 
 	entity_add_component(SYS, c_name_new("Candle"));
@@ -484,6 +482,13 @@ void candle_init2()
 #endif
 	entity_add_component(SYS, c_sauces_new());
 	entity_add_component(SYS, c_node_new());
+
+	sauces_bytes = _binary_candle_build_data_zip_start;
+	sauces_size = (uint64_t)(  _binary_candle_build_data_zip_end
+	                         - _binary_candle_build_data_zip_start);
+
+	printf("Hey, I'm saucing here!\n");
+	c_sauces_me_a_zip(c_sauces(&SYS), sauces_bytes, sauces_size);
 
 	textures_reg();
 	meshes_reg();

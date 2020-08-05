@@ -1,7 +1,7 @@
 #ifndef NAME_H
 #define NAME_H
 
-#include <ecs/ecm.h>
+#include "../ecs/ecm.h"
 
 typedef struct
 {

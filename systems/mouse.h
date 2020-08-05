@@ -1,8 +1,8 @@
 #ifndef MOUSE_H
 #define MOUSE_H
 
-#include <ecs/ecm.h>
-#include <events.h>
+#include "../ecs/ecm.h"
+#include "../events.h"
 
 typedef struct
 {

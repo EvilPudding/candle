@@ -2,8 +2,8 @@
 #define SHADER_H
 
 #include "texture.h"
-#include <ecs/ecm.h>
-#include <utils/khash.h>
+#include "../ecs/ecm.h"
+#include "khash.h"
 
 typedef struct
 {

@@ -137,7 +137,7 @@ typedef unsigned int khint32_t;
 typedef unsigned long khint32_t;
 #endif
 
-#include <third_party/pstdint.h>
+#include "../third_party/pstdint.h"
 typedef uint64_t khint64_t;
 
 #ifndef kh_inline

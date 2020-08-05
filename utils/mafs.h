@@ -1,7 +1,7 @@
 #ifndef MAFS_H
 #define MAFS_H
 
-#include <third_party/pstdint.h>
+#include "../third_party/pstdint.h"
 
 #ifndef __OPENCL_C_VERSION__
 #include <math.h>

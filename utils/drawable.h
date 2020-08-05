@@ -1,11 +1,11 @@
 #ifndef MESH_GL_H
 #define MESH_GL_H
 
-#include <utils/khash.h>
-#include <utils/shader.h>
+#include "khash.h"
+#include "shader.h"
 
 /* TODO maybe skin_t should not be defined on a component header */
-#include <components/skin.h>
+#include "../components/skin.h"
 #ifdef SHORT_IND
 typedef uint16_t vertid_t;
 #define IDTYPE GL_UNSIGNED_SHORT
@@ -14,8 +14,8 @@ typedef uint32_t vertid_t;
 #define IDTYPE GL_UNSIGNED_INT
 #endif
 
-#include<utils/mesh.h>
-#include<utils/material.h>
+#include "mesh.h"
+#include "material.h"
 
 typedef void(*draw_cb)(void *usrptr, shader_t *shader);
 

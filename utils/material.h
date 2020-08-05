@@ -1,9 +1,10 @@
 #ifndef MATERIAL_H
 #define MATERIAL_H
 
-#include <vil/vil.h>
 #include "texture.h"
 #include "mafs.h"
+struct vifunc;
+struct vicall;
 
 typedef struct mat
 {

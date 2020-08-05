@@ -1,0 +1,35 @@
+#!/bin/bash
+SUFFIX=""
+
+while test $# -gt 0; do
+  case "$1" in
+    -h|--help)
+	  echo "Usage: candle-config [--cflags] [--libs] [--emscripten]"
+      exit 0
+      ;;
+    --emscripten)
+      SUFFIX="_emscripten"
+	  shift
+	  break
+      ;;
+    *)
+      break;
+      ;;
+  esac
+done
+
+while test $# -gt 0; do
+  case "$1" in
+    --libs)
+	  shift
+      cat candle/build/libs$SUFFIX
+      ;;
+    --cflags)
+	  shift
+      cat candle/build/cflags$SUFFIX
+      ;;
+    *)
+	  shift
+      ;;
+  esac
+done

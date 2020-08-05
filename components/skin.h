@@ -1,8 +1,8 @@
 #ifndef SKIN_H
 #define SKIN_H
 
-#include <ecs/ecm.h>
-#include <utils/mafs.h>
+#include "../ecs/ecm.h"
+#include "../utils/mafs.h"
 
 typedef struct
 {

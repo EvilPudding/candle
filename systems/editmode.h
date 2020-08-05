@@ -1,10 +1,8 @@
 #ifndef EDITMODE_H
 #define EDITMODE_H
 
-#include <ecs/ecm.h>
-#include <utils/mesh.h>
-#include <utils/renderer.h>
-#include <utils/nk.h>
+#include "../ecs/ecm.h"
+#include "../utils/renderer.h"
 
 struct edit_scale
 {

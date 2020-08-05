@@ -3,6 +3,7 @@
 #include <systems/editmode.h>
 #include <utils/khash.h>
 #include <utils/mafs.h>
+#include <utils/nk.h>
 #include <candle.h>
 #include <utils/str.h>
 #include <stdlib.h>
@@ -327,6 +328,13 @@ slot_t vifunc_ref_to_slot(vifunc_t *self, uint32_t ref)
 	if (ref == ~0) return slot_empty();
 	for(it = self->begin; it; it = it->next)
 	{
+		if (ref(it->name) == ref)
+		{
+			slot_t slot;
+			slot.depth = 1;
+			slot.calls[0] = it->id;
+			return slot;
+		}
 		for (i = 0; i < it->input_args_num; i++)
 		{
 			uint32_t arg_ref;

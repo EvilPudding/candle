@@ -99,7 +99,7 @@ typedef void *GLhandleARB;
 typedef unsigned int GLhandleARB;
 #endif
 
-#include <third_party/pstdint.h>
+#include "../third_party/pstdint.h"
 		typedef unsigned short GLhalfARB;
 		typedef unsigned short GLhalf;
 		typedef GLint GLfixed;
