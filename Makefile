@@ -51,7 +51,7 @@ CFLAGS = -std=c89 -pedantic -Wall -I. -Wno-unused-function \
          -Wno-format-truncation -Wno-stringop-truncation $(PARENTCFLAGS) \
          -DTHREADED -DUSE_VAO
 
-CFLAGS_REL = $(CFLAGS) -g3
+CFLAGS_REL = $(CFLAGS) -O3
 
 CFLAGS_DEB = $(CFLAGS) -g3 -DDEBUG
 

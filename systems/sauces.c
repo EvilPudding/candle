@@ -94,7 +94,6 @@ void c_sauces_register(c_sauces_t *self, const char *name, const char *path, voi
 	char *dot;
 	sauces_loader_cb cb = NULL;
 	resource_t *sauce;
-	printf("reg %s %s\n", name, path);
 
 	strncpy(buffer, name, sizeof(buffer) - 1);
 	dot = strrchr(buffer, '.');
@@ -117,7 +116,6 @@ void c_sauces_register(c_sauces_t *self, const char *name, const char *path, voi
 					" Resources should be uniquely named.\n", name);
 			return;
 		}
-		/* printf("Registering name %s\n", name); */
 		k = kh_put(res, self->sauces, key, &ret);
 		kh_value(self->sauces, k) = sauce;
 
