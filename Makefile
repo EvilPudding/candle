@@ -51,7 +51,7 @@ CFLAGS = -std=c89 -pedantic -Wall -I. -Wno-unused-function \
          -Wno-format-truncation -Wno-stringop-truncation $(PARENTCFLAGS) \
          -DTHREADED -DUSE_VAO
 
-CFLAGS_REL = $(CFLAGS) -g3
+CFLAGS_REL = $(CFLAGS) -O3
 
 CFLAGS_DEB = $(CFLAGS) -g3 -DDEBUG
 
@@ -85,12 +85,12 @@ $(DIR)/packager:
 
 
 $(DIR)/candle.a: init $(OBJS_REL) $(DIR)/data.zip
-	$(AR) rs $@ $(OBJS_REL)
 	echo -n candle/$(DIR)/candle.a >> $(DIR)/libs
 	echo -n " " >> $(DIR)/libs
 	echo -n -Wl,--format=binary -Wl,candle/$(DIR)/data.zip -Wl,--format=default >> $(DIR)/libs
 	echo -n " " >> $(DIR)/libs
 	echo -n $(DEPS_REL) >> $(DIR)/libs
+	$(AR) rs $@ $(OBJS_REL)
 
 $(DIR)/%.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS_REL)
@@ -115,6 +115,11 @@ debug: $(DIR)/candle_debug.a
 	echo -n $(DEPS_DEB) > $(DIR)/libs
 
 $(DIR)/candle_debug.a: init $(OBJS_DEB)
+	echo -n candle/$(DIR)/candle_debug.a >> $(DIR)/libs_debug
+	echo -n " " >> $(DIR)/libs_debug
+	echo -n -Wl,--format=binary -Wl,candle/$(DIR)/data.zip -Wl,--format=default >> $(DIR)/libs_debug
+	echo -n " " >> $(DIR)/libs_debug
+	echo -n $(DEPS_DEB) >> $(DIR)/libs_debug
 	$(AR) rs $@ $(OBJS_DEB)
 
 $(DIR)/%.debug.o: %.c

@@ -12,6 +12,11 @@ while test $# -gt 0; do
 	  shift
 	  break
       ;;
+    --debug)
+      SUFFIX="_debug"
+	  shift
+	  break
+      ;;
     *)
       break;
       ;;
