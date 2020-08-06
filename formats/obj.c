@@ -1,8 +1,8 @@
-#include "obj.h"
 #include <candle.h>
+#include "obj.h"
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
+#include <stdio.h>
 
 /* ////////////////////////////////////////////////////////////////////////// */
 /*                                .OBJ LOADER                                 */
@@ -39,111 +39,157 @@ struct face {
 	} value;
 };
 
-static void ignoreLine(FILE *fp)
+static void ignore_line(const char **bytes, const char *end)
 {
-    char ch;
-    while((ch=fgetc(fp)) != EOF && ch!='\n');
+    while (*bytes < end)
+	{
+		const char ch = **bytes;
+		++(*bytes);
+		if (ch == '\n' || ch == '\r')
+			return;
+	}
 }
 
-static int isToIgnore(char c)
+static int should_ignore(char c)
 {
 	/* return c == '#' || c == 'u' || c == 'o' || c == 's' || c == 'm' ||
 	 * c == 'g'; */
 	return c != 'v' && c != 'f';
 }
 
-
-static void count(FILE *fp, int *numV, int *numVT, int *numVN, int *numF)
+static int strgetf(const char **str, const char *end, float *value)
 {
-    char ch;
+	int read_num = 0, ret;
+	assert(*str < end);
+	ret = sscanf(*str, " %f %n", value, &read_num);
+	*str += read_num;
+	return ret;
+}
+
+static void strgets(const char **str, const char *end, char *line, size_t n)
+{
+	int i;
+
+	line[n - 1] = '\0';
+	for (i = 0; i < n && *str < end; ++i)
+	{
+		line[i] = **str;
+		++(*str);
+		if (line[i] == '\n' || line[i] == '\r')
+			break;
+	}
+	if (i < n)
+		line[i] = '\0';
+}
+
+static char strgetc(const char **str, const char *end)
+{
+	char ch;
+	if (*str < end)
+	{
+		ch = **str;
+		++(*str);
+	}
+	else
+	{
+		ch = EOF;
+	}
+	return ch;
+}
+
+static void count(const char *bytes, size_t bytes_num, int *numV, int *numVT,
+                  int *numVN, int *numF)
+{
+	const char *str = bytes;
+	const char *end = bytes + bytes_num;
+	char ch;
     (*numV) = 0;
     (*numVT) = 0;
     (*numVN) = 0;
     (*numF) = 0;
-    rewind(fp);
-    while((ch = fgetc(fp)) != EOF )
+	while ((ch = strgetc(&str, end)) != EOF)
     {
-        if (isToIgnore(ch))
+        if (should_ignore(ch))
 		{
-			ignoreLine(fp);
+			ignore_line(&str, end);
 		}
         else
 		{
 			switch (ch)
 			{
 				case 'v':
-					if ((ch = fgetc(fp)) == 't')
+					ch = strgetc(&str, end);
+					if (ch == 't')
+					{
 						(*numVT)++;
+					}
 					else if (ch == 'n')
+					{
 						(*numVN)++;
-					else (*numV)++;
+					}
+					else
+					{
+						(*numV)++;
+					}
 					break;
-				case 'f':(*numF)++;
+				case 'f':
+					(*numF)++;
+					break;
 			}
+			ignore_line(&str, end);
 		}
     }
-    rewind(fp);
 }
 
-static void read_prop(mesh_t *self, FILE * fp, vec3_t *tempNorm,
-		vec2_t *tempText, struct face *tempFace)
+static void read_prop(mesh_t *self, const char *bytes, size_t bytes_num,
+                      vec3_t *tempNorm, vec2_t *tempText, struct face *tempFace)
 {
-    int n1 = 0, n2 = 0, n3 = 0, n4 = 0;
-    char ch;
-	int ret;
+    int n1 = 0, n2 = 0, n4 = 0;
+	const char *str = bytes;
+	const char *end = bytes + bytes_num;
+	char ch;
 
-    rewind(fp);
-    while((ch = fgetc(fp)) != EOF)
+    while((ch = strgetc(&str, end)) != EOF)
     {
-        if (isToIgnore(ch))
+        if (should_ignore(ch))
 		{
-			ignoreLine(fp);
+			ignore_line(&str, end);
 		}
         else
 		{
 			struct face *tf;
 			char *line_i, *words, *token;
 
-			char *line = malloc(512);
+			char line[512];
 			int i;
 			switch(ch)
 			{
 				case 'v':
-					if ((ch=fgetc(fp))=='t')
+					ch = strgetc(&str, end);
+					if (ch == 't')
 					{
-						fgetc(fp);
-						ret = fscanf(fp, "%f", &(tempText[n1].x)); fgetc(fp);
-						if (!ret) exit(1);
-						ret = fscanf(fp, "%f", &(tempText[n1].y)); fgetc(fp);
-						if (!ret) exit(1);
+						strgetf(&str, end, &tempText[n1].x);
+						strgetf(&str, end, &tempText[n1].y);
 						n1++;
 					}
-					else if (ch=='n')
+					else if (ch == 'n')
 					{
-						fgetc(fp);
-						ret = fscanf(fp, "%f", &(tempNorm[n2].x)); fgetc(fp);
-						if (!ret) exit(1);
-						ret = fscanf(fp, "%f", &(tempNorm[n2].y)); fgetc(fp);
-						if (!ret) exit(1);
-						ret = fscanf(fp, "%f", &(tempNorm[n2].z)); fgetc(fp);
-						if (!ret) exit(1);
+						strgetf(&str, end, &tempNorm[n2].x);
+						strgetf(&str, end, &tempNorm[n2].y);
+						strgetf(&str, end, &tempNorm[n2].z);
 						n2++;
 					}
 					else
 					{
 						vec3_t pos;
-						ret = fscanf(fp, "%f", &pos.x); fgetc(fp);
-						if (!ret) exit(1);
-						ret = fscanf(fp, "%f", &pos.y); fgetc(fp);
-						if (!ret) exit(1);
-						ret = fscanf(fp, "%f", &pos.z); fgetc(fp);
+						strgetf(&str, end, &pos.x);
+						strgetf(&str, end, &pos.y);
+						strgetf(&str, end, &pos.z);
 						mesh_add_vert(self, VEC3(pos.x, pos.y, pos.z));
-						if (!ret) exit(1);
-						n3++;
 					}
 					break;
 				case 'f':
-					if (fgets(line, 512, fp) == NULL) exit(1);
+					strgets(&str, end, line, 512);
 					tf = &tempFace[n4];
 					line_i = line;
 					for (i = 0; (words = obj__strsep(&line_i, " ")) != NULL; i += 3)
@@ -169,37 +215,27 @@ static void read_prop(mesh_t *self, FILE * fp, vec3_t *tempNorm,
 
 					n4++;
 			}
-			free(line);
 		}
     }
 }
 
-void mesh_load_obj(mesh_t *self, const char *filename)
+void mesh_load_obj(mesh_t *self, const char *bytes, size_t bytes_num)
 {
-	FILE *fp;
     int i;
     int v, vt, vn, f;
 	vec3_t *tempNorm;
 	vec2_t *tempText;
 	struct face *tempFace;
 
-	strncpy(self->name, filename, sizeof(self->name) - 1);
-    fp = fopen(filename, "r");
-	if (!fp)
-	{
-		printf("Could not find object '%s'\n", filename);
-		return;
-	}
-
-    count(fp, &v, &vt, &vn, &f);
+    count(bytes, bytes_num, &v, &vt, &vn, &f);
+	printf("%s counts %d %d %d %d\n", self->name, v, vt, vn, f);
     tempNorm = malloc((vn + 1) * sizeof(vec3_t));
     tempText = malloc((vt + 1) * sizeof(vec2_t));
     tempFace = malloc(f * sizeof(struct face));
 
 	tempNorm[0] = Z3;
 	tempText[0] = Z2;
-    read_prop(self, fp, &tempNorm[1], &tempText[1], tempFace);
-
+    read_prop(self, bytes, bytes_num, &tempNorm[1], &tempText[1], tempFace);
 
 	for (i = 0; i < f; i++)
 	{
@@ -224,9 +260,7 @@ void mesh_load_obj(mesh_t *self, const char *filename)
 	free(tempNorm);
 	free(tempText);
     free(tempFace);
-
-    fclose(fp);
-
+	printf("\t\tend object %s\n", self->name);
 }
 
 

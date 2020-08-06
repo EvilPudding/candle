@@ -45,7 +45,7 @@ void c_light_init(c_light_t *self)
 
 		g_light_widget = mat_new("light_widget", "default");
 		mat1t(g_light_widget, ref("albedo.texture"),
-		      texture_from_memory("bulb", bulb_png, bulb_png_len));
+		      texture_from_memory("bulb", (const char *)bulb_png, bulb_png_len));
 		mat1f(g_light_widget, ref("albedo.blend"), 1.0f);
 		mat4f(g_light_widget, ref("emissive.color"), vec4(1.0f, 1.0f, 1.0f, 1.0f));
 	}

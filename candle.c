@@ -487,12 +487,11 @@ void candle_init(const char *path)
 	sauces_size = (uint64_t)(  _binary_candle_build_data_zip_end
 	                         - _binary_candle_build_data_zip_start);
 
-	printf("Hey, I'm saucing here!\n");
-	c_sauces_me_a_zip(c_sauces(&SYS), sauces_bytes, sauces_size);
-
 	textures_reg();
 	meshes_reg();
 	materials_reg();
+
+	c_sauces_me_a_zip(c_sauces(&SYS), sauces_bytes, sauces_size);
 
 	g_candle->mtx = malloc(sizeof(mtx_t));
 	g_candle->render_thr = malloc(sizeof(thrd_t));

@@ -101,7 +101,7 @@ typedef struct texture
 } texture_t;
 
 texture_t *texture_from_file(const char *filename);
-texture_t *texture_from_memory(const char *name, void *buffer, int32_t len);
+texture_t *texture_from_memory(const char *name, const char *buffer, size_t len);
 int32_t texture_load(texture_t *self, const char *filename);
 texture_t *texture_from_buffer(const char *name, void *buffer,
                                int32_t width, int32_t height, int32_t Bpp);

@@ -122,7 +122,8 @@ vec4_t color_from_hex(const char *hex_str)
 	return self;
 }
 
-mat_t *mat_from_file(const char *filename)
+mat_t *mat_from_memory(const char *bytes, size_t bytes_num,
+                       const char *filename)
 {
 	mat_t *self;
 	const char *file_name = strrchr(filename, '/');
@@ -139,7 +140,7 @@ mat_t *mat_from_file(const char *filename)
 	self = mat_new(file_name, NULL);
 	printf("loading %s\n", filename);
 
-	vifunc_load(self->sandbox, filename);
+	vifunc_load(self->sandbox, bytes, bytes_num);
 
 	self->call = vifunc_get(self->sandbox, "material");
 	if (self->call)
@@ -296,10 +297,10 @@ static void _code_save(vifunc_t *func, FILE *fp)
 	fprintf(fp, "%%{\n%s}%%", type->code);
 }
 
-static bool_t _code_load(vifunc_t *func, FILE *fp) 
+static bool_t _code_load(vifunc_t *func, vifile_t *fp) 
 {
 	struct mat_type *type;
-	char buffer[1024];
+	char *line;
 
 	if (!func->usrptr)
 	{
@@ -308,25 +309,23 @@ static bool_t _code_load(vifunc_t *func, FILE *fp)
 	type = func->usrptr;
 	type->code = str_new(64);
 
-	buffer[1024 - 1] = '\0';
-	if (!fgets(buffer, 3, fp))
+	line = vigets(fp);
+	if (!line)
 	{
 		return true;
 	}
-	if (strncmp(buffer, "%{", 2))
+	if (strncmp(line, "%{", 2))
 	{
-		rewind(fp);
+		viwind(fp);
 		return true;
 	}
 
-	while (fgets(buffer, sizeof(buffer) - 1, fp))
+	while ((line = vigets(fp)))
 	{
-		char *end = strstr(buffer, "}%");
-		if (end) *end = '\0';
+		if (strncmp(line, "}%", 2) == 0)
+			break;
 
-		str_cat(&type->code, buffer);
-
-		if (end) break;
+		str_cat(&type->code, line);
 	}
 	printf("loaded %s\n", type->code);
 
@@ -616,9 +615,11 @@ void materials_register_defaults(void)
 	vifunc_link(parallax, ref("height.mix.result"), ref("pbr.height"));
 }
 
-void *mat_loader(const char *path, const char *name, uint32_t ext)
+static
+void *mat_loader(const char *bytes, size_t bytes_num, const char *name,
+                 uint32_t ext)
 {
-	return mat_from_file(path);
+	return mat_from_memory(bytes, bytes_num, name);
 }
 
 void materials_reg()
@@ -1451,12 +1452,12 @@ static void init_type(uint32_t tid, const char *type_name)
 	mat->usrptr = type;
 	if (!vifunc_get(mat, "pbr"))
 	{
-		sprintf(buffer, "%.*s.vil", (int)sizeof(type->name) - 1, type->name);
-		if (!vifunc_load(mat, buffer))
-		{
+		/* sprintf(buffer, "%.*s.vil", (int)sizeof(type->name) - 1, type->name); */
+		/* if (!vifunc_load(mat, buffer)) */
+		/* { */
 			printf("Type '%s' doesn't exist or is incomplete.\n", type_name);
-			exit(1);
-		}
+			/* exit(1); */
+		/* } */
 	}
 	vifunc_watch(mat, mat_type_changed, type);
 

@@ -2904,24 +2904,6 @@ void mesh_cube(mesh_t *self, float size, float tex_scale)
 	            vec3(size, size, size));
 }
 
-void mesh_load(mesh_t *self, const char *filename)
-{
-	char ext[16];
-	mesh_lock(self);
-
-	strncpy(ext, strrchr(filename, '.') + 1, sizeof(ext) - 1);
-
-	if(!strncmp(ext, "ply", sizeof(ext) - 1))
-	{
-		mesh_load_ply(self, filename);
-	}
-	else if(!strncmp(ext, "obj", sizeof(ext) - 1))
-	{
-		mesh_load_obj(self, filename);
-	}
-	mesh_unlock(self);
-}
-
 vertex_t *mesh_farthest(mesh_t *self, const vec3_t dir)
 {
 	float last_dist;
@@ -2956,36 +2938,55 @@ float mesh_get_margin(const mesh_t *self)
 	return 0.001f; /* FIXME */
 }
 
-int load_mesh(mesh_t *mesh)
+typedef struct
+{
+	mesh_t *output;
+	const char *bytes;
+	size_t bytes_num;
+} mesh_load_t;
+
+static
+int load_mesh(mesh_load_t *info)
 {
 	char buffer[256];
-	strcpy(buffer, mesh->name);
-	printf("loading %s\n", mesh->name);
-	mesh_load(mesh, buffer);
+	strcpy(buffer, info->output->name);
+
+	mesh_lock(info->output);
+
+	mesh_load_obj(info->output, info->bytes, info->bytes_num);
+
+	mesh_unlock(info->output);
+	free(info);
 	return 1;
 }
 
-void *mesh_loader(const char *path, const char *name, uint32_t ext)
+void *mesh_loader_obj(const char *bytes, size_t bytes_num, const char *name,
+                      uint32_t ext)
 {
-	mesh_t *mesh = mesh_new();
 #ifdef THREADED
 	thrd_t thr;
 #endif
-	strcpy(mesh->name, path);
+	mesh_t *output = mesh_new();
+	mesh_load_t *info = malloc(sizeof(*info));
+
+	strcpy(output->name, name);
+	info->output = output;
+	info->bytes = bytes;
+	info->bytes_num = bytes_num;
 
 #ifdef THREADED
-	thrd_create(&thr, (thrd_start_t)load_mesh, mesh);
+	thrd_create(&thr, (thrd_start_t)load_mesh, 	info);
 #else
-	load_mesh(mesh);
+	load_mesh(info);
 #endif
 
-	return mesh;
+	return output;
 }
 
 void meshes_reg()
 {
-	sauces_loader(ref("obj"), mesh_loader);
-	sauces_loader(ref("ply"), mesh_loader);
+	sauces_loader(ref("obj"), mesh_loader_obj);
+	/* sauces_loader(ref("ply"), mesh_loader); */
 }
 
 /* http://paulbourke.net/papers/triangulate/ */

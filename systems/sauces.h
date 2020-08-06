@@ -3,7 +3,8 @@
 
 #include "../ecs/ecm.h"
 
-typedef void*(*sauces_loader_cb)(const char *path, const char *name, uint32_t ext);
+typedef void*(*sauces_loader_cb)(const char *bytes, size_t bytes_num,
+                                 const char *name, uint32_t ext);
 
 struct load_signal
 {
@@ -22,6 +23,7 @@ typedef struct
 	char name[64];
 	char path[256];
 	void *data;
+	uint32_t archive_id;
 } resource_t;
 
 KHASH_MAP_INIT_INT(res, resource_t*)
@@ -30,7 +32,7 @@ KHASH_MAP_INIT_INT(loa, sauces_loader_cb)
 typedef struct c_sauces
 {
 	c_t super;
-
+	void *archive;
 	khash_t(loa) *loaders;
 	khash_t(res) *sauces;
 	khash_t(res) *generic;
@@ -41,7 +43,7 @@ DEF_CASTER(ct_sauces, c_sauces, c_sauces_t)
 
 c_sauces_t *c_sauces_new(void);
 void c_sauces_register(c_sauces_t *self, const char *name, const char *path,
-		void *data);
+		void *data, uint32_t archive_id);
 
 void c_sauces_me_a_zip(c_sauces_t *self, const unsigned char *bytes,
                        uint64_t size);
@@ -54,7 +56,7 @@ resource_handle_t sauce_handle(const char *name);
 
 #define sauces_loader(ref, loader) (c_sauces_loader(c_sauces(&SYS), ref, loader))
 #define sauces_register(name, path, data) (c_sauces_register(c_sauces(&SYS), \
-			name, path, data))
+			name, path, data, ~0))
 #define sauces(name) (c_sauces_get(c_sauces(&SYS), name))
 
 #endif /* !RESAUCES_H */

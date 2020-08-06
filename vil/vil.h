@@ -9,12 +9,16 @@
 
 struct vicall;
 struct vifunc;
+struct vifile;
+
+typedef struct vifile vifile_t;
 
 typedef float (*vifunc_gui_cb)(struct vicall *call, void *data, void *nk);
 typedef void  (*vicall_save_cb)(struct vicall *call, void *data, FILE *fp);
-typedef bool_t(*vicall_load_cb)(struct vicall *call, void *data, int argc, const char **argv);
+typedef bool_t(*vicall_load_cb)(struct vicall *call, void *data, int argc,
+                                const char **argv);
 typedef void  (*vifunc_save_cb)(struct vifunc *func, FILE *fp);
-typedef bool_t(*vifunc_load_cb)(struct vifunc *func, FILE *fp);
+typedef bool_t(*vifunc_load_cb)(struct vifunc *func, vifile_t *fp);
 typedef void  (*vil_func_cb)(struct vifunc *func, void *usrptr);
 
 enum vicall_flags {
@@ -169,7 +173,7 @@ uint32_t vifunc_gui(vifunc_t *type, void *nk);
 void vifunc_watch(vifunc_t *self, vil_func_cb callback, void *usrptr);
 vicall_t *vifunc_get(vifunc_t *self, const char *name);
 void vifunc_save(vifunc_t *self, const char *filename);
-bool_t vifunc_load(vifunc_t *self, const char *filename);
+bool_t vifunc_load(vifunc_t *self, const char *bytes, size_t bytes_num);
 void vifunc_slot_to_name(vifunc_t *func, slot_t slot, char *buffer,
                          const char *separator, const char *append);
 void vifunc_foreach_unlinked_input(vifunc_t *self, vil_foreach_input_cb cb,
@@ -177,5 +181,9 @@ void vifunc_foreach_unlinked_input(vifunc_t *self, vil_foreach_input_cb cb,
 
 slot_t slot_pop(slot_t slt);
 
+vifile_t *viopen(const char *bytes, size_t bytes_num);
+char *vigets(vifile_t *fp);
+void viwind(vifile_t *fp);
+void viclose(vifile_t *fp);
 
 #endif /* !VISUAL_LOGIC_H */

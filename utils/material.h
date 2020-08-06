@@ -21,7 +21,8 @@ typedef struct mat
 extern char g_mats_path[256];
 
 mat_t *mat_new(const char *name, const char *type_name);
-mat_t *mat_from_file(const char *filename);
+mat_t *mat_from_memory(const char *bytes, size_t bytes_num,
+                       const char *filename);
 mat_t *mat_from_dir(const char *name, const char *dirname);
 bool_t mat_is_transparent(mat_t *self);
 void mat_destroy(mat_t *self);

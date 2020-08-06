@@ -51,7 +51,7 @@ CFLAGS = -std=c89 -pedantic -Wall -I. -Wno-unused-function \
          -Wno-format-truncation -Wno-stringop-truncation $(PARENTCFLAGS) \
          -DTHREADED -DUSE_VAO
 
-CFLAGS_REL = $(CFLAGS) -O3
+CFLAGS_REL = $(CFLAGS) -g3
 
 CFLAGS_DEB = $(CFLAGS) -g3 -DDEBUG
 
@@ -70,11 +70,11 @@ emscripten: CFLAGS := $(CFLAGS_EMS)
 
 all: $(DIR)/candle.a
 
-$(DIR)/data.zip: pack
-	./pack ../$(SAUCES)
+$(DIR)/data.zip: $(DIR)/packager
+	$(DIR)/packager ../$(SAUCES)
 
-pack: 
-	$(CC) packager/packager.c third_party/miniz.c -O3 -o pack
+$(DIR)/packager: 
+	$(CC) packager/packager.c third_party/miniz.c -O3 -o $(DIR)/packager
 
 ../%/$(DIR)/export.a:
 	$(MAKE) -C $(patsubst %/$(DIR)/export.a, %, $@)
@@ -151,4 +151,3 @@ init:
 
 clean:
 	rm -fr $(DIR)
-	rm pack

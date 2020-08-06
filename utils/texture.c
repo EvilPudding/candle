@@ -1075,7 +1075,9 @@ static void texture_update_indir_info(texture_t *self)
 }
 
 
-int32_t texture_load_from_memory(texture_t *self, void *buffer, int32_t len)
+static
+int32_t texture_load_from_memory(texture_t *self, const char *buffer,
+                                 int32_t len)
 {
 	texture_t temp;
 	memset(&temp, 0, sizeof(temp));
@@ -1083,8 +1085,10 @@ int32_t texture_load_from_memory(texture_t *self, void *buffer, int32_t len)
 	temp.target = GL_TEXTURE_2D;
 
 	temp.bufs[0].dims = 0;
-	temp.bufs[0].data = stbi_load_from_memory(buffer, len, (int32_t*)&temp.width,
-			(int32_t*)&temp.height, &temp.bufs[0].dims, 4);
+	temp.bufs[0].data = stbi_load_from_memory((const unsigned char*)buffer,
+	                                          len, (int32_t*)&temp.width,
+	                                          (int32_t*)&temp.height,
+	                                          &temp.bufs[0].dims, 4);
 	temp.bufs[0].dims = 4;
 
 	if(!temp.bufs[0].data)
@@ -1116,7 +1120,7 @@ texture_t *texture_from_buffer(const char *name, void *buffer,
 	return self;
 }
 
-texture_t *texture_from_memory(const char *name, void *buffer, int32_t len)
+texture_t *texture_from_memory(const char *name, const char *buffer, size_t len)
 {
 	texture_t *self = texture_new_2D(0, 0, TEX_INTERPOLATE, 0);
 	strcpy(self->name, name);
@@ -1620,10 +1624,10 @@ texture_t *texture_cubemap
 	return self;
 }
 
-void *tex_loader(const char *path, const char *name, uint32_t ext)
+void *tex_loader(const char *bytes, size_t bytes_num,
+                 const char *name, uint32_t ext)
 {
-	texture_t *texture = texture_from_file(path);
-
+	texture_t *texture = texture_from_memory(name, bytes, bytes_num);
 	return texture;
 }
 

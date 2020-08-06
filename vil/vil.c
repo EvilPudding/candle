@@ -36,6 +36,14 @@ void propagate_data(vicall_t *root, vicall_t *call, slot_t parent_slot,
                     uint8_t *parent_data);
 void vicall_copy_defaults(vicall_t *call);
 
+struct vifile
+{
+	char **lines;
+	uint32_t lines_num;
+	uint32_t line;
+	char bytes[1];
+};
+
 void label_gui(vicall_t *call, void *ctx) 
 {
 	nk_layout_row_dynamic(ctx, 20, 1);
@@ -156,15 +164,17 @@ slot_t vifunc_slot_from_name(vifunc_t *func, const char *input,
 	char buffer[64];
 	slot_t slot = {0};
 	char *name;
-	char *rest;
+	char *str;
+	char *saveptr;
 
 	strcpy(buffer, input);
-	rest = buffer;
+	str = buffer;
 
-	while ((name = my_strtok_r(rest, separator, &rest)))
+	while ((name = my_strtok_r(str, separator, &saveptr)))
 	{
 		vicall_t *it;
 		uint32_t id = ~0;
+		str = NULL;
 
 		for(it = func->begin; it; it = it->next)
 		{
@@ -599,17 +609,62 @@ void vifunc_link(vifunc_t *self, uint32_t from, uint32_t into)
 	_vifunc_link(self, from_slot, into_slot);
 }
 
-bool_t vifunc_load(vifunc_t *self, const char *filename)
+vifile_t *viopen(const char *bytes, size_t bytes_num)
+{
+	char *saveptr;
+	char *newline;
+	char *str;
+	vifile_t *fp = malloc(sizeof(vifile_t) + bytes_num + 1);
+	memcpy(fp->bytes, bytes, bytes_num);
+	fp->bytes[bytes_num] = '\0';
+	fp->lines = malloc(sizeof(*fp->lines));
+	fp->lines_num = 0;
+	fp->line = 0;
+
+	str = fp->bytes;
+	while ((newline = my_strtok_r(str, "\n", &saveptr)))
+	{
+		str = NULL;
+		fp->lines = realloc(fp->lines, (fp->lines_num + 1) * sizeof(*fp->lines));
+		fp->lines[fp->lines_num] = newline;
+		fp->lines_num++;
+	}
+
+	return fp;
+}
+
+void viwind(vifile_t *fp)
+{
+	fp->line = 0;
+}
+
+char *vigets(vifile_t *fp)
+{
+	char *line = NULL;
+	if (fp->line < fp->lines_num)
+	{
+		line = fp->lines[fp->line];
+		fp->line++;
+	}
+	return line;
+}
+
+void viclose(vifile_t *fp)
+{
+	free(fp);
+}
+
+
+bool_t vifunc_load(vifunc_t *self, const char *bytes, size_t bytes_num)
 {
 	char *str = NULL;
-	FILE *fp;
+	vifile_t *fp;
 	vicall_t *it;
 	if (!self) return false;
 
 	/* TODO: clear self */
 
-	fp = fopen(filename, "r");
-	if (!fp) return false;
+    fp = viopen(bytes, bytes_num);
 
 	self->locked++;
 
@@ -618,33 +673,26 @@ bool_t vifunc_load(vifunc_t *self, const char *filename)
 		self->ctx->builtin_load_func(self, fp);
 	}
 
-	while(!feof(fp))
+	while ((str = vigets(fp)))
 	{
 		vicall_t *root;
 		slot_t slot;
-		char separators[] = " ";
 		char *p;
 		char *argv[64];
 		int argc;
+		char *save;
 
-		str = str_readline(fp);
-		if (str[str_len(str) - 1] == '\n')
-		{
-			str[str_len(str) - 1] = '\0';
-		}
-
-		p = strtok(str, separators);
+		p = my_strtok_r(str, " ", &save);
 		argc = 0;
 
 		argv[argc++] = p;
 		if (!p)
 		{
-			str_free(str);
 			continue;
 		}
 		assert(p);
 
-		while((p = strtok(NULL, separators)) != NULL)
+		while((p = my_strtok_r(NULL, " ", &save)) != NULL)
 		{
 			argv[argc++] = p;
 		}
@@ -658,10 +706,6 @@ bool_t vifunc_load(vifunc_t *self, const char *filename)
 			if (slot.depth <= 1)
 			{
 				_vicall_load(self, argc, (const char **)argv);
-			}
-			else
-			{
-				printf("Error loading '%s'\n", filename);
 			}
 		}
 		else
@@ -690,8 +734,6 @@ bool_t vifunc_load(vifunc_t *self, const char *filename)
 				_vifunc_link(self, slot, into_slot);
 			}
 		}
-
-		str_free(str);
 	}
 
 	for (it = self->begin; it; it = it->next)
@@ -702,12 +744,12 @@ bool_t vifunc_load(vifunc_t *self, const char *filename)
 
 	self->locked--;
 
-	fclose(fp);
+	viclose(fp);
 	return true;
 
 fail:
 	self->locked--;
-	fclose(fp);
+	viclose(fp);
 	return false;
 }
 
@@ -987,7 +1029,7 @@ vicall_t *vicall_new(vifunc_t *parent, vifunc_t *type, const char *name,
 {
 	vicall_t *call;
 	uint32_t i;
-	if (!parent || !type) return NULL;
+	assert(parent && type);
 	/* NK_ASSERT((nk_size)type->call_count < NK_LEN(type->call_buf)); */
 	i = parent->call_count++;
 	call = &parent->call_buf[i];

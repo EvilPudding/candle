@@ -33,11 +33,10 @@ static sauces_loader_cb c_sauces_get_loader(c_sauces_t *self, uint32_t ext);
 c_sauces_t *c_sauces_new()
 {
 	c_sauces_t *self = component_new(ct_sauces);
+	self->archive = NULL;
 	self->sauces = kh_init(res);
 	self->generic = kh_init(res);
 	self->loaders = kh_init(loa);
-
-
 	return self;
 }
 
@@ -85,12 +84,14 @@ void c_sauces_loader(c_sauces_t *self, uint32_t ref, sauces_loader_cb loader)
 	kh_value(self->loaders, k) = loader;
 }
 
-void c_sauces_register(c_sauces_t *self, const char *name, const char *path, void *data)
+void c_sauces_register(c_sauces_t *self, const char *name,
+                       const char *path, void *data,
+                       uint32_t archive_id)
 {
 	khiter_t k;
 	uint32_t key;
 	int ret;
-	char buffer[64];
+	char buffer[256];
 	char *dot;
 	sauces_loader_cb cb = NULL;
 	resource_t *sauce;
@@ -105,6 +106,7 @@ void c_sauces_register(c_sauces_t *self, const char *name, const char *path, voi
 		strncpy(sauce->path, path, sizeof(sauce->path) - 1);
 	}
 	sauce->data = data;
+	sauce->archive_id = archive_id;
 
 	if(dot)
 	{
@@ -134,9 +136,44 @@ void c_sauces_register(c_sauces_t *self, const char *name, const char *path, voi
 	}
 }
 
+static
+char *c_sauces_get_bytes(c_sauces_t *self, resource_t *sauce, size_t *bytes_num)
+{
+	char *bytes = NULL;
+	if (sauce->archive_id == ~0) {
+		unsigned long fpsize;
+		FILE *fp = fopen(sauce->path, "rb");
+		fseek(fp, 0, SEEK_END);
+		fpsize = ftell(fp) + 1;
+		fseek(fp, 0, SEEK_SET);
+		bytes = malloc(fpsize);
+		fread(bytes, 1, fpsize, fp);
+		bytes[fpsize - 1] = '\0';
+		fclose(fp);
+	}
+	else
+	{
+		const char *uncomp;
+		mz_zip_archive_file_stat file_stat;
+		if (mz_zip_reader_file_stat(self->archive, sauce->archive_id,
+		                             &file_stat))
+		{
+			uncomp = mz_zip_reader_extract_file_to_heap(self->archive,
+			                                            file_stat.m_filename,
+			                                            bytes_num, 0);
+			bytes = malloc(*bytes_num + 1);
+			memcpy(bytes, uncomp, *bytes_num);
+			bytes[*bytes_num] = 0;
+		}
+	}
+	return bytes;
+}
+
 void *c_sauces_get_data(c_sauces_t *self, resource_handle_t *handle)
 {
 	char *dot;
+	char *bytes;
+	size_t bytes_num;
 	sauces_loader_cb cb;
 	resource_t *sauce = c_sauces_get_sauce(self, handle);
 
@@ -150,7 +187,8 @@ void *c_sauces_get_data(c_sauces_t *self, resource_handle_t *handle)
 	
 	cb = c_sauces_get_loader(self, handle->ext);
 	if(!cb) return NULL;
-	sauce->data = cb(sauce->path, sauce->name, handle->ext);
+	bytes = c_sauces_get_bytes(self, sauce, &bytes_num);
+	sauce->data = cb(bytes, bytes_num, sauce->name, handle->ext);
 	return sauce->data;
 }
 
@@ -213,7 +251,7 @@ int c_sauces_index_dir(c_sauces_t *self, const char *dir_name)
 
 		dot = strrchr(buffer, '.');
 		if(!dot || dot[1] == '\0') goto next;;
-		c_sauces_register(self, buffer, path, NULL);
+		c_sauces_register(self, buffer, path, NULL, ~0);
 
 next:
 		if (tinydir_next(&dir) == -1)
@@ -254,34 +292,34 @@ int c_sauces_component_menu(c_sauces_t *self, void *ctx)
 void c_sauces_me_a_zip(c_sauces_t *self, const unsigned char *bytes,
                        uint64_t size)
 {
-	mz_zip_archive archive;
-	mz_bool status;
 	int i;
 
-	mz_zip_zero_struct(&archive);
-	status = mz_zip_reader_init_mem(&archive, bytes, size, 0);
-
-	status = mz_zip_reader_end(&archive);
-	for (i = 0; i < (int)mz_zip_reader_get_num_files(&archive); i++)
+	self->archive = malloc(sizeof(mz_zip_archive));
+	mz_zip_zero_struct(self->archive);
+	if (!mz_zip_reader_init_mem(self->archive, bytes, size, 0))
+	{
+		return;
+	}
+	for (i = 0; i < (int)mz_zip_reader_get_num_files(self->archive); i++)
 	{
 		mz_zip_archive_file_stat file_stat;
-		if (!mz_zip_reader_file_stat(&archive, i, &file_stat))
+		if (!mz_zip_reader_file_stat(self->archive, i, &file_stat))
 		{
-			printf("mz_zip_reader_file_stat() failed!\n");
-			mz_zip_reader_end(&archive);
-			return;
+			continue;
 		}
 
-		printf("Filename: \"%s\", Comment: \"%s\", Uncompressed size: %u, Compressed size: %u, Is Dir: %u\n", file_stat.m_filename, file_stat.m_comment, (uint32_t)file_stat.m_uncomp_size, (uint32_t)file_stat.m_comp_size, mz_zip_reader_is_file_a_directory(&archive, i));
-
-		if (!strcmp(file_stat.m_filename, "directory/"))
+		if (!mz_zip_reader_is_file_a_directory(self->archive, i))
 		{
-			if (!mz_zip_reader_is_file_a_directory(&archive, i))
-			{
-				return;
-			}
+			const char *filename = strrchr(file_stat.m_filename, '/');
+			if (!filename)
+				filename = file_stat.m_filename;
+			else
+				filename++;
+			c_sauces_register(self, filename, file_stat.m_filename, NULL, i);
 		}
 	}
+	/* End archive in sauces destroy */
+	/* status = mz_zip_reader_end(self->archive); */
 }
 
 void ct_sauces(ct_t *self)
