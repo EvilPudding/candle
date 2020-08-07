@@ -8,7 +8,13 @@ CALL vcenv.bat
 set DIR=build
 set GLFW=third_party\glfw\src
 set TINYCTHREAD=third_party\tinycthread\source
-set THIRD_PARTY_SRC= %GLFW%\win32_init.c^
+set THIRD_PARTY_SRC= %GLFW%\context.c^
+                     %GLFW%\init.c^
+                     %GLFW%\input.c^
+                     %GLFW%\monitor.c^
+                     %GLFW%\vulkan.c^
+                     %GLFW%\window.c^
+                     %GLFW%\win32_init.c^
                      %GLFW%\win32_joystick.c^
                      %GLFW%\win32_monitor.c^
                      %GLFW%\win32_time.c^
@@ -17,7 +23,8 @@ set THIRD_PARTY_SRC= %GLFW%\win32_init.c^
                      %GLFW%\wgl_context.c^
                      %GLFW%\egl_context.c^
                      %GLFW%\osmesa_context.c^
-                     %TINYCTHREAD%\tinycthread.c
+                     %TINYCTHREAD%\tinycthread.c^
+                     third_party\miniz.c
 
 set CFLAGS=/O2 /I. /W1 /D_GLFW_WIN32 /Ithird_party\glfw\include /I%TINYCTHREAD% /DTHREADED^
 	/D_CRT_SECURE_NO_WARNINGS
