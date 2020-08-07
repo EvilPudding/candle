@@ -3,6 +3,8 @@ SETLOCAL ENABLEEXTENSIONS ENABLEDELAYEDEXPANSION
 
 CD /D %~dp0
 
+CALL vcenv.bat
+
 set DIR=build
 set GLFW=third_party\glfw\src
 set TINYCTHREAD=third_party\tinycthread\source
@@ -19,23 +21,6 @@ set THIRD_PARTY_SRC= %GLFW%\win32_init.c^
 
 set CFLAGS=/O2 /I. /W1 /D_GLFW_WIN32 /Ithird_party\glfw\include /I%TINYCTHREAD% /DTHREADED^
 	/D_CRT_SECURE_NO_WARNINGS
-
-WHERE cl
-IF %ERRORLEVEL% NEQ 0 (
-	set vsdir=
-	set vcvarsall=""
-	FOR /R "C:\Program Files (x86)\Microsoft Visual Studio\" %%f in (vcvarsall.bat) DO @IF EXIST "%%f" (
-		set vcvarsall=%%f
-	)
-	IF NOT EXIST "!vcvarsall!" (
-		ECHO Could not automatically find vcvarsall.bat to setup the build environment.
-		ECHO If the Microsoft Build Tools are not installed, get them at:
-		ECHO     https://visualstudio.microsoft.com/visual-cpp-build-tools/
-		ECHO If the build tools are installed, run vcvarsall.bat before calling build.bat
-		GOTO ERROR
-	)
-	CALL "!vcvarsall!" x86_amd64
-)
 
 set sources=%THIRD_PARTY_SRC% candle.c
 
