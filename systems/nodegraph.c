@@ -26,7 +26,7 @@ void node_entity(c_nodegraph_t *self, entity_t entity, void *ctx)
 	else
 	{
 #ifdef _WIN32
-		sprintf(buffer, "ENT_%I64u", ent);
+		sprintf(buffer, "ENT_%I64u", entity);
 #elif __EMSCRIPTEN__
 		sprintf(buffer, "NODE_%lld", entity);
 #else

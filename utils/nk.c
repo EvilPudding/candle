@@ -1093,16 +1093,16 @@ nk_tree_entity_base(struct nk_context *ctx, enum nk_tree_type type,
     struct nk_window *win = ctx->current;
     int title_len = 0;
     nk_hash tree_hash = 0;
-    nk_uint *state = 0;
+    enum nk_collapse_states *state = NULL;
 
     /* retrieve tree state from internal widget state tables */
     if (!hash) {
         title_len = (int)nk_strlen(title);
         tree_hash = nk_murmur_hash(title, (int)title_len, (nk_hash)line);
     } else tree_hash = nk_murmur_hash(hash, len, (nk_hash)line);
-    state = nk_find_value(win, tree_hash);
+    state = (enum nk_collapse_states*)nk_find_value(win, tree_hash);
     if (!state) {
-        state = nk_add_value(ctx, win, tree_hash, 0);
+        state = (enum nk_collapse_states*)nk_add_value(ctx, win, tree_hash, 0);
         *state = initial_state;
     } return nk_tree_entity_image_push_hashed_base(ctx, type, img, title,
         nk_strlen(title), state, selected, has_children);
