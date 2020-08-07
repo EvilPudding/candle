@@ -6,7 +6,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef THREADED
 #include <tinycthread.h>
+#endif
 
 /* #if __has_include (<assimp/cimport.h>) */
 /* #include <assimp/cimport.h> */
@@ -181,8 +183,10 @@ mesh_t *mesh_new()
 	vector_alloc(self->faces, 100);
 	vector_alloc(self->edges, 100);
 
+#ifdef THREADED
 	self->mtx = malloc(sizeof(mtx_t));
 	mtx_init(self->mtx, mtx_plain | mtx_recursive);
+#endif
 
 	return self;
 }
@@ -277,9 +281,11 @@ void mesh_destroy(mesh_t *self)
 		{
 			mesh_lock(self);
 			_mesh_destroy(self);
+#ifdef THREADED
 			mtx_destroy(self->mtx);
 			free(self->mtx);
 			self->mtx = NULL;
+#endif
 			free(self);
 		}
 	}
@@ -962,19 +968,25 @@ void mesh_paint(mesh_t *self, vec4_t color)
 void mesh_unlock_write(mesh_t *self)
 {
 	self->locked_write--;
+#ifdef THREADED
 	if(self->locked_write == 0) mtx_unlock(self->mtx);
+#endif
 }
 
 void mesh_lock_write(mesh_t *self)
 {
+#ifdef THREADED
 	if(self->locked_write == 0) mtx_lock(self->mtx);
+#endif
 	self->locked_write++;
 }
 
 void mesh_unlock(mesh_t *self)
 {
 	self->locked_read--;
+#ifdef THREADED
 	mtx_unlock(self->mtx);
+#endif
 
 	if (self->locked_read == 0)
 	{
@@ -984,7 +996,9 @@ void mesh_unlock(mesh_t *self)
 
 void mesh_lock(mesh_t *self)
 {
+#ifdef THREADED
 	mtx_lock(self->mtx);
+#endif
 	self->locked_read++;
 }
 
@@ -1195,7 +1209,9 @@ void mesh_update(mesh_t *self)
 {
 	int i;
 	if (!self->changes) return;
+#ifdef THREADED
 	if (!mtx_trylock(self->mtx)) return;
+#endif
 
 	for(i = 0; i < vector_count(self->faces); i++)
 	{
@@ -1211,7 +1227,9 @@ void mesh_update(mesh_t *self)
 	}
 	self->changes = 0;
 	self->update_id++;
+#ifdef THREADED
 	mtx_unlock(self->mtx);
+#endif
 }
 
 int mesh_add_vert(mesh_t *self, vecN_t pos)
@@ -2688,11 +2706,15 @@ mesh_t *mesh_clone(mesh_t *self)
 	{
 		clone = malloc(sizeof(*self));
 		_mesh_clone(self, clone);
+#ifdef THREADED
 		clone->mtx = malloc(sizeof(mtx_t));
 		mtx_init(clone->mtx, mtx_plain | mtx_recursive);
+#endif
 		if(self->locked_read)
 		{
+#ifdef THREADED
 			mtx_lock(clone->mtx);
+#endif
 		}
 	}
 	else

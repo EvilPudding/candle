@@ -25,7 +25,13 @@ void node_entity(c_nodegraph_t *self, entity_t entity, void *ctx)
 	}
 	else
 	{
-		sprintf(buffer, "NODE_%ld", entity);
+#ifdef WIN32
+		sprintf(buffer, "ENT_%I64u", ent);
+#elif __EMSCRIPTEN__
+		sprintf(buffer, "NODE_%lld", entity);
+#else
+		sprintf(buffer, "NODE_%lld", entity);
+#endif
 	}
 	node = c_node(&entity);
 	if(node)

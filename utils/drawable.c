@@ -5,7 +5,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <systems/render_device.h>
+#ifdef THREADED
 #include <tinycthread.h>
+#endif
 
 KHASH_MAP_INIT_INT(varray, varray_t*)
 
@@ -17,7 +19,9 @@ static void draw_conf_update_inst(draw_conf_t *self, int32_t id);
 static int32_t drawable_position_changed(drawable_t *self, struct draw_bind *bind);
 static draw_group_t *get_group(uint32_t ref);
 static void draw_conf_remove_instance(draw_conf_t *self, int32_t id);
+#ifdef THREADED
 static mtx_t g_group_mtx;
+#endif
 
 #define MASK_TRANS (1 << 0)
 #define MASK_PROPS (1 << 1)
@@ -41,7 +45,9 @@ static draw_group_t *get_group(uint32_t ref)
 
 	if (ref == 0) return NULL;
 
+#ifdef THREADED
 	mtx_lock(&g_group_mtx);
+#endif
 	if (!g_draw_groups) g_draw_groups = kh_init(draw_group);
 	k = kh_get(draw_group, g_draw_groups, ref);
 
@@ -56,7 +62,9 @@ static draw_group_t *get_group(uint32_t ref)
 	{
 		bind = &kh_value(g_draw_groups, k);
 	}
+#ifdef THREADED
 	mtx_unlock(&g_group_mtx);
+#endif
 	return bind;
 }
 
@@ -376,7 +384,9 @@ static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
 	int32_t i;
 	uvec2_t ent;
 
+#ifdef THREADED
 	mtx_lock(self->mtx);
+#endif
 
 	i = self->inst_num++;
 	/* if (draw->bind[gid].bind == ref("light")) */
@@ -398,7 +408,9 @@ static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
 	self->trans_updates++;
 	self->props_updates++;
 
+#ifdef THREADED
 	mtx_unlock(self->mtx);
+#endif
 	return i;
 }
 
@@ -622,7 +634,9 @@ static void draw_conf_remove_instance(draw_conf_t *self, int32_t id)
 		puts("??");
 		return;
 	}
+#ifdef THREADED
 	mtx_lock(self->mtx);
+#endif
 	last = --self->inst_num;
 
 	self->comps[id]->conf = NULL;
@@ -643,7 +657,9 @@ static void draw_conf_remove_instance(draw_conf_t *self, int32_t id)
 		self->props_updates++;
 	}
 
+#ifdef THREADED
 	mtx_unlock(self->mtx);
+#endif
 }
 
 varray_t *varray_get(mesh_t *mesh)
@@ -692,8 +708,10 @@ draw_conf_t *drawable_get_conf(drawable_t *self, uint32_t gid)
 		if (!self->bind[gid].conf)
 		{
 			result = calloc(1, sizeof(draw_conf_t));
+#ifdef THREADED
 			result->mtx = malloc(sizeof(mtx_t));
 			mtx_init(result->mtx, mtx_plain);
+#endif
 		}
 		else
 		{
@@ -715,8 +733,10 @@ draw_conf_t *drawable_get_conf(drawable_t *self, uint32_t gid)
 		k = kh_put(config, draw_group->configs, p, &ret);
 
 		result = kh_value(draw_group->configs, k) = calloc(1, sizeof(draw_conf_t));
+#ifdef THREADED
 		result->mtx = malloc(sizeof(mtx_t));
 		mtx_init(result->mtx, mtx_plain);
+#endif
 		result->vars = conf;
 	}
 	else
@@ -767,9 +787,13 @@ void drawable_model_changed(drawable_t *self)
 			*props = new_props;
 			if (!(bind->updates & MASK_PROPS))
 			{
+#ifdef THREADED
 				mtx_lock(conf->mtx);
+#endif
 				conf->props_updates++;
+#ifdef THREADED
 				mtx_unlock(conf->mtx);
+#endif
 				bind->updates |= MASK_PROPS;
 			}
 		}
@@ -1051,7 +1075,9 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	uint32_t primitive;
 
 	if (!self || !self->inst_num) return 0;
+#ifdef THREADED
 	mtx_lock(self->mtx);
+#endif
 	mesh = self->vars.mesh;
 	/* printf("%d %p %d %s\n", self->vars.transparent, self->vars.mesh, */
 			/* self->vars.xray, self->vars.vs->name); */
@@ -1142,7 +1168,9 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 		else
 		{
 			primitive = GL_POINTS;
+#ifndef __EMSCRIPTEN__
 			glPointSize(5.f);
+#endif
 		}
 	}
 	if (self->inst_num == 1) instance_id = 0;
@@ -1164,7 +1192,9 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	if (cull_was_enabled) glEnable(GL_CULL_FACE);
 
 end:
+#ifdef THREADED
 	mtx_unlock(self->mtx);
+#endif
 
 	glDepthRange(0.0, 1.00); glerr();
 
@@ -1389,14 +1419,18 @@ static int32_t draw_group_draw(draw_group_t *self)
 	if (!self) return 0;
 	if (!self->configs) return 0;
 
+#ifdef THREADED
 	mtx_lock(&g_group_mtx);
+#endif
 	for(k = kh_begin(self->configs); k != kh_end(self->configs); ++k)
 	{
 		if (!kh_exist(self->configs, k)) continue;
 		conf = kh_value(self->configs, k);
 		res |= draw_conf_draw(conf, -1);
 	}
+#ifdef THREADED
 	mtx_unlock(&g_group_mtx);
+#endif
 	return res;
 }
 
@@ -1408,5 +1442,7 @@ void draw_group(uint32_t ref)
 void draw_groups_init()
 {
 	g_varrays = kh_init(varray);
+#ifdef THREADED
 	mtx_init(&g_group_mtx, mtx_plain);
+#endif
 }

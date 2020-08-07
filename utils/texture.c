@@ -6,7 +6,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#ifdef THREADED
 #include <tinycthread.h>
+#endif
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -64,8 +66,10 @@ int g_indir_n = 1;
 
 typedef struct
 {
+#ifdef THREADED
 	thrd_t thread;
 	mtx_t mtx;
+#endif
 	tex_tile_t *tile;
 } tile_worker_t;
 
@@ -76,7 +80,9 @@ bool_t *g_probe_tiles;
 uint32_t g_min_shadow_tile = 64;
 uint32_t g_max_probe_levels;
 uint32_t g_num_shadows;
+#ifdef THREADED
 mtx_t g_indir_mtx;
+#endif
 
 uint32_t get_sum_tiles(uint32_t level)
 {
@@ -89,7 +95,9 @@ void svp_init()
 	uint32_t t;
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max);
 	max = floorf(((float)max) / 129);
+#ifdef THREADED
 	mtx_init(&g_indir_mtx, mtx_plain);
+#endif
 	g_cache = texture_new_2D(g_cache_w * 129, g_cache_h * 129, TEX_INTERPOLATE, 1,
 	                         buffer_new("color", false, 4));
 	g_cache_bound = calloc(g_cache_w * g_cache_h, sizeof(*g_cache_bound));
@@ -1023,7 +1031,9 @@ static void texture_update_indir_info(texture_t *self)
 				break;
 	}
 
+#ifdef THREADED
 	mtx_lock(&g_indir_mtx);
+#endif
 	self->bufs[0].indir_n = g_indir_n;
 	self->bufs[0].tiles = &g_tiles[g_indir_n];
 
@@ -1069,7 +1079,9 @@ static void texture_update_indir_info(texture_t *self)
 		if (tiles_x > 1)
 			tiles_x = tiles_x / 2;
 	}
+#ifdef THREADED
 	mtx_unlock(&g_indir_mtx);
+#endif
 
 	self->sparse_it = true;
 }
@@ -1162,14 +1174,14 @@ int32_t load_tex_tile(tex_tile_t *tile)
 	                      buffer, sizeof(buffer));
 
 	puts(buffer);
-#ifdef __EMSCRIPTEN__
-	EM_ASM_(
-	{
-		load_tile_js($0, $1, $2);
-	}, path, bytes, tile->loading);
-#else
+/* #ifdef __EMSCRIPTEN__ */
+	/* EM_ASM_( */
+	/* { */
+		/* load_tile_js($0, $1, $2); */
+	/* }, path, bytes, tile->loading); */
+/* #else */
 	bytes = stbi_load(buffer, &w, &h, &dims, 4);
-#endif
+/* #endif */
 	dims = 4;
 	assert(w == 129 && h == 129);
 	memcpy(tile->bytes, bytes, w * h * 4);
@@ -1207,7 +1219,9 @@ int load_tex_tile_worker(void *usrptr)
 	tile_worker_t *worker = usrptr;
 
 	while (true) {
+#ifdef THREADED
 		mtx_lock(&worker->mtx);
+#endif
 		if (!worker->tile)
 		{
 			break;
@@ -1227,7 +1241,9 @@ static void load_tex_tile_assign_worker(tex_tile_t *tile)
 		{
 			tile->loading = true;
 			g_tile_workers[t].tile = tile;
+#ifdef THREADED
 			mtx_unlock(&g_tile_workers[t].mtx);
+#endif
 			return;
 		}
 	}

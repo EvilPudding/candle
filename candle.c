@@ -20,7 +20,9 @@
 #define candle_getcwd _getcwd
 #endif
 
+#ifdef THREADED
 #include <tinycthread.h>
+#endif
 
 candle_t *g_candle;
 
@@ -293,10 +295,12 @@ static void ticker_loop_tick(bool_t delay)
 	current = glfwGetTime();
 	if (delay && current - g_candle->last_update < 0.016)
 	{
+#ifdef THREADED
 		struct timespec remaining = { 0, 0 };
 		remaining.tv_nsec = (0.016 - (current - g_candle->last_update)) * 1000000000;
 		thrd_sleep(&remaining, NULL);
 		g_candle->last_update += 0.016;
+#endif
 	}
 	else
 	{
@@ -491,13 +495,17 @@ void candle_init(const char *path)
 	meshes_reg();
 	materials_reg();
 
+#ifndef __EMSCRIPTEN__
 	c_sauces_me_a_zip(c_sauces(&SYS), sauces_bytes, sauces_size);
+#else
+	c_sauces_index_dir(c_sauces(&SYS), "resauces");
+#endif
 
+#ifdef THREADED
 	g_candle->mtx = malloc(sizeof(mtx_t));
 	g_candle->render_thr = malloc(sizeof(thrd_t));
 	g_candle->ticker_thr = malloc(sizeof(thrd_t));
 
-#ifdef THREADED
 	thrd_create(g_candle->ticker_thr, ticker_loop, NULL);
 
 

@@ -1,7 +1,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#ifdef THREADED
 #include <tinycthread.h>
+#endif
 
 struct element
 {
@@ -30,7 +32,9 @@ typedef struct vector
 	void *fallback;
 
 	vector_compare_cb compare;
+#ifdef THREADED
 	mtx_t mtx;
+#endif
 } vector_t;
 
 vector_t *vector_new(int data_size, int flags, void *fallback,
@@ -52,7 +56,9 @@ vector_t *vector_new(int data_size, int flags, void *fallback,
 	self->fallback = NULL;
 	if (self->reentrant)
 	{
+#ifdef THREADED
 		mtx_init(&self->mtx, mtx_plain);
+#endif
 	}
 	if(fallback)
 	{
@@ -88,7 +94,9 @@ void vector_get_copy(vector_t *self, int i, void *copy)
 {
 	struct element *element;
 
+#ifdef THREADED
 	if (self->reentrant) mtx_lock(&self->mtx);
+#endif
 	
 	element = _vector_get(self, i);
 
@@ -98,7 +106,9 @@ void vector_get_copy(vector_t *self, int i, void *copy)
 		memcpy(copy, data, self->data_size);
 	}
 
+#ifdef THREADED
 	if (self->reentrant) mtx_unlock(&self->mtx);
+#endif
 }
 
 void *vector_get(vector_t *self, int i)
@@ -189,7 +199,9 @@ void vector_remove(vector_t *self, int i)
 {
 	struct element *element;
 
+#ifdef THREADED
 	if (self->reentrant) mtx_lock(&self->mtx);
+#endif
 
 	element = _vector_get(self, i);
 
@@ -222,7 +234,12 @@ void vector_remove(vector_t *self, int i)
 		self->count--;
 	}
 end:
-	if (self->reentrant) mtx_unlock(&self->mtx);
+	if (self->reentrant)
+	{
+#ifdef THREADED
+		mtx_unlock(&self->mtx);
+#endif
+	}
 }
 
 int vector_index_of(vector_t *self, void *data)
@@ -332,11 +349,15 @@ int vector_reserve(vector_t *self)
 {
 	int ret;
 
+#ifdef THREADED
 	if (self->reentrant) mtx_lock(&self->mtx);
+#endif
 
 	ret = _vector_reserve(self);
 
+#ifdef THREADED
 	if (self->reentrant) mtx_unlock(&self->mtx);
+#endif
 
 	return ret;
 }
@@ -346,7 +367,9 @@ void vector_add(vector_t *self, void *value)
 	int count;
 	int si;
 
+#ifdef THREADED
 	if (self->reentrant) mtx_lock(&self->mtx);
+#endif
 
 	count = self->count;
 	si = count;
@@ -362,7 +385,9 @@ void vector_add(vector_t *self, void *value)
 		vector_shift(self, si, 1);
 	}
 	memcpy(&_vector_get(self, si)->data, value, self->data_size);
+#ifdef THREADED
 	if (self->reentrant) mtx_unlock(&self->mtx);
+#endif
 }
 
 void *vector_get_set(vector_t *self, int i)

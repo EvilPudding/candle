@@ -5,7 +5,9 @@
 #include <candle.h>
 #include <components/name.h>
 #include <components/destroyed.h>
+#ifdef THREADED
 #include <tinycthread.h>
+#endif
 
 /* static void entity_check_missing_dependencies(entity_t self); */
 
@@ -13,18 +15,25 @@ struct entity_creation {
 	entity_t entities[32];
 	uint32_t creating_num;
 };
+#ifdef THREADED
 static tss_t _g_creating_entity;
+#else
+struct entity_creation _g_creating_entity;
+#endif
 
 void entity_creation_init()
 {
+#ifdef THREADED
 	if (tss_create(&_g_creating_entity, (tss_dtor_t)free) != thrd_success)
 	{
 		assert(false);
 	}
+#endif
 }
 
 static struct entity_creation *g_creating_entity_get(void)
 {
+#ifdef THREADED
 	struct entity_creation *value = tss_get(_g_creating_entity);
 	if (!value)
 	{
@@ -32,6 +41,9 @@ static struct entity_creation *g_creating_entity_get(void)
 		tss_set(_g_creating_entity, value);
 	}
     return value;
+#else
+    return &_g_creating_entity;
+#endif
 }
 
 void entity_new_post()

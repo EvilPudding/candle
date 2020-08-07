@@ -51,14 +51,6 @@ canvas {
   <canvas id="canvas" oncontextmenu="event.preventDefault(); return false;" tabindex=-1></canvas>
 
     <script type='text/javascript'>
-		function load_tile_js(path, output, done) {
-			path = UTF8ToString(path, w, h);
-			var fs = FS.open(path);
-
-			FS.close(fs);
-			{{{ makeSetValue('done', '0', '1', 'i32') }}};
-		}
-
 		var Module = {
 			preRun: [],
 			postRun: [],

@@ -1881,7 +1881,9 @@ int32_t c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 		c_editmode_init_nk(self);
 	}
 
-#ifdef WIN32
+#ifdef __EMSCRIPTEN__
+	sprintf(buffer, "ENT_%llu", ent);
+#elif WIN32
 	sprintf(buffer, "ENT_%I64u", ent);
 #else
 	sprintf(buffer, "ENT_%lu", ent);

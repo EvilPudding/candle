@@ -6,12 +6,16 @@
 #include "components/destroyed.h"
 
 #include <ecs/entity.h>
+#ifdef THREADED
 #include <tinycthread.h>
+#endif
 
+#ifdef THREADED
 static mtx_t entity_mtx;
 static mtx_t clean_mtx;
 static mtx_t cts_mtx;
 static mtx_t signals_mtx;
+#endif
 
 entity_t SYS = 0x0000000100000001ul;
 
@@ -87,6 +91,7 @@ void ecm_init()
 		self->entity_uid_counter = 1;
 	}
 
+#ifdef THREADED
 	g_ecm->mtx = malloc(sizeof(mtx_t));
 	mtx_init(g_ecm->mtx, mtx_recursive);
 
@@ -96,6 +101,7 @@ void ecm_init()
 
 	mtx_init(&cts_mtx, mtx_recursive);
 	mtx_init(&signals_mtx, mtx_recursive);
+#endif
 	entity_creation_init();
 
 }
@@ -126,7 +132,9 @@ vector_t *ecm_get_listeners(uint32_t signal)
 	khiter_t k;
 	vector_t *listeners;
 
+#ifdef THREADED
 	mtx_lock(&signals_mtx);
+#endif
 	k = kh_get(sig, g_ecm->signals, signal);
 	if(k == kh_end(g_ecm->signals))
 	{
@@ -141,7 +149,9 @@ vector_t *ecm_get_listeners(uint32_t signal)
 	{
 		listeners = kh_value(g_ecm->signals, k);
 	}
+#ifdef THREADED
 	mtx_unlock(&signals_mtx);
+#endif
 	return listeners;
 }
 
@@ -183,7 +193,9 @@ entity_t ecm_new_entity()
 	struct { uint32_t pos, uid; } *convert;
 	uint32_t i;
 
+#ifdef THREADED
 	mtx_lock(&entity_mtx);
+#endif
 
 	i = g_ecm->entities_info[0].next_free;
 
@@ -212,7 +224,9 @@ entity_t ecm_new_entity()
 	convert->pos = i;
 	convert->uid = info->uid;
 
+#ifdef THREADED
 	mtx_unlock(&entity_mtx);
+#endif
 	return ent;
 }
 
@@ -348,7 +362,9 @@ c_t *ct_add(ct_t *self, entity_t entity)
 
 	if(!self) return NULL;
 
+#ifdef THREADED
 	mtx_lock(&cts_mtx);
+#endif
 
 	/* int page_id = self->pages_size - 1; */
 	/* struct comp_page *page = &self->pages[page_id]; */
@@ -375,7 +391,9 @@ c_t *ct_add(ct_t *self, entity_t entity)
 	/* { */
 		/* self->offsets_size = pos + 1; */
 	/* } */
+#ifdef THREADED
 	mtx_unlock(&cts_mtx);
+#endif
 
 	/* c_t *comp = (c_t*)&page->components[offset]; */
 	/* memset(comp, 0, self->size); */
@@ -390,7 +408,9 @@ ct_t *ecm_get(ct_id_t id)
 	khiter_t k;
 	ct_t *ct = NULL;
 
+#ifdef THREADED
 	mtx_lock(g_ecm->mtx);
+#endif
 	k = kh_get(ct, g_ecm->cts, comp_type);
 
 	if (k != kh_end(g_ecm->cts))
@@ -418,7 +438,9 @@ ct_t *ecm_get(ct_id_t id)
 		}
 
 	}
+#ifdef THREADED
 	mtx_unlock(g_ecm->mtx);
+#endif
 	return ct;
 }
 
