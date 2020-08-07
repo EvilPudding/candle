@@ -122,7 +122,10 @@ int main(int argc, char *argv[])
 	status = mz_zip_writer_init_file(&archive, "build/data.zip", 2e+7);
 	/* status = mz_zip_writer_init_heap(&archive, 0, 2e+7); */
 
-	add_dir(&archive, argv[1]);
+	if (argc > 1)
+	{
+		add_dir(&archive, argv[1]);
+	}
 
 	status = mz_zip_writer_finalize_archive(&archive);
 	/* void *data = NULL; */
