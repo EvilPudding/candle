@@ -7,7 +7,7 @@
 #include <math.h>
 #include <float.h>
 #include <stdlib.h>
-void sincosf(float x, float *sin, float *cos);
+void sincosf(float x, float *sin_out, float *cos_out);
 #else
 #define nextafterf nextafter
 #define sqrtf sqrt
@@ -31,6 +31,15 @@ void sincosf(float x, float *sin, float *cos);
 #   define PREDEF_STANDARD_C_2018
 #  endif
 # endif
+#endif
+
+#ifdef _WIN32
+static
+void sincosf(float x, float *sin_out, float *cos_out)
+{
+	*sin_out = sinf(x);
+	*cos_out = cosf(x);
+}
 #endif
 
 #if defined(PREDEF_STANDARD_C_1989) && !defined(PREDEF_STANDARD_C_1999)
