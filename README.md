@@ -75,11 +75,21 @@ Further explanations on how to create custom render passes will be added in the 
 
 ### Resources
 
-Anything included in the directory ```resauces``` is copied into the build directory. To index a directory for texture, mesh, sound and material lookup, run:
+In order to have the engine manage texture, mesh, sound, material resources,
+they need to be indexed, to do so there are two ways:
+
+1) index a directory which will be available relative to the executable:
 
 ```c
 c_sauces_index_dir(c_sauces(&SYS), "name_of_directory");
 ```
+2) embed the directory by passing a `SAUCES` variable when building the
+the engine:
+
+```c
+make -C candle SAUCES=resauces
+```
+
 after this, a texture that is within that directory can be accessed by:
 
 ```c
