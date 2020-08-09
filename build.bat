@@ -39,7 +39,7 @@ set THIRD_PARTY_SRC= %GLFW%\context.c^
 
 ::set CFLAGS=/O2 /I. /W1 /D_GLFW_WIN32 /Ithird_party\glfw\include /I%TINYCTHREAD% /DTHREADED^
 	::/D_CRT_SECURE_NO_WARNINGS
-set CFLAGS=/DEBUG:FULLi /Z7 /I. /W1 /D_GLFW_WIN32 /Ithird_party\glfw\include /I%TINYCTHREAD% /DTHREADED^
+set CFLAGS=/O2 /I. /W1 /D_GLFW_WIN32 /Ithird_party\glfw\include /I%TINYCTHREAD% /DTHREADED^
 	/D_CRT_SECURE_NO_WARNINGS
 
 set sources=%THIRD_PARTY_SRC% candle.c
@@ -76,6 +76,9 @@ ECHO 1 RCDATA "%DIR%\data.zip" > %DIR%\res.rc
 rc %DIR%\res.rc
 
 lib !objects! /out:"%DIR%\candle.lib"
+
+echo gdi32.lib opengl32.lib kernel32.lib user32.lib shell32.lib^
+ candle\%DIR%\candle.lib candle\%DIR%\res.res > %DIR%\libs
 
 GOTO END
 
