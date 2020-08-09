@@ -5,6 +5,17 @@ CD /D %~dp0
 
 CALL vcenv.bat
 
+SET SAUCES=""
+:PARSEPARAMS
+	IF "%~1"=="" GOTO START
+	IF "%~1"=="/SAUCES" (
+		SET SAUCES=%~2
+		SHIFT
+	)
+	SHIFT
+GOTO :PARSEPARAMS
+:START
+
 set DIR=build
 set GLFW=third_party\glfw\src
 set TINYCTHREAD=third_party\tinycthread\source
@@ -26,7 +37,9 @@ set THIRD_PARTY_SRC= %GLFW%\context.c^
                      %TINYCTHREAD%\tinycthread.c^
                      third_party\miniz.c
 
-set CFLAGS=/O2 /I. /W1 /D_GLFW_WIN32 /Ithird_party\glfw\include /I%TINYCTHREAD% /DTHREADED^
+::set CFLAGS=/O2 /I. /W1 /D_GLFW_WIN32 /Ithird_party\glfw\include /I%TINYCTHREAD% /DTHREADED^
+	::/D_CRT_SECURE_NO_WARNINGS
+set CFLAGS=/DEBUG:FULLi /Z7 /I. /W1 /D_GLFW_WIN32 /Ithird_party\glfw\include /I%TINYCTHREAD% /DTHREADED^
 	/D_CRT_SECURE_NO_WARNINGS
 
 set sources=%THIRD_PARTY_SRC% candle.c
@@ -49,17 +62,21 @@ mkdir %DIR%\%TINYCTHREAD%
 set objects=
 FOR %%f IN (!sources!) DO @IF EXIST "%%f" (
 	set src=%DIR%\%%f
-	call set object=%%src:.c=.obj%%
+	CALL set object=%%src:.c=.obj%%
 	cl %CFLAGS% /c "%%f" /Fo"!object!" || (
 		echo Error compiling %%f
 		GOTO ERROR
 	)
-	call set objects=!objects! !object!
+	CALL set objects=!objects! !object!
 )
 
-ECHO !objects!
+cl packager\packager.c %DIR%\third_party\miniz.obj /Fe%DIR%\packager.exe /O2
+CALL %DIR%\packager.exe ..\!SAUCES!
+ECHO 1 RCDATA "%DIR%\data.zip" > %DIR%\res.rc
+rc %DIR%\res.rc
 
 lib !objects! /out:"%DIR%\candle.lib"
+
 GOTO END
 
 :ERROR

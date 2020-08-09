@@ -831,8 +831,8 @@ buffer_t buffer_new(const char *name, int32_t is_float, int32_t dims)
 	else if(dims == -1)
 	{
 		buffer.format = GL_DEPTH_COMPONENT;
-		buffer.internal = GL_DEPTH_COMPONENT32F;
-		buffer.type = GL_FLOAT;
+		buffer.internal = GL_DEPTH_COMPONENT24;
+		buffer.type = GL_UNSIGNED_BYTE;
 	}
 
 	buffer.dims = dims;
@@ -966,8 +966,8 @@ texture_t *texture_new_3D
 	{
 		if(i > 0) perror("Depth component must be added first\n");
 		self->bufs[i].format = GL_DEPTH_COMPONENT;
-		self->bufs[i].internal = GL_DEPTH_COMPONENT16;
-		self->bufs[i].type = GL_UNSIGNED_SHORT;
+		self->bufs[i].internal = GL_DEPTH_COMPONENT24;
+		self->bufs[i].type = GL_UNSIGNED_BYTE;
 		self->depth_buffer = 1;
 	}
 
@@ -1403,7 +1403,7 @@ int32_t texture_target_sub(texture_t *self, texture_t *depth, int32_t fb,
 		status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
 		if(status != GL_FRAMEBUFFER_COMPLETE)
 		{
-			printf("Failed to create framebuffer!\n");
+			printf("Failed to create framebuffer! tex_sub %s\n", self->name);
 			switch(status)
 			{
 				/* case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_EXT: */
@@ -1547,7 +1547,7 @@ static int32_t texture_cubemap_frame_buffer(texture_t *self)
 	status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
 	if(status != GL_FRAMEBUFFER_COMPLETE)
 	{
-		printf("Failed to create framebuffer!\n");
+		printf("Failed to create framebuffer! cubemap\n");
 		exit(1);
 	}
 

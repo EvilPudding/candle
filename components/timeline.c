@@ -68,6 +68,7 @@ static int c_timeline_find(c_timeline_t *self, vector_t *vec)
 			return i-1;
 		}
 	}
+	printf("Couldn't find timeline point\n");
 	exit(1);
 	return 0;
 }

@@ -232,7 +232,7 @@ int c_camera_draw(c_camera_t *self)
 void c_camera_init(c_camera_t *self)
 {
 	self->proj_near = 0.01f;
-	self->proj_far = 100.0f;
+	self->proj_far = 1000.0f;
 	self->proj_fov = 90.0f;
 	self->width = 1;
 	self->height = 1;

@@ -160,7 +160,11 @@ void _ct_add_listener(ct_t *self, int32_t flags, int32_t priority, uint32_t sign
 {
 	listener_t *lis = malloc(sizeof(*lis));
 	vector_t *listeners = ecm_get_listeners(signal);
-	if(ct_get_listener(self, signal)) exit(1);
+	if(ct_get_listener(self, signal))
+	{
+		printf("Listener already exists\n");
+		exit(1);
+	}
 
 	lis->signal = signal;
 	lis->cb = cb;

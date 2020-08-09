@@ -133,7 +133,7 @@ void shaders_candle_ssao()
 		"	float D = texelFetch(gbuffer.depth, ivec2(gl_FragCoord.xy) * 2, 0).r;\n"
 		"	float d0 = linearize(D);\n"
 		"	float dither = dither_value();\n"
-		"	float rad = (0.8 / d0);\n"
+		"	float rad = (0.4 / d0);\n"
 		"	vec2 rnd = normalize(vec2(rand(tc), dither));\n"
 		"	float z = clamp((n.z + 0.5), 0.0, 1.0);\n");
 
@@ -634,7 +634,7 @@ void shaders_candle_common()
 
 	str_cat(&shader_buffer,
 		"#define NEAR 0.1\n"
-		"#define FAR 100.0\n"
+		"#define FAR 1000.0\n"
 		"float linearize(float depth)\n"
 		"{\n"
 		"    return (2.0 * NEAR * FAR) / ((FAR + NEAR) - (2.0 * depth - 1.0) * (FAR - NEAR));\n"
