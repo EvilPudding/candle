@@ -251,9 +251,9 @@ int c_spatial_menu(c_spatial_t *self, void *ctx)
 	if(nk_tree_push(ctx, NK_TREE_NODE, "Position", NK_MINIMIZED))
 	{
 		/* nk_layout_row_dynamic(ctx, 0, 1); */
-		nk_property_float(ctx, "#x:", -10000, &tmp.x, 10000, 0.1, 0.05);
-		nk_property_float(ctx, "#y:", -10000, &tmp.y, 10000, 0.1, 0.05);
-		nk_property_float(ctx, "#z:", -10000, &tmp.z, 10000, 0.1, 0.05);
+		nk_property_float(ctx, "#x:", -10000, &tmp.x, 10000, 0.1f, 0.05f);
+		nk_property_float(ctx, "#y:", -10000, &tmp.y, 10000, 0.1f, 0.05f);
+		nk_property_float(ctx, "#z:", -10000, &tmp.z, 10000, 0.1f, 0.05f);
 
 		if(!vec3_equals(self->pos, tmp))
 		{

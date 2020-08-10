@@ -450,7 +450,7 @@ int mat_menu(mat_t *self, void *ctx)
 		ret = true;
 	}
 
-	nk_layout_row_push(ctx, 0.30);
+	nk_layout_row_push(ctx, 0.30f);
 	if (nk_button_label(ctx, "edit"))
 	{
 		c_editmode(&SYS)->open_vil = type->mat;

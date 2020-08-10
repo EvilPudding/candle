@@ -197,9 +197,9 @@ static INLINE type##n##_t type##n##_div_number(type##n##_t const a, n_t b) \
 { \
 	type##n##_t r; \
 	int i; \
-	n_t inv = 1.0f / b; \
+	float inv = 1.0f / b; \
 	for(i=0; i<n; ++i) \
-		((n_t*)&r)[i] = ((n_t*)&a)[i] * inv; \
+		((n_t*)&r)[i] = (n_t)(((n_t*)&a)[i] * inv); \
 	return r; \
 } \
 static INLINE type##n##_t type##n##_mul_number(type##n##_t const a, n_t b) \
@@ -254,12 +254,12 @@ static INLINE type##n##_t type##n##_inv(type##n##_t const a) \
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		((n_t*)&r)[i] = -((n_t*)&a)[i]; \
+		((n_t*)&r)[i] = ((n_t*)&a)[i] * -1; \
 	return r; \
 } \
 static INLINE n_t type##n##_dot(type##n##_t const a, type##n##_t const b) \
 { \
-	n_t p = 0.0f; \
+	n_t p = (n_t)0; \
 	int i; \
 	for(i=0; i<n; ++i) \
 		p += ((n_t*)&b)[i]*((n_t*)&a)[i]; \
@@ -278,7 +278,7 @@ static INLINE n_t type##n##_len_square(type##n##_t const v) \
 } \
 static INLINE n_t type##n##_len(type##n##_t const v) \
 { \
-	return sqrt(type##n##_dot(v,v)); \
+	return (n_t)sqrt((float)type##n##_dot(v,v)); \
 } \
 static INLINE n_t type##n##_dist(type##n##_t const v1, type##n##_t const v2) \
 { \
@@ -288,19 +288,19 @@ static INLINE n_t type##n##_dist(type##n##_t const v1, type##n##_t const v2) \
 static INLINE type##n##_t type##n##_get_unit(const type##n##_t v) \
 { \
     n_t len = type##n##_len(v); \
-    if(len < FLT_EPSILON ) return v; \
+    if(len < (n_t)FLT_EPSILON ) return v; \
     return type##n##_div_number(v, len); \
 } \
 static INLINE type##n##_t type##n##_norm(type##n##_t const v) \
 { \
-	return type##n##_scale(v, 1.0 / type##n##_len(v)); \
+	return type##n##_scale(v, ((n_t)1) / type##n##_len(v)); \
 } \
 static INLINE type##n##_t type##n##_abs(type##n##_t a) \
 { \
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		((n_t*)&r)[i] = tabs(((n_t*)&a)[i]); \
+		((n_t*)&r)[i] = (n_t)tabs(((n_t*)&a)[i]); \
 	return r; \
 } \
 static INLINE type##n##_t type##n##_round(type##n##_t a) \
@@ -308,7 +308,7 @@ static INLINE type##n##_t type##n##_round(type##n##_t a) \
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		((n_t*)&r)[i] = round(((n_t*)&a)[i]); \
+		((n_t*)&r)[i] = (n_t)round(((n_t*)&a)[i]); \
 	return r; \
 } \
 static INLINE type##n##_t type##n##_floor(type##n##_t a) \
@@ -316,7 +316,7 @@ static INLINE type##n##_t type##n##_floor(type##n##_t a) \
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		((n_t*)&r)[i] = floor(((n_t*)&a)[i]); \
+		((n_t*)&r)[i] = (n_t)floor((float)((n_t*)&a)[i]); \
 	return r; \
 } \
 static INLINE type##n##_t type##n##_fract(type##n##_t a) \
@@ -324,7 +324,7 @@ static INLINE type##n##_t type##n##_fract(type##n##_t a) \
 	type##n##_t r; \
 	int i; \
 	for(i=0; i<n; ++i) \
-		((n_t*)&r)[i] = ((n_t*)&a)[i] - floor(((n_t*)&a)[i]); \
+		((n_t*)&r)[i] = ((n_t*)&a)[i] - (n_t)floor((float)((n_t*)&a)[i]); \
 	return r; \
 } \
 static INLINE type##n##_t type##n##_min(type##n##_t a, type##n##_t b) \
@@ -358,7 +358,7 @@ static INLINE type##n##_t type##n##_mix(type##n##_t x, type##n##_t y, n_t a) \
 { \
 	type##n##_t r; \
 	int i; \
-	n_t inv = 1.0f - a; \
+	n_t inv = ((n_t)1) - a; \
 	for(i=0; i<n; ++i) \
 		((n_t*)&r)[i] = ((n_t*)&x)[i] * inv + ((n_t*)&y)[i] * a; \
 	return r; \
@@ -397,14 +397,14 @@ static INLINE type##4_t type##4_cross(type##4_t const a, type##4_t const b, \
 		type##4_t const c) \
 { \
 	type##4_t r; \
-	r.x = -a.w*b.z*c.y + a.z*b.w*c.y + a.w*b.y*c.z \
-		  -a.y*b.w*c.z - a.z*b.y*c.w + a.y*b.z*c.w; \
-	r.y =  a.w*b.z*c.x - a.z*b.w*c.x - a.w*b.x*c.z \
-		  +a.x*b.w*c.z + a.z*b.x*c.w - a.x*b.z*c.w; \
-	r.z = -a.w*b.y*c.x + a.y*b.w*c.x + a.w*b.x*c.y \
-		  -a.x*b.w*c.y - a.y*b.x*c.w + a.x*b.y*c.w; \
-	r.w =  a.z*b.y*c.x - a.y*b.z*c.x - a.z*b.x*c.y \
-		  +a.x*b.z*c.y + a.y*b.x*c.z - a.x*b.y*c.z; \
+	r.x = a.z*b.w*c.y + a.w*b.y*c.z - a.w*b.z*c.y \
+	    + a.y*b.z*c.w - a.y*b.w*c.z - a.z*b.y*c.w; \
+	r.y = a.w*b.z*c.x - a.z*b.w*c.x - a.w*b.x*c.z \
+	    + a.x*b.w*c.z + a.z*b.x*c.w - a.x*b.z*c.w; \
+	r.z = a.y*b.w*c.x + a.w*b.x*c.y - a.w*b.y*c.x \
+	    - a.x*b.w*c.y - a.y*b.x*c.w + a.x*b.y*c.w; \
+	r.w = a.z*b.y*c.x - a.y*b.z*c.x - a.z*b.x*c.y \
+	    + a.x*b.z*c.y + a.y*b.x*c.z - a.x*b.y*c.z; \
 	return r; \
 } \
 static INLINE type##3_t type##3_double_cross(const type##3_t v1, const type##3_t v2) \
@@ -414,7 +414,7 @@ static INLINE type##3_t type##3_double_cross(const type##3_t v1, const type##3_t
 static INLINE type##3_t type##3_reflect(type##3_t const v, type##3_t const n) \
 { \
 	type##3_t r; \
-	n_t p  = 2.f*type##3_dot(v, n); \
+	n_t p  = ((n_t)2) * type##3_dot(v, n); \
 	int i; \
 	for(i=0;i<3;++i) \
 		((n_t*)&r)[i] = ((n_t*)&v)[i] - p*((n_t*)&n)[i]; \
@@ -432,7 +432,7 @@ static INLINE type##3_t type##3_reflect(type##3_t const v, type##3_t const n) \
 static INLINE type##4_t type##4_reflect(type##4_t v, type##4_t n) \
 { \
 	type##4_t r; \
-	n_t p  = 2.f*type##4_dot(v, n); \
+	n_t p  = ((n_t)2) * type##4_dot(v, n); \
 	int i; \
 	for(i=0;i<4;++i) \
 		((n_t*)&r)[i] = ((n_t*)&v)[i] - p*((n_t*)&n)[i]; \
@@ -441,7 +441,7 @@ static INLINE type##4_t type##4_reflect(type##4_t v, type##4_t n) \
 static INLINE type##3_t type##3_perpendicular(const type##3_t v, const type##3_t p) \
 { \
     const n_t  pp = p.x*p.x + p.y*p.y + p.z*p.z; \
-    if(pp > 0.0) \
+    if(pp > (n_t)0) \
 	{ \
         const n_t  c = (v.x*p.x + v.y*p.y + v.z*p.z) / pp; \
         const type##3_t  result = type##3( v.x - c*p.x, \
@@ -454,22 +454,22 @@ static INLINE type##3_t type##3_perpendicular(const type##3_t v, const type##3_t
 static INLINE type##4_t type##4_unit(const type##4_t v) \
 { \
     const n_t  vv = v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w; \
-    if(vv > 0.0) \
+    if(vv > (n_t)0) \
 	{ \
-        const n_t  d = sqrt(vv); \
+        const n_t  d = (n_t)sqrt(vv); \
 		return type##4( v.x / d, v.y / d, v.z / d, v.w / d ); \
     } \
-	return type##4(0.0, 0.0, 0.0, 0.0); \
+	return type##4((n_t)0, (n_t)0, (n_t)0, (n_t)0); \
 } \
 static INLINE type##3_t type##3_unit(const type##3_t v) \
 { \
     const n_t  vv = v.x*v.x + v.y*v.y + v.z*v.z; \
-    if(vv > 0.0) \
+    if(vv > (n_t)0) \
 	{ \
-        const n_t  d = sqrt(vv); \
+        const n_t  d = (n_t)sqrt(vv); \
 		return type##3( v.x / d, v.y / d, v.z / d ); \
     } \
-	return type##3(0.0, 0.0, 0.0); \
+	return type##3((n_t)0, (n_t)0, (n_t)0); \
 } \
 static INLINE type##2_t type##2_rotate(const type##2_t v, const n_t cosa, const n_t sina) \
 { \
@@ -479,7 +479,7 @@ static INLINE type##3_t type##3_rotate(const type##3_t v, const type##3_t a, \
                                  const n_t cosa, const n_t sina) \
 { \
     const type##3_t  vxa = type##3_cross(v, a); \
-    const n_t ca = (1 - cosa) * type##3_dot(v, a); \
+    const n_t ca = (((n_t)1) - cosa) * type##3_dot(v, a); \
 	return type##3_sub( \
 		type##3_add(type##3_scale(v, cosa), type##3_scale(a, ca)), \
 		type##3_scale(vxa, sina) \
@@ -825,10 +825,10 @@ static INLINE mat4_t mat4_orthonormalize(mat4_t M)
 static INLINE mat4_t mat4_frustum(n_t l, n_t r, n_t b, n_t t, n_t n, n_t f)
 {
 	mat4_t M;
-	M._[0][0] = 2.f*n/(r-l);
+	M._[0][0] = ((n_t)2)*n/(r-l);
 	M._[0][1] = M._[0][2] = M._[0][3] = 0.f;
 	
-	M._[1][1] = 2.*n/(t-b);
+	M._[1][1] = ((n_t)2)*n/(t-b);
 	M._[1][0] =
 		M._[1][2] =
 		M._[1][3] = 0.0f;
@@ -836,36 +836,36 @@ static INLINE mat4_t mat4_frustum(n_t l, n_t r, n_t b, n_t t, n_t n, n_t f)
 	M._[2][0] = (r+l)/(r-l);
 	M._[2][1] = (t+b)/(t-b);
 	M._[2][2] = -(f+n)/(f-n);
-	M._[2][3] = -1.f;
+	M._[2][3] = -((n_t)1);
 	
-	M._[3][2] = -2.f*(f*n)/(f-n);
+	M._[3][2] = ((n_t)2)*(f*n)/(f-n);
 	M._[3][0] =
 		M._[3][1] =
-		M._[3][3] = 0.0f;
+		M._[3][3] = (n_t)0;
 	return M;
 }
 static INLINE mat4_t mat4_ortho(n_t l, n_t r, n_t b, n_t t, n_t n, n_t f)
 {
 	mat4_t M;
-	M._[0][0] = 2.f/(r-l);
+	M._[0][0] = ((n_t)2) / (r - l);
 	M._[0][1] =
 		M._[0][2] =
-		M._[0][3] = 0.0f;
+		M._[0][3] = (n_t)0;
 
-	M._[1][1] = 2.f/(t-b);
+	M._[1][1] = ((n_t)2)/(t-b);
 	M._[1][0] =
 		M._[1][2] =
-		M._[1][3] = 0.0f;
+		M._[1][3] = (n_t)0;
 
-	M._[2][2] = -2.f/(f-n);
+	M._[2][2] = -((n_t)2)/(f-n);
 	M._[2][0] =
 		M._[2][1] =
-		M._[2][3] = 0.0f;
+		M._[2][3] = (n_t)0;
 	
 	M._[3][0] = -(r+l)/(r-l);
 	M._[3][1] = -(t+b)/(t-b);
 	M._[3][2] = -(f+n)/(f-n);
-	M._[3][3] = 1.f;
+	M._[3][3] = (n_t)1;
 	return M;
 }
 static INLINE mat4_t mat4_perspective(n_t y_fov, n_t aspect, n_t n, n_t f)
@@ -875,27 +875,27 @@ static INLINE mat4_t mat4_perspective(n_t y_fov, n_t aspect, n_t n, n_t f)
 
 	mat4_t M;
 
-	n_t const a = 1.f / tan(y_fov / 2.f);
+	n_t const a = ((n_t)1) / tanf(y_fov / ((n_t)2));
 
 	M._[0][0] = a / aspect;
-	M._[0][1] = 0.f;
-	M._[0][2] = 0.f;
-	M._[0][3] = 0.f;
+	M._[0][1] = (n_t)0;
+	M._[0][2] = (n_t)0;
+	M._[0][3] = (n_t)0;
 
-	M._[1][0] = 0.f;
+	M._[1][0] = (n_t)0;
 	M._[1][1] = a;
-	M._[1][2] = 0.f;
-	M._[1][3] = 0.f;
+	M._[1][2] = (n_t)0;
+	M._[1][3] = (n_t)0;
 
-	M._[2][0] = 0.f;
-	M._[2][1] = 0.f;
+	M._[2][0] = (n_t)0;
+	M._[2][1] = (n_t)0;
 	M._[2][2] = -((f + n) / (f - n));
-	M._[2][3] = -1.f;
+	M._[2][3] = -(n_t)1;
 
-	M._[3][0] = 0.f;
-	M._[3][1] = 0.f;
+	M._[3][0] = (n_t)0;
+	M._[3][1] = (n_t)0;
 	M._[3][2] = -((2.f * f * n) / (f - n));
-	M._[3][3] = 0.f;
+	M._[3][3] = (n_t)0;
 	return M;
 }
 
@@ -1098,24 +1098,24 @@ static INLINE vec3_t quat_to_euler(vec4_t q)
 	n_t sinp, siny, cosy;
 
 	/* roll (x-axis rotation) */
-	n_t sinr = +2.0 * (q.w * q.x + q.y * q.z);
-	n_t cosr = +1.0 - 2.0 * (q.x * q.x + q.y * q.y);
+	n_t sinr = ((n_t)2) * (q.w * q.x + q.y * q.z);
+	n_t cosr = ((n_t)1) - ((n_t)2) * (q.x * q.x + q.y * q.y);
 	result.x = atan2f(sinr, cosr);
 
 	/* pitch (y-axis rotation) */
-	sinp = +2.0 * (q.w * q.y - q.z * q.x);
+	sinp = ((n_t)2) * (q.w * q.y - q.z * q.x);
 	if (fabs(sinp) >= 1)
-		if (sinp > 0.0f)
-			result.y =  M_PI / 2.0f; /* use 90 degrees if out of range */
+		if (sinp > (n_t)0)
+			result.y =  ((n_t)M_PI) / (n_t)2; /* use 90 degrees if out of range */
 		else
-			result.y = -M_PI / 2.0f; /* use 90 degrees if out of range */
+			result.y = -((n_t)M_PI) / (n_t)2; /* use 90 degrees if out of range */
 	else
 		result.y = asin(sinp);
 
 	/* yaw (z-axis rotation) */
-	siny = +2.0 * (q.w * q.z + q.x * q.y);
-	cosy = +1.0 - 2.0 * (q.y * q.y + q.z * q.z);  
-	result.z = atan2f(siny, cosy);
+	siny = ((n_t)2) * (q.w * q.z + q.x * q.y);
+	cosy = ((n_t)1) - ((n_t)2) * (q.y * q.y + q.z * q.z);
+	result.z = (n_t)atan2f(siny, cosy);
 
 	return result;
 }
@@ -1143,12 +1143,7 @@ static INLINE vec4_t quat_rotate(vec3_t axis, n_t angle)
 {
 	vec4_t r;
 	n_t s, c;
-	#ifdef WIN32
-	s = sin(angle * 0.5f);
-	c = cos(angle * 0.5f);
-	#else
 	sincosf(angle * 0.5f, &s, &c);
-	#endif
 
 	XYZ(r) = vec3_scale(axis, s);
 	r.w = c;
@@ -1169,9 +1164,9 @@ static INLINE vec4_t quat_rotate(vec3_t axis, n_t angle)
 static INLINE vec4_t quat_from_euler(n_t yaw, n_t pitch, n_t roll)
 {
 	n_t yaw_sin, yaw_cos, pitch_sin, pitch_cos, roll_sin, roll_cos;
-	yaw *= 0.5f;
-	pitch *= 0.5f;
-	roll *= 0.5f;
+	yaw *= (n_t)0.5;
+	pitch *= (n_t)0.5;
+	roll *= (n_t)0.5;
 	#ifdef WIN32
 	sincosf(yaw, &yaw_sin, &yaw_cos);
 	sincosf(pitch, &pitch_sin, &pitch_cos);
@@ -1193,11 +1188,11 @@ static INLINE vec4_t quat_from_euler(n_t yaw, n_t pitch, n_t roll)
 
 static INLINE vec4_t quat_clerp(vec4_t start, vec4_t end, float factor)
 {
-	float sclp, sclq;
-	float cosom = start.x * end.x + start.y * end.y + start.z * end.z +
+	n_t sclp, sclq;
+	n_t cosom = start.x * end.x + start.y * end.y + start.z * end.z +
 		start.w * end.w;
 
-	if( cosom < 0.0)
+	if( cosom < (n_t)0)
 	{
 		cosom = -cosom;
 		end.x = -end.x;
@@ -1205,19 +1200,19 @@ static INLINE vec4_t quat_clerp(vec4_t start, vec4_t end, float factor)
 		end.z = -end.z;
 		end.w = -end.w;
 	}
-	if( (1.0 - cosom) > 0.0001)
+	if( (((n_t)1) - cosom) > ((n_t)0.0001))
 	{
 		/* Standard case (slerp) */
 		float omega, sinom;
 		omega = acosf(cosom);
 		sinom = sinf( omega);
-		sclp  = sinf( (1.0 - factor) * omega) / sinom;
+		sclp  = sinf( (((n_t)1) - factor) * omega) / sinom;
 		sclq  = sinf( factor * omega) / sinom;
 	}
 	else
 	{
 		/* Very close, do linear interp (because it's faster) */
-		sclp = 1.0 - factor;
+		sclp = ((n_t)1) - factor;
 		sclq = factor;
 	}
 
@@ -1240,8 +1235,8 @@ static INLINE mat4_t mat4_mul_quat(mat4_t M, vec4_t q)
 	MXYZ(R._[1]) = quat_mul_vec3(q, MXYZ(M._[1]));
 	MXYZ(R._[2]) = quat_mul_vec3(q, MXYZ(M._[2]));
 
-	R._[3][0] = R._[3][1] = R._[3][2] = 0.f;
-	R._[3][3] = 1.f;
+	R._[3][0] = R._[3][1] = R._[3][2] = (n_t)0;
+	R._[3][3] = (n_t)1;
 	return R;
 }
 
@@ -1301,8 +1296,8 @@ static INLINE vec4_t mat4_to_quat(mat4_t m)
 		biggestIndex = 3;
 	}
 
-	biggestVal = sqrtf(fourBiggestSquaredMinus1 + 1.0f) * 0.5f;
-	mult = 0.25f / biggestVal;
+	biggestVal = sqrtf(fourBiggestSquaredMinus1 + (n_t)1) * (n_t)0.5;
+	mult = ((n_t)0.25) / biggestVal;
 
 	switch(biggestIndex)
 	{
@@ -1315,7 +1310,7 @@ static INLINE vec4_t mat4_to_quat(mat4_t m)
 		case 3:
 			return vec4((m._[2][0] + m._[0][2]) * mult, (m._[1][2] + m._[2][1]) * mult, biggestVal, (m._[0][1] - m._[1][0]) * mult);
 		default:
-			return vec4(0, 0, 0, 0);
+			return vec4((n_t)0, (n_t)0, (n_t)0, (n_t)0);
 	}
 }
 
@@ -1330,7 +1325,7 @@ static INLINE mat3_t mat3(void)
 	int i, j;
 	for(i=0; i<3; ++i)
 		for(j=0; j<3; ++j)
-			M._[i][j] = i==j ? 1.f : 0.f;
+			M._[i][j] = i==j ? (n_t)1 : (n_t)0;
 	return M;
 }
 
@@ -1369,8 +1364,8 @@ static INLINE vec2_t int_to_vec2(int id)
 	return vec2((float)convert._convert.r / 255, (float)convert._convert.g / 255);
 }
 
-#define Z4 (vec4(0.0f, 0.0f, 0.0f, 0.0f))
-#define Z3 (vec3(0.0f, 0.0f, 0.0f))
-#define Z2 (vec2(0.0f, 0.0f))
+#define Z4 (vec4((n_t)0, (n_t)0, (n_t)0, (n_t)0))
+#define Z3 (vec3((n_t)0, (n_t)0, (n_t)0))
+#define Z2 (vec2((n_t)0, (n_t)0))
 
 #endif
