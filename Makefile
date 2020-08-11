@@ -18,7 +18,7 @@ LDFLAGS_REL = $(LIBS) candle/$(DIR)/candle.a \
 -Wl,--format=binary -Wl,candle/$(DIR)/data.zip -Wl,--format=default
 LDFLAGS_DEB = $(LIBS) candle/$(DIR)/candle_debug.a
 LDFLAGS_EMS = -lm -lGL -ldl -lrt candle/$(DIR)/candle_emscripten.a \
-			  $(EMS_OPTS) --preload-file $(SAUCES)
+			  $(EMS_OPTS) --preload-file $(SAUCES) --shell-file index.html
 
 GLFW = third_party/glfw/src
 TINYCTHREAD = third_party/tinycthread/source
