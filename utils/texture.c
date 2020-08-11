@@ -61,8 +61,8 @@ const int g_cache_w = 64;
 const int g_cache_h = 32;
 const int g_indir_w = 128;
 const int g_indir_h = 128;
-int g_cache_n = 0;
-int g_indir_n = 1;
+uint32_t g_cache_n = 0;
+uint32_t g_indir_n = 1;
 
 typedef struct
 {
@@ -400,7 +400,7 @@ uint32_t texture_max_mips(texture_t *self)
 
 uint32_t _mip_to_tiles(uint32_t mip)
 {
-	const uint32_t max_mip_tiles = (pow(4, mip) - 1) / 3;
+	const uint32_t max_mip_tiles = (uint32_t)((pow(4, mip) - 1) / 3);
 	const uint32_t pad_tiles = MAX_MIPS - mip - 1;
 	return max_mip_tiles + pad_tiles;
 }
@@ -594,7 +594,7 @@ uint32_t _load_tile(tex_tile_t *tile, uint32_t max_loads)
 		g_cache_bound[cache_tile] = tile;
 
 		texture_bind(g_cache, 0);
-		new_location.mip = tile->mip;
+		new_location.mip = (uint8_t)tile->mip;
 		new_location.x = cache_tile % g_cache_w;
 		new_location.y = cache_tile / g_cache_w;
 
@@ -831,8 +831,8 @@ buffer_t buffer_new(const char *name, int32_t is_float, int32_t dims)
 	else if(dims == -1)
 	{
 		buffer.format = GL_DEPTH_COMPONENT;
-		buffer.internal = GL_DEPTH_COMPONENT32F;
-		buffer.type = GL_FLOAT;
+		buffer.internal = GL_DEPTH_COMPONENT24;
+		buffer.type = GL_UNSIGNED_SHORT;
 	}
 
 	buffer.dims = dims;
@@ -966,8 +966,8 @@ texture_t *texture_new_3D
 	{
 		if(i > 0) perror("Depth component must be added first\n");
 		self->bufs[i].format = GL_DEPTH_COMPONENT;
-		self->bufs[i].internal = GL_DEPTH_COMPONENT16;
-		self->bufs[i].type = GL_UNSIGNED_SHORT;
+		self->bufs[i].internal = GL_DEPTH_COMPONENT24;
+		self->bufs[i].type = GL_UNSIGNED_BYTE;
 		self->depth_buffer = 1;
 	}
 
@@ -1395,15 +1395,12 @@ int32_t texture_target_sub(texture_t *self, texture_t *depth, int32_t fb,
 		GLuint status;
 
 		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-				self->target, depth ? depth->bufs[0].id : 0, 0);
-		self->last_depth = depth;
-
-		glDrawBuffers(self->bufs_size - self->depth_buffer, attachments);
+				self->target, depth ? depth->bufs[0].id : 0, 0); glerr();
 
 		status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
 		if(status != GL_FRAMEBUFFER_COMPLETE)
 		{
-			printf("Failed to create framebuffer!\n");
+			printf("Failed to create framebuffer! tex_sub '%s'\n", self->name);
 			switch(status)
 			{
 				/* case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_EXT: */
@@ -1417,6 +1414,10 @@ int32_t texture_target_sub(texture_t *self, texture_t *depth, int32_t fb,
 			}
 			exit(1);
 		}
+
+		glDrawBuffers(self->bufs_size - self->depth_buffer, attachments);
+		glerr();
+		self->last_depth = depth;
 	}
 
 	glViewport(x, y, width, height); glerr();
@@ -1547,7 +1548,7 @@ static int32_t texture_cubemap_frame_buffer(texture_t *self)
 	status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
 	if(status != GL_FRAMEBUFFER_COMPLETE)
 	{
-		printf("Failed to create framebuffer!\n");
+		printf("Failed to create framebuffer! cubemap\n");
 		exit(1);
 	}
 

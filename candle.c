@@ -1,5 +1,5 @@
 #include "candle.h"
-#include <utils/str.h>
+#include "utils/str.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -10,7 +10,12 @@
 #include <components/name.h>
 #include <components/node.h>
 
+#define GLFW_INCLUDE_NONE
+#ifdef _WIN32
+#define GLFW_EXPOSE_NATIVE_WIN32
+#endif
 #include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -442,13 +447,32 @@ entity_t _c_new(entity_t root, int argc, char **argv)
 	return entity_null;
 }
 
-/* extern uint8_t data[]     __asm__("_binary_candle_build_data_zip_start"); */
-/* extern uint8_t data_end[] __asm__("_binary_candle_build_data_zip_end"); */
+#if defined(_WIN32)
+static bool_t get_archive(const char **bytes, size_t *bytes_num)
+{
+	HRSRC hRes = FindResource(0, MAKEINTRESOURCE(1), RT_RCDATA);
+	HGLOBAL hMem = LoadResource(0, hRes);
+	DWORD size = SizeofResource(0, hRes);
+	*bytes = LockResource(hMem);
+	*bytes_num = size;
+	return true;
+}
+#elif defined(__EMSCRIPTEN__)
+#else
 extern uint8_t _binary_candle_build_data_zip_start[];
 extern uint8_t _binary_candle_build_data_zip_end[];
+static bool_t get_archive(char **bytes, size_t *bytes_num)
+{
+	*bytes = _binary_candle_build_data_zip_start;
+	*bytes_num = (size_t)(  _binary_candle_build_data_zip_end
+	                      - _binary_candle_build_data_zip_start);
+	return true;
+}
+#endif
+
 void candle_init(const char *path)
 {
-	uint64_t sauces_size;
+	size_t sauces_size;
 	const unsigned char *sauces_bytes;
 	g_candle = calloc(1, sizeof *g_candle);
 	g_candle->loader = loader_new();
@@ -456,10 +480,19 @@ void candle_init(const char *path)
 	loader_start(g_candle->loader);
 
 	{
+		char *slash;
 		strcpy(g_candle->firstDir, path);
-		strrchr(g_candle->firstDir, '/')[0] = '\0';
+		slash = strrchr(g_candle->firstDir, '/');
+		if (slash)
+		{
+			slash[0] = '\0';
+			candle_reset_dir();
+		}
+		else
+		{
+			g_candle->firstDir[0] = '\0';
+		}
 		printf("%s\n", g_candle->firstDir);
-		candle_reset_dir();
 	}
 
 	materials_init_vil();
@@ -487,16 +520,15 @@ void candle_init(const char *path)
 	entity_add_component(SYS, c_sauces_new());
 	entity_add_component(SYS, c_node_new());
 
-	sauces_bytes = _binary_candle_build_data_zip_start;
-	sauces_size = (uint64_t)(  _binary_candle_build_data_zip_end
-	                         - _binary_candle_build_data_zip_start);
-
 	textures_reg();
 	meshes_reg();
 	materials_reg();
 
 #ifndef __EMSCRIPTEN__
-	c_sauces_me_a_zip(c_sauces(&SYS), sauces_bytes, sauces_size);
+	if (get_archive(&sauces_bytes, &sauces_size))
+	{
+		c_sauces_me_a_zip(c_sauces(&SYS), sauces_bytes, sauces_size);
+	}
 #else
 	c_sauces_index_dir(c_sauces(&SYS), "resauces");
 #endif
@@ -523,6 +555,4 @@ void candle_init(const char *path)
 #else
 	render_loop_init();
 #endif
-
-	/* candle_import_dir(candle, entity_null, "./"); */
 }

@@ -390,8 +390,8 @@ static char *string_preprocess(const char *src, bool_t len, const char *filename
 	char defs[][64] = {
 		  "#ifndef DEFINES\n"
 		, "#define DEFINES\n"
-		, "precision mediump float;\n"
-		, "precision mediump int;\n"
+		, "precision highp float;\n"
+		, "precision highp int;\n"
 #ifdef MESH4
 		, "#define MESH4\n"
 #endif

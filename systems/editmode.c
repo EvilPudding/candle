@@ -1009,7 +1009,7 @@ void c_editmode_activate(c_editmode_t *self)
 	{
 		self->camera = entity_new((
 			c_name_new("Edit Camera"), c_editlook_new(), c_node_new(),
-			c_camera_new(70, 0.1, 100.0, true, true, true, editmode_renderer_new(self))
+			c_camera_new(70, 0.1, 1000.0, true, true, true, editmode_renderer_new(self))
 		));
 		sc = c_spatial(&self->camera);
 		c_spatial_lock(sc);
@@ -1081,6 +1081,7 @@ int32_t c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 	if (!c_mouse_active(c_mouse(self))) return CONTINUE;
 
 	renderer = c_camera(&self->camera)->renderer;
+	if (!renderer) return CONTINUE;
 	p = vec2(event->x / renderer->width,
 			1.0f - event->y / renderer->height);
 	XY(self->mouse_screen_pos) = p;
@@ -1883,7 +1884,7 @@ int32_t c_editmode_entity_window(c_editmode_t *self, entity_t ent)
 
 #ifdef __EMSCRIPTEN__
 	sprintf(buffer, "ENT_%llu", ent);
-#elif WIN32
+#elif _WIN32
 	sprintf(buffer, "ENT_%I64u", ent);
 #else
 	sprintf(buffer, "ENT_%lu", ent);

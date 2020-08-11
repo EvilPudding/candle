@@ -26,7 +26,7 @@ mesh_t *g_quad_mesh;
 static void init_context_b(c_window_t *self)
 {
 	const GLubyte *renderer;
-	const GLubyte *vendor;
+	const GLubyte *glvendor;
 	const GLubyte *version;
 	const GLubyte *glslVersion;
 /* #ifdef __EMSCRIPTEN__ */
@@ -58,6 +58,9 @@ static void init_context_b(c_window_t *self)
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	/*glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);*/
+	/*glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);*/
+	/*glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);*/
 
 	self->window = glfwCreateWindow(self->width, self->height, "Candle", NULL, NULL);
 	glfwMakeContextCurrent(self->window);
@@ -76,11 +79,11 @@ static void init_context_b(c_window_t *self)
 
 	glDepthFunc(GL_LESS); glerr();
 	renderer = glGetString( GL_RENDERER );
-	vendor = glGetString( GL_VENDOR );
+	glvendor = glGetString( GL_VENDOR );
 	version = glGetString( GL_VERSION );
 	glslVersion = glGetString(GL_SHADING_LANGUAGE_VERSION);
 
-	printf("GL Vendor : %s\n", vendor);
+	printf("GL Vendor : %s\n", glvendor);
 	printf("GL Renderer : %s\n", renderer);
 	printf("GL Version (string) : %s\n", version);
 	printf("GLSL Version : %s\n", glslVersion); 
