@@ -145,7 +145,8 @@ static vicall_t *vifunc_get_call(vifunc_t *type, const slot_t slot,
 	return NULL;
 }
 
-char* my_strtok_r(char *str, const char *delim, char **nextp)
+static
+char* vil__strtok_r(char *str, const char *delim, char **nextp)
 {
     char *ret;
     if (str == NULL) str = *nextp;
@@ -170,7 +171,7 @@ slot_t vifunc_slot_from_name(vifunc_t *func, const char *input,
 	strcpy(buffer, input);
 	str = buffer;
 
-	while ((name = my_strtok_r(str, separator, &saveptr)))
+	while ((name = vil__strtok_r(str, separator, &saveptr)))
 	{
 		vicall_t *it;
 		uint32_t id = ~0;
@@ -622,7 +623,7 @@ vifile_t *viopen(const char *bytes, size_t bytes_num)
 	fp->line = 0;
 
 	str = fp->bytes;
-	while ((newline = my_strtok_r(str, "\n", &saveptr)))
+	while ((newline = vil__strtok_r(str, "\n", &saveptr)))
 	{
 		str = NULL;
 		fp->lines = realloc(fp->lines, (fp->lines_num + 1) * sizeof(*fp->lines));
@@ -682,7 +683,7 @@ bool_t vifunc_load(vifunc_t *self, const char *bytes, size_t bytes_num)
 		int argc;
 		char *save;
 
-		p = my_strtok_r(str, " ", &save);
+		p = vil__strtok_r(str, " ", &save);
 		argc = 0;
 
 		argv[argc++] = p;
@@ -692,7 +693,7 @@ bool_t vifunc_load(vifunc_t *self, const char *bytes, size_t bytes_num)
 		}
 		assert(p);
 
-		while((p = my_strtok_r(NULL, " ", &save)) != NULL)
+		while((p = vil__strtok_r(NULL, " ", &save)) != NULL)
 		{
 			argv[argc++] = p;
 		}
