@@ -65,7 +65,7 @@ set objects=
 FOR %%f IN (!sources!) DO @IF EXIST "%%f" (
 	set src=%DIR%\%%f
 	CALL set object=%%src:.c=.obj%%
-	%DIR%\datescomp.exe !object! %%f && (
+	%DIR%\datescomp.exe %%f !object! || (
 		cl /c "%%f" /Fo"!object!" %CFLAGS% || (
 			echo Error compiling %%f
 			GOTO ERROR
