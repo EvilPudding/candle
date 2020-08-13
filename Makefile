@@ -16,7 +16,8 @@ EMS_OPTS = -s USE_GLFW=3 -s USE_WEBGL2=1 \
 LIBS = -lm -lGL -pthread -ldl -lX11 -lrt
 LDFLAGS_REL = $(LIBS) candle/$(DIR)/candle.a \
 -Wl,--format=binary -Wl,candle/$(DIR)/data.zip -Wl,--format=default
-LDFLAGS_DEB = $(LIBS) candle/$(DIR)/candle_debug.a
+LDFLAGS_DEB = $(LIBS) candle/$(DIR)/candle_debug.a \
+-Wl,--format=binary -Wl,candle/$(DIR)/data.zip -Wl,--format=default
 LDFLAGS_EMS = -lm -lGL -ldl -lrt candle/$(DIR)/candle_emscripten.a \
 			  $(EMS_OPTS) --preload-file $(SAUCES) --shell-file index.html
 
