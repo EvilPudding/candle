@@ -66,7 +66,7 @@ static int strgetf(const char **str, const char *end, float *value)
 	return ret;
 }
 
-static void strgets(const char **str, const char *end, char *line, size_t n)
+static bool_t strgets(const char **str, const char *end, char *line, size_t n)
 {
 	int i;
 
@@ -80,6 +80,7 @@ static void strgets(const char **str, const char *end, char *line, size_t n)
 	}
 	if (i < n)
 		line[i] = '\0';
+	return i > 0;
 }
 
 static char strgetc(const char **str, const char *end)
@@ -141,57 +142,63 @@ static void count(const char *bytes, size_t bytes_num, int *numV, int *numVT,
     }
 }
 
+static
+char *obj__strtok_r(char *str, const char *delim, char **nextp)
+{
+    char *ret;
+    if (str == NULL) str = *nextp;
+    str += strspn(str, delim);
+    if (*str == '\0') return NULL;
+    ret = str;
+    str += strcspn(str, delim);
+    if (*str) *str++ = '\0';
+    *nextp = str;
+    return ret;
+}
+
 static void read_prop(mesh_t *self, const char *bytes, size_t bytes_num,
                       vec3_t *tempNorm, vec2_t *tempText, struct face *tempFace)
 {
     int n1 = 0, n2 = 0, n4 = 0;
 	const char *str = bytes;
 	const char *end = bytes + bytes_num;
-	char ch;
-
-    while((ch = strgetc(&str, end)) != EOF)
+	char line[512];
+    while (strgets(&str, end, line, 512))
     {
-        if (should_ignore(ch))
+        if (should_ignore(line[0]))
 		{
-			ignore_line(&str, end);
+			continue;
 		}
         else
 		{
 			struct face *tf;
 			char *line_i, *words, *token;
 
-			char line[512];
 			int i;
-			switch(ch)
+			switch(line[0])
 			{
 				case 'v':
-					ch = strgetc(&str, end);
-					if (ch == 't')
+					if (line[1] == 't')
 					{
-						strgetf(&str, end, &tempText[n1].x);
-						strgetf(&str, end, &tempText[n1].y);
+						sscanf(line + 2, " %f %f", &tempText[n1].x, &tempText[n1].y);
 						n1++;
 					}
-					else if (ch == 'n')
+					else if (line[1] == 'n')
 					{
-						strgetf(&str, end, &tempNorm[n2].x);
-						strgetf(&str, end, &tempNorm[n2].y);
-						strgetf(&str, end, &tempNorm[n2].z);
+						sscanf(line + 2, " %f %f %f", &tempNorm[n2].x,
+						       &tempNorm[n2].y, &tempNorm[n2].z);
 						n2++;
 					}
 					else
 					{
 						vec3_t pos;
-						strgetf(&str, end, &pos.x);
-						strgetf(&str, end, &pos.y);
-						strgetf(&str, end, &pos.z);
+						sscanf(line + 1, " %f %f %f", &pos.x, &pos.y, &pos.z);
 						mesh_add_vert(self, VEC3(pos.x, pos.y, pos.z));
 					}
 					break;
 				case 'f':
-					strgets(&str, end, line, 512);
 					tf = &tempFace[n4];
-					line_i = line;
+					line_i = line + 1;
 					for (i = 0; (words = obj__strsep(&line_i, " ")) != NULL; i += 3)
 					{
 						int j;
@@ -212,7 +219,6 @@ static void read_prop(mesh_t *self, const char *bytes, size_t bytes_num,
 						}
 					}
 					tf->nv = i / 3;
-
 					n4++;
 			}
 		}
@@ -236,7 +242,6 @@ void mesh_load_obj(mesh_t *self, const char *bytes, size_t bytes_num)
 	tempNorm[0] = Z3;
 	tempText[0] = Z2;
     read_prop(self, bytes, bytes_num, &tempNorm[1], &tempText[1], tempFace);
-
 	for (i = 0; i < f; i++)
 	{
 		struct face *face = &tempFace[i];
