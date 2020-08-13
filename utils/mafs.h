@@ -52,6 +52,7 @@ void sincosf(float x, float *sin_out, float *cos_out)
 #define powf pow
 #define sinf sin
 #define cosf cos
+#define tanf tan
 #define acosf acos
 #define atan2f atan2
 
