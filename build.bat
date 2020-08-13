@@ -59,18 +59,22 @@ mkdir %DIR%\ecs
 mkdir %DIR%\%GLFW%
 mkdir %DIR%\%TINYCTHREAD%
 
+cl buildtools\datescomp.c /Fe%DIR%\datescomp.exe /Fo%DIR%\datescomp.obj /O2
+
 set objects=
 FOR %%f IN (!sources!) DO @IF EXIST "%%f" (
 	set src=%DIR%\%%f
 	CALL set object=%%src:.c=.obj%%
-	cl %CFLAGS% /c "%%f" /Fo"!object!" || (
-		echo Error compiling %%f
-		GOTO ERROR
+	%DIR%\datescomp.exe !object! %%f && (
+		cl /c "%%f" /Fo"!object!" %CFLAGS% || (
+			echo Error compiling %%f
+			GOTO ERROR
+		)
 	)
 	CALL set objects=!objects! !object!
 )
 
-cl packager\packager.c %DIR%\third_party\miniz.obj /Fe%DIR%\packager.exe /O2
+cl buildtools\packager.c %DIR%\third_party\miniz.obj /Fo%DIR%\packager.obj /Fe%DIR%\packager.exe /O2
 CALL %DIR%\packager.exe ..\!SAUCES!
 ECHO 1 RCDATA "%DIR%\data.zip" > %DIR%\res.rc
 rc %DIR%\res.rc
