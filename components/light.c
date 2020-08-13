@@ -210,6 +210,8 @@ static int c_light_pre_draw(c_light_t *self)
 int c_light_menu(c_light_t *self, void *ctx)
 {
 	int ambient;
+	float power, last_power;
+	bool_t changed = false;
 	struct nk_colorf *old;
 	union { struct nk_colorf nk; vec4_t v; } new;
 	nk_layout_row_dynamic(ctx, 0, 1);
@@ -229,13 +231,13 @@ int c_light_menu(c_light_t *self, void *ctx)
 		{
 			self->radius = rad;
 			c_light_position_changed(self);
-			world_changed();
+			changed = true;
 		}
 		nk_property_float(ctx, "volumetric:", -1.0, &volum, 10.0, 0.1, 0.05);
 		if(volum != self->volumetric_intensity)
 		{
 			self->volumetric_intensity = volum;
-			world_changed();
+			changed = true;
 		}
 
 	}
@@ -252,6 +254,31 @@ int c_light_menu(c_light_t *self, void *ctx)
 	if(memcmp(&new, &self->color, sizeof(vec4_t)))
 	{
 		self->color = new.v;
+		changed = true;
+	}
+
+	last_power = power = (self->color.x + self->color.y + self->color.z) / 3.f;
+	nk_layout_row_dynamic(ctx, 20, 1);
+	nk_property_float(ctx, "power:", 0.0f, &power, 30.0f, 0.05f, 0.05f);
+	if (fabs(power - last_power) > 0.04f)
+	{
+		if (last_power > 0.f)
+		{
+			self->color.x *= power / last_power;
+			self->color.y *= power / last_power;
+			self->color.z *= power / last_power;
+		}
+		else
+		{
+			self->color.x = power;
+			self->color.y = power;
+			self->color.z = power;
+		}
+		changed = true;
+	}
+
+	if (changed)
+	{
 		world_changed();
 	}
 
