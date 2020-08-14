@@ -448,12 +448,12 @@ entity_t _c_new(entity_t root, int argc, char **argv)
 }
 
 #if defined(_WIN32)
-static bool_t get_archive(const char **bytes, size_t *bytes_num)
+static bool_t get_archive(unsigned char **bytes, size_t *bytes_num)
 {
 	HRSRC hRes = FindResource(0, MAKEINTRESOURCE(1), RT_RCDATA);
 	HGLOBAL hMem = LoadResource(0, hRes);
 	DWORD size = SizeofResource(0, hRes);
-	*bytes = LockResource(hMem);
+	*bytes = (unsigned char*)LockResource(hMem);
 	*bytes_num = size;
 	return true;
 }
@@ -461,9 +461,9 @@ static bool_t get_archive(const char **bytes, size_t *bytes_num)
 #else
 extern uint8_t _binary_candle_build_data_zip_start[];
 extern uint8_t _binary_candle_build_data_zip_end[];
-static bool_t get_archive(char **bytes, size_t *bytes_num)
+static bool_t get_archive(unsigned char **bytes, size_t *bytes_num)
 {
-	*bytes = _binary_candle_build_data_zip_start;
+	*bytes = (unsigned char*)_binary_candle_build_data_zip_start;
 	*bytes_num = (size_t)(  _binary_candle_build_data_zip_end
 	                      - _binary_candle_build_data_zip_start);
 	return true;
@@ -473,7 +473,7 @@ static bool_t get_archive(char **bytes, size_t *bytes_num)
 void candle_init(const char *path)
 {
 	size_t sauces_size;
-	const unsigned char *sauces_bytes;
+	unsigned char *sauces_bytes;
 	g_candle = calloc(1, sizeof *g_candle);
 	g_candle->loader = loader_new();
 

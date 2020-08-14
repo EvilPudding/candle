@@ -147,7 +147,11 @@ char *c_sauces_get_bytes(c_sauces_t *self, resource_t *sauce, size_t *bytes_num)
 		fpsize = ftell(fp) + 1;
 		fseek(fp, 0, SEEK_SET);
 		bytes = malloc(fpsize);
-		fread(bytes, 1, fpsize, fp);
+		if (fread(bytes, 1, fpsize, fp) != fpsize)
+		{
+			printf("OSpooky!\n");
+			exit(1);
+		}
 		bytes[fpsize - 1] = '\0';
 		fclose(fp);
 	}
