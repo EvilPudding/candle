@@ -132,7 +132,7 @@ $(DIR)/data.zip: $(DIR)/packager
 	$(DIR)/packager ../$(SAUCES)
 
 $(DIR)/packager: 
-	$(CC) packager/packager.c third_party/miniz.c -O3 -o $(DIR)/packager
+	$(CC) buildtools/packager.c third_party/miniz.c -O3 -o $(DIR)/packager
 
 ##############################################################################
 
