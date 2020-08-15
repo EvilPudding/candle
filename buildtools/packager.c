@@ -31,9 +31,18 @@ void path_join(char *path, size_t size, const char *other)
 }
 
 static
-void add_dir(mz_zip_archive *archive, const char *dir_name)
+void add_path(mz_zip_archive *archive, const char *dir_name)
 {
+	mz_bool status;
 	tinydir_dir dir;
+	FILE *fp = fopen(dir_name, "rb");
+	if (fp != NULL) {
+		status = mz_zip_writer_add_file(archive, dir_name + 3, dir_name,
+		                                "", 0, MZ_BEST_COMPRESSION);
+		fclose(fp);
+		return;
+	}
+
 	if (tinydir_open(&dir, dir_name) == -1)
 	{
 		return;
@@ -44,7 +53,6 @@ void add_dir(mz_zip_archive *archive, const char *dir_name)
 		char *dot;
 		char path[512];
 		char buffer[64];
-		mz_bool status;
 
 		if (tinydir_readfile(&dir, &file) == -1)
 		{
@@ -62,7 +70,7 @@ void add_dir(mz_zip_archive *archive, const char *dir_name)
 
 		if (file.is_dir)
 		{
-			add_dir(archive, path);
+			add_path(archive, path);
 			goto next;
 		}
 
@@ -132,7 +140,7 @@ int main(int argc, char *argv[])
 
 	for (i = 1; i < argc; ++i)
 	{
-		add_dir(&archive, argv[i]);
+		add_path(&archive, argv[i]);
 	}
 	if (!mz_zip_writer_finalize_archive(&archive))
 	{
