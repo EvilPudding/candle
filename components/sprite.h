@@ -1,8 +1,8 @@
 #ifndef SPRITE_H
 #define SPRITE_H
 
-#include <ecs/ecm.h>
-#include <utils/drawable.h>
+#include "../ecs/ecm.h"
+#include "../utils/drawable.h"
 
 typedef struct
 {

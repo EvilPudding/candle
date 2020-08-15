@@ -1,5 +1,6 @@
 #!/bin/bash
 SUFFIX=""
+FILE=""
 
 while test $# -gt 0; do
   case "$1" in
@@ -10,12 +11,18 @@ while test $# -gt 0; do
     --emscripten)
       SUFFIX="_emscripten"
 	  shift
-	  break
       ;;
     --debug)
       SUFFIX="_debug"
 	  shift
-	  break
+      ;;
+    --libs)
+	  shift
+	  FILE="libs"
+      ;;
+    --cflags)
+	  shift
+	  FILE="cflags"
       ;;
     *)
       break;
@@ -23,18 +30,4 @@ while test $# -gt 0; do
   esac
 done
 
-while test $# -gt 0; do
-  case "$1" in
-    --libs)
-	  shift
-      cat candle/build/libs$SUFFIX
-      ;;
-    --cflags)
-	  shift
-      cat candle/build/cflags$SUFFIX
-      ;;
-    *)
-	  shift
-      ;;
-  esac
-done
+cat candle/build/$FILE$SUFFIX

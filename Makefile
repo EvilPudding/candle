@@ -25,9 +25,10 @@ GLFW = third_party/glfw/src
 TINYCTHREAD = third_party/tinycthread/source
 
 PLUGINS = $(wildcard ../*.candle)
-PLUGINS_REL = $(patsubst %, ../%/$(DIR)/export.a, $(PLUGINS))
-PLUGINS_DEB = $(patsubst %, ../%/$(DIR)/export_debug.a, $(PLUGINS))
-PLUGINS_EMS = $(patsubst %, ../%/$(DIR)/export_emscripten.a, $(PLUGINS))
+PLUGINS_DIR = $(patsubst %, %/$(DIR), $(PLUGINS))
+PLUGINS_REL = $(patsubst %, %/libs, $(PLUGINS_DIR))
+PLUGINS_DEB = $(patsubst %, %/libs_debug, $(PLUGINS_DIR))
+PLUGINS_EMS = $(patsubst %, %/libs_emscripten, $(PLUGINS_DIR))
 
 THIRD_PARTY_SRC = \
 		   $(GLFW)/context.c \
@@ -70,21 +71,19 @@ CFLAGS_EMS = -Wall -I. -Wno-unused-function \
 
 ##############################################################################
 
-all: $(DIR)/candle.a
+all: init $(DIR)/candle.a $(PLUGINS_REL)
+	-cat $(PLUGINS_REL) | paste -sd " " > $(DIR)/libs
+	echo -n " $(LDFLAGS_REL)" >> $(DIR)/libs
 
-$(DIR)/candle.a: init $(OBJS_REL) $(DIR)/data.zip
-	echo -n $(LDFLAGS_REL) >> $(DIR)/libs
+$(DIR)/candle.a: $(OBJS_REL)
 	$(AR) rs $@ $(OBJS_REL)
 
 $(DIR)/%.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS_REL)
 
-../%/$(DIR)/export.a:
-	$(MAKE) -C $(patsubst %/$(DIR)/export.a, %, $@)
-	echo -n " " >> $(DIR)/libs
-	echo -n $(patsubst ../%, %, $@) >> $(DIR)/libs
-	echo -n " " >> $(DIR)/libs
-	-cat $(patsubst %/export.a, %/libs, $@) >> $(DIR)/libs
+../%/$(DIR)/libs: $(DIR)/data.zip
+	$(MAKE) -C ../$*
+	$(DIR)/packager $(patsubst %, ../$*/%, $(shell cat ../$*/$(DIR)/res))
 
 # utils/gl.c:
 # 	galogen gl.xml --api gl --ver 3.0 --profile core --exts $(EXTS)
@@ -92,39 +91,36 @@ $(DIR)/%.o: %.c
 
 ##############################################################################
 
-debug: $(DIR)/candle_debug.a
+debug: init $(DIR)/candle_debug.a $(PLUGINS_DEB)
+	-cat $(PLUGINS_DEB) | paste -sd " " > $(DIR)/libs_debug
+	echo -n " $(LDFLAGS_DEB)" >> $(DIR)/libs_debug
 
-$(DIR)/candle_debug.a: init $(OBJS_DEB) $(DIR)/data.zip
-	echo -n $(LDFLAGS_DEB) >> $(DIR)/libs_debug
+$(DIR)/candle_debug.a: $(OBJS_DEB)
 	$(AR) rs $@ $(OBJS_DEB)
 
 $(DIR)/%.debug.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS_DEB)
 
-../%/$(DIR)/export_debug.a:
-	$(MAKE) -C $(patsubst %/$(DIR)/export_debug.a, %, $@)
-	echo -n " " >> $(DIR)/libs_debug
-	echo -n $(patsubst ../%, %, $@) >> $(DIR)/libs_debug
-	echo -n " " >> $(DIR)/libs_debug
-	-cat $(patsubst %/export_debug.a, %/libs_debug, $@) >> $(DIR)/libs_debug
+../%/$(DIR)/libs_debug: $(DIR)/data.zip
+	$(MAKE) -C ../$* debug
+	$(DIR)/packager $(patsubst %, ../$*/%, $(shell cat ../$*/$(DIR)/res))
+
 
 ##############################################################################
 
-emscripten: $(DIR)/candle_emscripten.a
+emscripten: init $(DIR)/candle_emscripten.a
+	-cat $(PLUGINS_EMS) | paste -sd " " > $(DIR)/libs_emscripten
+	echo -n " $(LDFLAGS_EMS)" >> $(DIR)/libs_emscripten
 
-$(DIR)/candle_emscripten.a: init $(OBJS_EMS)
-	echo -n $(LDFLAGS_EMS) >> $(DIR)/libs_emscripten
+$(DIR)/candle_emscripten.a: $(OBJS_EMS)
 	$(AR) rs $@ $(OBJS_EMS)
 
 $(DIR)/%.emscripten.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS_EMS)
 
-../%/$(DIR)/export_emscripten.a:
-	$(MAKE) -C $(patsubst %/$(DIR)/export_emscripten.a, %, $@)
-	echo -n " " >> $(DIR)/libs_emscripten
-	echo -n $(patsubst ../%, %, $@) >> $(DIR)/libs_emscripten
-	echo -n " " >> $(DIR)/libs_emscripten
-	-cat $(patsubst %/export_emscripten.a, %/libs_emscripten, $@) >> $(DIR)/libs_emscripten
+../%/$(DIR)/libs_emscripten: $(DIR)/data.zip
+	$(MAKE) -C ../$* emscripten
+	$(DIR)/packager $(patsubst %, ../$*/%, $(shell cat ../$*/$(DIR)/res))
 
 ##############################################################################
 
@@ -137,10 +133,6 @@ $(DIR)/packager:
 ##############################################################################
 
 init:
-	rm -f $(DIR)/libs
-	rm -f $(DIR)/libs_debug
-	rm -f $(DIR)/libs_emscripten
-	rm -f $(DIR)/cflags
 	mkdir -p $(DIR)
 	mkdir -p $(DIR)/components
 	mkdir -p $(DIR)/systems
@@ -155,3 +147,6 @@ init:
 
 clean:
 	rm -fr $(DIR)
+	rm -fr $(PLUGINS_DIR)
+
+.PHONY: clean all init

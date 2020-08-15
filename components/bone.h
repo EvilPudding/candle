@@ -1,9 +1,9 @@
 #ifndef BONE_H
 #define BONE_H
 
-#include <ecs/ecm.h>
-#include <utils/mafs.h>
-#include <utils/drawable.h>
+#include "../ecs/ecm.h"
+#include "../utils/mafs.h"
+#include "../utils/drawable.h"
 
 typedef struct
 {

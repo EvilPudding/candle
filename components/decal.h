@@ -1,11 +1,11 @@
 #ifndef DECAL_H
 #define DECAL_H
 
-#include <utils/glutil.h>
-#include <ecs/ecm.h>
-#include <utils/texture.h>
-#include <utils/material.h>
-#include <utils/shader.h>
+#include "../utils/glutil.h"
+#include "../ecs/ecm.h"
+#include "../utils/texture.h"
+#include "../utils/material.h"
+#include "../utils/shader.h"
 
 typedef struct c_decal_t
 {

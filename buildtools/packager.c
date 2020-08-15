@@ -117,26 +117,30 @@ next:
 
 int main(int argc, char *argv[])
 {
+	int i;
 	mz_bool status;
 	mz_zip_archive archive = {0};
-	status = mz_zip_writer_init_file(&archive, "build/data.zip", 2e+7);
-	/* status = mz_zip_writer_init_heap(&archive, 0, 2e+7); */
 
-	if (argc > 1)
+	if (   !mz_zip_reader_init_file(&archive, "build/data.zip", 0)
+		|| !mz_zip_writer_init_from_reader(&archive, "build/data.zip"))
 	{
-		add_dir(&archive, argv[1]);
+		if (!mz_zip_writer_init_file(&archive, "build/data.zip", 2e+7))
+		{
+			return 1;
+		}
 	}
 
-	status = mz_zip_writer_finalize_archive(&archive);
-	/* void *data = NULL; */
-	/* size_t data_size = 0; */
-	/* status =  mz_zip_writer_finalize_heap_archive(&archive, &data, &data_size); */
-	/* if (status) */
-	/* { */
-		/* hexembed(data, data_size); */
-	/* } */
-
-	status = mz_zip_writer_end(&archive);
-
+	for (i = 1; i < argc; ++i)
+	{
+		add_dir(&archive, argv[i]);
+	}
+	if (!mz_zip_writer_finalize_archive(&archive))
+	{
+		return 1;
+	}
+	if (!mz_zip_writer_end(&archive))
+	{
+		return 1;
+	}
 	return 0;
 }
