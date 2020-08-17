@@ -20,7 +20,6 @@ typedef struct
 	entity_t force_down;
 } c_freemove_t;
 
-void ct_freemove(ct_t *self);
 DEF_CASTER(ct_freemove, c_freemove, c_freemove_t)
 
 c_freemove_t *c_freemove_new(entity_t orientation, int plane_movement, entity_t force_down);

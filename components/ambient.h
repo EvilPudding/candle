@@ -1,10 +1,10 @@
 #ifndef AMBIENT_H
 #define AMBIENT_H
 
-#include <utils/glutil.h>
-#include <ecs/ecm.h>
-#include <utils/texture.h>
-#include <utils/material.h>
+#include "../utils/glutil.h"
+#include "../ecs/ecm.h"
+#include "../utils/texture.h"
+#include "../utils/material.h"
 
 typedef struct c_ambient_t
 {
@@ -13,7 +13,6 @@ typedef struct c_ambient_t
 	float map_size;
 } c_ambient_t;
 
-void ct_ambient(ct_t *self);
 DEF_CASTER(ct_ambient, c_ambient, c_ambient_t)
 
 c_ambient_t *c_ambient_new(int map_size);

@@ -20,7 +20,6 @@ typedef struct
 	int playing;
 } c_timeline_t;
 
-void ct_timeline(ct_t *self);
 DEF_CASTER(ct_timeline, c_timeline, c_timeline_t)
 
 c_timeline_t *c_timeline_new(void);

@@ -21,7 +21,6 @@ typedef struct
 #endif
 } c_spatial_t;
 
-void ct_spatial(ct_t *self);
 DEF_CASTER(ct_spatial, c_spatial, c_spatial_t)
 
 c_spatial_t *c_spatial_new(void);

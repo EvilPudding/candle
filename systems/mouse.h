@@ -36,7 +36,6 @@ typedef struct c_mouse
     double last_left_event;
 } c_mouse_t;
 
-void ct_mouse(ct_t *self);
 DEF_CASTER(ct_mouse, c_mouse, c_mouse_t)
 c_mouse_t *c_mouse_new(void);
 void c_mouse_visible(c_mouse_t *self, bool_t visible);

@@ -45,7 +45,6 @@ typedef struct c_render_device
 	uint32_t bound_ubos[32];
 } c_render_device_t;
 
-void ct_render_device(ct_t *self);
 DEF_CASTER(ct_render_device, c_render_device, c_render_device_t)
 
 c_render_device_t *c_render_device_new(void);

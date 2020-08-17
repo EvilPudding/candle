@@ -144,7 +144,6 @@ typedef struct
 	bool_t modified;
 } c_model_t;
 
-void ct_model(ct_t *self);
 DEF_CASTER(ct_model, c_model, c_model_t)
 vs_t *model_vs(void);
 vs_t *widget_vs(void);

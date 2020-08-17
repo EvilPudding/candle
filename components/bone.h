@@ -14,7 +14,6 @@ typedef struct
 	mat4_t offset;
 } c_bone_t;
 
-void ct_bone(ct_t *self);
 DEF_CASTER(ct_bone, c_bone, c_bone_t)
 
 c_bone_t *c_bone_new(entity_t skin, mat4_t offset);

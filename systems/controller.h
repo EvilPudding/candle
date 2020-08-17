@@ -40,7 +40,6 @@ typedef struct c_controllers_t
 	uint32_t num_controllers;
 } c_controllers_t;
 
-void ct_controller(ct_t *self);
 DEF_CASTER(ct_controller, c_controller, c_controllers_t)
 c_controllers_t *c_controllers_new(void);
 void c_controllers_rumble(c_controllers_t *self, uint32_t controller,

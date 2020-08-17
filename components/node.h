@@ -33,7 +33,6 @@ typedef struct
 	bool_t inherit_transform;
 } c_node_t;
 
-void ct_node(ct_t *self);
 DEF_CASTER(ct_node, c_node, c_node_t)
 
 c_node_t *c_node_new(void);

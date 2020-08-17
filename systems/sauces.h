@@ -38,7 +38,6 @@ typedef struct c_sauces
 	khash_t(res) *generic;
 } c_sauces_t;
 
-void ct_sauces(ct_t *self);
 DEF_CASTER(ct_sauces, c_sauces, c_sauces_t)
 
 c_sauces_t *c_sauces_new(void);

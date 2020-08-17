@@ -9,7 +9,6 @@ typedef struct
 	int steps;
 } c_destroyed_t;
 
-void ct_destroyed(ct_t *self);
 DEF_CASTER(ct_destroyed, c_destroyed, c_destroyed_t)
 
 c_destroyed_t *c_destroyed_new(void);

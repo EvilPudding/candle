@@ -1,11 +1,11 @@
 #ifndef VISUAL_LOGIC_H
 #define VISUAL_LOGIC_H
 
-#include <ecs/ecm.h>
-#include <utils/mafs.h>
-#include <utils/khash.h>
-#include <utils/macros.h>
-#include <utils/macros.h>
+#include "../ecs/ecm.h"
+#include "../utils/mafs.h"
+#include "../utils/khash.h"
+#include "../utils/macros.h"
+#include "../utils/macros.h"
 
 struct vicall;
 struct vifunc;

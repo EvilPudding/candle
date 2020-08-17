@@ -3,6 +3,7 @@
 
 #include "../ecs/ecm.h"
 #include "../utils/renderer.h"
+#include "../utils/nk.h"
 
 struct edit_scale
 {
@@ -133,7 +134,6 @@ typedef struct c_editmode
 	entity_t arrows, X, Y, Z, W, RX, RY, RZ, SX, SY, SZ;
 } c_editmode_t;
 
-void ct_editmode(ct_t *self);
 DEF_CASTER(ct_editmode, c_editmode, c_editmode_t)
 
 c_editmode_t *c_editmode_new(void);

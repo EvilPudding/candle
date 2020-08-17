@@ -25,8 +25,9 @@ struct set_var
 };
 
 #define IDENT_NULL UINT_MAX
-#define DEF_CASTER(ct, cn, nc_t) \
-	static nc_t *cn(void *entity)\
+#define DEF_CASTER(ct, cn, nc_t)               \
+	void ct(ct_t *self);                       \
+	static nc_t *cn(void *entity)              \
 { return (nc_t*)ct_get(ecm_get(ct), entity); }
 
 #define ecm_foreach_c(vvar, code) { khint_t __i;		\

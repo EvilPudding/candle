@@ -1,8 +1,8 @@
 #ifndef AXIS_H
 #define AXIS_H
 
-#include <ecs/ecm.h>
-#include <utils/mesh.h>
+#include "../ecs/ecm.h"
+#include "../utils/mesh.h"
 
 typedef struct
 {
@@ -13,7 +13,6 @@ typedef struct
 	int visible;
 } c_axis_t;
 
-void ct_axis(ct_t *self);
 DEF_CASTER(ct_axis, c_axis, c_axis_t)
 
 c_axis_t *c_axis_new(int type, vecN_t dir);

@@ -10,7 +10,6 @@ typedef struct
 	unsigned int hash;
 } c_name_t;
 
-void ct_name(ct_t *self);
 DEF_CASTER(ct_name, c_name, c_name_t)
 
 c_name_t *c_name_new(const char *name);

@@ -1,9 +1,9 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include <ecs/ecm.h>
-#include <utils/glutil.h>
-#include <utils/renderer.h>
+#include "../ecs/ecm.h"
+#include "../utils/glutil.h"
+#include "../utils/renderer.h"
 
 typedef struct
 {
@@ -25,7 +25,6 @@ typedef struct
 	mesh_t *mesh;
 } c_camera_t;
 
-void ct_camera(ct_t *self);
 DEF_CASTER(ct_camera, c_camera, c_camera_t)
 
 c_camera_t *c_camera_new(float proj_fov, float proj_near, float proj_far,

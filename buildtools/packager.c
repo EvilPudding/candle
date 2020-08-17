@@ -35,17 +35,16 @@ void add_path(mz_zip_archive *archive, const char *dir_name)
 {
 	mz_bool status;
 	tinydir_dir dir;
-	FILE *fp = fopen(dir_name, "rb");
-	if (fp != NULL) {
-		status = mz_zip_writer_add_file(archive, dir_name + 3, dir_name,
-		                                "", 0, MZ_BEST_COMPRESSION);
-		fclose(fp);
-		return;
-	}
 
 	if (tinydir_open(&dir, dir_name) == -1)
 	{
-		return;
+		FILE *fp = fopen(dir_name, "rb");
+		if (fp != NULL) {
+			status = mz_zip_writer_add_file(archive, dir_name + 3, dir_name,
+											"", 0, MZ_BEST_COMPRESSION);
+			fclose(fp);
+			return;
+		}
 	}
 	while (dir.has_next)
 	{
@@ -132,7 +131,7 @@ int main(int argc, char *argv[])
 	if (   !mz_zip_reader_init_file(&archive, "build/data.zip", 0)
 		|| !mz_zip_writer_init_from_reader(&archive, "build/data.zip"))
 	{
-		if (!mz_zip_writer_init_file(&archive, "build/data.zip", 2e+7))
+		if (!mz_zip_writer_init_file(&archive, "build/data.zip", 0))
 		{
 			return 1;
 		}

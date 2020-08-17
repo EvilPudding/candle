@@ -1,9 +1,9 @@
 #ifndef WINDOW_H
 #define WINDOW_H
 
-#include <ecs/ecm.h>
-#include <utils/drawable.h>
-#include <utils/renderer.h>
+#include "../ecs/ecm.h"
+#include "../utils/drawable.h"
+#include "../utils/renderer.h"
 
 extern int window_width;
 extern int window_height;
@@ -27,7 +27,6 @@ typedef struct c_window_t
 	renderer_t *renderer;
 } c_window_t;
 
-void ct_window(ct_t *self);
 DEF_CASTER(ct_window, c_window, c_window_t)
 
 void c_window_handle_resize(c_window_t *self, const void *event);
