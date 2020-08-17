@@ -72,7 +72,7 @@ CFLAGS_EMS = -Wall -I. -Wno-unused-function \
 ##############################################################################
 
 all: init $(DIR)/candle.a $(PLUGINS_REL)
-	-cat "$(PLUGINS_REL)" | paste -sd " " > $(DIR)/libs
+	-cat "" $(PLUGINS_REL) | paste -sd " " > $(DIR)/libs
 	echo -n " $(LDFLAGS_REL)" >> $(DIR)/libs
 
 $(DIR)/candle.a: $(OBJS_REL) $(DIR)/data.zip
@@ -92,7 +92,7 @@ $(DIR)/%.o: %.c
 ##############################################################################
 
 debug: init $(DIR)/candle_debug.a $(PLUGINS_DEB)
-	-cat "$(PLUGINS_DEB)" | paste -sd " " > $(DIR)/libs_debug
+	-cat "" $(PLUGINS_DEB) | paste -sd " " > $(DIR)/libs_debug
 	echo -n " $(LDFLAGS_DEB)" >> $(DIR)/libs_debug
 
 $(DIR)/candle_debug.a: $(OBJS_DEB) $(DIR)/data.zip
@@ -109,7 +109,7 @@ $(DIR)/%.debug.o: %.c
 ##############################################################################
 
 emscripten: init $(DIR)/candle_emscripten.a
-	-cat "$(PLUGINS_EMS)" | paste -sd " " > $(DIR)/libs_emscripten
+	-cat "" $(PLUGINS_EMS) | paste -sd " " > $(DIR)/libs_emscripten
 	echo -n " $(LDFLAGS_EMS)" >> $(DIR)/libs_emscripten
 
 $(DIR)/candle_emscripten.a: $(OBJS_EMS) $(DIR)/data.zip
