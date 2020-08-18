@@ -697,7 +697,7 @@ void renderer_default_pipeline(renderer_t *self)
 			opt_tex("refr", refr, NULL),
 			opt_num("ssr_power", 1.0f, NULL),
 			opt_tex("ssao", ssao, NULL),
-			opt_num("ssao_power", 0.6f, NULL),
+			opt_num("ssao_power", 1.0f, NULL),
 			opt_tex("volum", volum, NULL)
 	);
 	renderer_add_pass(self, "bloom_0", "candle:bright", ref("quad"), 0,
