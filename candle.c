@@ -3,12 +3,13 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <systems/window.h>
-#include <systems/render_device.h>
-#include <systems/sauces.h>
-#include <systems/nodegraph.h>
-#include <components/name.h>
-#include <components/node.h>
+#include "systems/window.h"
+#include "systems/render_device.h"
+#include "systems/sauces.h"
+#include "systems/nodegraph.h"
+#include "components/name.h"
+#include "components/node.h"
+#include "utils/file.h"
 
 #define GLFW_INCLUDE_NONE
 #ifdef _WIN32
@@ -407,6 +408,26 @@ entity_t candle_run_command(entity_t root, const char *command)
 	free(copy);
 	if(!entity_exists(instance)) instance = root;
 	return instance;
+}
+
+int candle_run_from_memory(entity_t root, const char *bytes, size_t bytes_num)
+{
+	char *line;
+	sfile_t *file = sopen(bytes, bytes_num);
+
+	if (file == NULL) return 0;
+
+	while ((line = sgets(file)))
+	{
+		entity_t entity;
+		entity = candle_run_command(root, line);
+		if(entity_exists(root) && c_node(&root) && entity != root)
+		{
+			c_node_add(c_node(&root), 1, entity);
+		}
+	}
+	sclose(file);
+	return 1;
 }
 
 int candle_run(entity_t root, const char *map_name)

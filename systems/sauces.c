@@ -40,11 +40,11 @@ c_sauces_t *c_sauces_new()
 	return self;
 }
 
-resource_t *c_sauces_get_sauce(c_sauces_t *self, const resource_handle_t *handle)
+resource_t *c_sauces_get_sauce(c_sauces_t *self, resource_handle_t handle)
 {
-	if(handle->ext != ~0)
+	if(handle.ext != ~0)
 	{
-		khiter_t k = kh_get(res, self->sauces, handle->name);
+		khiter_t k = kh_get(res, self->sauces, handle.name);
 		if(k != kh_end(self->sauces))
 		{
 			return kh_value(self->sauces, k);
@@ -52,7 +52,7 @@ resource_t *c_sauces_get_sauce(c_sauces_t *self, const resource_handle_t *handle
 	}
 	else
 	{
-		khiter_t k = kh_get(res, self->generic, handle->name);
+		khiter_t k = kh_get(res, self->generic, handle.name);
 		if(k != kh_end(self->generic))
 		{
 			return kh_value(self->generic, k);
@@ -115,7 +115,7 @@ void c_sauces_register(c_sauces_t *self, const char *name,
 		if(k != kh_end(self->sauces))
 		{
 			printf("Name collision! %s"
-					" Resources should be uniquely named.\n", name);
+			       " Resources should be uniquely named.\n", name);
 			return;
 		}
 		k = kh_put(res, self->sauces, key, &ret);
@@ -134,9 +134,12 @@ void c_sauces_register(c_sauces_t *self, const char *name,
 		k = kh_put(res, self->generic, key, &ret);
 		kh_value(self->generic, k) = sauce;
 	}
+	else
+	{
+		printf("no loader %s\n", buffer);
+	}
 }
 
-static
 char *c_sauces_get_bytes(c_sauces_t *self, resource_t *sauce, size_t *bytes_num)
 {
 	char *bytes = NULL;
@@ -173,7 +176,7 @@ char *c_sauces_get_bytes(c_sauces_t *self, resource_t *sauce, size_t *bytes_num)
 	return bytes;
 }
 
-void *c_sauces_get_data(c_sauces_t *self, resource_handle_t *handle)
+void *c_sauces_get_data(c_sauces_t *self, resource_handle_t handle)
 {
 	char *dot;
 	char *bytes;
@@ -187,12 +190,12 @@ void *c_sauces_get_data(c_sauces_t *self, resource_handle_t *handle)
 	dot = strrchr(sauce->path, '.');
 	if(!dot || dot[1] == '\0') return NULL;
 
-	if (handle->ext == ~0) handle->ext = ref(dot + 1);
+	if (handle.ext == ~0) handle.ext = ref(dot + 1);
 	
-	cb = c_sauces_get_loader(self, handle->ext);
+	cb = c_sauces_get_loader(self, handle.ext);
 	if(!cb) return NULL;
 	bytes = c_sauces_get_bytes(self, sauce, &bytes_num);
-	sauce->data = cb(bytes, bytes_num, sauce->name, handle->ext);
+	sauce->data = cb(bytes, bytes_num, sauce->name, handle.ext);
 	return sauce->data;
 }
 
@@ -203,7 +206,7 @@ resource_handle_t sauce_handle(const char *name)
 	resource_handle_t handle;
 
 	strncpy(buffer, name, sizeof(buffer) - 1);
-	to_lower_case(buffer);
+	/* to_lower_case(buffer); */
 	requested_dot = strrchr(buffer, '.');
 
 	handle.name = ref(buffer);
@@ -218,8 +221,7 @@ resource_handle_t sauce_handle(const char *name)
 
 void *c_sauces_get(c_sauces_t *self, const char *name)
 {
-	resource_handle_t handle = sauce_handle(name);
-	return c_sauces_get_data(self, &handle);
+	return c_sauces_get_data(self, sauce_handle(name));
 }
 
 int c_sauces_index_dir(c_sauces_t *self, const char *dir_name)
@@ -251,7 +253,7 @@ int c_sauces_index_dir(c_sauces_t *self, const char *dir_name)
 		}
 
 		strcpy(buffer, file.name);
-		to_lower_case(buffer);
+		/* to_lower_case(buffer); */
 
 		dot = strrchr(buffer, '.');
 		if(!dot || dot[1] == '\0') goto next;;

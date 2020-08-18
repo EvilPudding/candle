@@ -49,8 +49,9 @@ void c_sauces_me_a_zip(c_sauces_t *self, const unsigned char *bytes,
 void c_sauces_loader(c_sauces_t *self, uint32_t ref, sauces_loader_cb loader);
 void *c_sauces_get(c_sauces_t *self, const char *name);
 int c_sauces_index_dir(c_sauces_t *self, const char *dir_name);
-resource_t *c_sauces_get_sauce(c_sauces_t *self, const resource_handle_t *handle);
-void *c_sauces_get_data(c_sauces_t *self, resource_handle_t *handle);
+resource_t *c_sauces_get_sauce(c_sauces_t *self, const resource_handle_t handle);
+void *c_sauces_get_data(c_sauces_t *self, resource_handle_t handle);
+char *c_sauces_get_bytes(c_sauces_t *self, resource_t *sauce, size_t *bytes_num);
 resource_handle_t sauce_handle(const char *name);
 
 #define sauces_loader(ref, loader) (c_sauces_loader(c_sauces(&SYS), ref, loader))

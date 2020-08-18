@@ -297,7 +297,7 @@ static void _code_save(vifunc_t *func, FILE *fp)
 	fprintf(fp, "%%{\n%s}%%", type->code);
 }
 
-static bool_t _code_load(vifunc_t *func, vifile_t *fp) 
+static bool_t _code_load(vifunc_t *func, sfile_t *fp) 
 {
 	struct mat_type *type;
 	char *line;
@@ -309,18 +309,18 @@ static bool_t _code_load(vifunc_t *func, vifile_t *fp)
 	type = func->usrptr;
 	type->code = str_new(64);
 
-	line = vigets(fp);
+	line = sgets(fp);
 	if (!line)
 	{
 		return true;
 	}
 	if (strncmp(line, "%{", 2))
 	{
-		viwind(fp);
+		swind(fp);
 		return true;
 	}
 
-	while ((line = vigets(fp)))
+	while ((line = sgets(fp)))
 	{
 		if (strncmp(line, "}%", 2) == 0)
 			break;

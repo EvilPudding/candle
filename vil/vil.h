@@ -6,19 +6,17 @@
 #include "../utils/khash.h"
 #include "../utils/macros.h"
 #include "../utils/macros.h"
+#include "../utils/file.h"
 
 struct vicall;
 struct vifunc;
-struct vifile;
-
-typedef struct vifile vifile_t;
 
 typedef float (*vifunc_gui_cb)(struct vicall *call, void *data, void *nk);
 typedef void  (*vicall_save_cb)(struct vicall *call, void *data, FILE *fp);
 typedef bool_t(*vicall_load_cb)(struct vicall *call, void *data, int argc,
                                 const char **argv);
 typedef void  (*vifunc_save_cb)(struct vifunc *func, FILE *fp);
-typedef bool_t(*vifunc_load_cb)(struct vifunc *func, vifile_t *fp);
+typedef bool_t(*vifunc_load_cb)(struct vifunc *func, sfile_t *fp);
 typedef void  (*vil_func_cb)(struct vifunc *func, void *usrptr);
 
 enum vicall_flags {
@@ -180,10 +178,5 @@ void vifunc_foreach_unlinked_input(vifunc_t *self, vil_foreach_input_cb cb,
                                    void *usrptr);
 
 slot_t slot_pop(slot_t slt);
-
-vifile_t *viopen(const char *bytes, size_t bytes_num);
-char *vigets(vifile_t *fp);
-void viwind(vifile_t *fp);
-void viclose(vifile_t *fp);
 
 #endif /* !VISUAL_LOGIC_H */

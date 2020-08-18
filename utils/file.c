@@ -78,3 +78,62 @@ int is_dir(const char *f)
 	return file.is_dir;
 }
 
+static
+char *file__strtok_r(char *str, const char *delim, char **nextp)
+{
+    char *ret;
+    if (str == NULL) str = *nextp;
+    str += strspn(str, delim);
+    if (*str == '\0') return NULL;
+    ret = str;
+    str += strcspn(str, delim);
+    if (*str) *str++ = '\0';
+    *nextp = str;
+    return ret;
+}
+
+sfile_t *sopen(const char *bytes, size_t bytes_num)
+{
+	char *saveptr;
+	char *newline;
+	char *str;
+	sfile_t *fp = malloc(sizeof(sfile_t) + bytes_num + 1);
+	memcpy(fp->bytes, bytes, bytes_num);
+	fp->bytes[bytes_num] = '\0';
+	fp->lines = malloc(sizeof(*fp->lines));
+	fp->lines_num = 0;
+	fp->line = 0;
+
+	str = fp->bytes;
+	while ((newline = file__strtok_r(str, "\n", &saveptr)))
+	{
+		str = NULL;
+		fp->lines = realloc(fp->lines, (fp->lines_num + 1) * sizeof(*fp->lines));
+		fp->lines[fp->lines_num] = newline;
+		fp->lines_num++;
+	}
+
+	return fp;
+}
+
+void swind(sfile_t *fp)
+{
+	fp->line = 0;
+}
+
+char *sgets(sfile_t *fp)
+{
+	char *line = NULL;
+	if (fp->line < fp->lines_num)
+	{
+		line = fp->lines[fp->line];
+		fp->line++;
+	}
+	return line;
+}
+
+void sclose(sfile_t *fp)
+{
+	free(fp);
+}
+

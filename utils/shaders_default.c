@@ -68,7 +68,7 @@ void shaders_candle_final()
 		"	}\n"
 		"	const float epsilon = 0.0001;\n"
 		"	float factor = totalWeight + epsilon;\n"
-		"	return vec4(volumetric, factor - ssao_factor * ssao_power) / factor;\n"
+		"	return vec4(volumetric, (factor - ssao_factor) * ssao_power) / factor;\n"
 		"}\n");
 
 	str_cat(&shader_buffer,
@@ -174,10 +174,10 @@ void shaders_candle_ssao()
 
 	str_cat(&shader_buffer,
 		"			float falloff = (1.0 + max(abs(c1), abs(c2)));\n"
-		"			ao += clamp(sin(angle) / falloff - 0.1, 0.0, 1.0);\n"
+		"			ao += clamp(sin(angle) / falloff, 0.0, 1.0);\n"
 		"		}\n"
 		"	}\n"
-		"	ao = 1.0 - (ao / float(TAPS) * ITERS);\n"
+		"	ao = 1.0 - (ao / (float(TAPS) * ITERS));\n"
 		"	FragColor = clamp(ao, 0.0, 1.0); \n"
 		"}\n");
 

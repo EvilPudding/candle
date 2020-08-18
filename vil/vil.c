@@ -36,14 +36,6 @@ void propagate_data(vicall_t *root, vicall_t *call, slot_t parent_slot,
                     uint8_t *parent_data);
 void vicall_copy_defaults(vicall_t *call);
 
-struct vifile
-{
-	char **lines;
-	uint32_t lines_num;
-	uint32_t line;
-	char bytes[1];
-};
-
 void label_gui(vicall_t *call, void *ctx) 
 {
 	nk_layout_row_dynamic(ctx, 20, 1);
@@ -146,7 +138,7 @@ static vicall_t *vifunc_get_call(vifunc_t *type, const slot_t slot,
 }
 
 static
-char* vil__strtok_r(char *str, const char *delim, char **nextp)
+char *vil__strtok_r(char *str, const char *delim, char **nextp)
 {
     char *ret;
     if (str == NULL) str = *nextp;
@@ -610,62 +602,17 @@ void vifunc_link(vifunc_t *self, uint32_t from, uint32_t into)
 	_vifunc_link(self, from_slot, into_slot);
 }
 
-vifile_t *viopen(const char *bytes, size_t bytes_num)
-{
-	char *saveptr;
-	char *newline;
-	char *str;
-	vifile_t *fp = malloc(sizeof(vifile_t) + bytes_num + 1);
-	memcpy(fp->bytes, bytes, bytes_num);
-	fp->bytes[bytes_num] = '\0';
-	fp->lines = malloc(sizeof(*fp->lines));
-	fp->lines_num = 0;
-	fp->line = 0;
-
-	str = fp->bytes;
-	while ((newline = vil__strtok_r(str, "\n", &saveptr)))
-	{
-		str = NULL;
-		fp->lines = realloc(fp->lines, (fp->lines_num + 1) * sizeof(*fp->lines));
-		fp->lines[fp->lines_num] = newline;
-		fp->lines_num++;
-	}
-
-	return fp;
-}
-
-void viwind(vifile_t *fp)
-{
-	fp->line = 0;
-}
-
-char *vigets(vifile_t *fp)
-{
-	char *line = NULL;
-	if (fp->line < fp->lines_num)
-	{
-		line = fp->lines[fp->line];
-		fp->line++;
-	}
-	return line;
-}
-
-void viclose(vifile_t *fp)
-{
-	free(fp);
-}
-
 
 bool_t vifunc_load(vifunc_t *self, const char *bytes, size_t bytes_num)
 {
 	char *str = NULL;
-	vifile_t *fp;
+	sfile_t *fp;
 	vicall_t *it;
 	if (!self) return false;
 
 	/* TODO: clear self */
 
-    fp = viopen(bytes, bytes_num);
+    fp = sopen(bytes, bytes_num);
 
 	self->locked++;
 
@@ -674,7 +621,7 @@ bool_t vifunc_load(vifunc_t *self, const char *bytes, size_t bytes_num)
 		self->ctx->builtin_load_func(self, fp);
 	}
 
-	while ((str = vigets(fp)))
+	while ((str = sgets(fp)))
 	{
 		vicall_t *root;
 		slot_t slot;
@@ -745,12 +692,12 @@ bool_t vifunc_load(vifunc_t *self, const char *bytes, size_t bytes_num)
 
 	self->locked--;
 
-	viclose(fp);
+	sclose(fp);
 	return true;
 
 fail:
 	self->locked--;
-	viclose(fp);
+	sclose(fp);
 	return false;
 }
 
