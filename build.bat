@@ -46,8 +46,20 @@ set sources=%THIRD_PARTY_SRC% candle.c
 
 set subdirs=components systems formats utils vil ecs
 
+set LIBS=gdi32.lib opengl32.lib kernel32.lib user32.lib shell32.lib candle\%DIR%\candle.lib candle\%DIR%\res.res
+
+FOR /d %%f IN (..\*.candle) DO (
+	call %%f\build.bat
+	set /p PLUGIN_LIBS=<%%f\build\libs
+	set LIBS=!LIBS! !PLUGIN_LIBS!
+	pwd
+)
+
+mkdir %DIR%
+echo !LIBS! > %DIR%\libs
+
 FOR %%a IN (%subdirs%) DO @IF EXIST "%%a" (
-	FOR %%f in (%%a\*.c) DO @IF EXIST "%%f" set sources=!sources! %%f
+	FOR %%f IN (%%a\*.c) DO @IF EXIST "%%f" set sources=!sources! %%f
 )
 
 mkdir %DIR%\components
@@ -59,7 +71,9 @@ mkdir %DIR%\ecs
 mkdir %DIR%\%GLFW%
 mkdir %DIR%\%TINYCTHREAD%
 
-cl buildtools\datescomp.c /Fe%DIR%\datescomp.exe /Fo%DIR%\datescomp.obj /O2
+IF NOT EXIST %DIR%\datescomp.exe (
+	cl buildtools\datescomp.c /Fe%DIR%\datescomp.exe /Fo%DIR%\datescomp.obj /O2
+)
 
 set objects=
 FOR %%f IN (!sources!) DO @IF EXIST "%%f" (
@@ -68,24 +82,19 @@ FOR %%f IN (!sources!) DO @IF EXIST "%%f" (
 	%DIR%\datescomp.exe %%f !object! || (
 		cl /c "%%f" /Fo"!object!" %CFLAGS% || (
 			echo Error compiling %%f
-			GOTO ERROR
+			GOTO END
 		)
 	)
 	CALL set objects=!objects! !object!
 )
 
-cl buildtools\packager.c %DIR%\third_party\miniz.obj /Fo%DIR%\packager.obj /Fe%DIR%\packager.exe /O2
+%DIR%\datescomp.exe buildtools\packager.c %DIR%\packager.exe || (
+	cl buildtools\packager.c %DIR%\third_party\miniz.obj /Fo%DIR%\packager.obj /Fe%DIR%\packager.exe /O2
+)
+
 CALL %DIR%\packager.exe ..\!SAUCES!
 ECHO 1 RCDATA "%DIR%\data.zip" > %DIR%\res.rc
 rc %DIR%\res.rc
 
 lib !objects! /out:"%DIR%\candle.lib"
-
-echo gdi32.lib opengl32.lib kernel32.lib user32.lib shell32.lib^
- candle\%DIR%\candle.lib candle\%DIR%\res.res > %DIR%\libs
-
-GOTO END
-
-:ERROR
-ECHO ERROR
 :END
