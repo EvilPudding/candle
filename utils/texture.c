@@ -623,7 +623,6 @@ uint32_t load_tile_by_id(uint32_t tile, uint32_t max_loads)
 	{
 		/* printf("could not load tile %d %d\n", tile, g_indir_n); */
 		return 0;
-		exit(1);
 	}
 	return _load_tile(&g_tiles[tile], max_loads);
 }
@@ -645,9 +644,6 @@ static int32_t texture_from_file_loader(texture_t *self)
 	const uint32_t type = self->bufs[0].type;
 	int32_t tiles_x, m, y, x;
 	uint32_t tile_i, i;
-
-			if (!strcmp(self->name, "bulb"))
-				exit(1);
 
 	if (self->target != GL_TEXTURE_2D)
 	{
@@ -1440,7 +1436,6 @@ void texture_draw_id(texture_t *self, int32_t tex)
 
 void texture_bind(texture_t *self, int32_t tex)
 {
-	/* printf("This shouldn't be used anymore\n"); exit(1); */
 	tex = tex >= 0 ? tex : self->draw_id;
 
 	if (!self->bufs[tex].id) return;

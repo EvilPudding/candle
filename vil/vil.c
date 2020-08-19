@@ -772,7 +772,11 @@ vifunc_t *vifunc_new(vil_t *ctx, const char *name,
 	if (!ctx->funcs) return NULL;
 	id = ref(name);
 	k = kh_put(vifunc, ctx->funcs, id, &ret);
-	if(ret == -1) exit(1);
+	if(ret == -1)
+	{
+		printf("Failed to put\n");
+		exit(1);
+	}
 	type = &kh_value(ctx->funcs, k);
 	*type = calloc(1, sizeof(vifunc_t));
 	(*type)->builtin_gui = builtin_gui;

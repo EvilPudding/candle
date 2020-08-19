@@ -181,7 +181,6 @@ void *vector_get_item(vector_t *self, void *item)
 
 void vector_shift(vector_t *self, int id, int count)
 {
-	/* if(id > self->count) exit(1); */
 	if(count > 0)
 	{
 		memmove(_vector_get(self, id + count), _vector_get(self, id),

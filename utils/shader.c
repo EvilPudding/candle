@@ -623,7 +623,11 @@ static uint32_t fs_new_loader(fs_variation_t *self)
 	printf("fetching %s\n", buffer);
 	self->code = shader_preprocess(shader_source(buffer), true, false, false);
 
-	if(!self->code) exit(1);
+	if(!self->code)
+	{
+		printf("Fs has no code\n");
+		exit(1);
+	}
 
 	self->program = glCreateShader(GL_FRAGMENT_SHADER); glerr();
 

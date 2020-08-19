@@ -46,18 +46,6 @@ set sources=%THIRD_PARTY_SRC% candle.c
 
 set subdirs=components systems formats utils vil ecs
 
-set LIBS=gdi32.lib opengl32.lib kernel32.lib user32.lib shell32.lib candle\%DIR%\candle.lib candle\%DIR%\res.res
-
-FOR /d %%f IN (..\*.candle) DO (
-	call %%f\build.bat
-	set /p PLUGIN_LIBS=<%%f\build\libs
-	set LIBS=!LIBS! !PLUGIN_LIBS!
-	pwd
-)
-
-mkdir %DIR%
-echo !LIBS! > %DIR%\libs
-
 FOR %%a IN (%subdirs%) DO @IF EXIST "%%a" (
 	FOR %%f IN (%%a\*.c) DO @IF EXIST "%%f" set sources=!sources! %%f
 )
@@ -93,6 +81,22 @@ FOR %%f IN (!sources!) DO @IF EXIST "%%f" (
 )
 
 CALL %DIR%\packager.exe ..\!SAUCES!
+
+set LIBS=gdi32.lib opengl32.lib kernel32.lib user32.lib shell32.lib candle\%DIR%\candle.lib candle\%DIR%\res.res
+
+FOR /d %%f IN (..\*.candle) DO (
+	call %%f\build.bat
+	set /p PLUGIN_LIBS=<%%f\build\libs
+	set LIBS=!LIBS! !PLUGIN_LIBS!
+	set /p PLUGIN_RES=<%%f\build\res
+	for %%S IN (!PLUGIN_RES!) DO (
+		%DIR%\packager.exe %%f\build\%%~S
+	)
+)
+
+mkdir %DIR%
+echo !LIBS! > %DIR%\libs
+
 ECHO 1 RCDATA "%DIR%\data.zip" > %DIR%\res.rc
 rc %DIR%\res.rc
 

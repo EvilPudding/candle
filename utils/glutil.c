@@ -40,7 +40,7 @@ void _check_gl_error(const char *file, int line)
 	}
 	if(got_error)
 	{
-		__builtin_trap();
+		printf("Exiting due to opengl error\n");
 		exit(1);
 	}
 #ifndef __EMSCRIPTEN__
@@ -59,6 +59,7 @@ void glInit()
 #ifndef __EMSCRIPTEN__
 	if(ogl_LoadFunctions() == ogl_LOAD_FAILED)
 	{
+		printf("Exiting due to opengl failing to init\n");
 		exit(1);
 	}
 #else

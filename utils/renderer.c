@@ -1252,7 +1252,11 @@ void renderer_add_pass(
 	unsigned int hash;
 	pass_t *pass;
 
-	if(!output) exit(1);
+	if(!output)
+	{
+		printf("Pass has no output\n");
+		exit(1);
+	}
 	sprintf(buffer, name, self->passes_size);
 	hash = ref(buffer);
 	/* TODO add pass replacement */
