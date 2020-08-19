@@ -90,7 +90,7 @@ FOR /d %%f IN (..\*.candle) DO (
 	set LIBS=!LIBS! !PLUGIN_LIBS!
 	set /p PLUGIN_RES=<%%f\build\res
 	for %%S IN (!PLUGIN_RES!) DO (
-		%DIR%\packager.exe %%f\build\%%~S
+		%DIR%\packager.exe %%f\%%~S
 	)
 )
 
