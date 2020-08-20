@@ -1266,7 +1266,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 				"	} else {\n"
 				"	}\n"
 				"	final.rgb += pbr_in.emissive;\n"
-				"	final.rgb *= poly_color;\n"
+				/* "	final.rgb *= poly_color;\n" */
 				"	FragColor = final;\n");
 		}
 		str_cat(&gbuffer, "#else\n");
