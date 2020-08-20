@@ -126,7 +126,6 @@ void c_sauces_register(c_sauces_t *self, const char *name,
 		cb = c_sauces_get_loader(self, ref(dot + 1));
 	}
 
-
 	if(cb)
 	{
 		key = ref(buffer);
@@ -317,6 +316,9 @@ void c_sauces_me_a_zip(c_sauces_t *self, const unsigned char *bytes,
 		if (!mz_zip_reader_is_file_a_directory(self->archive, i))
 		{
 			const char *filename = strrchr(file_stat.m_filename, '/');
+			if (!filename)
+				filename = strrchr(file_stat.m_filename, '\\');
+
 			if (!filename)
 				filename = file_stat.m_filename;
 			else

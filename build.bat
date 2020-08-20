@@ -37,10 +37,10 @@ set THIRD_PARTY_SRC= %GLFW%\context.c^
                      %TINYCTHREAD%\tinycthread.c^
                      third_party\miniz.c
 
+set CFLAGS=/Z7 /I. /W1 /D_GLFW_WIN32 /Ithird_party\glfw\include /I%TINYCTHREAD% /DTHREADED^
+	/D_CRT_SECURE_NO_WARNINGS
 ::set CFLAGS=/O2 /I. /W1 /D_GLFW_WIN32 /Ithird_party\glfw\include /I%TINYCTHREAD% /DTHREADED^
 	::/D_CRT_SECURE_NO_WARNINGS
-set CFLAGS=/O2 /I. /W1 /D_GLFW_WIN32 /Ithird_party\glfw\include /I%TINYCTHREAD% /DTHREADED^
-	/D_CRT_SECURE_NO_WARNINGS
 
 set sources=%THIRD_PARTY_SRC% candle.c
 
@@ -75,6 +75,8 @@ FOR %%f IN (!sources!) DO @IF EXIST "%%f" (
 	)
 	CALL set objects=!objects! !object!
 )
+
+DEL %DIR%\data.zip
 
 %DIR%\datescomp.exe buildtools\packager.c %DIR%\packager.exe || (
 	cl buildtools\packager.c %DIR%\third_party\miniz.obj /Fo%DIR%\packager.obj /Fe%DIR%\packager.exe /O2

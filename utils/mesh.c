@@ -2638,7 +2638,11 @@ void mesh_extrude_edges(mesh_t *self, int steps, vecN_t offset,
 
 			e = m_edge(self, e_id);
 			new = e_prev(e_pair(e, self), self)->prev;
-			if(new == -1) exit(1);
+			if(new == -1)
+			{
+				printf("Extrude edges error\n");
+				exit(1);
+			}
 			mesh_select(self, TMP, MESH_EDGE, new);
 
 		}
