@@ -68,7 +68,7 @@ void shaders_candle_final()
 		"	}\n"
 		"	const float epsilon = 0.0001;\n"
 		"	float factor = totalWeight + epsilon;\n"
-		"	return vec4(volumetric, (factor - ssao_factor) * ssao_power) / factor;\n"
+		"	return vec4(volumetric, (factor - ssao_factor * ssao_power)) / factor;\n"
 		"}\n");
 
 	str_cat(&shader_buffer,

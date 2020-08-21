@@ -163,6 +163,14 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			glUniform1i(shader_cached_uniform(shader, sb->u.integer.u), bind->integer); glerr();
 			glerr();
 			break;
+		case OPT_UINT:
+			if(bind->getter)
+			{
+				bind->uinteger = ((integer_getter)bind->getter)(pass, pass->usrptr);
+			}
+			glUniform1ui(shader_cached_uniform(shader, sb->u.uinteger.u), bind->uinteger); glerr();
+			glerr();
+			break;
 		case OPT_VEC2:
 			if(bind->getter)
 			{
@@ -256,48 +264,36 @@ static void update_ubo(renderer_t *self, int32_t camid)
 	/* glUnmapBuffer(GL_UNIFORM_BUFFER); glerr(); */
 }
 
-void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model)
+void renderer_set_model(renderer_t *self, uint32_t camid, mat4_t *model)
 {
-	vec3_t pos = vec4_xyz(mat4_mul_vec4(*model, vec4(0.0f, 0.0f, 0.0f, 1.0f)));
-
-	if(self->output && self->cubemap)
+	if(camid == ~0)
 	{
 		int32_t i;
-		vec3_t p1[6], up[6];
-		p1[0] = vec3(1.0, 0.0, 0.0);
-		p1[1] = vec3(-1.0, 0.0, 0.0);
-		p1[2] = vec3(0.0, 1.0, 0.0);
-		p1[3] = vec3(0.0, -1.0, 0.0);
-		p1[4] = vec3(0.0, 0.0, 1.0);
-		p1[5] = vec3(0.0, 0.0, -1.0);
-
-		up[0] = vec3(0.0,-1.0,0.0);
-		up[1] = vec3(0.0, -1.0, 0.0);
-		up[2] = vec3(0.0, 0.0, 1.0);
-		up[3] = vec3(0.0, 0.0, -1.0);
-		up[4] = vec3(0.0, -1.0, 0.0);
-		up[5] = vec3(0.0, -1.0, 0.0);
-
-		for(i = 0; i < 6; i++)
+		for(i = 0; i < self->camera_count; i++)
 		{
 			struct gl_camera *var = &self->glvars[i];
-
-			var->inv_model = mat4_look_at(pos, vec3_add(pos, p1[i]), up[i]);
-			var->model = mat4_invert(var->inv_model);
-			var->pos = pos;
+			var->model = mat4_mul(*model, self->relative_transform[i]);
+			var->inv_model = mat4_invert(var->model);
+			var->pos = vec4_xyz(mat4_mul_vec4(var->model, vec4(0.0f, 0.0f, 0.0f, 1.0f)));
+			if (self->stored_camera_frame[i] != self->frame)
+			{
+				self->glvars[i].previous_view = self->glvars[i].inv_model;
+				self->stored_camera_frame[i] = self->frame;
+			}
 			self->ubo_changed[i] = true;
 		}
 	}
 	else
 	{
+		struct gl_camera *var = &self->glvars[camid];
+		var->model = mat4_mul(*model, self->relative_transform[camid]);
+		var->pos = vec4_xyz(mat4_mul_vec4(var->model, vec4(0.0f, 0.0f, 0.0f, 1.0f)));
+		var->inv_model = mat4_invert(*model);
 		if (self->stored_camera_frame[camid] != self->frame)
 		{
-			self->glvars[camid].previous_view = self->glvars[camid].inv_model;
+			var->previous_view = var->inv_model;
 			self->stored_camera_frame[camid] = self->frame;
 		}
-		self->glvars[camid].pos = pos;
-		self->glvars[camid].model = *model;
-		self->glvars[camid].inv_model = mat4_invert(*model);
 		self->ubo_changed[camid] = true;
 
 	}
@@ -817,6 +813,7 @@ int renderer_resize(renderer_t *self, int width, int height)
 static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
                                      bool_t *profile)
 {
+	uint32_t f;
 	c_render_device_t *rd;
 
 	if(!pass->active) return NULL;
@@ -889,48 +886,37 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 		glClearDepth(pass->clear_depth);
 	}
 
-	if(self->cubemap)
+	for (f = 0; f < self->camera_count; f++)
 	{
-		uint32_t f;
-		glEnable(GL_SCISSOR_TEST);
-		glScissor(self->pos.x, self->pos.y, self->size.x * 2, self->size.y * 3);
-		texture_target(pass->output, pass->depth, 0);
-		if(pass->clear) glClear(pass->clear);
-		glDisable(GL_SCISSOR_TEST);
+		uvec2_t pos;
+		uvec2_t size;
+		if (pass->camid != ~0 && f != pass->camid) continue;
 
-		for(f = 0; f < 6; f++)
+		c_render_device_bind_ubo(rd, 19, self->ubos[f]);
+
+		if (self->size[f].x > 0)
 		{
-			uvec2_t pos;
-
-			pos.x = self->pos.x + (f % 2) * self->size.x;
-			pos.y = self->pos.y + (f / 2) * self->size.y;
-
-			update_ubo(self, f);
-			c_render_device_bind_ubo(rd, 19, self->ubos[f]);
-			texture_target_sub(pass->output, pass->depth, 0,
-			                   pos.x, pos.y, self->size.x, self->size.y);
-
-			draw_group(pass->draw_signal);
-		}
-	}
-	else
-	{
-		c_render_device_bind_ubo(rd, 19, self->ubos[pass->camid]);
-		if (self->size.x > 0)
-		{
-			texture_target_sub(pass->output, pass->depth, pass->framebuffer_id,
-			                   self->pos.x, self->pos.y,
-			                   self->size.x, self->size.y);
+			size = self->size[f];
+			pos = self->pos[f];
 		}
 		else
 		{
-			texture_target(pass->output, pass->depth, pass->framebuffer_id);
+			size = uvec2(pass->output->width, pass->output->height);
+			pos = uvec2(0, 0);
 		}
 
-		if(pass->clear) glClear(pass->clear);
+		texture_target_sub(pass->output, pass->depth, pass->framebuffer_id,
+				pos.x, pos.y, size.x, size.y);
 
+
+		if (pass->clear)
+		{
+			glEnable(GL_SCISSOR_TEST);
+			glScissor(pos.x, pos.y, size.x, size.y);
+			glClear(pass->clear);
+			glDisable(GL_SCISSOR_TEST);
+		}
 		draw_group(pass->draw_signal);
-
 	}
 	pass_unbind_textures(pass);
 	glerr();
@@ -1008,13 +994,15 @@ renderer_t *renderer_new(float resolution)
 
 	for(f = 0; f < 6; f++)
 	{
-		self->glvars[f].projection = self->glvars[f].inv_projection =
-			self->glvars[f].previous_view = self->glvars[f].model = mat4();
+		self->relative_transform[f] =
+			self->glvars[f].projection =
+			self->glvars[f].inv_projection =
+			self->glvars[f].previous_view =
+			self->glvars[f].model = mat4();
 	}
 	self->proj_near = 0.1f;
 	self->proj_far = 100.0f;
 	self->proj_fov = M_PI / 2.0f;
-	self->cubemap = false;
 
 	self->resolution = resolution;
 
@@ -1160,6 +1148,15 @@ bind_t opt_int(const char *name, int32_t value, getter_cb getter)
 	bind.getter = getter;
 	return bind;
 }
+bind_t opt_uint(const char *name, uint32_t value, getter_cb getter)
+{
+	bind_t bind = {0};
+	strncpy(bind.name, name, sizeof(bind.name) - 1);
+	bind.type = OPT_UINT;
+	bind.uinteger = value;
+	bind.getter = getter;
+	return bind;
+}
 bind_t opt_vec2(const char *name, vec2_t value, getter_cb getter)
 {
 	bind_t bind = {0};
@@ -1187,11 +1184,11 @@ bind_t opt_vec4(const char *name, vec4_t value, getter_cb getter)
 	bind.getter = getter;
 	return bind;
 }
-bind_t opt_cam(entity_t camera, getter_cb getter)
+bind_t opt_cam(uint32_t camera, getter_cb getter)
 {
 	bind_t bind = {0};
 	bind.type = OPT_CAM;
-	bind.entity = camera;
+	bind.uinteger = camera;
 	bind.getter = getter;
 	return bind;
 }
@@ -1292,6 +1289,7 @@ void renderer_add_pass(
 	pass->framebuffer_id = framebuffer;
 	pass->auto_mip = !!(flags & GEN_MIP);
 	pass->track_brightness = !!(flags & TRACK_BRIGHT);
+	pass->camid = 0;
 
 	if(shader_name)
 	{
@@ -1359,7 +1357,7 @@ void renderer_add_pass(
 		}
 		if(opt.type == OPT_CAM)
 		{
-			pass->camid = opt.integer;
+			pass->camid = opt.uinteger;
 			continue;
 		}
 		if(opt.type == OPT_CLEAR_COLOR)

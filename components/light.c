@@ -86,7 +86,9 @@ uint32_t get_level_size(uint32_t level);
 extern texture_t *g_probe_cache;
 static void c_light_create_renderer(c_light_t *self)
 {
+	uint32_t f;
 	texture_t *output;
+	vec3_t p1[6], up[6];
 	renderer_t *renderer = renderer_new(1.0f);
 
 	self->tile = get_free_tile(0, &self->lod);
@@ -94,15 +96,36 @@ static void c_light_create_renderer(c_light_t *self)
 	output = g_probe_cache;
 
 	renderer_add_pass(renderer, "depth", "candle:depth", self->visible_group,
-			CULL_DISABLE, output, output, 0, ~0, 2,
+			CULL_DISABLE, output, output, 0, ~0, 3,
 			opt_clear_depth(1.0f, NULL),
+			opt_cam(~0, NULL),
 			opt_clear_color(vec4(0.343750, 0.996094, 0.996094, 0.000000), NULL)
 	);
-	renderer->pos = self->tile.pos;
-	renderer->size = self->tile.size;
+
+	p1[0] = vec3(1.0, 0.0, 0.0);
+	p1[1] = vec3(-1.0, 0.0, 0.0);
+	p1[2] = vec3(0.0, 1.0, 0.0);
+	p1[3] = vec3(0.0, -1.0, 0.0);
+	p1[4] = vec3(0.0, 0.0, 1.0);
+	p1[5] = vec3(0.0, 0.0, -1.0);
+
+	up[0] = vec3(0.0,-1.0,0.0);
+	up[1] = vec3(0.0, -1.0, 0.0);
+	up[2] = vec3(0.0, 0.0, 1.0);
+	up[3] = vec3(0.0, 0.0, -1.0);
+	up[4] = vec3(0.0, -1.0, 0.0);
+	up[5] = vec3(0.0, -1.0, 0.0);
+
+	for(f = 0; f < 6; f++)
+	{
+		renderer->pos[f].x = self->tile.pos.x + (f % 2) * self->tile.size.x;
+		renderer->pos[f].y = self->tile.pos.y + (f / 2) * self->tile.size.y;
+		renderer->relative_transform[f] = mat4_invert(mat4_look_at(Z3, p1[f], up[f]));
+		renderer->size[f] = self->tile.size;
+	}
+	renderer->camera_count = 6;
 	renderer->width = self->tile.size.x;
 	renderer->height = self->tile.size.y;
-	renderer->cubemap = true;
 
 	renderer->output = output;
 
@@ -198,9 +221,7 @@ static int c_light_pre_draw(c_light_t *self)
 
 		drawable_set_transform(&self->draw, model);
 
-		renderer_set_model(self->renderer, 0, &node->model);
-		/* renderer_pass(self->renderer, ref("depth"))->clear_color = */
-			/* vec4(0, 0, 0, self->radius); */
+		renderer_set_model(self->renderer, ~0, &node->model);
 		renderer_draw(self->renderer);
 	}
 	self->modified = 0;

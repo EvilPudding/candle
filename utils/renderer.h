@@ -21,17 +21,17 @@ struct uniform;
 
 enum pass_options
 {
-	DEPTH_LOCK		= 1 << 0,
-	DEPTH_GREATER	= 1 << 1,
-	DEPTH_EQUAL		= 1 << 2,
-	DEPTH_DISABLE	= 1 << 3,
-	CULL_DISABLE	= 1 << 4,
-	CULL_INVERT		= 1 << 5,
-	ADD				= 1 << 6,
-	MUL				= 1 << 7,
-	BLEND			= 1 << 8,
-	GEN_MIP			= 1 << 9,
-	TRACK_BRIGHT	= 1 << 10
+	DEPTH_LOCK      = 1 << 0,
+	DEPTH_GREATER   = 1 << 1,
+	DEPTH_EQUAL     = 1 << 2,
+	DEPTH_DISABLE   = 1 << 3,
+	CULL_DISABLE    = 1 << 4,
+	CULL_INVERT     = 1 << 5,
+	ADD             = 1 << 6,
+	MUL             = 1 << 7,
+	BLEND           = 1 << 8,
+	GEN_MIP         = 1 << 9,
+	TRACK_BRIGHT    = 1 << 10
 };
 
 enum bind_type
@@ -40,6 +40,7 @@ enum bind_type
 	OPT_TEX,
 	OPT_NUM,
 	OPT_INT,
+	OPT_UINT,
 	OPT_VEC2,
 	OPT_VEC3,
 	OPT_VEC4,
@@ -56,6 +57,7 @@ typedef vec3_t     (*vec3_getter)(struct pass *pass, void *usrptr);
 typedef vec4_t     (*vec4_getter)(struct pass *pass, void *usrptr);
 typedef float      (*number_getter)(struct pass *pass, void *usrptr);
 typedef int        (*integer_getter)(struct pass *pass, void *usrptr);
+typedef uint32_t   (*uinteger_getter)(struct pass *pass, void *usrptr);
 typedef texture_t* (*tex_getter)(struct pass *pass, void *usrptr);
 typedef void*      (*getter_cb)(struct pass *pass, void *usrptr);
 typedef entity_t   (*camera_getter)(struct pass *pass, void *usrptr);
@@ -92,6 +94,9 @@ typedef struct
 		struct {
 			uint32_t u;
 		} integer;
+		struct {
+			uint32_t u;
+		} uinteger;
 	} u;
 } hash_bind_t;
 
@@ -107,7 +112,8 @@ typedef struct
 		vec2_t vec2;
 		vec3_t vec3;
 		vec4_t vec4;
-		int integer;
+		int32_t integer;
+		uint32_t uinteger;
 		void *ptr;
 
 	unsigned int hash;
@@ -153,7 +159,7 @@ typedef struct pass
 	int32_t track_brightness;
 
 	int32_t active;
-	int32_t camid;
+	uint32_t camid;
 	uint32_t bound_textures;
 	uint32_t draw_every;
 
@@ -201,9 +207,9 @@ typedef struct renderer
 	uint32_t ubos[6];
 	uint32_t ubo_changed[6];
 
-	bool_t cubemap;
-	ivec2_t pos;
-	uvec2_t size;
+	mat4_t relative_transform[6];
+	uvec2_t pos[6];
+	uvec2_t size[6];
 
 	uint8_t *mips;
 	uint32_t mips_buffer_size;
@@ -249,7 +255,7 @@ int renderer_resize(renderer_t *self, int width, int height);
 
 pass_t *renderer_pass(renderer_t *self, unsigned int hash);
 void renderer_default_pipeline(renderer_t *self);
-void renderer_set_model(renderer_t *self, int32_t camid, mat4_t *model);
+void renderer_set_model(renderer_t *self, uint32_t camid, mat4_t *model);
 void renderer_update_projection(renderer_t *self);
 vec3_t renderer_real_pos(renderer_t *self, float depth, vec2_t coord);
 vec3_t renderer_screen_pos(renderer_t *self, vec3_t pos);
@@ -262,10 +268,11 @@ bind_t opt_none(void);
 bind_t opt_tex(const char *name, texture_t *tex, getter_cb getter);
 bind_t opt_num(const char *name, float value, getter_cb getter);
 bind_t opt_int(const char *name, int32_t value, getter_cb getter);
+bind_t opt_uint(const char *name, uint32_t value, getter_cb getter);
 bind_t opt_vec2(const char *name, vec2_t value, getter_cb getter);
 bind_t opt_vec3(const char *name, vec3_t value, getter_cb getter);
 bind_t opt_vec4(const char *name, vec4_t value, getter_cb getter);
-bind_t opt_cam(entity_t camera, getter_cb getter);
+bind_t opt_cam(uint32_t camera, getter_cb getter);
 bind_t opt_clear_color(vec4_t color, getter_cb getter);
 bind_t opt_clear_depth(float depth, getter_cb getter);
 bind_t opt_callback(getter_cb callback);
