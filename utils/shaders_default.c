@@ -76,6 +76,8 @@ void shaders_candle_final()
 		"{\n"
 		"	ivec2 fc = ivec2(gl_FragCoord.xy);\n"
 		"	vec4 cc = texelFetch(light.color, fc, 0);\n"
+		"	vec4 refr0 = texelFetch(refr.color, fc, 0);\n"
+		"	cc = vec4(mix(refr0.rgb, cc.rgb, cc.a), 1.0);\n"
 		"	vec2 normal = texelFetch(gbuffer.nn, fc, 0).rg;\n"
 		"	vec2 metalic_roughness = texelFetch(gbuffer.mr, fc, 0).rg;\n"
 		"	vec4 albedo = texelFetch(gbuffer.albedo, fc, 0);\n"
@@ -205,6 +207,40 @@ void shaders_candle_copy()
 		"}\n");
 
 	shader_add_source("candle:copy.glsl", shader_buffer,
+	                  str_len(shader_buffer));
+	str_free(shader_buffer);
+}
+
+static
+void shaders_candle_copy_gbuffer()
+{
+	char *shader_buffer = str_new(64);
+
+	str_cat(&shader_buffer,
+		"layout (location = 0) out vec4 Alb;\n"
+		"layout (location = 1) out vec2 NN;\n"
+		"layout (location = 2) out vec2 MR;\n"
+		"layout (location = 3) out vec3 Emi;\n"
+		"BUFFER {\n"
+		"	sampler2D depth;\n"
+		"	sampler2D albedo;\n"
+		"	sampler2D nn;\n"
+		"	sampler2D mr;\n"
+		"	sampler2D emissive;\n"
+		"} gbuffer;\n");
+	str_cat(&shader_buffer,
+		"void main(void)\n"
+		"{\n"
+		"	vec4 alb = texelFetch(gbuffer.albedo, ivec2(gl_FragCoord.xy), 0);\n"
+		"   if (alb.a < 0.7) discard;\n"
+		"	Alb = alb;\n"
+		"	NN = texelFetch(gbuffer.nn, ivec2(gl_FragCoord.xy), 0).rg;\n"
+		"	MR = texelFetch(gbuffer.mr, ivec2(gl_FragCoord.xy), 0).rg;\n"
+		"	Emi = texelFetch(gbuffer.emissive, ivec2(gl_FragCoord.xy), 0).rgb;\n"
+		"	gl_FragDepth = texelFetch(gbuffer.depth, ivec2(gl_FragCoord.xy), 0);\n"
+		"}\n");
+
+	shader_add_source("candle:copy_gbuffer.glsl", shader_buffer,
 	                  str_len(shader_buffer));
 	str_free(shader_buffer);
 }
@@ -849,13 +885,12 @@ void shaders_candle_common()
 	/* TODO: should go to ssr.glsl */
 	str_cat(&shader_buffer,
 		"vec3 get_proj_coord(sampler2D depthmap, vec3 hitCoord)\n"
-		"	/* z = hitCoord.z - depth */\n"
 		"{\n"
 		"	vec4 projectedCoord     = camera(projection) * vec4(hitCoord, 1.0);\n"
 		"	projectedCoord.xy      /= projectedCoord.w;\n"
 		"	projectedCoord.xy       = projectedCoord.xy * 0.5 + 0.5;\n"
 		"	float depth             = get_position(depthmap, projectedCoord.xy).z;\n"
-		"	return vec3(projectedCoord.xy, hitCoord.z - depth);\n"
+		"	return vec3(projectedCoord.xy, linearize(hitCoord.z) - linearize(depth));\n"
 		"}\n");
 
 	str_cat(&shader_buffer,
@@ -863,16 +898,20 @@ void shaders_candle_common()
 		"{\n"
 		"	float depth;\n"
 		"	vec3 pc;\n"
-		"	for(uint i = 0u; i < 16u; i++)\n"
+		"	dir = -dir * 0.5;\n"
+		"	float search_dir = -1.0;\n"
+		"	hitCoord += dir;\n"
+		"	for(uint i = 0u; i < 8u; i++)\n"
 		"	{\n"
 		"		pc = get_proj_coord(depthmap, hitCoord);\n"
 		"		if(pc.x > 1.0 || pc.y > 1.0 || pc.x < 0.0 || pc.y < 0.0) break;\n"
-		"		if(abs(pc.z) <= 0.01)\n"
+		"		dir = dir * 0.5;\n"
+		"		if (sign(pc.z) != sign(search_dir))\n"
 		"		{\n"
-		"			return vec3(pc.xy, 1.0);\n"
+		"			dir = -dir;\n"
+		"			search_dir = -search_dir;\n"
 		"		}\n"
-		"		dir *= 0.5;\n"
-		"		hitCoord -= dir;\n"
+		"		hitCoord += dir;\n"
 		"	}\n"
 		"	return vec3(pc.xy, 1.0);\n"
 		"}\n");
@@ -881,19 +920,18 @@ void shaders_candle_common()
 		"vec3 RayCast(sampler2D depth, vec3 dir, inout vec3 hitCoord)\n"
 		"{\n"
 		"	dir *= 0.1;  \n"
-		"	for(uint i = 0u; i < 64u; ++i) {\n"
+		"	for(uint i = 0u; i < 16u; ++i) {\n"
 		"		hitCoord += dir; \n"
-		"		dir *= 1.1;\n"
+		"		dir *= 1.3;\n"
 		"		vec3 pc = get_proj_coord(depth, hitCoord);\n"
 		"		if(pc.x > 1.0 || pc.y > 1.0 || pc.x < 0.0 || pc.y < 0.0) break;\n"
 		"		if(pc.z < -2.0) break;\n"
 		"		if(pc.z < 0.0)\n"
 		"		{\n"
-		"			return vec3(pc.xy, 1.0);\n"
-		"			/* return BinarySearch(dir, hitCoord); */\n"
+		"			return BinarySearch(depth, dir, hitCoord);\n"
 		"		}\n"
 		"	}\n"
-		"	return vec3(0.0);\n"
+		"	return vec3(-1.0);\n"
 		"}\n");
 
 	str_cat(&shader_buffer,
@@ -1773,7 +1811,9 @@ void shaders_candle_pbr()
 		"	if(dif.a == 0.0) discard;\n");
 
 	str_cat(&shader_buffer,
+		"	float depth = textureLod(gbuffer.depth, pixel_pos(), 0.0).r;\n"
 		"	vec3 c_pos = get_position(gbuffer.depth);\n"
+		"	if(light(radius) > 0.0 && depth > gl_FragCoord.z) discard;\n"
 		"	vec3 w_pos = (camera(model) * vec4(c_pos, 1.0)).xyz;\n"
 		"	vec2 normal = texelFetch(gbuffer.nn, fc, 0).rg;\n"
 		"	vec2 metalic_roughness = texelFetch(gbuffer.mr, fc, 0).rg;\n"
@@ -1793,7 +1833,6 @@ void shaders_candle_pbr()
 		"		vec3 w_light_dir = obj_pos - w_pos;\n"
 		"		float point_to_light = length(c_light_dir);\n");
 	str_cat(&shader_buffer,
-		"		float depth = textureLod(gbuffer.depth, pixel_pos(), 0.0).r;\n"
 		"		float sd = 0.0;\n"
 		"		if(dif.a >= 1.0)\n"
 		"		{\n"
@@ -1826,6 +1865,7 @@ void shaders_candle()
 	shaders_candle_final();
 	shaders_candle_ssao();
 	shaders_candle_copy();
+	shaders_candle_copy_gbuffer();
 	shaders_candle_downsample();
 	shaders_candle_upsample();
 	shaders_candle_kawase();

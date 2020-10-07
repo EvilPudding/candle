@@ -545,8 +545,12 @@ void renderer_default_pipeline(renderer_t *self)
 		buffer_new("mr",		false, 2),
 		buffer_new("emissive",	false, 3));
 
-	/* texture_t *gbuffer =	texture_new_2D(0, 0, 0, */
-	/* ); */
+	texture_t *transp_gbuffer = texture_new_2D(0, 0, 0, 5,
+		buffer_new("depth",		true, -1),
+		buffer_new("albedo",	true, 4),
+		buffer_new("nn",		true, 2),
+		buffer_new("mr",		false, 2),
+		buffer_new("emissive",	false, 3));
 
 	texture_t *ssao =		texture_new_2D(0, 0, 0, 1,
 		buffer_new("occlusion",	true, 1)
@@ -576,19 +580,20 @@ void renderer_default_pipeline(renderer_t *self)
 	/* ); */
 
 	texture_t *selectable = texture_new_2D(0, 0, 0, 2,
-		buffer_new("depth",		true, -1),
-		buffer_new("ids",		false, 4));
+		buffer_new("depth", false, -1),
+		buffer_new("ids",   false, 4));
 
-	renderer_add_tex(self, "query_mips", 0.1f, query_mips);
-	renderer_add_tex(self, "gbuffer",    1.0f, gbuffer);
-	renderer_add_tex(self, "ssao",       1.0f / 2.0f, ssao);
-	renderer_add_tex(self, "light",      1.0f, light);
-	renderer_add_tex(self, "volum",      1.0f / 2.0f, volum);
-	renderer_add_tex(self, "refr",       1.0f, refr);
-	renderer_add_tex(self, "tmp",        1.0f, tmp);
-	renderer_add_tex(self, "final",      1.0f, final);
-	renderer_add_tex(self, "selectable", 1.0f, selectable);
-	renderer_add_tex(self, "bloom",      1.0f, bloom);
+	renderer_add_tex(self, "query_mips",  0.1f, query_mips);
+	renderer_add_tex(self, "gbuffer",     1.0f, gbuffer);
+	renderer_add_tex(self, "transp_gbuffer", 1.0f, transp_gbuffer);
+	renderer_add_tex(self, "ssao",        1.0f / 2.0f, ssao);
+	renderer_add_tex(self, "light",       1.0f, light);
+	renderer_add_tex(self, "volum",       1.0f / 2.0f, volum);
+	renderer_add_tex(self, "refr",        1.0f, refr);
+	renderer_add_tex(self, "tmp",         1.0f, tmp);
+	renderer_add_tex(self, "final",       1.0f, final);
+	renderer_add_tex(self, "selectable",  1.0f, selectable);
+	renderer_add_tex(self, "bloom",       1.0f, bloom);
 
 	renderer_add_pass(self, "query_visible", "candle:query_mips", ref("visible"), 0,
 			query_mips, query_mips, 0, ~0, 3,
@@ -619,8 +624,8 @@ void renderer_default_pipeline(renderer_t *self)
 			opt_clear_color(Z4, NULL)
 	);
 
-	renderer_add_pass(self, "framebuffer_pass", "candle:framebuffer_draw", ref("framebuffer"), 0,
-			gbuffer, gbuffer, 0, ~0, 0
+	renderer_add_pass(self, "framebuffer_pass", "candle:framebuffer_draw",
+			ref("framebuffer"), 0, gbuffer, gbuffer, 0, ~0, 0
 	);
 
 	/* DECAL PASS */
@@ -672,12 +677,23 @@ void renderer_default_pipeline(renderer_t *self)
 	renderer_add_kawase(self, refr, tmp, 1, 2);
 	renderer_add_kawase(self, refr, tmp, 2, 3);
 
-	renderer_add_pass(self, "transp_1", "candle:gbuffer", ref("transparent"),
-			0, gbuffer, gbuffer, 0, ~0, 0);
+	renderer_add_pass(self, "transp_2", "candle:gbuffer", ref("transparent"),
+			0, transp_gbuffer, transp_gbuffer, 0, ~0, 4,
+			opt_tex("refr", refr, NULL),
+			opt_tex("gbuffer", gbuffer, NULL),
+			opt_clear_depth(1.0f, NULL),
+			opt_clear_color(Z4, NULL)
+	);
 
-	renderer_add_pass(self, "transp_2", "candle:transparent", ref("transparent"),
-			DEPTH_LOCK | DEPTH_EQUAL, light, gbuffer, 0, ~0, 1,
-			opt_tex("refr", refr, NULL)
+	renderer_add_pass(self, "render_pass_2", "candle:pbr", ref("light"),
+			ADD, light, NULL, 0, ~0, 2,
+			opt_clear_color(Z4, NULL),
+			opt_tex("gbuffer", transp_gbuffer, NULL)
+	);
+
+	renderer_add_pass(self, "render_pass_2", "candle:copy_gbuffer", ref("quad"),
+			0, gbuffer, gbuffer, 0, ~0, 1,
+			opt_tex("gbuffer", transp_gbuffer, NULL)
 	);
 
 	renderer_add_pass(self, "ssao_pass", "candle:ssao", ref("quad"), 0,
@@ -847,17 +863,17 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 	if(pass->additive)
 	{
 		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE); glerr();
 	}
 	if(pass->multiply)
 	{
 		glEnable(GL_BLEND);
-		glBlendFunc(GL_DST_COLOR, GL_ZERO);
+		glBlendFunc(GL_DST_COLOR, GL_ZERO); glerr();
 	}
 	if(pass->blend)
 	{
 		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); glerr();
 	}
 	if(pass->cull)
 	{
@@ -870,7 +886,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 	if(pass->depth)
 	{
 		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(pass->depth_func);
+		glDepthFunc(pass->depth_func); glerr();
 	}
 	else
 	{
@@ -1323,9 +1339,13 @@ void renderer_add_pass(
 		{
 			pass->depth_func = GL_GEQUAL;
 		}
-		else
+		else if (flags & DEPTH_LESSER)
 		{
 			pass->depth_func = GL_LEQUAL;
+		}
+		else
+		{
+			pass->depth_func = GL_EQUAL;
 		}
 	}
 

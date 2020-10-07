@@ -567,7 +567,7 @@ static uint32_t shader_new_loader(shader_t *self)
 			g_vs[self->index].name, isLinked);
 	if (!isLinked)
 	{
-		printf("%u %u %u\n", fprogram, vprogram, gprogram);
+		printf("Failed to link %u %u %u\n", fprogram, vprogram, gprogram);
 		exit(1);
 	}
 
@@ -703,8 +703,7 @@ fs_t *fs_new(const char *filename)
 	if (   strncmp(filename, "candle:gbuffer", strlen("candle:gbuffer"))
 	    && strncmp(filename, "candle:query_mips", strlen("candle:query_mips"))
 	    && strncmp(filename, "candle:select", strlen("candle:select"))
-	    && strncmp(filename, "candle:depth", strlen("candle:depth"))
-	    && strncmp(filename, "candle:transparent", strlen("candle:transparent")))
+	    && strncmp(filename, "candle:depth", strlen("candle:depth")))
 	{
 		fs_push_variation(self, filename);
 	}

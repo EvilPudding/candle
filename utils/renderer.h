@@ -23,15 +23,16 @@ enum pass_options
 {
 	DEPTH_LOCK      = 1 << 0,
 	DEPTH_GREATER   = 1 << 1,
-	DEPTH_EQUAL     = 1 << 2,
-	DEPTH_DISABLE   = 1 << 3,
-	CULL_DISABLE    = 1 << 4,
-	CULL_INVERT     = 1 << 5,
-	ADD             = 1 << 6,
-	MUL             = 1 << 7,
-	BLEND           = 1 << 8,
-	GEN_MIP         = 1 << 9,
-	TRACK_BRIGHT    = 1 << 10
+	DEPTH_LESSER    = 1 << 2,
+	DEPTH_EQUAL     = 1 << 3,
+	DEPTH_DISABLE   = 1 << 4,
+	CULL_DISABLE    = 1 << 5,
+	CULL_INVERT     = 1 << 6,
+	ADD             = 1 << 7,
+	MUL             = 1 << 8,
+	BLEND           = 1 << 9,
+	GEN_MIP         = 1 << 10,
+	TRACK_BRIGHT    = 1 << 11
 };
 
 enum bind_type
