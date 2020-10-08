@@ -904,7 +904,8 @@ void shaders_candle_common()
 		"	{\n"
 		"		pc = get_proj_coord(hitCoord);\n"
 		"		vec3 c_pos = get_position(depthmap, pc);\n"
-		"		float dist = hitCoord.z - c_pos.z;\n"
+		"		float dist = hitCoord.z - c_pos.z;\n");
+	str_cat(&shader_buffer,
 		"		if(pc.x > 1.0 || pc.y > 1.0 || pc.x < 0.0 || pc.y < 0.0) break;\n"
 		"		dir = dir * 0.5;\n"
 		"		if (sign(dist) != sign(search_dir))\n"

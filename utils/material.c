@@ -1288,7 +1288,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 			"	if (coord.x >= 0.0)\n"
 			"	{\n"
 			"		vec3 refracted = textureLod(refr.color, coord.xy, mip).rgb;\n"
-			"		refracted -= pbr_in.albedo.rgb * pbr_in.albedo.a;\n"
+			"		refracted -= pbr_in.tint.rgb * pbr_in.tint.a;\n"
 			"		refracted = clamp(refracted, 0.0, 1.0);\n"
 			"		pbr_in.emissive.rgb = refracted;\n"
 			"	}\n"
@@ -1312,7 +1312,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		str_cat(&gbuffer,
 			"	MR.r = 0.0;\n"
 			"	MR.g = pbr_in.roughness;\n"
-			"	Alb = vec4(pbr_in.albedo.rgb * pbr_in.albedo.a, receive_shadows ? 1.0 : 0.5);\n"
+			"	Alb = vec4(pbr_in.tint.rgb * pbr_in.tint.a, receive_shadows ? 1.0 : 0.5);\n"
 			"	Emi = pbr_in.emissive;\n");
 	}
 	else if (output_type == ref("decal"))
