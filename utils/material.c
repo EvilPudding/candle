@@ -504,10 +504,11 @@ void matcall_set_vec4(vicall_t *call, uint32_t ref, vec4_t value)
 static
 void materials_register_defaults(void)
 {
-	vicall_t *albedo, *roughness, *metalness, *normal, *height;
+	vicall_t *albedo, *roughness, *refraction, *metalness, *normal, *height;
 	vifunc_t *defaultmat, *transparent, *parallax, *decal,
-	         *pr1, *pr3, *pr4;
+	         *pr1, *pr3, *pr4, *tnum;
 
+	tnum = vil_get(&g_mat_ctx, ref("number"));
 	pr1 = vil_get(&g_mat_ctx, ref("property1"));
 	pr3 = vil_get(&g_mat_ctx, ref("property3"));
 	pr4 = vil_get(&g_mat_ctx, ref("property4"));
@@ -545,6 +546,8 @@ void materials_register_defaults(void)
 	vicall_new(transparent, pr3, "emissive", vec2(368, 352), ~0, V_IN | V_OUT);
 	roughness = vicall_new(transparent, pr1, "roughness", vec2(193, 305), ~0, V_IN | V_OUT);
 		matcall_set_number(roughness, ref("value"), 0.2f);
+	refraction = vicall_new(transparent, tnum, "refraction", vec2(193, 305), ~0, V_IN | V_OUT);
+		matcall_set_number(refraction, ~0, 1.0f);
 	normal = vicall_new(transparent, pr3, "normal", vec2(364, 90), ~0, V_IN | V_OUT);
 		matcall_set_vec3(normal, ref("color"), vec3(0.5f, 0.5f, 1.0f));
 	albedo = vicall_new(transparent, pr3, "absorb", vec2(190.0, 440.0f), ~0, V_IN | V_OUT);
@@ -557,6 +560,7 @@ void materials_register_defaults(void)
 	vifunc_link(transparent, ref("emissive.mix.result"), ref("pbr.emissive"));
 	vifunc_link(transparent, ref("roughness.mix.result"), ref("pbr.roughness"));
 	vifunc_link(transparent, ref("absorb.mix.result"), ref("pbr.absorb"));
+	vifunc_link(transparent, ref("refraction"), ref("pbr.refraction"));
 
 	decal = vifunc_new(&g_mat_ctx, "_decal", NULL, 0, false);
 	vicall_new(decal, vil_get(&g_mat_ctx, ref("decal")), "pbr",
@@ -880,6 +884,7 @@ struct transparent
 	vec3_t normal;
 	float roughness;
 	vec3_t emissive;
+	float refraction;
 };
 
 struct opaque
@@ -1261,29 +1266,31 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		str_cat(&gbuffer,
 			"	vec3 norm = get_normal(pbr_in.normal);\n"
 			"	vec2 pp = pixel_pos();\n"
+			"	vec2 coord;\n"
 			"	float depth = textureLod(gbuffer.depth, pp, 0.).r;\n"
 			"	if (depth <= gl_FragCoord.z)\n"
 			"		discard;"
-			"	if (true) {\n"
+			"	if (abs(pbr_in.refraction - 1.0) > 0.001)\n"
+		    "	{\n"
 			"		vec3 pos = view_space_in;\n"
-			"		vec3 dir = normalize(normalize(pos) - norm);\n"
-			/* "		vec3 dir = normalize(pos);\n" */
-			/* "		vec3 dir = -norm;\n" */
-			"		vec3 coords = RayCast(gbuffer.depth, dir, pos);\n"
-			/* "		vec2 coord = pp + norm.xy * (0.1 + pbr_in.roughness * 0.03);\n" */
-			"		vec2 coord = coords.xy;\n"
-			"		float mip = clamp(((pbr_in.roughness * length(coords - view_space_in)) / length(view_space_in)) * 3., 0.0, 3.0);\n"
-			/* "		float mip = 0.;\n" */
+			"		vec3 dir = refract(normalize(pos), norm,\n"
+			"		                   1.0 / pbr_in.refraction);\n"
+			"		coord = RayCast(gbuffer.depth, dir, pos);\n"
+			"	}\n"
+			"	else\n"
+			"	{\n"
+			"		coord = pp;\n"
+			"	}\n"
+			"	float mip = clamp(pbr_in.roughness * 3.0, 0.0, 3.0);\n"
 			);
 		str_cat(&gbuffer,
-			"		if (coord.x >= 0.0)\n"
-			"		{\n"
-			"			vec3 refracted = textureLod(refr.color, coord.xy, mip).rgb;\n"
-			"			refracted = refracted * (1.0 - pbr_in.absorb);\n"
-			"			pbr_in.emissive.rgb = refracted;\n"
-			"		}\n"
-			"	} else {\n"
-			"	}\n");
+			"	if (coord.x >= 0.0)\n"
+			"	{\n"
+			"		vec3 refracted = textureLod(refr.color, coord.xy, mip).rgb;\n"
+			"		refracted = refracted * (1.0 - pbr_in.absorb);\n"
+			"		pbr_in.emissive.rgb = refracted;\n"
+			"	}\n"
+			"\n");
 	}
 	else if (output_type == ref("decal"))
 	{
@@ -1301,7 +1308,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	if (output_type == ref("transparent"))
 	{
 		str_cat(&gbuffer,
-			"	MR.r = 0.1;\n"
+			"	MR.r = 0.9;\n"
 			"	MR.g = pbr_in.roughness;\n"
 			"	Alb = vec4(vec3(0.0, 0.0, 0.0), receive_shadows ? 1.0 : 0.5);\n"
 			"	Emi = pbr_in.emissive;\n");
@@ -1479,7 +1486,7 @@ static void init_type(uint32_t tid, const char *type_name)
 
 void materials_init_vil()
 {
-	vicall_t *r, *g, *b, *a, *normal, *albedo, *roughn, *color;
+	vicall_t *r, *g, *b, *a, *normal, *albedo, *roughn, *color, *refraction;
 	vil_t *ctx = &g_mat_ctx;
 	vifunc_t *tint, *tnum, *v2, *v3, *v4, *tcol, *visin, *virange;
 	vifunc_t *vimul, *vimix, *vimix2, *vimix3, *vimix4, *viadd, *tprev, *ttex;
@@ -1678,8 +1685,6 @@ void materials_init_vil()
 		matcall_set_vec3(normal, ~0, vec3(0.5f, 0.5f, 1.0f));
 		matcall_set_number(roughn, ~0, 0.5f);
 
-
-
 	transparent = vifunc_new(ctx, "transparent", NULL, sizeof(struct transparent), false);
 		vicall_new(transparent, v3, "absorb", vec2(200, 10),
 		           offsetof(struct transparent, absorb), V_IN);
@@ -1689,6 +1694,9 @@ void materials_init_vil()
 		           offsetof(struct transparent, roughness), V_IN);
 		vicall_new(transparent, v3, "emissive", vec2(500, 10),
 		           offsetof(struct transparent, emissive), V_IN);
+		refraction = vicall_new(transparent, tnum, "refraction", vec2(500, 10),
+		           offsetof(struct transparent, refraction), V_IN);
+	matcall_set_number(refraction, ~0, 1.0);
 
 	decal = vifunc_new(ctx, "decal", NULL, sizeof(struct decal), false);
 		albedo = vicall_new(decal, v4, "albedo", vec2(100, 10),

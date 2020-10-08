@@ -691,7 +691,7 @@ void renderer_default_pipeline(renderer_t *self)
 			opt_tex("gbuffer", transp_gbuffer, NULL)
 	);
 
-	renderer_add_pass(self, "render_pass_2", "candle:copy_gbuffer", ref("quad"),
+	renderer_add_pass(self, "copy_gbuffer", "candle:copy_gbuffer", ref("quad"),
 			0, gbuffer, gbuffer, 0, ~0, 1,
 			opt_tex("gbuffer", transp_gbuffer, NULL)
 	);

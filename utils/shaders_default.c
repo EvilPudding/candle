@@ -884,54 +884,58 @@ void shaders_candle_common()
 
 	/* TODO: should go to ssr.glsl */
 	str_cat(&shader_buffer,
-		"vec3 get_proj_coord(sampler2D depthmap, vec3 hitCoord)\n"
+		"vec2 get_proj_coord(vec3 hitCoord)\n"
 		"{\n"
 		"	vec4 projectedCoord     = camera(projection) * vec4(hitCoord, 1.0);\n"
 		"	projectedCoord.xy      /= projectedCoord.w;\n"
 		"	projectedCoord.xy       = projectedCoord.xy * 0.5 + 0.5;\n"
-		"	float depth             = get_position(depthmap, projectedCoord.xy).z;\n"
-		"	return vec3(projectedCoord.xy, linearize(hitCoord.z) - linearize(depth));\n"
+		"	return projectedCoord.xy;\n"
 		"}\n");
 
 	str_cat(&shader_buffer,
-		"vec3 BinarySearch(sampler2D depthmap, vec3 dir, inout vec3 hitCoord)\n"
+		"vec2 BinarySearch(sampler2D depthmap, vec3 dir, inout vec3 hitCoord)\n"
 		"{\n"
 		"	float depth;\n"
-		"	vec3 pc;\n"
+		"	vec2 pc;\n"
 		"	dir = -dir * 0.5;\n"
 		"	float search_dir = -1.0;\n"
 		"	hitCoord += dir;\n"
 		"	for(uint i = 0u; i < 8u; i++)\n"
 		"	{\n"
-		"		pc = get_proj_coord(depthmap, hitCoord);\n"
+		"		pc = get_proj_coord(hitCoord);\n"
+		"		vec3 c_pos = get_position(depthmap, pc);\n"
+		"		float dist = hitCoord.z - c_pos.z;\n"
 		"		if(pc.x > 1.0 || pc.y > 1.0 || pc.x < 0.0 || pc.y < 0.0) break;\n"
 		"		dir = dir * 0.5;\n"
-		"		if (sign(pc.z) != sign(search_dir))\n"
+		"		if (sign(dist) != sign(search_dir))\n"
 		"		{\n"
 		"			dir = -dir;\n"
 		"			search_dir = -search_dir;\n"
 		"		}\n"
 		"		hitCoord += dir;\n"
 		"	}\n"
-		"	return vec3(pc.xy, 1.0);\n"
+		"	return get_proj_coord(hitCoord);\n"
 		"}\n");
 
 	str_cat(&shader_buffer,
-		"vec3 RayCast(sampler2D depth, vec3 dir, inout vec3 hitCoord)\n"
+		"vec2 RayCast(sampler2D depthmap, vec3 dir, inout vec3 hitCoord)\n"
 		"{\n"
-		"	dir *= 0.1;  \n"
+		"	dir *= 0.1;\n"
+		"	float step = 0.1;\n"
 		"	for(uint i = 0u; i < 16u; ++i) {\n"
-		"		hitCoord += dir; \n"
-		"		dir *= 1.3;\n"
-		"		vec3 pc = get_proj_coord(depth, hitCoord);\n"
+		"		hitCoord += dir;\n"
+		"		vec2 pc = get_proj_coord(hitCoord);\n"
+		"		vec3 c_pos = get_position(depthmap, pc);\n"
+		"		float dist = hitCoord.z - c_pos.z;\n"
 		"		if(pc.x > 1.0 || pc.y > 1.0 || pc.x < 0.0 || pc.y < 0.0) break;\n"
-		"		if(pc.z < -2.0) break;\n"
-		"		if(pc.z < 0.0)\n"
+		"		if(dist < 0.0 /*&& length(hitCoord - c_pos) < step*/)\n"
 		"		{\n"
-		"			return BinarySearch(depth, dir, hitCoord);\n"
+		"			return BinarySearch(depthmap, dir, hitCoord);\n"
 		"		}\n"
+		"		dir *= 1.3;\n"
+		"		step *= 1.3;\n"
 		"	}\n"
-		"	return vec3(-1.0);\n"
+		"	return vec2(-1.0);\n"
 		"}\n");
 
 	str_cat(&shader_buffer,
@@ -981,24 +985,23 @@ void shaders_candle_common()
 	str_cat(&shader_buffer,
 		"	/* Ray cast */\n"
 		"	vec3 hitPos = pos.xyz; // + vec3(0.0, 0.0, rand(camPos.xz) * 0.2 - 0.1);\n"
-		"	vec3 coords = RayCast(depth, reflected, hitPos);\n"
-		"	vec2 dCoords = abs(vec2(0.5, 0.5) - coords.xy) * 2.0;\n"
+		"	vec2 coords = RayCast(depth, reflected, hitPos);\n"
+		"	vec2 dCoords = abs(vec2(0.5, 0.5) - coords) * 2.0;\n"
 		"	float screenEdgefactor = (clamp(1.0 -\n"
 		"				(pow(dCoords.x, 4.0) + pow(dCoords.y, 4.0)), 0.0, 1.0));\n"
 		"	vec3 fallback_color = vec3(0.0);\n"
-		"	vec2 deltaP = coords.xy - texcoord;\n");
+		"	vec2 deltaP = coords - texcoord;\n");
 	str_cat(&shader_buffer,
 		"	float adjacentLength = length(deltaP);\n"
 		"	vec2 adjacentUnit = normalize(deltaP);\n"
 		"	uint numMips = MAX_MIPS;\n"
 		"	vec4 reflect_color = vec4(0.0);\n"
-		"	float maxMipLevel = 3.0;\n"
-		"	float glossMult = gloss;\n");
+		"	float glossMult = 1.0;\n");
 	str_cat(&shader_buffer,
 		"	for(int i = -4; i <= 4; ++i)\n"
 		"	{\n"
 		"		float len = adjacentLength * (float(i) / 4.0) * perceptualRoughness * 0.3;\n"
-		"		vec2 samplePos = coords.xy + vec2(adjacentUnit.y, -adjacentUnit.x) * len;\n"
+		"		vec2 samplePos = coords + vec2(adjacentUnit.y, -adjacentUnit.x) * len;\n"
 		"		float mipChannel = perceptualRoughness * adjacentLength * 40.0;\n"
 		"		glossMult = 1.0;\n"
 		"		vec4 newColor = textureLod(screen, samplePos, mipChannel).rgba;\n"
@@ -1006,11 +1009,10 @@ void shaders_candle_common()
 		"		glossMult *= gloss;\n"
 		"	}\n");
 	str_cat(&shader_buffer,
-		"	vec3 f0 = vec3(0.04);\n"
-		"	vec3 specular_color = mix(f0, base_color.rgb, metallic);\n"
-		"	float reflectance = max(max(specular_color.r, specular_color.g), specular_color.b);\n"
-		"	float NdotL = clamp(dot(w_nor, -eye_dir), 0.001, 1.0);\n"
-		"	specular_color = fresnelSchlick(vec3(reflectance), NdotL) * CNST_1DIVPI;\n"
+		/* "	vec3 f0 = vec3(0.04);\n" */
+		/* "	vec3 specular_color = mix(f0, base_color.rgb, metallic);\n" */
+		"	float NdotE = clamp(dot(w_nor, -eye_dir), 0.001, 1.0);\n"
+		"	vec3 specular_color = fresnelSchlick(vec3(1.0), NdotE) * CNST_1DIVPI;\n"
 		"	float fade_on_roughness = 1.0;\n"
 		"	float fade = screenEdgefactor * fade_on_roughness;\n"
 		"	return vec4(mix(fallback_color,\n"
