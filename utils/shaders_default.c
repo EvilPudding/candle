@@ -824,18 +824,9 @@ void shaders_candle_common()
 		"}\n");
 
 	str_cat(&shader_buffer,
-		"vec3 get_position(sampler2D depth)\n"
+		"vec3 get_position(vec3 pos)\n"
 		"{\n"
-		"	vec2 pos = pixel_pos();\n"
-		"	vec3 raw_pos = vec3(pos, textureLod(depth, pos, 0.0).r);\n"
-		"	vec4 clip_pos = vec4(raw_pos * 2.0 - 1.0, 1.0);\n"
-		"	vec4 view_pos = camera(inv_projection) * clip_pos;\n"
-		"	return view_pos.xyz / view_pos.w;\n"
-		"}\n"
-		"vec3 get_position(float depth, vec2 pos)\n"
-		"{\n"
-		"	vec3 raw_pos = vec3(pos, depth);\n"
-		"	vec4 clip_pos = vec4(raw_pos * 2.0 - 1.0, 1.0);\n"
+		"	vec4 clip_pos = vec4(pos * 2.0 - 1.0, 1.0);\n"
 		"	vec4 view_pos = camera(inv_projection) * clip_pos;\n"
 		"	return view_pos.xyz / view_pos.w;\n"
 		"}\n");
@@ -843,7 +834,7 @@ void shaders_candle_common()
 	str_cat(&shader_buffer,
 		"vec3 get_position(sampler2D depth, vec2 pos)\n"
 		"{\n"
-		"	return get_position(textureLod(depth, pos, 0.0).r, pos);\n"
+		"	return get_position(vec3(pos, textureLod(depth, pos, 0.0).r));\n"
 		"}\n"
 		"vec3 get_normal(sampler2D buffer)\n"
 		"{\n"
@@ -965,11 +956,11 @@ void shaders_candle_common()
 		"}\n");
 
 	str_cat(&shader_buffer,
-		"vec4 ssr2(sampler2D depth, sampler2D screen, vec4 base_color,\n"
+		"vec4 ssr2(sampler2D depthmap, sampler2D screen, vec4 base_color,\n"
 		"		vec2 metallic_roughness, vec3 nor)\n"
 		"{\n"
 		"	vec2 tc = pixel_pos();\n"
-		"	vec3 pos = get_position(depth, pixel_pos());\n"
+		"	vec3 pos = get_position(depthmap, tc);\n"
 		"	float perceptualRoughness = metallic_roughness.y;\n"
 		"	float metallic = metallic_roughness.x;\n"
 		"	perceptualRoughness = clamp(perceptualRoughness, c_MinRoughness, 1.0);\n"
@@ -986,7 +977,7 @@ void shaders_candle_common()
 	str_cat(&shader_buffer,
 		"	/* Ray cast */\n"
 		"	vec3 hitPos = pos.xyz; // + vec3(0.0, 0.0, rand(camPos.xz) * 0.2 - 0.1);\n"
-		"	vec2 coords = RayCast(depth, reflected, hitPos);\n"
+		"	vec2 coords = RayCast(depthmap, reflected, hitPos);\n"
 		"	vec2 dCoords = abs(vec2(0.5, 0.5) - coords) * 2.0;\n"
 		"	float screenEdgefactor = (clamp(1.0 -\n"
 		"				(pow(dCoords.x, 4.0) + pow(dCoords.y, 4.0)), 0.0, 1.0));\n"
@@ -1166,7 +1157,7 @@ void shaders_candle_volum()
 		"	bool inverted = light(volumetric) < 0.0;\n");
 
 	str_cat(&shader_buffer,
-		"	vec3 c_pos = get_position(depth,  pixel_pos());\n"
+		"	vec3 c_pos = get_position(vec3(pixel_pos(), depth));\n"
 		"	vec3 w_cam = camera(pos);\n"
 		"	vec3 w_pos = (camera(model) * vec4(c_pos, 1.0)).xyz;\n"
 		"	float color = 0.0;\n"
@@ -1810,17 +1801,18 @@ void shaders_candle_pbr()
 		"void main(void)\n"
 		"{\n"
 		"	ivec2 fc = ivec2(gl_FragCoord.xy);\n"
+		"	vec2 pp = pixel_pos();\n"
 		"	vec4 dif = texelFetch(gbuffer.albedo, fc, 0);\n"
 		"	if(dif.a == 0.0) discard;\n");
 
 	str_cat(&shader_buffer,
-		"	float depth = textureLod(gbuffer.depth, pixel_pos(), 0.0).r;\n"
-		"	vec3 c_pos = get_position(gbuffer.depth);\n"
+		"	float depth = textureLod(gbuffer.depth, pp, 0.0).r;\n"
+		"	vec3 c_pos = get_position(gbuffer.depth, pp);\n"
 		"	if(light(radius) > 0.0 && depth > gl_FragCoord.z) discard;\n"
-		"	vec3 w_pos = (camera(model) * vec4(c_pos, 1.0)).xyz;\n"
 		"	vec2 normal = texelFetch(gbuffer.nn, fc, 0).rg;\n"
-		"	vec2 metalic_roughness = texelFetch(gbuffer.mr, fc, 0).rg;\n"
-		"	vec3 c_nor = decode_normal(normal);\n");
+		"	vec3 c_nor = decode_normal(normal);\n"
+		"	vec3 w_pos = (camera(model) * vec4(c_pos, 1.0)).xyz;\n"
+		"	vec2 metalic_roughness = texelFetch(gbuffer.mr, fc, 0).rg;\n");
 
 	str_cat(&shader_buffer,
 		"	float dist_to_eye = length(c_pos);\n"

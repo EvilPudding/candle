@@ -1164,7 +1164,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 			"#elif !defined(SELECT_PASS) && !defined(SHADOW_PASS)\n"
 			"	float depth = textureLod(gbuffer.depth, pixel_pos(), 0.0).r;\n"
 			"	if (depth > gl_FragCoord.z) discard;\n"
-			"	vec4 w_pos = (camera(model)*vec4(get_position(gbuffer.depth), 1.0));\n"
+			"	vec4 w_pos = (camera(model)*vec4(get_position(gbuffer.depth, pixel_pos()), 1.0));\n"
 			"	vec3 m_pos = (inverse(model) * w_pos).xyz;\n"
 			"	vec3 diff = abs(m_pos);\n"
 			"	if (diff.x > 0.5 || diff.y > 0.5 || diff.z > 0.5) discard;\n"

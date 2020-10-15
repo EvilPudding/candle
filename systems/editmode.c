@@ -799,7 +799,7 @@ static void editmode_context_shader()
 		"void main(void)\n"
 		"{\n"
 		"	vec2 id = textureLod(sbuffer.ids, pixel_pos(), 0.0).rg;\n"
-		"	vec3 c_pos = get_position(gbuffer.depth);\n"
+		"	vec3 c_pos = get_position(gbuffer.depth, pixel_pos());\n"
 		"	vec3 w_pos = (camera(model) * vec4(c_pos, 1.0)).xyz;\n"
 		"	w_pos += 0.0001;\n"
 		"	if (length(w_pos - context_pos) + dither_value() * 4.0 > pow(context_phase, 4.0) * 1000.0)\n"
