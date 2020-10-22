@@ -21,18 +21,19 @@ struct uniform;
 
 enum pass_options
 {
-	DEPTH_LOCK      = 1 << 0,
-	DEPTH_GREATER   = 1 << 1,
-	DEPTH_LESSER    = 1 << 2,
-	DEPTH_EQUAL     = 1 << 3,
-	DEPTH_DISABLE   = 1 << 4,
-	CULL_DISABLE    = 1 << 5,
-	CULL_INVERT     = 1 << 6,
-	ADD             = 1 << 7,
-	MUL             = 1 << 8,
-	BLEND           = 1 << 9,
-	GEN_MIP         = 1 << 10,
-	TRACK_BRIGHT    = 1 << 11
+	DEPTH_LOCK          = 1 << 0,
+	DEPTH_GREATER       = 1 << 1,
+	DEPTH_LESSER        = 1 << 2,
+	DEPTH_EQUAL         = 1 << 3,
+	DEPTH_DISABLE       = 1 << 4,
+	CULL_DISABLE        = 1 << 5,
+	CULL_INVERT         = 1 << 6,
+	ADD                 = 1 << 7,
+	MUL                 = 1 << 8,
+	BLEND               = 1 << 9,
+	GEN_MIP             = 1 << 10,
+	TRACK_BRIGHT        = 1 << 11,
+	IGNORE_CAM_VIEWPORT = 1 << 12
 };
 
 enum bind_type
@@ -42,6 +43,8 @@ enum bind_type
 	OPT_NUM,
 	OPT_INT,
 	OPT_UINT,
+	OPT_UVEC2,
+	OPT_IVEC2,
 	OPT_VEC2,
 	OPT_VEC3,
 	OPT_VEC4,
@@ -56,6 +59,8 @@ enum bind_type
 typedef vec2_t     (*vec2_getter)(struct pass *pass, void *usrptr);
 typedef vec3_t     (*vec3_getter)(struct pass *pass, void *usrptr);
 typedef vec4_t     (*vec4_getter)(struct pass *pass, void *usrptr);
+typedef uvec2_t    (*uvec2_getter)(struct pass *pass, void *usrptr);
+typedef ivec2_t    (*ivec2_getter)(struct pass *pass, void *usrptr);
 typedef float      (*number_getter)(struct pass *pass, void *usrptr);
 typedef int        (*integer_getter)(struct pass *pass, void *usrptr);
 typedef uint32_t   (*uinteger_getter)(struct pass *pass, void *usrptr);
@@ -85,6 +90,12 @@ typedef struct
 		} number;
 		struct {
 			uint32_t u;
+		} uvec2;
+		struct {
+			uint32_t u;
+		} ivec2;
+		struct {
+			uint32_t u;
 		} vec2;
 		struct {
 			uint32_t u;
@@ -110,6 +121,8 @@ typedef struct
 		texture_t *buffer;
 		entity_t entity;
 		float number;
+		uvec2_t uvec2;
+		ivec2_t ivec2;
 		vec2_t vec2;
 		vec3_t vec3;
 		vec4_t vec4;
@@ -146,6 +159,7 @@ typedef struct pass
 	unsigned int clear;
 	uint32_t draw_signal;
 	entity_t camera;
+	bool_t ignore_cam_viewport;
 
 	int32_t binds_size;
 	bind_t *binds;
@@ -270,6 +284,8 @@ bind_t opt_tex(const char *name, texture_t *tex, getter_cb getter);
 bind_t opt_num(const char *name, float value, getter_cb getter);
 bind_t opt_int(const char *name, int32_t value, getter_cb getter);
 bind_t opt_uint(const char *name, uint32_t value, getter_cb getter);
+bind_t opt_uvec2(const char *name, uvec2_t value, getter_cb getter);
+bind_t opt_ivec2(const char *name, ivec2_t value, getter_cb getter);
 bind_t opt_vec2(const char *name, vec2_t value, getter_cb getter);
 bind_t opt_vec3(const char *name, vec3_t value, getter_cb getter);
 bind_t opt_vec4(const char *name, vec4_t value, getter_cb getter);

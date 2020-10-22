@@ -1113,9 +1113,9 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	{
 		uint32_t loc;
 		loc = shader_cached_uniform(shader, ref("g_framebuffer"));
-		glUniform1i(loc, 6);
-		glActiveTexture(GL_TEXTURE0 + 6);
-		texture_bind(self->vars.custom_texture, 0);
+		glUniform1i(loc, 7);
+		glActiveTexture(GL_TEXTURE0 + 7);
+		texture_bind(self->vars.custom_texture, -1);
 	}
 
 	if (self->vars.draw_callback)
@@ -1169,7 +1169,7 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 		{
 			primitive = GL_POINTS;
 #ifndef __EMSCRIPTEN__
-			glPointSize(5.f);
+			/* glPointSize(5.f); */
 #endif
 		}
 	}

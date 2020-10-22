@@ -21,7 +21,7 @@ static int renderer_update_screen_texture(renderer_t *self);
 
 static void bind_pass(pass_t *pass, shader_t *shader);
 
-#define FIRST_TEX 7
+#define FIRST_TEX 8
 static void pass_unbind_textures(pass_t *pass)
 {
 	uint32_t i;
@@ -171,6 +171,22 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			glUniform1ui(shader_cached_uniform(shader, sb->u.uinteger.u), bind->uinteger); glerr();
 			glerr();
 			break;
+		case OPT_UVEC2:
+			if(bind->getter)
+			{
+				bind->uvec2 = ((uvec2_getter)bind->getter)(pass, pass->usrptr);
+			}
+			glUniform2ui(shader_cached_uniform(shader, sb->u.uvec2.u), bind->uvec2.x, bind->uvec2.y);
+			glerr();
+			break;
+		case OPT_IVEC2:
+			if(bind->getter)
+			{
+				bind->ivec2 = ((ivec2_getter)bind->getter)(pass, pass->usrptr);
+			}
+			glUniform2i(shader_cached_uniform(shader, sb->u.ivec2.u), bind->ivec2.x, bind->ivec2.y);
+			glerr();
+			break;
 		case OPT_VEC2:
 			if(bind->getter)
 			{
@@ -304,8 +320,9 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 {
 	renderer_add_pass(self, "kawase_p",
 			to_mip == from_mip ? "copy" : "candle:downsample",
-			ref("quad"), 0, t2, NULL, to_mip, ~0, 2,
+			ref("quad"), 0, t2, NULL, to_mip, ~0, 3,
 			opt_tex("buf", t1, NULL),
+			opt_uvec2("pos", uvec2(0, 0), NULL),
 			opt_int("level", from_mip, NULL)
 	);
 
@@ -634,7 +651,7 @@ void renderer_default_pipeline(renderer_t *self)
 			opt_tex("gbuffer", gbuffer, NULL)
 	);
 
-	renderer_add_pass(self, "selectable", "candle:select", ref("selectable"),
+	renderer_add_pass(self, "selectable", "candle:select_map", ref("selectable"),
 			0, selectable, selectable, 0, ~0, 2,
 			opt_clear_depth(1.0f, NULL),
 			opt_clear_color(Z4, NULL)
@@ -667,9 +684,10 @@ void renderer_default_pipeline(renderer_t *self)
 	/* ); */
 
 	renderer_add_pass(self, "refraction", "candle:copy", ref("quad"), 0,
-			refr, NULL, 0, ~0, 3,
+			refr, NULL, 0, ~0, 4,
 			opt_tex("buf", light, NULL),
 			opt_clear_color(Z4, NULL),
+			opt_uvec2("pos", uvec2(0, 0), NULL),
 			opt_int("level", 0, NULL)
 	);
 
@@ -910,7 +928,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 
 		c_render_device_bind_ubo(rd, 19, self->ubos[f]);
 
-		if (self->size[f].x > 0)
+		if (!pass->ignore_cam_viewport && self->size[f].x > 0)
 		{
 			size = self->size[f];
 			pos = self->pos[f];
@@ -1017,7 +1035,7 @@ renderer_t *renderer_new(float resolution)
 			self->glvars[f].model = mat4();
 	}
 	self->proj_near = 0.1f;
-	self->proj_far = 100.0f;
+	self->proj_far = 1000.0f;
 	self->proj_fov = M_PI / 2.0f;
 
 	self->resolution = resolution;
@@ -1061,6 +1079,8 @@ entity_t renderer_entity_at_pixel(renderer_t *self, int x, int y,
 extern texture_t *g_cache;
 extern texture_t *g_indir;
 extern texture_t *g_probe_cache;
+extern texture_t *g_histogram_buffer;
+extern texture_t *g_histogram_accum;
 int renderer_component_menu(renderer_t *self, void *ctx)
 {
 	int i;
@@ -1091,6 +1111,14 @@ int renderer_component_menu(renderer_t *self, void *ctx)
 				c_editmode_open_texture(c_editmode(&SYS), output->buffer);
 			}
 		}
+	}
+	if (nk_button_label(ctx, "histograma"))
+	{
+		c_editmode_open_texture(c_editmode(&SYS), g_histogram_accum);
+	}
+	if (nk_button_label(ctx, "histogram"))
+	{
+		c_editmode_open_texture(c_editmode(&SYS), g_histogram_buffer);
 	}
 	if (nk_button_label(ctx, "cache"))
 	{
@@ -1170,6 +1198,24 @@ bind_t opt_uint(const char *name, uint32_t value, getter_cb getter)
 	strncpy(bind.name, name, sizeof(bind.name) - 1);
 	bind.type = OPT_UINT;
 	bind.uinteger = value;
+	bind.getter = getter;
+	return bind;
+}
+bind_t opt_uvec2(const char *name, uvec2_t value, getter_cb getter)
+{
+	bind_t bind = {0};
+	strncpy(bind.name, name, sizeof(bind.name) - 1);
+	bind.type = OPT_UVEC2;
+	bind.uvec2 = value;
+	bind.getter = getter;
+	return bind;
+}
+bind_t opt_ivec2(const char *name, ivec2_t value, getter_cb getter)
+{
+	bind_t bind = {0};
+	strncpy(bind.name, name, sizeof(bind.name) - 1);
+	bind.type = OPT_IVEC2;
+	bind.ivec2 = value;
 	bind.getter = getter;
 	return bind;
 }
@@ -1267,7 +1313,7 @@ void renderer_add_pass(
 
 	if(!output)
 	{
-		printf("Pass has no output\n");
+		printf("Pass %s has no output\n", name);
 		exit(1);
 	}
 	sprintf(buffer, name, self->passes_size);
@@ -1347,6 +1393,10 @@ void renderer_add_pass(
 		{
 			pass->depth_func = GL_EQUAL;
 		}
+	}
+	if(flags & IGNORE_CAM_VIEWPORT)
+	{
+		pass->ignore_cam_viewport = true;
 	}
 
 	pass->draw_signal = draw_signal;

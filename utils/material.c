@@ -1038,7 +1038,6 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	uint32_t size, output_type, i, id;
 	vicall_t *call = vifunc_get(func, "pbr");
 	struct mat_type *type = usrptr;
-	char *gbuffer;
 
 	char *name = str_new(64);
 	char *name2 = str_new(64);
@@ -1046,14 +1045,19 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	char *q_name2 = str_new(64);
 	char *s_name = str_new(64);
 	char *s_name2 = str_new(64);
-	char *d_name = str_new(64);
-	char *d_name2 = str_new(64);
+	char *sm_name = str_new(64);
+	char *sm_name2 = str_new(64);
 	char *t_name = str_new(64);
 	char *t_name2 = str_new(64);
+	char *c_name = str_new(64);
+	char *c_name2 = str_new(64);
 
-	char *select = str_new(64);
-	char *query = str_new(64);
-	char *depth = str_new(64);
+	char *code = str_new(128);
+	char *gbuffer = str_new(64);
+	char *select_map = str_new(64);
+	char *query_mips = str_new(64);
+	char *shadow_map = str_new(64);
+	char *caustics = str_new(64);
 
 	mat_type_inputs(func);
 
@@ -1071,20 +1075,19 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 
 	output_type = call->type->id;
 
-	gbuffer = str_new(128);
-	str_cat(&gbuffer, "#include \"candle:common.glsl\"\n");
-	vil_foreach_func(call->type->ctx, (vil_func_cb)material_generate_struct, &gbuffer);
-	vil_foreach_func(call->type->ctx, (vil_func_cb)material_generate_func, &gbuffer);
+	str_cat(&code, "#include \"candle:common.glsl\"\n");
+	vil_foreach_func(call->type->ctx, (vil_func_cb)material_generate_struct, &code);
+	vil_foreach_func(call->type->ctx, (vil_func_cb)material_generate_func, &code);
 
-	str_cat(&gbuffer, "struct costum_material_t {\n");
-	vicall_foreach_unlinked_input(type->tmp_material_instance, _generate_uniform, &gbuffer);
+	str_cat(&code, "struct costum_material_t {\n");
+	vicall_foreach_unlinked_input(type->tmp_material_instance, _generate_uniform, &code);
 	for (i = size; i < size; i += 4)
 	{
-		str_catf(&gbuffer, "	uint _padding_%d;\n", i + 4);
+		str_catf(&code, "	uint _padding_%d;\n", i + 4);
 	}
-	str_cat(&gbuffer, "};\n");
+	str_cat(&code, "};\n");
 
-	str_cat(&gbuffer,
+	str_cat(&code,
 		"layout(std140) uniform cms_t {\n"
 		"	costum_material_t info[128];\n"
 		"} costum_materials;\n"
@@ -1094,15 +1097,25 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		"layout (location = 2) out vec4 TILES2;\n"
 		"layout (location = 3) out vec4 TILES3;\n"
 	);
-	str_cat(&gbuffer,
+	str_cat(&code,
 		"#elif defined(SELECT_PASS)\n"
 		"layout (location = 0) out vec4 IDS;\n"
 		"layout (location = 1) out vec2 GeomID;\n"
 		"#elif defined(SHADOW_PASS)\n"
-		"layout (location = 0) out vec4 Depth;\n"
+		"layout (location = 0) out vec4 Color;\n"
+		"#elif defined(CAUSTICS_PASS)\n"
+		"layout (location = 0) out vec4 Color;\n"
 	);
-	str_cat(&gbuffer,
-		"#else\n"
+	if (output_type == ref("transparent"))
+	{
+		str_cat(&code,
+			"BUFFER {\n"
+			"   sampler2D depth;\n"
+			"} shadow_map;\n");
+	}
+
+	str_cat(&code,
+		"#elif defined(GBUFFER_PASS)\n"
 		"layout (location = 0) out vec4 Alb;\n"
 		"layout (location = 1) out vec4 NN;\n"
 		"layout (location = 2) out vec4 MR;\n"
@@ -1110,7 +1123,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 
 	if (output_type == ref("transparent"))
 	{
-		str_cat(&gbuffer,
+		str_cat(&code,
 			"BUFFER { sampler2D color; } refr;\n"
 			"BUFFER {\n"
 			"   sampler2D depth;\n"
@@ -1118,24 +1131,25 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	}
 	else if (output_type == ref("decal"))
 	{
-		str_cat(&gbuffer,
+		str_cat(&code,
 			"BUFFER { sampler2D depth; } gbuffer;\n"
 		);
 	}
 
-	str_cat(&gbuffer,
+	str_cat(&code,
 		"#endif\n"
 		"void main(void) {\n"
+		"	vec2 _pp = pixel_pos();\n"
 		"	uint tile_array[8];\n"
 		"	uint tile_num = 0u;\n"
 	);
 
 	vifunc_foreach_call(func, false, true, true, false,
-	                    (vil_call_cb)material_generate_precall, &gbuffer);
+	                    (vil_call_cb)material_generate_precall, &code);
 
 	if (output_type == ref("transparent"))
 	{
-		str_cat(&gbuffer,
+		str_cat(&code,
 			"#ifdef QUERY_PASS\n"
 			"	if (((int(gl_FragCoord.x) + int(gl_FragCoord.y)) & 1) == 0)\n"
 			"		discard;\n"
@@ -1144,7 +1158,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	}
 	else
 	{
-		str_cat(&gbuffer,
+		str_cat(&code,
 			"#ifdef QUERY_PASS\n"
 			"	if (((int(gl_FragCoord.x) + int(gl_FragCoord.y)) & 1) == 1)\n"
 			"		discard;\n"
@@ -1154,17 +1168,17 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 
 	if (output_type == ref("decal"))
 	{
-		str_cat(&gbuffer,
+		str_cat(&code,
 			"#if defined(QUERY_PASS)\n"
 				"tex_space_in = texcoord;\n"
 		        "world_space_in = vertex_world_position;\n"
 		        "view_space_in = vertex_position;\n"
 		);
-		str_cat(&gbuffer,
-			"#elif !defined(SELECT_PASS) && !defined(SHADOW_PASS)\n"
-			"	float depth = textureLod(gbuffer.depth, pixel_pos(), 0.0).r;\n"
+		str_cat(&code,
+			"#elif defined(GBUFFER)\n"
+			"	float depth = textureLod(gbuffer.depth, _pp, 0.0).r;\n"
 			"	if (depth > gl_FragCoord.z) discard;\n"
-			"	vec4 w_pos = (camera(model)*vec4(get_position(gbuffer.depth, pixel_pos()), 1.0));\n"
+			"	vec4 w_pos = (camera(model)*vec4(get_position(gbuffer.depth, _pp, 1.0));\n"
 			"	vec3 m_pos = (inverse(model) * w_pos).xyz;\n"
 			"	vec3 diff = abs(m_pos);\n"
 			"	if (diff.x > 0.5 || diff.y > 0.5 || diff.z > 0.5) discard;\n"
@@ -1174,14 +1188,14 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	}
 	else
 	{
-		str_cat(&gbuffer,
+		str_cat(&code,
 				"tex_space_in = texcoord;\n"
 		        "world_space_in = vertex_world_position;\n"
 		        "view_space_in = vertex_position;\n"
 		        );
 	}
 
-	str_cat(&gbuffer,
+	str_cat(&code,
 	        "resolution_in = screen_size;\n"
 	        "#ifdef QUERY_PASS\n"
 	        "time_in = scene.time + 10.0 * 0.01;\n"
@@ -1191,16 +1205,16 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	        );
 
 	vicall_foreach_unlinked_input(type->tmp_material_instance,
-	                              _generate_uniform_assigment, &gbuffer);
+	                              _generate_uniform_assigment, &code);
 
 	if (output_type == ref("parallax"))
 	{
-		str_cat(&gbuffer, "/* HEIGHT PRECOMPUTATION */\n");
+		str_cat(&code, "/* HEIGHT PRECOMPUTATION */\n");
 		vicall_iterate_dependencies(call, ref("height"), ~0,
 		                            (vil_link_cb)material_generate_assignments,
-		                            (vil_call_cb)material_generate_call, &gbuffer);
-		str_cat(&gbuffer, "/* --------------------- */\n");
-		str_cat(&gbuffer,
+		                            (vil_call_cb)material_generate_call, &code);
+		str_cat(&code, "/* --------------------- */\n");
+		str_cat(&code,
 				"float scl = ((1.0 - pbr_in.height) * .05);\n"
 				"vec3 newpoint = (normalize(view_space_in) * scl);\n"
 				"vec3 flatnorm = (newpoint * TM());\n"
@@ -1215,21 +1229,21 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	/* RUN BODY */
 	vicall_iterate_dependencies(call, ~0, ~0,
 	                            (vil_link_cb)material_generate_assignments,
-	                            (vil_call_cb)material_generate_call, &gbuffer);
+	                            (vil_call_cb)material_generate_call, &code);
 	if (type->code)
 	{
 		printf("CAT CODE '%s'\n", type->code);
-		str_cat(&gbuffer, type->code);
+		str_cat(&code, type->code);
 	}
 
 	if (output_type != ref("transparent") && output_type != ref("decal"))
 	{
-		str_cat(&gbuffer,
+		str_cat(&code,
 			"#if defined(SELECT_PASS) || defined(SHADOW_PASS)\n"
 			"	if (pbr_in.albedo.a < 0.7) discard;\n"
 			"#endif\n");
 	}
-	str_cat(&gbuffer,
+	str_cat(&code,
 		"#ifdef QUERY_PASS\n"
 		"	TILES0.r = float(tile_array[0] % 256u);\n"
 		"	TILES0.g = float(tile_array[0] / 256u);\n"
@@ -1240,7 +1254,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		"	TILES1.b = float(tile_array[3] % 256u);\n"
 		"	TILES1.a = float(tile_array[3] / 256u);\n"
 	);
-	str_cat(&gbuffer,
+	str_cat(&code,
 		"	TILES2.r = float(tile_array[4] % 256u);\n"
 		"	TILES2.g = float(tile_array[4] / 256u);\n"
 		"	TILES2.b = float(tile_array[5] % 256u);\n"
@@ -1250,7 +1264,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		"	TILES3.b = float(tile_array[7] % 256u);\n"
 		"	TILES3.a = float(tile_array[7] / 256u);\n"
 	);
-	str_cat(&gbuffer,
+	str_cat(&code,
 		"	TILES0 /= 255.0;\n"
 		"	TILES1 /= 255.0;\n"
 		"	TILES2 /= 255.0;\n"
@@ -1259,16 +1273,36 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		"	IDS.xy = vec2(float(id.x) / 255.0, float(id.y) / 255.0);\n"
 		"	IDS.zw = vec2(poly_id);\n"
 		"#elif defined(SHADOW_PASS)\n"
-		"	Depth = encode_float_rgba(gl_FragCoord.z);\n"
+		"#elif defined(CAUSTICS_PASS)\n");
+	if (output_type == ref("transparent"))
+	{
+		str_cat(&code,
+			"	vec3 norm = (camera(model) * vec4(get_normal(pbr_in.normal), 0.0)).xyz;\n"
+			"	vec3 pos = world_space_in - camera(pos);\n"
+			"	float z;\n"
+			"	float pd = lookup_single(pos, z);\n"
+			"	float dist = pd - z;\n"
+			"	if(dist < 0.0)\n"
+			"		discard;"
+			/* "	if (abs(pbr_in.refraction - 1.0) > 0.001)\n" */
+			"	{\n"
+			"		vec3 dir = refract(normalize(pos), norm,\n"
+			"		                   1.0 / pbr_in.refraction);\n"
+			"		vec2 coord = RayCastCube(dir, pos);\n"
+			"		Color = vec4(coord, 0.0, 1.0);\n"
+			"	}\n"
+		        );
+	}
+
+	str_cat(&code,
 		"#else\n");
 
 	if (output_type == ref("transparent"))
 	{
-		str_cat(&gbuffer,
+		str_cat(&code,
 			"	vec3 norm = get_normal(pbr_in.normal);\n"
-			"	vec2 pp = pixel_pos();\n"
 			"	vec2 coord;\n"
-			"	float depth = textureLod(gbuffer.depth, pp, 0.).r;\n"
+			"	float depth = textureLod(gbuffer.depth, _pp, 0.).r;\n"
 			"	if (depth <= gl_FragCoord.z)\n"
 			"		discard;"
 			"	if (abs(pbr_in.refraction - 1.0) > 0.001)\n"
@@ -1280,11 +1314,11 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 			"	}\n"
 			"	else\n"
 			"	{\n"
-			"		coord = pp;\n"
+			"		coord = _pp;\n"
 			"	}\n"
 			"	float mip = clamp(pbr_in.roughness * 3.0, 0.0, 3.0);\n"
 			);
-		str_cat(&gbuffer,
+		str_cat(&code,
 			"	if (coord.x >= 0.0)\n"
 			"	{\n"
 			"		vec3 refracted = textureLod(refr.color, coord.xy, mip).rgb;\n"
@@ -1296,20 +1330,20 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	}
 	else if (output_type == ref("decal"))
 	{
-		str_cat(&gbuffer,
+		str_cat(&code,
 			"	vec3 norm = ((camera(view) * model) * vec4(pbr_in.normal, 0.0)).xyz;\n");
 	}
 	else
 	{
-		str_cat(&gbuffer,
+		str_cat(&code,
 			"	vec3 norm = get_normal(pbr_in.normal);\n");
 	}
-	str_cat(&gbuffer,
+	str_cat(&code,
 		"	NN.rg = encode_normal(norm);\n");
 
 	if (output_type == ref("transparent"))
 	{
-		str_cat(&gbuffer,
+		str_cat(&code,
 			"	MR.r = 0.0;\n"
 			"	MR.g = pbr_in.roughness;\n"
 			"	Alb = vec4(pbr_in.tint.rgb * pbr_in.tint.a, receive_shadows ? 1.0 : 0.5);\n"
@@ -1317,7 +1351,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	}
 	else if (output_type == ref("decal"))
 	{
-		str_cat(&gbuffer,
+		str_cat(&code,
 			"	MR.r = pbr_in.metalness;\n"
 			"	Alb = pbr_in.albedo.rgba;\n"
 			"	Emi = pbr_in.emissive;\n"
@@ -1326,48 +1360,56 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	}
 	else
 	{
-		str_cat(&gbuffer,
+		str_cat(&code,
 			"	if (pbr_in.albedo.a < 0.7) discard;\n"
 			"	MR.r = pbr_in.metalness;\n"
 			"	MR.g = pbr_in.roughness;\n"
 			"	Alb = vec4(pbr_in.albedo.rgb, receive_shadows ? 1.0 : 0.5);\n"
 			"	Emi = pbr_in.emissive;\n");
 	}
-	str_cat(&gbuffer,
+	str_cat(&code,
 		"#endif\n"
 		"}\n");
 
 	c_render_device(&SYS)->shader = NULL;
 	c_render_device(&SYS)->frag_bound = NULL;
 
-	str_cat(&select, "#define SELECT_PASS\n");
-	str_cat(&select, gbuffer);
+	str_cat(&select_map, "#define SELECT_PASS\n");
+	str_cat(&select_map, code);
 
-	str_cat(&query, "#define QUERY_PASS\n");
-	str_cat(&query, gbuffer);
+	str_cat(&query_mips, "#define QUERY_PASS\n");
+	str_cat(&query_mips, code);
 
-	str_cat(&depth, "#define SHADOW_PASS\n");
-	str_cat(&depth, gbuffer);
+	str_cat(&shadow_map, "#define SHADOW_PASS\n");
+	str_cat(&shadow_map, code);
+
+	str_cat(&caustics, "#define CAUSTICS_PASS\n");
+	str_cat(&caustics, code);
+
+	str_cat(&gbuffer, "#define GBUFFER_PASS\n");
+	str_cat(&gbuffer, code);
 
 	id = type - g_mat_types;
-	str_catf(&d_name, "candle:depth#%d", id);
-	str_catf(&d_name2, "candle:depth#%d.glsl", id);
+	str_catf(&c_name, "candle:caustics#%d", id);
+	str_catf(&c_name2, "candle:caustics#%d.glsl", id);
+	str_catf(&sm_name, "candle:shadow_map#%d", id);
+	str_catf(&sm_name2, "candle:shadow_map#%d.glsl", id);
 	str_catf(&q_name, "candle:query_mips#%d", id);
 	str_catf(&q_name2, "candle:query_mips#%d.glsl", id);
-	str_catf(&s_name, "candle:select#%d", id);
-	str_catf(&s_name2, "candle:select#%d.glsl", id);
+	str_catf(&s_name, "candle:select_map#%d", id);
+	str_catf(&s_name2, "candle:select_map#%d.glsl", id);
 	str_catf(&name, "candle:gbuffer#%d", id);
 	str_catf(&name2, "candle:gbuffer#%d.glsl", id);
 
 	if (type->src)
 	{
-		if (strcmp(type->src, gbuffer))
+		if (strcmp(type->src, code))
 		{
 			fs_t *fs;
 			shader_add_source(name2, gbuffer, str_len(gbuffer));
-			shader_add_source(q_name2, query, str_len(query));
-			shader_add_source(d_name2, depth, str_len(depth));
-			shader_add_source(s_name2, select, str_len(select));
+			shader_add_source(q_name2, query_mips, str_len(query_mips));
+			shader_add_source(sm_name2, shadow_map, str_len(shadow_map));
+			shader_add_source(s_name2, select_map, str_len(select_map));
 
 			str_free(type->src);
 			type->src = gbuffer;
@@ -1377,10 +1419,10 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 			fs = fs_new("candle:query_mips");
 			fs_update_variation(fs, id);
 
-			fs = fs_new("candle:depth");
+			fs = fs_new("candle:shadow_map");
 			fs_update_variation(fs, id);
 
-			fs = fs_new("candle:select");
+			fs = fs_new("candle:select_map");
 			fs_update_variation(fs, id);
 		}
 		else
@@ -1394,9 +1436,10 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		fs_t *fs;
 
 		shader_add_source(name2, gbuffer, str_len(gbuffer));
-		shader_add_source(q_name2, query, str_len(query));
-		shader_add_source(d_name2, depth, str_len(depth));
-		shader_add_source(s_name2, select, str_len(select));
+		shader_add_source(q_name2, query_mips, str_len(query_mips));
+		shader_add_source(sm_name2, shadow_map, str_len(shadow_map));
+		shader_add_source(s_name2, select_map, str_len(select_map));
+		shader_add_source(c_name2, caustics, str_len(caustics));
 
 		type->src = gbuffer;
 		fs = fs_new("candle:gbuffer");
@@ -1405,22 +1448,27 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		fs = fs_new("candle:query_mips");
 		fs_push_variation(fs, q_name);
 
-		fs = fs_new("candle:depth");
-		fs_push_variation(fs, d_name);
+		fs = fs_new("candle:shadow_map");
+		fs_push_variation(fs, sm_name);
 
-		fs = fs_new("candle:select");
+		fs = fs_new("candle:select_map");
 		fs_push_variation(fs, s_name);
+
+		fs = fs_new("candle:caustics");
+		fs_push_variation(fs, c_name);
 	}
 
-	str_free(query);
+	str_free(c_name);
+	str_free(c_name2);
+	str_free(query_mips);
 	str_free(q_name);
 	str_free(q_name2);
-	str_free(select);
+	str_free(select_map);
 	str_free(s_name);
 	str_free(s_name2);
-	str_free(depth);
-	str_free(d_name);
-	str_free(d_name2);
+	str_free(shadow_map);
+	str_free(sm_name);
+	str_free(sm_name2);
 	str_free(t_name);
 	str_free(t_name2);
 	str_free(name);

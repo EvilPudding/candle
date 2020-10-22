@@ -702,8 +702,9 @@ fs_t *fs_new(const char *filename)
 
 	if (   strncmp(filename, "candle:gbuffer", strlen("candle:gbuffer"))
 	    && strncmp(filename, "candle:query_mips", strlen("candle:query_mips"))
-	    && strncmp(filename, "candle:select", strlen("candle:select"))
-	    && strncmp(filename, "candle:depth", strlen("candle:depth")))
+	    && strncmp(filename, "candle:select_map", strlen("candle:select_map"))
+	    && strncmp(filename, "candle:shadow_map", strlen("candle:shadow_map"))
+	    && strncmp(filename, "candle:caustics", strlen("candle:caustics")))
 	{
 		fs_push_variation(self, filename);
 	}

@@ -189,6 +189,50 @@ void shaders_candle_ssao()
 }
 
 static
+void shaders_candle_color()
+{
+	char *shader_buffer = str_new(64);
+
+	str_cat(&shader_buffer,
+		"layout (location = 0) out vec4 FragColor;\n"
+		"uniform vec4 color;\n"
+		"void main(void)\n"
+		"{\n"
+		"	FragColor = color;\n"
+		"}\n");
+
+	shader_add_source("candle:color.glsl", shader_buffer,
+	                  str_len(shader_buffer));
+	str_free(shader_buffer);
+}
+
+static
+void shaders_candle_copyf()
+{
+	char *shader_buffer = str_new(64);
+
+	str_cat(&shader_buffer,
+		"layout (location = 0) out vec4 FragColor;\n"
+		"BUFFER {\n"
+		"	sampler2D color;\n"
+		"} buf;\n"
+		"uniform float level;\n"
+		"uniform vec2 size;\n"
+		"uniform vec2 screen_size;\n"
+		"void main(void)\n"
+		"{\n"
+		"	vec2 tc = (gl_FragCoord.xy - pos) / size;\n"
+		"	vec4 tex = textureLod(buf.color, tc, level);\n"
+		"	if(tex.a == 0.0) discard;\n"
+		"	FragColor = vec4(tc, 0.0, 1.0);\n"
+		"}\n");
+
+	shader_add_source("candle:copyf.glsl", shader_buffer,
+	                  str_len(shader_buffer));
+	str_free(shader_buffer);
+}
+
+static
 void shaders_candle_copy()
 {
 	char *shader_buffer = str_new(64);
@@ -199,9 +243,11 @@ void shaders_candle_copy()
 		"	sampler2D color;\n"
 		"} buf;\n"
 		"uniform int level;\n"
+		"uniform ivec2 pos;\n"
 		"void main(void)\n"
 		"{\n"
-		"	vec4 tex = texelFetch(buf.color, ivec2(gl_FragCoord.xy), level);\n"
+		"	ivec2 tc = ivec2(gl_FragCoord.xy) - pos;\n"
+		"	vec4 tex = texelFetch(buf.color, tc, level);\n"
 		"	if(tex.a == 0.0) discard;\n"
 		"	FragColor = tex;\n"
 		"}\n");
@@ -289,7 +335,8 @@ void shaders_candle_upsample()
 		"void main(void)\n"
 		"{\n"
 		"	vec4 tex;\n"
-		"	tex = textureLod(buf.color, pixel_pos(), float(level));\n"
+		"	tex = textureLod(buf.color, texcoord, float(level));\n"
+		"	tex.a = 1.0;\n"
 		"	tex.a = alpha;\n"
 		"	FragColor = tex;\n"
 		"}\n");
@@ -519,8 +566,9 @@ void shaders_candle_uniforms()
 		/* layout(location = 25) */ "uniform bool receive_shadows;\n"
 		/* layout(location = 26) */ "uniform sampler2D g_cache;\n"
 		/* layout(location = 27) */ "uniform sampler2D g_indir;\n"
-		/* layout(location = 28) */ "uniform sampler2D g_probes;\n"
-		/* layout(location = 29) */ "uniform sampler2D g_framebuffer;\n"
+		/* layout(location = 28) */ "uniform sampler2D g_probes_depth;\n"
+		/* layout(location = 29) */ "uniform sampler2D g_probes;\n"
+		/* layout(location = 30) */ "uniform sampler2D g_framebuffer;\n"
 		"#define light(prop) (scene.lights[matid].prop)\n"
 		"#define camera(prop) (renderer.camera.prop)\n"
 		"#endif\n");
@@ -724,9 +772,21 @@ void shaders_candle_common()
 		"	uint cube_layer;\n"
 		"	uvec2 tc = uvec2(floor(sampleCube(shadowCoord, cube_layer, z) * float(size)));\n"
 		"	uvec2 pos = uvec2(cube_layer % 2u, cube_layer / 2u) * size;\n"
-		"	vec4 distance = texelFetch(g_probes, ivec2(tc + pos + light(pos)), 0);\n"
-		"	return linearize(decode_float_rgba(distance));\n"
+		"	float distance = texelFetch(g_probes_depth, ivec2(tc + pos + light(pos)), 0).r;\n"
+		"	return linearize(distance);\n"
 		"}\n");
+
+	str_cat(&shader_buffer,
+		"vec3 lookup_probe(vec3 shadowCoord, out float z)\n"
+		"{\n"
+		"	uint size = 1024u / uint(pow(2.0, float(light(lod))));\n"
+		"	uint cube_layer;\n"
+		"	uvec2 tc = uvec2(floor(sampleCube(shadowCoord, cube_layer, z) * float(size)));\n"
+		"	uvec2 pos = uvec2(cube_layer % 2u, cube_layer / 2u) * size;\n"
+		"	vec3 value = texelFetch(g_probes, ivec2(tc + pos + light(pos)), 0).rgb;\n"
+		"	return value;\n"
+		"}\n");
+
 
 	str_cat(&shader_buffer,
 		"float lookup(vec3 coord)\n"
@@ -881,6 +941,53 @@ void shaders_candle_common()
 		"	projectedCoord.xy      /= projectedCoord.w;\n"
 		"	projectedCoord.xy       = projectedCoord.xy * 0.5 + 0.5;\n"
 		"	return projectedCoord.xy;\n"
+		"}\n");
+
+	str_cat(&shader_buffer,
+		"vec2 BinarySearchCube(vec3 dir, inout vec3 hitCoord)\n"
+		"{\n"
+		"	float depth;\n"
+		"	vec2 pc;\n"
+		"	dir = -dir * 0.5;\n"
+		"	float search_dir = -1.0;\n"
+		"	hitCoord += dir;\n"
+		"	for(uint i = 0u; i < 8u; i++)\n"
+		"	{\n"
+		"		float z;\n"
+		"		float pd = lookup_single(hitCoord, z);\n"
+		"		float dist = pd - z;\n");
+	str_cat(&shader_buffer,
+		"		dir = dir * 0.5;\n"
+		"		if (sign(dist) != sign(search_dir))\n"
+		"		{\n"
+		"			dir = -dir;\n"
+		"			search_dir = -search_dir;\n"
+		"		}\n"
+		"		hitCoord += dir;\n"
+		"	}\n"
+		"	uint cube_layer;\n"
+		"	float z;\n"
+		"	return sampleCube(hitCoord, cube_layer, z);\n"
+		"}\n");
+
+	str_cat(&shader_buffer,
+		"vec2 RayCastCube(vec3 dir, inout vec3 hitCoord)\n"
+		"{\n"
+		"	dir *= 0.1;\n"
+		"	float step = 0.1;\n"
+		"	for(uint i = 0u; i < 16u; ++i) {\n"
+		"		hitCoord += dir;\n"
+		"		float z;\n"
+		"		float pd = lookup_single(hitCoord, z);\n"
+		"		float dist = pd - z;\n"
+		"		if(dist < 0.0)\n"
+		"		{\n"
+		"			return BinarySearchCube(dir, hitCoord);\n"
+		"		}\n"
+		"		dir *= 1.3;\n"
+		"		step *= 1.3;\n"
+		"	}\n"
+		"	return vec2(-1.0);\n"
 		"}\n");
 
 	str_cat(&shader_buffer,
@@ -1831,10 +1938,13 @@ void shaders_candle_pbr()
 		"		float sd = 0.0;\n"
 		"		if(dif.a >= 1.0)\n"
 		"		{\n"
+		"			float z;\n"
 		"			sd = get_shadow(w_light_dir, point_to_light, dist_to_eye, depth);\n"
+		"			vec3 prob = lookup_probe(-w_light_dir, z);\n"
+		"			sd -= prob.x * 30.0;\n"
 		"		}\n");
 	str_cat(&shader_buffer,
-		"		if(sd < 0.95)\n"
+		/* "		if(sd < 0.95)\n" */
 		"		{\n"
 		"			vec3 eye_dir = normalize(-c_pos);\n"
 		"			float l = point_to_light / light(radius);\n"
@@ -1859,6 +1969,7 @@ void shaders_candle()
 	shaders_candle_uniforms();
 	shaders_candle_final();
 	shaders_candle_ssao();
+	shaders_candle_color();
 	shaders_candle_copy();
 	shaders_candle_copy_gbuffer();
 	shaders_candle_downsample();
@@ -1868,7 +1979,6 @@ void shaders_candle()
 	shaders_candle_framebuffer_draw();
 	shaders_candle_quad();
 	shaders_candle_motion();
-	shaders_candle_uniforms();
 	shaders_candle_common();
 	shaders_candle_volum();
 	shaders_candle_gaussian();

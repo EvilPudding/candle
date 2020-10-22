@@ -131,9 +131,15 @@ shader_t *vs_bind(vs_t *vs, uint32_t fs_variation)
 	glActiveTexture(GL_TEXTURE0 + 4);
 	texture_bind(g_indir, 0);
 
-	loc = shader_cached_uniform(rd->shader, ref("g_probes"));
+	loc = shader_cached_uniform(rd->shader, ref("g_probes_depth"));
 	glUniform1i(loc, 5);
 	glActiveTexture(GL_TEXTURE0 + 5);
+	texture_bind(g_probe_cache, 0);
+	glerr();
+
+	loc = shader_cached_uniform(rd->shader, ref("g_probes"));
+	glUniform1i(loc, 6);
+	glActiveTexture(GL_TEXTURE0 + 6);
 	texture_bind(g_probe_cache, 1);
 	glerr();
 

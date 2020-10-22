@@ -20,6 +20,7 @@ typedef struct
 	probe_tile_t tile;
 	uint32_t lod;
 	uint32_t page;
+	bool_t caustics;
 
 	drawable_t draw;
 	drawable_t widget;
@@ -27,6 +28,7 @@ typedef struct
 	uint32_t visible;
 	uint32_t ambient_group;
 	uint32_t light_group;
+	uint32_t caustics_group;
 	uint32_t modified;
 	uint32_t visible_group;
 	uint32_t shadow_cooldown;
@@ -39,7 +41,7 @@ c_light_t *c_light_new(float radius, vec4_t color);
 void c_light_visible(c_light_t *self, uint32_t visible);
 void c_light_set_lod(c_light_t *self, uint32_t lod);
 void c_light_set_groups(c_light_t *self, uint32_t visible_group,
-		uint32_t ambient_group, uint32_t light_group);
+		uint32_t ambient_group, uint32_t light_group, uint32_t caustics_group);
 void c_light_set_shadow_cooldown(c_light_t *self, uint32_t cooldown);
 
 #endif /* !LIGHT_H */

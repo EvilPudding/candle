@@ -19,20 +19,15 @@ extern mesh_t *g_quad_mesh;
 static int g_lights_num;
 static mat_t *g_light_widget;
 
+static mesh_t *g_histogram_mesh;
+texture_t *g_histogram_buffer;
+texture_t *g_histogram_accum;
+static drawable_t g_histogram;
+
 static int c_light_position_changed(c_light_t *self);
 
-void c_light_init(c_light_t *self)
+static void c_light_drawable_init(c_light_t *self)
 {
-	self->color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-	self->radius = 5.0f;
-	self->volumetric_intensity = 0.0f;
-	self->visible = 1;
-	self->shadow_cooldown = 1;
-
-	self->ambient_group = ref("ambient");
-	self->light_group = ref("light");
-	self->visible_group = ref("shadow");
-
 	if(!g_light)
 	{
 		g_light = mesh_new();
@@ -48,22 +43,71 @@ void c_light_init(c_light_t *self)
 		      texture_from_memory("bulb", (const char *)bulb_png, bulb_png_len));
 		mat1f(g_light_widget, ref("albedo.blend"), 1.0f);
 		mat4f(g_light_widget, ref("emissive.color"), vec4(1.0f, 1.0f, 1.0f, 1.0f));
+
+		{
+			const uint32_t histogram_resolution = 256;
+			g_histogram_mesh = mesh_new();
+			mesh_lock(g_histogram_mesh);
+			mesh_point_grid(g_histogram_mesh,
+			                vec3(0.0, 0.0, 0.0),
+			                vec3(histogram_resolution, histogram_resolution, 0.0),
+			                uvec3(histogram_resolution, histogram_resolution, 1));
+			mesh_unlock(g_histogram_mesh);
+			g_histogram_buffer = texture_new_2D(histogram_resolution,
+												histogram_resolution,
+			                                    TEX_INTERPOLATE, 2,
+				buffer_new("depth", true, -1),
+				buffer_new("color", true, 4));
+			g_histogram_accum = texture_new_2D(histogram_resolution / 2,
+			                                   histogram_resolution / 2,
+			                                   TEX_INTERPOLATE, 1,
+				buffer_new("color", true, 4));
+
+			drawable_init(&g_histogram, ref("histogram"));
+			drawable_set_mesh(&g_histogram, g_histogram_mesh);
+			drawable_set_texture(&g_histogram, g_histogram_buffer);
+			drawable_set_vs(&g_histogram,
+							vs_new("histogram", false, 1, vertex_modifier_new(
+				"{\n"
+				"	vec2 target = texelFetch(g_framebuffer, ivec2(P.xy), 0).xy;\n"
+				"	pos = vec4((target - 0.5) * 2.0, 0.0, 1.0);\n"
+				"}\n"
+			)));
+		}
 	}
+	if (!self->widget.mesh)
+	{
+		drawable_init(&self->widget, ref("widget"));
+		drawable_add_group(&self->widget, ref("selectable"));
+		drawable_set_vs(&self->widget, sprite_vs());
+		drawable_set_mat(&self->widget, g_light_widget);
+		drawable_set_entity(&self->widget, c_entity(self));
+		drawable_set_xray(&self->widget, true);
+		drawable_set_mesh(&self->widget, g_quad_mesh);
+
+		drawable_init(&self->draw, self->light_group);
+		drawable_set_vs(&self->draw, model_vs());
+		drawable_set_mesh(&self->draw, g_light);
+		drawable_set_matid(&self->draw, self->id);
+		drawable_set_entity(&self->draw, c_entity(self));
+	}
+}
+
+void c_light_init(c_light_t *self)
+{
+	self->color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+	self->radius = 5.0f;
+	self->volumetric_intensity = 0.0f;
+	self->visible = 1;
+	self->shadow_cooldown = 1;
+	self->caustics = true;
+
+	self->ambient_group = ref("ambient");
+	self->light_group = ref("light");
+	self->visible_group = ref("shadow");
+	self->caustics_group = ref("transparent");
+
 	self->id = g_lights_num++;
-
-	drawable_init(&self->widget, ref("widget"));
-	drawable_add_group(&self->widget, ref("selectable"));
-	drawable_set_vs(&self->widget, sprite_vs());
-	drawable_set_mat(&self->widget, g_light_widget);
-	drawable_set_entity(&self->widget, c_entity(self));
-	drawable_set_xray(&self->widget, true);
-	drawable_set_mesh(&self->widget, g_quad_mesh);
-
-	drawable_init(&self->draw, self->light_group);
-	drawable_set_vs(&self->draw, model_vs());
-	drawable_set_mesh(&self->draw, g_light);
-	drawable_set_matid(&self->draw, self->id);
-	drawable_set_entity(&self->draw, c_entity(self));
 
 	c_light_position_changed(self);
 	world_changed();
@@ -95,13 +139,6 @@ static void c_light_create_renderer(c_light_t *self)
 
 	output = g_probe_cache;
 
-	renderer_add_pass(renderer, "depth", "candle:depth", self->visible_group,
-			CULL_DISABLE, output, output, 0, ~0, 3,
-			opt_clear_depth(1.0f, NULL),
-			opt_cam(~0, NULL),
-			opt_clear_color(vec4(0.343750, 0.996094, 0.996094, 0.000000), NULL)
-	);
-
 	p1[0] = vec3(1.0, 0.0, 0.0);
 	p1[1] = vec3(-1.0, 0.0, 0.0);
 	p1[2] = vec3(0.0, 1.0, 0.0);
@@ -127,6 +164,47 @@ static void c_light_create_renderer(c_light_t *self)
 	renderer->width = self->tile.size.x;
 	renderer->height = self->tile.size.y;
 
+	renderer_add_pass(renderer, "depth", "candle:shadow_map", self->visible_group,
+		CULL_DISABLE, output, output, 0, ~0, 2,
+		opt_clear_depth(1.0f, NULL),
+		opt_cam(~0, NULL)
+	);
+	if (self->caustics)
+	{
+		uint32_t i;
+		for (i = 0; i < 6; ++i)
+		{
+		renderer_add_pass(renderer, "caustics", "candle:caustics",
+			self->caustics_group, IGNORE_CAM_VIEWPORT,
+			g_histogram_buffer, g_histogram_buffer, 0, ~0, 3,
+			opt_clear_depth(1.0f, NULL),
+			opt_clear_color(vec4(0.0, 0.0, 0.0, 1.0), NULL),
+			opt_cam(i, NULL)
+		);
+		renderer_add_pass(renderer, "caustics_accum0", "candle:color",
+			ref("histogram"), IGNORE_CAM_VIEWPORT | ADD,
+			g_histogram_accum, NULL, 0, ~0, 3,
+			opt_cam(i, NULL),
+			opt_vec4("color", vec4(0.01, 0.01, 0.01, 1.0), NULL),
+			opt_clear_color(vec4(0.0, 0.0, 0.0, 1.0), NULL)
+		);
+		renderer_add_pass(renderer, "caustics_copy", "candle:upsample",
+			ref("quad"), DEPTH_DISABLE,
+			output, NULL, 0, ~0, 4,
+			opt_tex("buf", g_histogram_accum, NULL),
+			opt_int("level", 0, NULL),
+			opt_num("alpha", 1.0, NULL),
+			opt_cam(i, NULL)
+		);
+		}
+
+		renderer_add_pass(renderer, "depth", "candle:shadow_map",
+			self->caustics_group, CULL_DISABLE, output, output, 0, ~0, 1,
+			opt_cam(~0, NULL)
+		);
+	}
+
+
 	renderer->output = output;
 
 	/* renderer_set_output(renderer, output); */
@@ -140,14 +218,19 @@ void c_light_set_shadow_cooldown(c_light_t *self, uint32_t cooldown)
 }
 
 void c_light_set_groups(c_light_t *self, uint32_t visible_group,
-		uint32_t ambient_group, uint32_t light_group)
+		uint32_t ambient_group, uint32_t light_group, uint32_t caustics_group)
 {
 	self->visible_group = visible_group;
-	if(!self->renderer)
+	self->caustics_group = caustics_group;
+	if (!self->renderer)
 	{
 		c_light_create_renderer(self);
 	}
 	self->renderer->passes[0].draw_signal = visible_group;
+	if (self->caustics)
+	{
+		self->renderer->passes[1].draw_signal = caustics_group;
+	}
 
 	self->ambient_group = ambient_group;
 	self->light_group = light_group;
@@ -178,6 +261,7 @@ static int c_light_position_changed(c_light_t *self)
 static int c_light_pre_draw(c_light_t *self)
 {
 	/* if(!self->modified) return CONTINUE; */
+	c_light_drawable_init(self);
 	if(self->radius == -1)
 	{
 		drawable_set_group(&self->draw, self->ambient_group);
