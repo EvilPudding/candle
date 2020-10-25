@@ -124,7 +124,7 @@ void c_light_init(c_light_t *self)
 	self->volumetric_intensity = 0.0f;
 	self->visible = 1;
 	self->shadow_cooldown = 1;
-	self->caustics = true;
+	self->caustics = false;
 
 	self->ambient_group = ref("ambient");
 	self->light_group = ref("light");
