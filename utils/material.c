@@ -1104,7 +1104,8 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		"#elif defined(SHADOW_PASS)\n"
 		"layout (location = 0) out vec4 Color;\n"
 		"#elif defined(CAUSTICS_PASS)\n"
-		"layout (location = 0) out vec4 Color;\n"
+		"layout (location = 0) out vec2 Pos;\n"
+		"layout (location = 1) out vec4 Color;\n"
 	);
 	if (output_type == ref("transparent"))
 	{
@@ -1289,7 +1290,8 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 			"		vec3 dir = refract(normalize(pos), norm,\n"
 			"		                   1.0 / pbr_in.refraction);\n"
 			"		vec2 coord = RayCastCube(dir, pos);\n"
-			"		Color = vec4(coord, 0.0, 1.0);\n"
+			"		Pos = vec2(coord);\n"
+			"		Color = pbr_in.tint;\n"
 			"	}\n"
 		        );
 	}
@@ -1322,9 +1324,9 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 			"	if (coord.x >= 0.0)\n"
 			"	{\n"
 			"		vec3 refracted = textureLod(refr.color, coord.xy, mip).rgb;\n"
-			"		refracted -= pbr_in.tint.rgb * pbr_in.tint.a;\n"
+			/* "		refracted = mix(refracted, pbr_in.absorb.rgb, pbr_in.tint.a);\n" */
 			"		refracted = clamp(refracted, 0.0, 1.0);\n"
-			"		pbr_in.emissive.rgb = refracted;\n"
+			"		pbr_in.emissive.rgb = refracted * (1.0 - pbr_in.tint.a);\n"
 			"	}\n"
 			"\n");
 	}
@@ -1344,7 +1346,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	if (output_type == ref("transparent"))
 	{
 		str_cat(&code,
-			"	MR.r = 0.0;\n"
+			"	MR.r = 0.3;\n"
 			"	MR.g = pbr_in.roughness;\n"
 			"	Alb = vec4(pbr_in.tint.rgb * pbr_in.tint.a, receive_shadows ? 1.0 : 0.5);\n"
 			"	Emi = pbr_in.emissive;\n");

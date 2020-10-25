@@ -31,9 +31,10 @@ enum pass_options
 	ADD                 = 1 << 7,
 	MUL                 = 1 << 8,
 	BLEND               = 1 << 9,
-	GEN_MIP             = 1 << 10,
-	TRACK_BRIGHT        = 1 << 11,
-	IGNORE_CAM_VIEWPORT = 1 << 12
+	ADD_NO_ALPHA        = 1 << 10,
+	GEN_MIP             = 1 << 11,
+	TRACK_BRIGHT        = 1 << 12,
+	IGNORE_CAM_VIEWPORT = 1 << 13
 };
 
 enum bind_type
@@ -150,6 +151,7 @@ typedef struct pass
 	char shader_name[32];
 	uint32_t hash;
 	bool_t additive;
+	bool_t additive_no_alpha;
 	bool_t multiply;
 	bool_t blend;
 	int32_t depth_update;

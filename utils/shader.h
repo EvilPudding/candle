@@ -8,6 +8,7 @@
 typedef struct
 {
 	uint32_t type;
+	bool_t header;
 	char *code;
 } vertex_modifier_t;
 
@@ -88,6 +89,7 @@ void fs_push_variation(fs_t *self, const char *filename);
 void fs_update_variation(fs_t *self, uint32_t fs_variation);
 vertex_modifier_t vertex_modifier_new(const char *code);
 vertex_modifier_t geometry_modifier_new(const char *code);
+vertex_modifier_t vertex_header_new(const char *code);
 
 shader_t *shader_new(fs_t *fs, uint32_t fs_variation, vs_t *vs);
 #ifdef MESH4

@@ -76,7 +76,7 @@ void shaders_reg()
 	"flat out uvec2 $poly_id;\n"
 	"flat out vec3 $obj_pos;\n"
 	"flat out mat4 $model;\n"
-	"out vec3 $poly_color;\n"
+	"out vec4 $poly_color;\n"
 	"out vec3 $vertex_position;\n"
 	"out vec3 $vertex_world_position;\n"
 	"out vec2 $texcoord;\n"
@@ -89,7 +89,7 @@ void shaders_reg()
 	"	vec4 pos = vec4(P.xyz, 1.0);\n"
 	"	$obj_pos = (M * vec4(0.0, 0.0, 0.0, 1.0)).xyz;\n"
 	"	$model = M;\n"
-	"	$poly_color = COL;\n"
+	"	$poly_color = vec4(COL, 1.0);\n"
 	"	$matid = uint(PROPS.x);\n"
 	"	$poly_id = uvec2(ID);\n"
 	"	$id = uvec2(PROPS.zw);\n"
@@ -112,7 +112,7 @@ void shaders_reg()
 	"flat in uvec2 $poly_id[1];\n"
 	"flat in vec3 $obj_pos[1];\n"
 	"flat in mat4 $model[1];\n"
-	"in vec3 $poly_color[1];\n"
+	"in vec4 $poly_color[1];\n"
 	"in vec3 $vertex_position[1];\n"
 	"in vec3 $vertex_world_position[1];\n"
 	"in vec2 $texcoord[1];\n"
@@ -126,7 +126,7 @@ void shaders_reg()
 	"flat out uvec2 poly_id;\n"
 	"flat out vec3 obj_pos;\n"
 	"flat out mat4 model;\n"
-	"out vec3 poly_color;\n"
+	"out vec4 poly_color;\n"
 	"out vec3 vertex_position;\n"
 	"out vec3 vertex_world_position;\n"
 	"out vec2 texcoord;\n"
@@ -140,14 +140,26 @@ vertex_modifier_t vertex_modifier_new(const char *code)
 	vertex_modifier_t self;
 	self.type = 0;
 	self.code = str_dup(code);
+	self.header = false;
 	return self;
 }
+
+vertex_modifier_t vertex_header_new(const char *code)
+{
+	vertex_modifier_t self;
+	self.type = 0;
+	self.header = true;
+	self.code = str_dup(code);
+	return self;
+}
+
 
 vertex_modifier_t geometry_modifier_new(const char *code)
 {
 	vertex_modifier_t self;
 	self.type = 1;
 	self.code = str_dup(code);
+	self.header = false;
 	return self;
 }
 
@@ -222,6 +234,7 @@ vs_t *vs_new(const char *name, bool_t has_skin, uint32_t num_modifiers, ...)
 	va_list va;
 	uint32_t i = g_vs_num++;
 	vs_t *self = &g_vs[i];
+	uint32_t num_headers = 0;
 	self->index = i;
 	strcpy(self->name, name);
 	self->has_skin = has_skin;
@@ -235,7 +248,13 @@ vs_t *vs_new(const char *name, bool_t has_skin, uint32_t num_modifiers, ...)
 	for(i = 0; i < num_modifiers; i++)
 	{
 		vertex_modifier_t vst = va_arg(va, vertex_modifier_t);
-		if(vst.type == 1)
+		if(vst.header)
+		{
+			self->vmodifiers[0] = vst;
+			self->vmodifier_num++;
+			num_headers++;
+		}
+		else if(vst.type == 1)
 		{
 			/* Skip over the first geometry modifier */
 			if(self->gmodifier_num == 0) self->gmodifier_num = 1;
@@ -249,7 +268,7 @@ vs_t *vs_new(const char *name, bool_t has_skin, uint32_t num_modifiers, ...)
 	}
 	va_end(va);
 
-	self->vmodifiers[0] = vertex_modifier_new(default_vs);
+	self->vmodifiers[num_headers] = vertex_modifier_new(default_vs);
 
 	if(self->gmodifier_num > 0)
 	{
@@ -410,7 +429,7 @@ static char *string_preprocess(const char *src, bool_t len, const char *filename
 		{
 			lsize += strlen(skin_str);
 		}
-		for(i = 0; i < sizeof(defs)/sizeof(*defs); i++)
+		for (i = 0; i < sizeof(defs)/sizeof(*defs); i++)
 		{
 			lsize += strlen(defs[i]);
 		}
@@ -426,7 +445,7 @@ static char *string_preprocess(const char *src, bool_t len, const char *filename
 		{
 			strcat(buffer, skin_str);
 		}
-		for(i = 0; i < sizeof(defs)/sizeof(*defs); i++)
+		for (i = 0; i < sizeof(defs)/sizeof(*defs); i++)
 		{
 			strcat(buffer, defs[i]);
 		}

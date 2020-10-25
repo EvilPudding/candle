@@ -658,13 +658,15 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	renderer_add_pass(self, "ambient_light_pass", "candle:pbr", ref("ambient"),
-			ADD, light, NULL, 0, ~0, 2,
+			ADD, light, NULL, 0, ~0, 3,
 			opt_clear_color(Z4, NULL),
+			opt_int("opaque_pass", true, NULL),
 			opt_tex("gbuffer", gbuffer, NULL)
 	);
 
 	renderer_add_pass(self, "render_pass", "candle:pbr", ref("light"),
-			ADD, light, NULL, 0, ~0, 1,
+			ADD, light, NULL, 0, ~0, 2,
+			opt_int("opaque_pass", true, NULL),
 			opt_tex("gbuffer", gbuffer, NULL)
 	);
 
@@ -704,7 +706,8 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	renderer_add_pass(self, "render_pass_2", "candle:pbr", ref("light"),
-			ADD, light, NULL, 0, ~0, 2,
+			ADD, light, NULL, 0, ~0, 3,
+			opt_int("opaque_pass", false, NULL),
 			opt_clear_color(Z4, NULL),
 			opt_tex("gbuffer", transp_gbuffer, NULL)
 	);
@@ -882,6 +885,14 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 	{
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE); glerr();
+	}
+	if(pass->additive_no_alpha)
+	{
+		glEnable(GL_BLEND);
+		/* glBlendFunc(GL_SRC_COLOR, GL_ONE); glerr(); */
+		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE,
+		                    GL_ONE,
+		                    GL_ZERO);
 	}
 	if(pass->multiply)
 	{
@@ -1401,6 +1412,7 @@ void renderer_add_pass(
 
 	pass->draw_signal = draw_signal;
 	pass->additive = !!(flags & ADD);
+	pass->additive_no_alpha = !!(flags & ADD_NO_ALPHA);
 	pass->multiply = !!(flags & MUL);
 	pass->blend = !!(flags & BLEND);
 	pass->cull = !(flags & CULL_DISABLE);

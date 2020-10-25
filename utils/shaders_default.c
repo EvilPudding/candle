@@ -195,10 +195,11 @@ void shaders_candle_color()
 
 	str_cat(&shader_buffer,
 		"layout (location = 0) out vec4 FragColor;\n"
-		"uniform vec4 color;\n"
+		"in vec4 poly_color;\n"
 		"void main(void)\n"
 		"{\n"
-		"	FragColor = color;\n"
+		"	FragColor = poly_color;\n"
+		/* "	FragColor = vec4(0.5, 0.5, 0.5, 1.0);\n" */
 		"}\n");
 
 	shader_add_source("candle:color.glsl", shader_buffer,
@@ -336,8 +337,8 @@ void shaders_candle_upsample()
 		"{\n"
 		"	vec4 tex;\n"
 		"	tex = textureLod(buf.color, texcoord, float(level));\n"
-		"	tex.a = 1.0;\n"
-		"	tex.a = alpha;\n"
+		/* "	tex.a = 1.0;\n" */
+		/* "	tex.a = alpha;\n" */
 		"	FragColor = tex;\n"
 		"}\n");
 
@@ -597,7 +598,7 @@ void shaders_candle_common()
 		"flat in vec3 obj_pos;\n"
 		"flat in mat4 model;\n"
 		"\n"
-		"in vec3 poly_color;\n"
+		"in vec4 poly_color;\n"
 		"in vec3 vertex_position;\n"
 		"in vec3 vertex_tangent;\n"
 		"in vec3 vertex_normal;\n"
@@ -777,14 +778,13 @@ void shaders_candle_common()
 		"}\n");
 
 	str_cat(&shader_buffer,
-		"vec3 lookup_probe(vec3 shadowCoord, out float z)\n"
+		"vec4 lookup_probe(vec3 shadowCoord, out float z)\n"
 		"{\n"
 		"	uint size = 1024u / uint(pow(2.0, float(light(lod))));\n"
 		"	uint cube_layer;\n"
 		"	uvec2 tc = uvec2(floor(sampleCube(shadowCoord, cube_layer, z) * float(size)));\n"
 		"	uvec2 pos = uvec2(cube_layer % 2u, cube_layer / 2u) * size;\n"
-		"	vec3 value = texelFetch(g_probes, ivec2(tc + pos + light(pos)), 0).rgb;\n"
-		"	return value;\n"
+		"	return textureLod(g_probes, vec2(tc + pos + light(pos)) / vec2(1024.0 * 4.0, 1024.0 * 6.0), 0.0);\n"
 		"}\n");
 
 
@@ -1679,7 +1679,7 @@ void shaders_candle_marching()
 		");\n");
 
 	str_cat(&shader_buffer,
-		"vec3 get_cubeColor(vec3 p)\n"
+		"vec4 get_cubeColor(vec3 p)\n"
 		"{\n"
 		"	float t = scene.time * 3.;\n"
 		"	float r0 = abs(cos(t * .3)) * 2. + .6;\n"
@@ -1691,7 +1691,7 @@ void shaders_candle_marching()
 		"	float val = 1. / (dot(p - origin, p - origin) + 1.);\n"
 		"	float val2 = .6 / (dot(p - origin - p1, p - origin - p1) + 0.7);\n"
 		"	float val3 = .5 / (dot(p - origin - p2, p - origin - p2) + 0.9);\n"
-		"	return vec3(val, val2, val3);\n"
+		"	return vec4(val, val2, val3, 1.0);\n"
 		"}\n");
 
 	str_cat(&shader_buffer,
@@ -1701,7 +1701,7 @@ void shaders_candle_marching()
 		"}\n"
 		"float get_cubeVal(vec3 p)\n"
 		"{\n"
-		"	vec3 color = get_cubeColor(p);\n"
+		"	vec4 color = get_cubeColor(p);\n"
 		"	return color.x + color.y + color.z;\n"
 		"}\n");
 
@@ -1902,7 +1902,8 @@ void shaders_candle_pbr()
 		"	sampler2D albedo;\n"
 		"	sampler2D nn;\n"
 		"	sampler2D mr;\n"
-		"} gbuffer;\n");
+		"} gbuffer;\n"
+		"uniform bool opaque_pass;\n");
 
 	str_cat(&shader_buffer,
 		"void main(void)\n"
@@ -1933,15 +1934,21 @@ void shaders_candle_pbr()
 		"		vec3 c_light = (camera(view) * vec4(obj_pos, 1.0)).xyz;\n"
 		"		vec3 c_light_dir = c_light - c_pos;\n"
 		"		vec3 w_light_dir = obj_pos - w_pos;\n"
+		"		vec3 light_color = light(color);\n"
 		"		float point_to_light = length(c_light_dir);\n");
 	str_cat(&shader_buffer,
 		"		float sd = 0.0;\n"
+		"		vec3 shad = vec3(0.0);\n"
 		"		if(dif.a >= 1.0)\n"
 		"		{\n"
 		"			float z;\n"
 		"			sd = get_shadow(w_light_dir, point_to_light, dist_to_eye, depth);\n"
-		"			vec3 prob = lookup_probe(-w_light_dir, z);\n"
-		"			sd -= prob.x * 30.0;\n"
+		"			shad = vec3(sd);\n"
+		"			if (opaque_pass)\n"
+		"			{\n"
+		"				vec4 prob = lookup_probe(-w_light_dir, z);\n"
+		"				shad -= prob.rgb * 16.0;\n"
+		"			}\n"
 		"		}\n");
 	str_cat(&shader_buffer,
 		/* "		if(sd < 0.95)\n" */
@@ -1951,8 +1958,8 @@ void shaders_candle_pbr()
 		"			float attenuation = ((3.0 - l*3.0) / (1.0+1.3*(pow(l*3.0-0.1, 2.0))))/3.0;\n"
 		"			attenuation = clamp(attenuation, 0.0, 1.0);\n"
 		"			vec4 color_lit = pbr(dif, metalic_roughness,\n"
-		"					light(color) * attenuation, c_light_dir, c_pos, c_nor);\n"
-		"			color += color_lit.xyz * (1.0 - sd);\n"
+		"					light_color * attenuation, c_light_dir, c_pos, c_nor);\n"
+		"			color.rgb += color_lit.rgb * (vec3(1.0) - shad);\n"
 		"		}\n"
 		"	}\n"
 		"\n"
