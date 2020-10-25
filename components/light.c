@@ -94,7 +94,6 @@ static void c_light_drawable_init(c_light_t *self)
 				"	float light = clamp(transm * 2.0 - 1.0, 0.0, 1.0);\n"
 				"	vec3 col = color.rgb * dark + light;\n"
 				"	$poly_color = vec4(col / 64.0, 1.0);\n"
-				/* "	$poly_color = vec4(col / 64.0, 1.0);\n" */
 				"}\n"
 			)));
 		}
