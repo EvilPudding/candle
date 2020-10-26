@@ -1,9 +1,67 @@
 
 #include "../third_party/tinydir/tinydir.h"
 #include "../third_party/miniz.h"
+#include "../third_party/pstdint.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+
+typedef struct pack__file
+{
+	char path[512];
+	uint64_t epoch_modified;
+	enum {
+		PACK__FILE_OLD,
+		PACK__FILE_NEW
+	} type;
+} pack__file_t;
+
+#ifdef _WIN32
+#include <windows.h>
+#include <fileapi.h>
+static
+int file_epoch_modified(pack__file_t *file)
+{
+	HANDLE fh;
+	FILETIME ft;
+	ULARGE_INTEGER ft_int64;
+
+	fh = CreateFile(file->path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+	                NULL, OPEN_EXISTING, 0, NULL);
+
+	if (fh == INVALID_HANDLE_VALUE)
+	{
+		CloseHandle(fh);
+		return 1;
+	}
+
+	if (GetFileTime(fh, NULL, NULL, &ft) == 0)
+	{
+		CloseHandle(fh);
+		return 1;
+	}
+
+	ft_int64.HighPart = ft.dwHighDateTime;
+	ft_int64.LowPart = ft.dwLowDateTime;
+
+	// Convert from hectonanoseconds since 01/01/1601 to seconds since 01/01/1970
+	file->epoch_modified = ft_int64.QuadPart / 10000000ULL - 11644473600ULL;
+
+	CloseHandle(fh);
+	return 0;
+}
+#else
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+static
+uint64_t file_epoch_modified(pack__file_t *file)
+{
+	struct stat st;
+	stat(file->path, &st);
+	file->epoch_modified = st.st_mtime - 1;
+}
+#endif
 
 static
 void path_join(char *path, size_t size, const char *other)
@@ -30,50 +88,87 @@ void path_join(char *path, size_t size, const char *other)
 	}
 }
 
-static
-void add_path(mz_zip_archive *archive, const char *dir_name)
+void file_check(pack__file_t *file, mz_zip_archive *archive,
+                int *rebuild_archive, int *new_files)
 {
-	mz_bool status;
+	mz_uint32 i;
+	if (   mz_zip_get_type(archive) != MZ_ZIP_TYPE_INVALID
+	    && mz_zip_reader_locate_file_v2(archive, file->path + 3, NULL, 0, &i))
+	{
+		mz_zip_archive_file_stat file_stat;
+		if (   mz_zip_reader_file_stat(archive, i, &file_stat)
+		    && !strcmp(file->path + 3, file_stat.m_filename))
+		{
+			if (file->epoch_modified <= file_stat.m_time)
+			{
+				file->type = PACK__FILE_OLD;
+			}
+			else
+			{
+				printf("file is newer %s %ld %ld\n", file->path,
+				       file->epoch_modified, file_stat.m_time);
+				file->type = PACK__FILE_NEW;
+				*rebuild_archive = 1;
+			}
+			return;
+		}
+	}
+	file->type = PACK__FILE_NEW;
+	*new_files = 1;
+}
+
+static
+void add_path(const char *dir_name, pack__file_t **files, int *num_files,
+              mz_zip_archive *archive, int *rebuild_archive, int *new_files)
+{
 	tinydir_dir dir;
 
 	if (tinydir_open(&dir, dir_name) == -1)
 	{
 		FILE *fp = fopen(dir_name, "rb");
 		if (fp != NULL) {
-			status = mz_zip_writer_add_file(archive, dir_name + 3, dir_name,
-											"", 0, MZ_BEST_COMPRESSION);
+			pack__file_t file;
+			strncpy(file.path, dir_name, sizeof(file.path) - 1);
+			file_epoch_modified(&file);
+			file_check(&file, archive, rebuild_archive, new_files);
+
+			(*num_files)++;
+			*files = realloc(*files, (*num_files) * sizeof(**files));
+			(*files)[*num_files - 1] = file;
 			fclose(fp);
+
 			return;
 		}
 	}
 	while (dir.has_next)
 	{
-		tinydir_file file;
+		tinydir_file dfile;
 		char *dot;
-		char path[512];
-		char buffer[64];
+		pack__file_t file;
+		char buffer[256];
 
-		if (tinydir_readfile(&dir, &file) == -1)
+		if (tinydir_readfile(&dir, &dfile) == -1)
 		{
 			perror("Error getting file");
 			goto next;
 		}
 
-		if (file.name[0] == '.')
+		if (dfile.name[0] == '.')
 		{
 			goto next;
 		}
 
-		strncpy(path, dir_name, sizeof(path) - 1);
-		path_join(path, sizeof(path), file.name);
+		strncpy(file.path, dir_name, sizeof(file.path) - 1);
+		path_join(file.path, sizeof(file.path), dfile.name);
 
-		if (file.is_dir)
+		if (dfile.is_dir)
 		{
-			add_path(archive, path);
+			add_path(file.path, files, num_files, archive, rebuild_archive,
+			         new_files);
 			goto next;
 		}
 
-		strcpy(buffer, file.name);
+		strcpy(buffer, dfile.name);
 
 		dot = strrchr(buffer, '.');
 		if (!dot || dot[1] == '\0')
@@ -81,8 +176,12 @@ void add_path(mz_zip_archive *archive, const char *dir_name)
 			goto next;
 		}
 
-		status = mz_zip_writer_add_file(archive, path + 3, path,
-		                                "", 0, MZ_BEST_COMPRESSION);
+		file_epoch_modified(&file);
+		file_check(&file, archive, rebuild_archive, new_files);
+
+		(*num_files)++;
+		*files = realloc(*files, (*num_files) * sizeof(**files));
+		(*files)[*num_files - 1] = file;
 
 next:
 		if (tinydir_next(&dir) == -1)
@@ -91,63 +190,141 @@ next:
 			return;
 		}
 	}
-
 }
-
-/* static */
-/* void hexembed(const char *data, size_t data_size) */
-/* { */
-/*     printf("const unsigned int g_sauces_archive_size = %ld;\n", data_size); */
-/*     printf("const unsigned int g_sauces_archive[] = {\n"); */
-
-/* 	if (data_size > 0) */
-/* 	{ */
-/* 		unsigned int *data_word = (unsigned int*)data; */
-/* 		size_t word_size = data_size / sizeof(*data_word); */
-/* 		unsigned int last_word = 0; */
-/* 		unsigned int remainder = data_size - word_size * 4; */
-/* 		size_t i; */
-/* 		for (i = 0; i < word_size; ++i) */
-/* 		{ */
-/* 			printf("0x%06x,", data_word[i]); */
-/* 		} */
-
-/* 		if (remainder) { */
-/* 			memcpy(&last_word, &data[data_size % 4], remainder); */
-/* 			printf("0x%06x", last_word); */
-/* 		} else { */
-/* 			printf("0x0", last_word); */
-/* 		} */
-/* 	} */
-/*     printf("\n};\n"); */
-/* } */
 
 int main(int argc, char *argv[])
 {
 	int i;
 	mz_bool status;
-	mz_zip_archive archive = {0};
+	mz_zip_archive read_archive = {0};
+	mz_zip_archive write_archive = {0};
 
-	if (   !mz_zip_reader_init_file(&archive, "build/data.zip", 0)
-		|| !mz_zip_writer_init_from_reader(&archive, "build/data.zip"))
-	{
-		if (!mz_zip_writer_init_file(&archive, "build/data.zip", 0))
-		{
-			return 1;
-		}
-	}
+	pack__file_t *files = NULL;
+	int num_files = 0;
+	int rebuild_archive = 0;
+	int new_files = 0;
+
+	mz_zip_reader_init_file(&read_archive, "build/data.zip", 0);
 
 	for (i = 1; i < argc; ++i)
 	{
-		add_path(&archive, argv[i]);
+		add_path(argv[i], &files, &num_files, &read_archive, &rebuild_archive,
+		         &new_files);
 	}
-	if (!mz_zip_writer_finalize_archive(&archive))
+
+	/* NOTE: no delete code meant to only update or append, but not delete */
+	for (i = 0; i < (int)mz_zip_reader_get_num_files(&read_archive); i++)
 	{
-		return 1;
+		mz_zip_archive_file_stat file_stat;
+		int found = 0;
+		if (!mz_zip_reader_file_stat(&read_archive, i, &file_stat))
+		{
+			continue;
+		}
+
+		if (!mz_zip_reader_is_file_a_directory(&read_archive, i))
+		{
+			int j;
+			for (j = 0; j < num_files; ++j)
+			{
+				if (!strcmp(files[j].path + 3, file_stat.m_filename))
+				{
+					found = 1;
+					break;
+				}
+			}
+			if (!found)
+			{
+				rebuild_archive = 1;
+				/* pack__file_t file; */
+				/* strcpy(file.path, "../"); */
+				/* strcat(file.path, file_stat.m_filename); */
+				/* file.type = PACK__FILE_OLD; */
+
+				/* num_files++; */
+				/* files = realloc(files, num_files * sizeof(*files)); */
+				/* files[num_files - 1] = file; */
+			}
+		}
 	}
-	if (!mz_zip_writer_end(&archive))
+
+	if (rebuild_archive)
 	{
-		return 1;
+		if (!mz_zip_writer_init_file(&write_archive, "build/new.zip", 0))
+		{
+			return 1;
+		}
+
+		for (i = 0; i < num_files; ++i)
+		{
+			if (files[i].type == PACK__FILE_NEW)
+			{
+				printf("archiving '%s'\n", files[i].path);
+				if (!mz_zip_writer_add_file(&write_archive, files[i].path + 3,
+				                            files[i].path, "", 0,
+				                            MZ_BEST_COMPRESSION))
+				{
+					return 1;
+				}
+			}
+			else
+			{
+				mz_uint32 j;
+				if (   !mz_zip_reader_locate_file_v2(&read_archive,
+				                                     files[i].path + 3,
+				                                     NULL, 0, &j)
+				    || !mz_zip_writer_add_from_zip_reader(&write_archive,
+				                                          &read_archive, j))
+				{
+					return 1;
+				}
+			}
+		}
+
+		if (   !mz_zip_writer_finalize_archive(&write_archive)
+		    || !mz_zip_writer_end(&write_archive)
+			|| !mz_zip_reader_end(&read_archive))
+		{
+			return 1;
+		}
+
+		remove("build/data.zip");
+		rename("build/new.zip", "build/data.zip");
+	}
+	else if (new_files)
+	{
+		if (mz_zip_writer_init_from_reader(&read_archive, "build/data.zip"))
+		{
+			write_archive = read_archive;
+		}
+		else
+		{
+			mz_zip_reader_end(&read_archive);
+			if (!mz_zip_writer_init_file(&write_archive, "build/data.zip", 0))
+			{
+				return 1;
+			}
+		}
+
+		for (i = 0; i < num_files; ++i)
+		{
+			if (files[i].path[0] != '\0' && files[i].type == PACK__FILE_NEW)
+			{
+				printf("archiving '%s'\n", files[i].path);
+				if (!mz_zip_writer_add_file(&write_archive, files[i].path + 3,
+											files[i].path, "", 0,
+											MZ_BEST_COMPRESSION))
+				{
+					return 1;
+				}
+			}
+		}
+
+		if (   !mz_zip_writer_finalize_archive(&write_archive)
+		    || !mz_zip_writer_end(&write_archive))
+		{
+			return 1;
+		}
 	}
 	return 0;
 }

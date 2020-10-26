@@ -19,7 +19,7 @@ LDFLAGS_REL = $(LIBS) candle/$(DIR)/candle.a \
 LDFLAGS_DEB = $(LIBS) candle/$(DIR)/candle_debug.a \
 -Wl,--format=binary -Wl,candle/$(DIR)/data.zip -Wl,--format=default
 LDFLAGS_EMS = -lm -lGL -ldl -lrt candle/$(DIR)/candle_emscripten.a \
-			  $(EMS_OPTS) --preload-file $(SAUCES) --shell-file index.html
+			  $(EMS_OPTS) --preload-file candle/$(DIR)/data.zip@/ --shell-file index.html
 
 GLFW = third_party/glfw/src
 TINYCTHREAD = third_party/tinycthread/source
@@ -69,21 +69,25 @@ CFLAGS_DEB = $(CFLAGS) -g3 -DDEBUG
 CFLAGS_EMS = -Wall -I. -Wno-unused-function \
 			 -Ithird_party/glfw/include -D_GLFW_X11 $(EMS_OPTS)
 
+PARALLEL_REL = $(DIR)/candle.a data_zip
+PARALLEL_DEB = $(DIR)/candle_debug.a data_zip
+PARALLEL_EMS = $(DIR)/candle_emscripten.a data_zip
+
 ##############################################################################
 
-all: init $(DIR)/candle.a $(PLUGINS_REL)
+all: init $(PLUGINS_REL) $(PARALLEL_REL)
 	-cat "" $(PLUGINS_REL) | paste -sd " " > $(DIR)/libs
 	echo -n " $(LDFLAGS_REL)" >> $(DIR)/libs
 
-$(DIR)/candle.a: $(OBJS_REL) $(DIR)/data.zip
+$(DIR)/candle.a: $(OBJS_REL)
 	$(AR) rs $@ $(OBJS_REL)
 
 $(DIR)/%.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS_REL)
 
-../%/$(DIR)/libs: $(DIR)/data.zip
+../%/$(DIR)/libs:
 	$(MAKE) -C ../$*
-	$(DIR)/packager $(patsubst %, ../$*/%, $(shell cat ../$*/$(DIR)/res))
+	echo $(patsubst %, ../$*/%, $(shell cat ../$*/$(DIR)/res)) >> $(DIR)/res
 
 # utils/gl.c:
 # 	galogen gl.xml --api gl --ver 3.0 --profile core --exts $(EXTS)
@@ -91,43 +95,43 @@ $(DIR)/%.o: %.c
 
 ##############################################################################
 
-debug: init $(DIR)/candle_debug.a $(PLUGINS_DEB)
+debug: init $(BUILDS_DEB) $(PARALLEL_DEB)
 	-cat "" $(PLUGINS_DEB) | paste -sd " " > $(DIR)/libs_debug
 	echo -n " $(LDFLAGS_DEB)" >> $(DIR)/libs_debug
 
-$(DIR)/candle_debug.a: $(OBJS_DEB) $(DIR)/data.zip
+$(DIR)/candle_debug.a: $(OBJS_DEB)
 	$(AR) rs $@ $(OBJS_DEB)
 
 $(DIR)/%.debug.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS_DEB)
 
-../%/$(DIR)/libs_debug: $(DIR)/data.zip
+../%/$(DIR)/libs_debug:
 	$(MAKE) -C ../$* debug
-	$(DIR)/packager $(patsubst %, ../$*/%, $(shell cat ../$*/$(DIR)/res))
+	echo $(patsubst %, ../$*/%, $(shell cat ../$*/$(DIR)/res)) >> $(DIR)/res
 
 
 ##############################################################################
 
-emscripten: init $(DIR)/candle_emscripten.a
+emscripten: init $(PLUGINS_EMS) $(PARALLEL_EMS)
 	-cat "" $(PLUGINS_EMS) | paste -sd " " > $(DIR)/libs_emscripten
 	echo -n " $(LDFLAGS_EMS)" >> $(DIR)/libs_emscripten
 
-$(DIR)/candle_emscripten.a: $(OBJS_EMS) $(DIR)/data.zip
+$(DIR)/candle_emscripten.a: $(OBJS_EMS)
 	$(AR) rs $@ $(OBJS_EMS)
 
 $(DIR)/%.emscripten.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS_EMS)
 
-../%/$(DIR)/libs_emscripten: $(DIR)/data.zip
+../%/$(DIR)/libs_emscripten:
 	$(MAKE) -C ../$* emscripten
-	$(DIR)/packager $(patsubst %, ../$*/%, $(shell cat ../$*/$(DIR)/res))
+	echo $(patsubst %, ../$*/%, $(shell cat ../$*/$(DIR)/res)) >> $(DIR)/res
 
 ##############################################################################
 
-$(DIR)/data.zip: $(DIR)/packager
-	$(DIR)/packager ../$(SAUCES)
+data_zip: $(DIR)/packager
+	$(DIR)/packager ../$(SAUCES) $(shell cat $(DIR)/res)
 
-$(DIR)/packager: 
+$(DIR)/packager: buildtools/packager.c
 	$(CC) buildtools/packager.c third_party/miniz.c -O3 -o $(DIR)/packager
 
 ##############################################################################
@@ -142,6 +146,7 @@ init:
 	mkdir -p $(DIR)/ecs
 	mkdir -p $(DIR)/$(GLFW)
 	mkdir -p $(DIR)/$(TINYCTHREAD)
+	rm -f $(DIR)/res
 
 ##############################################################################
 
@@ -149,4 +154,4 @@ clean:
 	rm -fr $(DIR)
 	rm -fr $(PLUGINS_DIR)
 
-.PHONY: clean all init
+.PHONY: clean all init data_zip
