@@ -1077,6 +1077,7 @@ int32_t c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 
 	if (!entity_exists(self->camera)) return CONTINUE;
 	if (!c_mouse_active(c_mouse(self))) return CONTINUE;
+	if (!c_camera(&self->camera)) return CONTINUE;
 
 	renderer = c_camera(&self->camera)->renderer;
 	if (!renderer) return CONTINUE;
