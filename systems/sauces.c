@@ -136,7 +136,7 @@ void c_sauces_register(c_sauces_t *self, const char *name,
 	}
 	else
 	{
-		printf("no loader %s\n", buffer);
+		/* printf("no loader %s\n", buffer); */
 	}
 }
 

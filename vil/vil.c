@@ -1314,7 +1314,6 @@ void vicall_iterate_dependencies(vicall_t *self,
 	bool_t *iterated = malloc(sizeof(bool_t) * self->parent->call_count);
 	memset(iterated, false, sizeof(bool_t) * self->parent->call_count);
 
-	printf("%d\n", vifunc_ref_to_slot(self->type, include).depth);
 	_vicall_iterate_dependencies(self, iterated,
 	                             vifunc_ref_to_slot(self->type, include),
 	                             vifunc_ref_to_slot(self->type, exclude),

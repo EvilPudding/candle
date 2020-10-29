@@ -225,7 +225,6 @@ uint32_t vs_new_loader(vs_t *self)
 		free(ncode);
 	}
 	self->ready = 1;
-	printf("vs ready %s\n", self->name);
 	return 1;
 }
 
@@ -582,8 +581,6 @@ static uint32_t shader_new_loader(shader_t *self)
 
 	glGetProgramiv(self->program, GL_LINK_STATUS, &isLinked);
 /* #endif */
-	printf("shader %d ready f:%s v:%s %d\n", self->program, self->fs->filename,
-			g_vs[self->index].name, isLinked);
 	if (!isLinked)
 	{
 		printf("Failed to link %u %u %u\n", fprogram, vprogram, gprogram);
@@ -639,7 +636,6 @@ static uint32_t fs_new_loader(fs_variation_t *self)
 
 	sprintf(buffer, "%s.glsl", self->filename);
 
-	printf("fetching %s\n", buffer);
 	self->code = shader_preprocess(shader_source(buffer), true, false, false);
 
 	if(!self->code)
@@ -655,7 +651,6 @@ static uint32_t fs_new_loader(fs_variation_t *self)
 
 	checkShaderError(self->program, self->filename, self->code);
 	self->ready = 1;
-	/* printf("fs ready %s\n", buffer); */
 
 	return 1;
 }

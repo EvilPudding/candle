@@ -16,7 +16,10 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #endif
 #include <GLFW/glfw3.h>
+
+#ifdef _WIN32
 #include <GLFW/glfw3native.h>
+#endif
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -513,7 +516,6 @@ void candle_init(const char *path)
 		{
 			g_candle->firstDir[0] = '\0';
 		}
-		printf("%s\n", g_candle->firstDir);
 	}
 
 	materials_init_vil();

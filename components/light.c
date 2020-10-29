@@ -114,6 +114,7 @@ static void c_light_drawable_init(c_light_t *self)
 		drawable_set_matid(&self->draw, self->id);
 		drawable_set_entity(&self->draw, c_entity(self));
 	}
+	c_light_position_changed(self);
 }
 
 void c_light_init(c_light_t *self)

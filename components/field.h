@@ -1,8 +1,8 @@
 #ifndef FIELD_H
 #define FIELD_H
 
-#include <ecs/ecm.h>
-#include <utils/drawable.h>
+#include "../ecs/ecm.h"
+#include "../utils/drawable.h"
 
 typedef struct
 {

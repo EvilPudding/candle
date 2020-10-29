@@ -10,8 +10,8 @@ DIR = build
 
 EMS_OPTS = -s USE_GLFW=3 -s USE_WEBGL2=1 \
 -s FULL_ES3=1 -s EMULATE_FUNCTION_POINTER_CASTS=1 \
--s WASM_MEM_MAX=2GB -s WASM=1 -s ASSERTIONS=1 \
--s ALLOW_MEMORY_GROWTH=1 -s SAFE_HEAP=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -g4
+-s WASM_MEM_MAX=2GB -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 \
+-s SAFE_HEAP=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -g4 
 
 LIBS = -lm -lGL -pthread -ldl -lX11 -lrt
 LDFLAGS_REL = $(LIBS) candle/$(DIR)/candle.a \
@@ -30,6 +30,7 @@ PLUGINS_REL = $(patsubst %, %/libs, $(PLUGINS_DIR))
 PLUGINS_DEB = $(patsubst %, %/libs_debug, $(PLUGINS_DIR))
 PLUGINS_EMS = $(patsubst %, %/libs_emscripten, $(PLUGINS_DIR))
 PLUGINS_RES = $(patsubst %, %/res, $(PLUGINS_DIR))
+PLUGINS_CLEAN = $(patsubst %, %_clean, $(PLUGINS))
 
 THIRD_PARTY_SRC = \
 		   $(GLFW)/context.c \
@@ -68,7 +69,7 @@ CFLAGS_REL = $(CFLAGS) -O3
 CFLAGS_DEB = $(CFLAGS) -g3 -DDEBUG
 
 CFLAGS_EMS = -Wall -I. -Wno-unused-function \
-			 -Ithird_party/glfw/include -D_GLFW_X11 $(EMS_OPTS)
+			 -D_GLFW_X11 $(EMS_OPTS)
 
 ##############################################################################
 
@@ -147,8 +148,10 @@ init:
 
 ##############################################################################
 
-clean:
+%.candle_clean:
+	$(MAKE) -C $*.candle clean
+
+clean: $(PLUGINS_CLEAN)
 	rm -fr $(DIR)
-	rm -fr $(PLUGINS_DIR)
 
 .PHONY: clean all init data_zip

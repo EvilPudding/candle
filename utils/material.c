@@ -1292,6 +1292,8 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 			"		vec2 coord = RayCastCube(dir, pos);\n"
 			"		Pos = vec2(coord);\n"
 			"		Color = pbr_in.tint;\n"
+			/* "		Color = poly_color;\n" */
+			/* "		Color.a = 0.5;\n" */
 			"	}\n"
 		        );
 	}
@@ -1350,6 +1352,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 			"	MR.g = pbr_in.roughness;\n"
 			"	Alb = vec4(pbr_in.tint.rgb * pbr_in.tint.a, receive_shadows ? 1.0 : 0.5);\n"
 			"	Emi = pbr_in.emissive;\n");
+			/* "	Emi = pbr_in.emissive * poly_color.rgb;\n"); */
 	}
 	else if (output_type == ref("decal"))
 	{

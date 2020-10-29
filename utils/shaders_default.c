@@ -1112,7 +1112,7 @@ void shaders_candle_common()
 		/* "	vec3 specular_color = mix(f0, base_color.rgb, metallic);\n" */
 		"	float NdotE = clamp(dot(w_nor, -eye_dir), 0.001, 1.0);\n"
 		"	vec3 specular_color = fresnelSchlick(vec3(1.0), NdotE) * CNST_1DIVPI;\n"
-		"	float fade_on_roughness = 1.0;\n"
+		"	float fade_on_roughness = pow(1.0 - metallic_roughness.y, 2.0);\n"
 		"	float fade = screenEdgefactor * fade_on_roughness;\n"
 		"	return vec4(mix(fallback_color,\n"
 		"				reflect_color.xyz * specular_color, fade), 1.0);\n"
@@ -1360,7 +1360,7 @@ void shaders_candle_marching()
 		"/* uniform isampler2D triTableTex; */\n"
 		"/* uniform float iso_level; */\n"
 		"float iso_level = 0.9;\n"
-		"float grid_size = 0.2;\n");
+		"float grid_size = 0.3;\n");
 
 	str_cat(&shader_buffer,
 		"const vec3 vert_offsets[8] = vec3[](\n"

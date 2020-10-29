@@ -70,10 +70,6 @@ static void init_context_b(c_window_t *self)
 		printf("Window failed to be created\n");
 		exit(1);
 	}
-	else
-	{
-		printf("Window created\n");
-	}
 
 	glInit();
 

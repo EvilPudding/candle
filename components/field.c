@@ -17,7 +17,7 @@ vs_t *field_vs()
 {
 	if (!g_field_vs)
 	{
-		g_field_vs = vs_new("field", false, 1, geometry_modifier_new("#include \"marching.glsl\"\n"));
+		g_field_vs = vs_new("field", false, 1, geometry_modifier_new("#include \"candle:marching.glsl\"\n"));
 	}
 	return g_field_vs;
 }
@@ -97,9 +97,9 @@ c_field_t *c_field_new(mat_t *mat, vec3_t start, vec3_t end, float cell_size,
 	self->cast_shadow = cast_shadow;
 
 	size = vec3_sub(end, start);
-	segments = uvec3(size.x / cell_size,
-	                 size.y / cell_size,
-	                 size.z / cell_size);
+	segments = uvec3(size.x / cell_size + 1,
+	                 size.y / cell_size + 1,
+	                 size.z / cell_size + 1);
 	/* self->values = texture_new_3D(_vec3(segments), 1); */
 	/* for (x = 0; x < segments.x; x++) */
 	/* 	for (y = 0; y < segments.y; y++) */

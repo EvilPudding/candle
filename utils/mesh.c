@@ -3052,7 +3052,6 @@ void mesh_triangulate_poly(mesh_t *self)
 		while(e != first_edge && e != -1);
 		
 	}
-	printf("%d\n", num_bounds);
 
 	free(bounds);
 	kh_destroy(id, selected_edges);

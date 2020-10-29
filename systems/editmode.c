@@ -396,7 +396,6 @@ int32_t rotate_drag(struct edit_rotate *self, vec3_t p, int32_t button, c_editmo
 	rot = quat_rotate(vec3_norm(axis1), angle);
 	rot = quat_mul(rot, self->start_quat);
 
-	/* printf("%f\n", d); */
 	to_mouse = vec3_sub(self->obj_pos, proj);
 	axis2 = vec3_cross(to_cam, to_mouse);
 	if(parent)
@@ -1063,7 +1062,6 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 			uint32_t result = renderer_geom_at_pixel(renderer, x, y,
 					&self->mouse_screen_pos.z);
 			self->over_poly = result;
-			/* printf("%lu\n", result); */
 		}
 		else
 		{

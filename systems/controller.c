@@ -47,6 +47,7 @@ int32_t c_controllers_event(c_controllers_t *self, const candle_event_t *event)
 
 int32_t c_controllers_events_end(c_controllers_t *self)
 {
+#ifndef __EMSCRIPTEN__
 	uint32_t i;
 	for (i = 0; i < 8; i++)
 	{
@@ -281,6 +282,8 @@ int32_t c_controllers_events_end(c_controllers_t *self)
 
 		}
 	}
+#else
+#endif
 	return CONTINUE;
 }
 
@@ -295,8 +298,9 @@ void ct_controller(ct_t *self)
 
 c_controllers_t *c_controllers_new()
 {
-	int i;
 	c_controllers_t *self = component_new(ct_controller);
+#ifndef __EMSCRIPTEN__
+	int i;
 	/* bool_t has_gamepads = false; */
 	/* int n_joysticks; */
 
@@ -354,5 +358,7 @@ c_controllers_t *c_controllers_new()
 	/* { */
 	/* 	sdl_GameControllerEventState(sdl_ENABLE); */
 	/* } */
+#else
+#endif
 	return self;
 }

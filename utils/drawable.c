@@ -389,8 +389,6 @@ static int32_t draw_conf_add_instance(draw_conf_t *self, drawable_t *draw,
 #endif
 
 	i = self->inst_num++;
-	/* if (draw->bind[gid].bind == ref("light")) */
-		/* printf("adding		%d\n", self->inst_num); */
 
 	draw_conf_inst_grow(self);
 
@@ -565,7 +563,7 @@ void varray_face_to_gl(varray_t *self, face_t *f, int32_t id)
 	}
 	else
 	{
-		printf("%d\n", f->e_size);
+		printf("invalid size %d\n", f->e_size);
 	}
 
 }
@@ -1079,8 +1077,6 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	mtx_lock(self->mtx);
 #endif
 	mesh = self->vars.mesh;
-	/* printf("%d %p %d %s\n", self->vars.transparent, self->vars.mesh, */
-			/* self->vars.xray, self->vars.vs->name); */
 	if (!self->varray) self->varray = varray_get(self->vars.mesh);
 
 	varray_update(self->varray);
