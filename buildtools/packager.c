@@ -17,6 +17,7 @@ typedef struct pack__file
 } pack__file_t;
 
 #ifdef _WIN32
+#define PSEP "\\"
 #include <windows.h>
 #include <fileapi.h>
 static
@@ -45,12 +46,13 @@ int file_epoch_modified(pack__file_t *file)
 	ft_int64.LowPart = ft.dwLowDateTime;
 
 	// Convert from hectonanoseconds since 01/01/1601 to seconds since 01/01/1970
-	file->epoch_modified = ft_int64.QuadPart / 10000000ULL - 11644473600ULL;
+	file->epoch_modified = ft_int64.QuadPart / 10000000ULL - 11644473600ULL - 1;
 
 	CloseHandle(fh);
 	return 0;
 }
 #else
+#define PSEP "/"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -70,12 +72,12 @@ void path_join(char *path, size_t size, const char *other)
 	size_t len;
 
 	if(other == NULL) return;
-	if(other[0] == '/') other++;
+	if(other[0] == '/' || other[0] == '\\') other++;
 	if(other[0] == '\0') return;
 
 	len = strlen(path);
 
-	if(path[len] == '/') path[len] = '\0';
+	if(path[len] == '/' || path[len] == '\\') path[len] = '\0';
 	strncpy(buffer, path, size);
 
 	if(path[0] == '\0')
@@ -84,7 +86,7 @@ void path_join(char *path, size_t size, const char *other)
 	}
 	else
 	{
-		sprintf(path, "%s/%s", buffer, other);
+		sprintf(path, "%s"PSEP"%s", buffer, other);
 	}
 }
 
@@ -96,8 +98,7 @@ void file_check(pack__file_t *file, mz_zip_archive *archive,
 	    && mz_zip_reader_locate_file_v2(archive, file->path + 3, NULL, 0, &i))
 	{
 		mz_zip_archive_file_stat file_stat;
-		if (   mz_zip_reader_file_stat(archive, i, &file_stat)
-		    && !strcmp(file->path + 3, file_stat.m_filename))
+		if (mz_zip_reader_file_stat(archive, i, &file_stat))
 		{
 			if (file->epoch_modified <= file_stat.m_time)
 			{
@@ -204,7 +205,7 @@ int main(int argc, char *argv[])
 	int rebuild_archive = 0;
 	int new_files = 0;
 
-	mz_zip_reader_init_file(&read_archive, "build/data.zip", 0);
+	mz_zip_reader_init_file(&read_archive, "build" PSEP "data.zip", 0);
 
 	for (i = 1; i < argc; ++i)
 	{
@@ -250,7 +251,7 @@ int main(int argc, char *argv[])
 
 	if (rebuild_archive)
 	{
-		if (!mz_zip_writer_init_file(&write_archive, "build/new.zip", 0))
+		if (!mz_zip_writer_init_file(&write_archive, "build"PSEP"new.zip", 0))
 		{
 			return 1;
 		}
@@ -288,19 +289,19 @@ int main(int argc, char *argv[])
 			return 1;
 		}
 
-		remove("build/data.zip");
-		rename("build/new.zip", "build/data.zip");
+		remove("build"PSEP"data.zip");
+		rename("build"PSEP"new.zip", "build"PSEP"data.zip");
 	}
 	else if (new_files)
 	{
-		if (mz_zip_writer_init_from_reader(&read_archive, "build/data.zip"))
+		if (mz_zip_writer_init_from_reader(&read_archive, "build"PSEP"data.zip"))
 		{
 			write_archive = read_archive;
 		}
 		else
 		{
 			mz_zip_reader_end(&read_archive);
-			if (!mz_zip_writer_init_file(&write_archive, "build/data.zip", 0))
+			if (!mz_zip_writer_init_file(&write_archive, "build"PSEP"data.zip", 0))
 			{
 				return 1;
 			}

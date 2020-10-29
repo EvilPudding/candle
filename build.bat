@@ -76,25 +76,24 @@ FOR %%f IN (!sources!) DO @IF EXIST "%%f" (
 	CALL set objects=!objects! !object!
 )
 
-DEL %DIR%\data.zip
-
 %DIR%\datescomp.exe buildtools\packager.c %DIR%\packager.exe || (
 	cl buildtools\packager.c %DIR%\third_party\miniz.obj /Fo%DIR%\packager.obj /Fe%DIR%\packager.exe /O2
 )
 
-CALL %DIR%\packager.exe ..\!SAUCES!
-
 set LIBS=gdi32.lib opengl32.lib kernel32.lib user32.lib shell32.lib candle\%DIR%\candle.lib candle\%DIR%\res.res
 
+set RES=
 FOR /d %%f IN (..\*.candle) DO (
 	call %%f\build.bat
 	set /p PLUGIN_LIBS=<%%f\build\libs
 	set LIBS=!LIBS! !PLUGIN_LIBS!
 	set /p PLUGIN_RES=<%%f\build\res
 	for %%S IN (!PLUGIN_RES!) DO (
-		%DIR%\packager.exe %%f\%%~S
+		set RES=!RES! %%f\%%~S
 	)
 )
+
+CALL %DIR%\packager.exe ..\!SAUCES! !RES!
 
 mkdir %DIR%
 echo !LIBS! > %DIR%\libs
