@@ -10,8 +10,8 @@ DIR = build
 
 EMS_OPTS = -s USE_GLFW=3 -s USE_WEBGL2=1 \
 -s FULL_ES3=1 -s EMULATE_FUNCTION_POINTER_CASTS=1 \
--s WASM_MEM_MAX=2GB -O3 -s WASM=1 -s ASSERTIONS=1 \
--s ALLOW_MEMORY_GROWTH=1 -s SAFE_HEAP=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0
+-s WASM_MEM_MAX=2GB -s WASM=1 -s ASSERTIONS=1 \
+-s ALLOW_MEMORY_GROWTH=1 -s SAFE_HEAP=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -g4
 
 LIBS = -lm -lGL -pthread -ldl -lX11 -lrt
 LDFLAGS_REL = $(LIBS) candle/$(DIR)/candle.a \
@@ -19,7 +19,7 @@ LDFLAGS_REL = $(LIBS) candle/$(DIR)/candle.a \
 LDFLAGS_DEB = $(LIBS) candle/$(DIR)/candle_debug.a \
 -Wl,--format=binary -Wl,candle/$(DIR)/data.zip -Wl,--format=default
 LDFLAGS_EMS = -lm -lGL -ldl -lrt candle/$(DIR)/candle_emscripten.a \
-			  $(EMS_OPTS) --preload-file candle/$(DIR)/data.zip@/ --shell-file index.html
+			  $(EMS_OPTS) --preload-file candle/$(DIR)/data.zip@/ --shell-file candle/index.html -g4
 
 GLFW = third_party/glfw/src
 TINYCTHREAD = third_party/tinycthread/source
@@ -51,7 +51,7 @@ THIRD_PARTY_SRC = \
 
 SRCS = $(wildcard *.c) $(wildcard components/*.c) $(wildcard systems/*.c) \
 	   $(wildcard formats/*.c) $(wildcard utils/*.c) $(wildcard vil/*.c) \
-	   $(wildcard ecs/*.c) third_party/miniz.c
+	   $(wildcard ecs/*.c)
 
 OBJS_REL = $(patsubst %.c, $(DIR)/%.o, $(SRCS) $(THIRD_PARTY_SRC))
 OBJS_DEB = $(patsubst %.c, $(DIR)/%.debug.o, $(SRCS) $(THIRD_PARTY_SRC))
@@ -132,7 +132,7 @@ data_zip: $(DIR)/packager
 	$(DIR)/packager ../$(SAUCES) $(shell cat $(DIR)/res)
 
 $(DIR)/packager: buildtools/packager.c
-	$(CC) buildtools/packager.c third_party/miniz.c -O3 -o $(DIR)/packager
+	cc buildtools/packager.c -O3 -o $(DIR)/packager
 
 ##############################################################################
 

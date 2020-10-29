@@ -5,7 +5,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include "../third_party/tinydir/tinydir.h"
-#include "../third_party/miniz.h"
+
+#include "../third_party/miniz.c"
 
 #include <components/model.h>
 #include <components/timeline.h>

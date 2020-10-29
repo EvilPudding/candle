@@ -1,6 +1,6 @@
 
 #include "../third_party/tinydir/tinydir.h"
-#include "../third_party/miniz.h"
+#include "../third_party/miniz.c"
 #include "../third_party/pstdint.h"
 #include <stdio.h>
 #include <stdlib.h>

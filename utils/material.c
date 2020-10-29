@@ -1802,16 +1802,6 @@ void mat1s(mat_t *self, uint32_t ref, const char *value)
 void mat1t(mat_t *self, uint32_t ref, texture_t *value)
 {
 	_mat_sampler_t sampler;
-	uint32_t i;
-
-	for (i = 0; !value->bufs[0].indir_n; i++)
-	{
-		if (i == 16)
-		{
-			printf("giving up on %s\n", (char*)value->usrptr);
-			break;
-		}
-	}
 	sampler.texture = value;
 	sampler.size.x = value->width;
 	sampler.size.y = value->height;
