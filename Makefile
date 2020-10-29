@@ -29,6 +29,7 @@ PLUGINS_DIR = $(patsubst %, %/$(DIR), $(PLUGINS))
 PLUGINS_REL = $(patsubst %, %/libs, $(PLUGINS_DIR))
 PLUGINS_DEB = $(patsubst %, %/libs_debug, $(PLUGINS_DIR))
 PLUGINS_EMS = $(patsubst %, %/libs_emscripten, $(PLUGINS_DIR))
+PLUGINS_RES = $(patsubst %, %/res, $(PLUGINS_DIR))
 
 THIRD_PARTY_SRC = \
 		   $(GLFW)/context.c \
@@ -69,13 +70,9 @@ CFLAGS_DEB = $(CFLAGS) -g3 -DDEBUG
 CFLAGS_EMS = -Wall -I. -Wno-unused-function \
 			 -Ithird_party/glfw/include -D_GLFW_X11 $(EMS_OPTS)
 
-PARALLEL_REL = $(DIR)/candle.a data_zip
-PARALLEL_DEB = $(DIR)/candle_debug.a data_zip
-PARALLEL_EMS = $(DIR)/candle_emscripten.a data_zip
-
 ##############################################################################
 
-all: init $(PLUGINS_REL) $(PARALLEL_REL)
+all: init $(PLUGINS_REL) $(DIR)/candle.a data_zip
 	-cat "" $(PLUGINS_REL) | paste -sd " " > $(DIR)/libs
 	echo -n " $(LDFLAGS_REL)" >> $(DIR)/libs
 
@@ -87,7 +84,6 @@ $(DIR)/%.o: %.c
 
 ../%/$(DIR)/libs:
 	$(MAKE) -C ../$*
-	echo $(patsubst %, ../$*/%, $(shell cat ../$*/$(DIR)/res)) >> $(DIR)/res
 
 # utils/gl.c:
 # 	galogen gl.xml --api gl --ver 3.0 --profile core --exts $(EXTS)
@@ -95,7 +91,7 @@ $(DIR)/%.o: %.c
 
 ##############################################################################
 
-debug: init $(BUILDS_DEB) $(PARALLEL_DEB)
+debug: init $(PLUGINS_DEB) $(DIR)/candle_debug.a data_zip
 	-cat "" $(PLUGINS_DEB) | paste -sd " " > $(DIR)/libs_debug
 	echo -n " $(LDFLAGS_DEB)" >> $(DIR)/libs_debug
 
@@ -107,12 +103,11 @@ $(DIR)/%.debug.o: %.c
 
 ../%/$(DIR)/libs_debug:
 	$(MAKE) -C ../$* debug
-	echo $(patsubst %, ../$*/%, $(shell cat ../$*/$(DIR)/res)) >> $(DIR)/res
 
 
 ##############################################################################
 
-emscripten: init $(PLUGINS_EMS) $(PARALLEL_EMS)
+emscripten: init $(PLUGINS_EMS) $(DIR)/candle_emscripten.a data_zip
 	-cat "" $(PLUGINS_EMS) | paste -sd " " > $(DIR)/libs_emscripten
 	echo -n " $(LDFLAGS_EMS)" >> $(DIR)/libs_emscripten
 
@@ -124,11 +119,13 @@ $(DIR)/%.emscripten.o: %.c
 
 ../%/$(DIR)/libs_emscripten:
 	$(MAKE) -C ../$* emscripten
-	echo $(patsubst %, ../$*/%, $(shell cat ../$*/$(DIR)/res)) >> $(DIR)/res
 
 ##############################################################################
 
-data_zip: $(DIR)/packager
+$(DIR)/res:
+	echo $(foreach res,$(PLUGINS), $(patsubst %, $(res)/%, $(shell cat "" $(res)/$(DIR)/res))) > $(DIR)/res
+
+data_zip: $(DIR)/res $(DIR)/packager
 	$(DIR)/packager ../$(SAUCES) $(shell cat $(DIR)/res)
 
 $(DIR)/packager: buildtools/packager.c
