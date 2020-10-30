@@ -152,7 +152,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			{
 				bind->number = ((number_getter)bind->getter)(pass, pass->usrptr);
 			}
-			glUniform1f(shader_cached_uniform(shader, sb->u.number.u), bind->number); glerr();
+			glUniform1f(shader_cached_uniform(shader, sb->u.number.u), (GLfloat)bind->number); glerr();
 			glerr();
 			break;
 		case OPT_INT:
@@ -160,7 +160,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			{
 				bind->integer = ((integer_getter)bind->getter)(pass, pass->usrptr);
 			}
-			glUniform1i(shader_cached_uniform(shader, sb->u.integer.u), bind->integer); glerr();
+			glUniform1i(shader_cached_uniform(shader, sb->u.integer.u), (GLint)bind->integer); glerr();
 			glerr();
 			break;
 		case OPT_UINT:
@@ -168,7 +168,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			{
 				bind->uinteger = ((integer_getter)bind->getter)(pass, pass->usrptr);
 			}
-			glUniform1ui(shader_cached_uniform(shader, sb->u.uinteger.u), bind->uinteger); glerr();
+			glUniform1ui(shader_cached_uniform(shader, sb->u.uinteger.u), (GLuint)bind->uinteger); glerr();
 			glerr();
 			break;
 		case OPT_UVEC2:
@@ -176,7 +176,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			{
 				bind->uvec2 = ((uvec2_getter)bind->getter)(pass, pass->usrptr);
 			}
-			glUniform2ui(shader_cached_uniform(shader, sb->u.uvec2.u), bind->uvec2.x, bind->uvec2.y);
+			glUniform2ui(shader_cached_uniform(shader, sb->u.uvec2.u), (GLuint)bind->uvec2.x, (GLuint)bind->uvec2.y);
 			glerr();
 			break;
 		case OPT_IVEC2:
@@ -184,7 +184,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			{
 				bind->ivec2 = ((ivec2_getter)bind->getter)(pass, pass->usrptr);
 			}
-			glUniform2i(shader_cached_uniform(shader, sb->u.ivec2.u), bind->ivec2.x, bind->ivec2.y);
+			glUniform2i(shader_cached_uniform(shader, sb->u.ivec2.u), (GLint)bind->ivec2.x, (GLint)bind->ivec2.y);
 			glerr();
 			break;
 		case OPT_VEC2:
@@ -192,7 +192,7 @@ static void bind_pass(pass_t *pass, shader_t *shader)
 			{
 				bind->vec2 = ((vec2_getter)bind->getter)(pass, pass->usrptr);
 			}
-			glUniform2f(shader_cached_uniform(shader, sb->u.vec2.u), bind->vec2.x, bind->vec2.y);
+			glUniform2f(shader_cached_uniform(shader, sb->u.vec2.u), (GLfloat)bind->vec2.x, (GLfloat)bind->vec2.y);
 			glerr();
 			break;
 		case OPT_VEC3:
@@ -320,9 +320,8 @@ void renderer_add_kawase(renderer_t *self, texture_t *t1, texture_t *t2,
 {
 	renderer_add_pass(self, "kawase_p",
 			to_mip == from_mip ? "copy" : "candle:downsample",
-			ref("quad"), 0, t2, NULL, to_mip, ~0, 3,
+			ref("quad"), 0, t2, NULL, to_mip, ~0, 2,
 			opt_tex("buf", t1, NULL),
-			opt_uvec2("pos", uvec2(0, 0), NULL),
 			opt_int("level", from_mip, NULL)
 	);
 
@@ -689,7 +688,7 @@ void renderer_default_pipeline(renderer_t *self)
 			refr, NULL, 0, ~0, 4,
 			opt_tex("buf", light, NULL),
 			opt_clear_color(Z4, NULL),
-			opt_uvec2("pos", uvec2(0, 0), NULL),
+			opt_ivec2("pos", ivec2(0, 0), NULL),
 			opt_int("level", 0, NULL)
 	);
 

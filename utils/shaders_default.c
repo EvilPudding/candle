@@ -1356,11 +1356,8 @@ void shaders_candle_marching()
 	char *shader_buffer = str_new(64);
 
 	str_cat(&shader_buffer,
-		"uniform sampler3D values;\n"
-		"/* uniform isampler2D triTableTex; */\n"
-		"/* uniform float iso_level; */\n"
 		"float iso_level = 0.9;\n"
-		"float grid_size = 0.3;\n");
+		"float grid_size = 0.2;\n");
 
 	str_cat(&shader_buffer,
 		"const vec3 vert_offsets[8] = vec3[](\n"
@@ -1375,513 +1372,77 @@ void shaders_candle_marching()
 		");\n");
 
 	str_cat(&shader_buffer,
-		"#define b3(r,g,b) (ivec3(r, g, b))\n"
-		"#define z3 ivec3(-1, -1, -1)\n"
-		"ivec3 tri_table[256 * 5] = ivec3[](\n"
-		"	z3,             z3,             z3,             z3,             z3,            \n"
-		"	b3( 0,  8,  3), z3,             z3,             z3,             z3,            \n"
-		"	b3( 0,  1,  9), z3,             z3,             z3,             z3,            \n"
-		"	b3( 1,  8,  3), b3( 9,  8,  1), z3,             z3,             z3,            \n"
-		"	b3( 1,  2, 10), z3,             z3,             z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 0,  8,  3), b3( 1,  2, 10), z3,             z3,             z3,            \n"
-		"	b3( 9,  2, 10), b3( 0,  2,  9), z3,             z3,             z3,            \n"
-		"	b3( 2,  8,  3), b3( 2, 10,  8), b3(10,  9,  8), z3,             z3,            \n"
-		"	b3( 3, 11,  2), z3,             z3,             z3,             z3,            \n"
-		"	b3( 0, 11,  2), b3( 8, 11,  0), z3,             z3,             z3,            \n"
-		"	b3( 1,  9,  0), b3( 2,  3, 11), z3,             z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 1, 11,  2), b3( 1,  9, 11), b3( 9,  8, 11), z3,             z3,            \n"
-		"	b3( 3, 10,  1), b3(11, 10,  3), z3,             z3,             z3,            \n"
-		"	b3( 0, 10,  1), b3( 0,  8, 10), b3( 8, 11, 10), z3,             z3,            \n"
-		"	b3( 3,  9,  0), b3( 3, 11,  9), b3(11, 10,  9), z3,             z3,            \n"
-		"	b3( 9,  8, 10), b3(10,  8, 11), z3,             z3,             z3,            \n"
-		"	b3( 4,  7,  8), z3,             z3,             z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 4,  3,  0), b3( 7,  3,  4), z3,             z3,             z3,            \n"
-		"	b3( 0,  1,  9), b3( 8,  4,  7), z3,             z3,             z3,            \n"
-		"	b3( 4,  1,  9), b3( 4,  7,  1), b3( 7,  3,  1), z3,             z3,            \n"
-		"	b3( 1,  2, 10), b3( 8,  4,  7), z3,             z3,             z3,            \n"
-		"	b3( 3,  4,  7), b3( 3,  0,  4), b3( 1,  2, 10), z3,             z3,            \n"
-		"	b3( 9,  2, 10), b3( 9,  0,  2), b3( 8,  4,  7), z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 2, 10,  9), b3( 2,  9,  7), b3( 2,  7,  3), b3( 7,  9,  4), z3,            \n"
-		"	b3( 8,  4,  7), b3( 3, 11,  2), z3,             z3,             z3,            \n"
-		"	b3(11,  4,  7), b3(11,  2,  4), b3( 2,  0,  4), z3,             z3,            \n"
-		"	b3( 9,  0,  1), b3( 8,  4,  7), b3( 2,  3, 11), z3,             z3,            \n"
-		"	b3( 4,  7, 11), b3( 9,  4, 11), b3( 9, 11,  2), b3( 9,  2,  1), z3,            \n"
-		"	b3( 3, 10,  1), b3( 3, 11, 10), b3( 7,  8,  4), z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 1, 11, 10), b3( 1,  4, 11), b3( 1,  0,  4), b3( 7, 11,  4), z3,            \n"
-		"	b3( 4,  7,  8), b3( 9,  0, 11), b3( 9, 11, 10), b3(11,  0,  3), z3,            \n"
-		"	b3( 4,  7, 11), b3( 4, 11,  9), b3( 9, 11, 10), z3,             z3,            \n"
-		"	b3( 9,  5,  4), z3,             z3,             z3,             z3,            \n"
-		"	b3( 9,  5,  4), b3( 0,  8,  3), z3,             z3,             z3,            \n"
-		"	b3( 0,  5,  4), b3( 1,  5,  0), z3,             z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 8,  5,  4), b3( 8,  3,  5), b3( 3,  1,  5), z3,             z3,            \n"
-		"	b3( 1,  2, 10), b3( 9,  5,  4), z3,             z3,             z3,            \n"
-		"	b3( 3,  0,  8), b3( 1,  2, 10), b3( 4,  9,  5), z3,             z3,            \n"
-		"	b3( 5,  2, 10), b3( 5,  4,  2), b3( 4,  0,  2), z3,             z3,            \n"
-		"	b3( 2, 10,  5), b3( 3,  2,  5), b3( 3,  5,  4), b3( 3,  4,  8), z3,            \n"
-		"	b3( 9,  5,  4), b3( 2,  3, 11), z3,             z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 0, 11,  2), b3( 0,  8, 11), b3( 4,  9,  5), z3,             z3,            \n"
-		"	b3( 0,  5,  4), b3( 0,  1,  5), b3( 2,  3, 11), z3,             z3,            \n"
-		"	b3( 2,  1,  5), b3( 2,  5,  8), b3( 2,  8, 11), b3( 4,  8,  5), z3,            \n"
-		"	b3(10,  3, 11), b3(10,  1,  3), b3( 9,  5,  4), z3,             z3,            \n"
-		"	b3( 4,  9,  5), b3( 0,  8,  1), b3( 8, 10,  1), b3( 8, 11, 10), z3,            \n"
-		"	b3( 5,  4,  0), b3( 5,  0, 11), b3( 5, 11, 10), b3(11,  0,  3), z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 5,  4,  8), b3( 5,  8, 10), b3(10,  8, 11), z3,             z3,            \n"
-		"	b3( 9,  7,  8), b3( 5,  7,  9), z3,             z3,             z3,            \n"
-		"	b3( 9,  3,  0), b3( 9,  5,  3), b3( 5,  7,  3), z3,             z3,            \n"
-		"	b3( 0,  7,  8), b3( 0,  1,  7), b3( 1,  5,  7), z3,             z3,            \n"
-		"	b3( 1,  5,  3), b3( 3,  5,  7), z3,             z3,             z3,            \n"
-		"	b3( 9,  7,  8), b3( 9,  5,  7), b3(10,  1,  2), z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3(10,  1,  2), b3( 9,  5,  0), b3( 5,  3,  0), b3( 5,  7,  3), z3,            \n"
-		"	b3( 8,  0,  2), b3( 8,  2,  5), b3( 8,  5,  7), b3(10,  5,  2), z3,            \n"
-		"	b3( 2, 10,  5), b3( 2,  5,  3), b3( 3,  5,  7), z3,             z3,            \n"
-		"	b3( 7,  9,  5), b3( 7,  8,  9), b3( 3, 11,  2), z3,             z3,            \n"
-		"	b3( 9,  5,  7), b3( 9,  7,  2), b3( 9,  2,  0), b3( 2,  7, 11), z3,            \n"
-		"	b3( 2,  3, 11), b3( 0,  1,  8), b3( 1,  7,  8), b3( 1,  5,  7), z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3(11,  2,  1), b3(11,  1,  7), b3( 7,  1,  5), z3,             z3,            \n"
-		"	b3( 9,  5,  8), b3( 8,  5,  7), b3(10,  1,  3), b3(10,  3, 11), z3,            \n"
-		"	b3( 5,  7,  0), b3( 5,  0,  9), b3( 7, 11,  0), b3( 1,  0, 10), b3(11, 10,  0),\n"
-		"	b3(11, 10,  0), b3(11,  0,  3), b3(10,  5,  0), b3( 8,  0,  7), b3( 5,  7,  0),\n"
-		"	b3(11, 10,  5), b3( 7, 11,  5), z3,             z3,             z3,            \n"
-		"	b3(10,  6,  5), z3,             z3,             z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 0,  8,  3), b3( 5, 10,  6), z3,             z3,             z3,            \n"
-		"	b3( 9,  0,  1), b3( 5, 10,  6), z3,             z3,             z3,            \n"
-		"	b3( 1,  8,  3), b3( 1,  9,  8), b3( 5, 10,  6), z3,             z3,            \n"
-		"	b3( 1,  6,  5), b3( 2,  6,  1), z3,             z3,             z3,            \n"
-		"	b3( 1,  6,  5), b3( 1,  2,  6), b3( 3,  0,  8), z3,             z3,            \n"
-		"	b3( 9,  6,  5), b3( 9,  0,  6), b3( 0,  2,  6), z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 5,  9,  8), b3( 5,  8,  2), b3( 5,  2,  6), b3( 3,  2,  8), z3,            \n"
-		"	b3( 2,  3, 11), b3(10,  6,  5), z3,             z3,             z3,            \n"
-		"	b3(11,  0,  8), b3(11,  2,  0), b3(10,  6,  5), z3,             z3,            \n"
-		"	b3( 0,  1,  9), b3( 2,  3, 11), b3( 5, 10,  6), z3,             z3,            \n"
-		"	b3( 5, 10,  6), b3( 1,  9,  2), b3( 9, 11,  2), b3( 9,  8, 11), z3,            \n"
-		"	b3( 6,  3, 11), b3( 6,  5,  3), b3( 5,  1,  3), z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 0,  8, 11), b3( 0, 11,  5), b3( 0,  5,  1), b3( 5, 11,  6), z3,            \n"
-		"	b3( 3, 11,  6), b3( 0,  3,  6), b3( 0,  6,  5), b3( 0,  5,  9), z3,            \n"
-		"	b3( 6,  5,  9), b3( 6,  9, 11), b3(11,  9,  8), z3,             z3,            \n"
-		"	b3( 5, 10,  6), b3( 4,  7,  8), z3,             z3,             z3,            \n"
-		"	b3( 4,  3,  0), b3( 4,  7,  3), b3( 6,  5, 10), z3,             z3,            \n"
-		"	b3( 1,  9,  0), b3( 5, 10,  6), b3( 8,  4,  7), z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3(10,  6,  5), b3( 1,  9,  7), b3( 1,  7,  3), b3( 7,  9,  4), z3,            \n"
-		"	b3( 6,  1,  2), b3( 6,  5,  1), b3( 4,  7,  8), z3,             z3,            \n"
-		"	b3( 1,  2,  5), b3( 5,  2,  6), b3( 3,  0,  4), b3( 3,  4,  7), z3,            \n"
-		"	b3( 8,  4,  7), b3( 9,  0,  5), b3( 0,  6,  5), b3( 0,  2,  6), z3,            \n"
-		"	b3( 7,  3,  9), b3( 7,  9,  4), b3( 3,  2,  9), b3( 5,  9,  6), b3( 2,  6,  9),\n"
-		"	b3( 3, 11,  2), b3( 7,  8,  4), b3(10,  6,  5), z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 5, 10,  6), b3( 4,  7,  2), b3( 4,  2,  0), b3( 2,  7, 11), z3,            \n"
-		"	b3( 0,  1,  9), b3( 4,  7,  8), b3( 2,  3, 11), b3( 5, 10,  6), z3,            \n"
-		"	b3( 9,  2,  1), b3( 9, 11,  2), b3( 9,  4, 11), b3( 7, 11,  4), b3( 5, 10,  6),\n"
-		"	b3( 8,  4,  7), b3( 3, 11,  5), b3( 3,  5,  1), b3( 5, 11,  6), z3,            \n"
-		"	b3( 5,  1, 11), b3( 5, 11,  6), b3( 1,  0, 11), b3( 7, 11,  4), b3( 0,  4, 11),\n"
-		"	b3( 0,  5,  9), b3( 0,  6,  5), b3( 0,  3,  6), b3(11,  6,  3), b3( 8,  4,  7),\n");
-	str_cat(&shader_buffer,
-		"	b3( 6,  5,  9), b3( 6,  9, 11), b3( 4,  7,  9), b3( 7, 11,  9), z3,            \n"
-		"	b3(10,  4,  9), b3( 6,  4, 10), z3,             z3,             z3,            \n"
-		"	b3( 4, 10,  6), b3( 4,  9, 10), b3( 0,  8,  3), z3,             z3,            \n"
-		"	b3(10,  0,  1), b3(10,  6,  0), b3( 6,  4,  0), z3,             z3,            \n"
-		"	b3( 8,  3,  1), b3( 8,  1,  6), b3( 8,  6,  4), b3( 6,  1, 10), z3,            \n"
-		"	b3( 1,  4,  9), b3( 1,  2,  4), b3( 2,  6,  4), z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 3,  0,  8), b3( 1,  2,  9), b3( 2,  4,  9), b3( 2,  6,  4), z3,            \n"
-		"	b3( 0,  2,  4), b3( 4,  2,  6), z3,             z3,             z3,            \n"
-		"	b3( 8,  3,  2), b3( 8,  2,  4), b3( 4,  2,  6), z3,             z3,            \n"
-		"	b3(10,  4,  9), b3(10,  6,  4), b3(11,  2,  3), z3,             z3,            \n"
-		"	b3( 0,  8,  2), b3( 2,  8, 11), b3( 4,  9, 10), b3( 4, 10,  6), z3,            \n"
-		"	b3( 3, 11,  2), b3( 0,  1,  6), b3( 0,  6,  4), b3( 6,  1, 10), z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 6,  4,  1), b3( 6,  1, 10), b3( 4,  8,  1), b3( 2,  1, 11), b3( 8, 11,  1),\n"
-		"	b3( 9,  6,  4), b3( 9,  3,  6), b3( 9,  1,  3), b3(11,  6,  3), z3,            \n"
-		"	b3( 8, 11,  1), b3( 8,  1,  0), b3(11,  6,  1), b3( 9,  1,  4), b3( 6,  4,  1),\n"
-		"	b3( 3, 11,  6), b3( 3,  6,  0), b3( 0,  6,  4), z3,             z3,            \n"
-		"	b3( 6,  4,  8), b3(11,  6,  8), z3,             z3,             z3,            \n"
-		"	b3( 7, 10,  6), b3( 7,  8, 10), b3( 8,  9, 10), z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 0,  7,  3), b3( 0, 10,  7), b3( 0,  9, 10), b3( 6,  7, 10), z3,            \n"
-		"	b3(10,  6,  7), b3( 1, 10,  7), b3( 1,  7,  8), b3( 1,  8,  0), z3,            \n"
-		"	b3(10,  6,  7), b3(10,  7,  1), b3( 1,  7,  3), z3,             z3,            \n"
-		"	b3( 1,  2,  6), b3( 1,  6,  8), b3( 1,  8,  9), b3( 8,  6,  7), z3,            \n"
-		"	b3( 2,  6,  9), b3( 2,  9,  1), b3( 6,  7,  9), b3( 0,  9,  3), b3( 7,  3,  9),\n"
-		"	b3( 7,  8,  0), b3( 7,  0,  6), b3( 6,  0,  2), z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 7,  3,  2), b3( 6,  7,  2), z3,             z3,             z3,            \n"
-		"	b3( 2,  3, 11), b3(10,  6,  8), b3(10,  8,  9), b3( 8,  6,  7), z3,            \n"
-		"	b3( 2,  0,  7), b3( 2,  7, 11), b3( 0,  9,  7), b3( 6,  7, 10), b3( 9, 10,  7),\n"
-		"	b3( 1,  8,  0), b3( 1,  7,  8), b3( 1, 10,  7), b3( 6,  7, 10), b3( 2,  3, 11),\n"
-		"	b3(11,  2,  1), b3(11,  1,  7), b3(10,  6,  1), b3( 6,  7,  1), z3,            \n"
-		"	b3( 8,  9,  6), b3( 8,  6,  7), b3( 9,  1,  6), b3(11,  6,  3), b3( 1,  3,  6),\n");
-	str_cat(&shader_buffer,
-		"	b3( 0,  9,  1), b3(11,  6,  7), z3,             z3,             z3,            \n"
-		"	b3( 7,  8,  0), b3( 7,  0,  6), b3( 3, 11,  0), b3(11,  6,  0), z3,            \n"
-		"	b3( 7, 11,  6), z3,             z3,             z3,             z3,            \n"
-		"	b3( 7,  6, 11), z3,             z3,             z3,             z3,            \n"
-		"	b3( 3,  0,  8), b3(11,  7,  6), z3,             z3,             z3,            \n"
-		"	b3( 0,  1,  9), b3(11,  7,  6), z3,             z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 8,  1,  9), b3( 8,  3,  1), b3(11,  7,  6), z3,             z3,            \n"
-		"	b3(10,  1,  2), b3( 6, 11,  7), z3,             z3,             z3,            \n"
-		"	b3( 1,  2, 10), b3( 3,  0,  8), b3( 6, 11,  7), z3,             z3,            \n"
-		"	b3( 2,  9,  0), b3( 2, 10,  9), b3( 6, 11,  7), z3,             z3,            \n"
-		"	b3( 6, 11,  7), b3( 2, 10,  3), b3(10,  8,  3), b3(10,  9,  8), z3,            \n"
-		"	b3( 7,  2,  3), b3( 6,  2,  7), z3,             z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 7,  0,  8), b3( 7,  6,  0), b3( 6,  2,  0), z3,             z3,            \n"
-		"	b3( 2,  7,  6), b3( 2,  3,  7), b3( 0,  1,  9), z3,             z3,            \n"
-		"	b3( 1,  6,  2), b3( 1,  8,  6), b3( 1,  9,  8), b3( 8,  7,  6), z3,            \n"
-		"	b3(10,  7,  6), b3(10,  1,  7), b3( 1,  3,  7), z3,             z3,            \n"
-		"	b3(10,  7,  6), b3( 1,  7, 10), b3( 1,  8,  7), b3( 1,  0,  8), z3,            \n"
-		"	b3( 0,  3,  7), b3( 0,  7, 10), b3( 0, 10,  9), b3( 6, 10,  7), z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 7,  6, 10), b3( 7, 10,  8), b3( 8, 10,  9), z3,             z3,            \n"
-		"	b3( 6,  8,  4), b3(11,  8,  6), z3,             z3,             z3,            \n"
-		"	b3( 3,  6, 11), b3( 3,  0,  6), b3( 0,  4,  6), z3,             z3,            \n"
-		"	b3( 8,  6, 11), b3( 8,  4,  6), b3( 9,  0,  1), z3,             z3,            \n"
-		"	b3( 9,  4,  6), b3( 9,  6,  3), b3( 9,  3,  1), b3(11,  3,  6), z3,            \n"
-		"	b3( 6,  8,  4), b3( 6, 11,  8), b3( 2, 10,  1), z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 1,  2, 10), b3( 3,  0, 11), b3( 0,  6, 11), b3( 0,  4,  6), z3,            \n"
-		"	b3( 4, 11,  8), b3( 4,  6, 11), b3( 0,  2,  9), b3( 2, 10,  9), z3,            \n"
-		"	b3(10,  9,  3), b3(10,  3,  2), b3( 9,  4,  3), b3(11,  3,  6), b3( 4,  6,  3),\n"
-		"	b3( 8,  2,  3), b3( 8,  4,  2), b3( 4,  6,  2), z3,             z3,            \n"
-		"	b3( 0,  4,  2), b3( 4,  6,  2), z3,             z3,             z3,            \n"
-		"	b3( 1,  9,  0), b3( 2,  3,  4), b3( 2,  4,  6), b3( 4,  3,  8), z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 1,  9,  4), b3( 1,  4,  2), b3( 2,  4,  6), z3,             z3,            \n"
-		"	b3( 8,  1,  3), b3( 8,  6,  1), b3( 8,  4,  6), b3( 6, 10,  1), z3,            \n"
-		"	b3(10,  1,  0), b3(10,  0,  6), b3( 6,  0,  4), z3,             z3,            \n"
-		"	b3( 4,  6,  3), b3( 4,  3,  8), b3( 6, 10,  3), b3( 0,  3,  9), b3(10,  9,  3),\n"
-		"	b3(10,  9,  4), b3( 6, 10,  4), z3,             z3,             z3,            \n"
-		"	b3( 4,  9,  5), b3( 7,  6, 11), z3,             z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 0,  8,  3), b3( 4,  9,  5), b3(11,  7,  6), z3,             z3,            \n"
-		"	b3( 5,  0,  1), b3( 5,  4,  0), b3( 7,  6, 11), z3,             z3,            \n"
-		"	b3(11,  7,  6), b3( 8,  3,  4), b3( 3,  5,  4), b3( 3,  1,  5), z3,            \n"
-		"	b3( 9,  5,  4), b3(10,  1,  2), b3( 7,  6, 11), z3,             z3,            \n"
-		"	b3( 6, 11,  7), b3( 1,  2, 10), b3( 0,  8,  3), b3( 4,  9,  5), z3,            \n"
-		"	b3( 7,  6, 11), b3( 5,  4, 10), b3( 4,  2, 10), b3( 4,  0,  2), z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 3,  4,  8), b3( 3,  5,  4), b3( 3,  2,  5), b3(10,  5,  2), b3(11,  7,  6),\n"
-		"	b3( 7,  2,  3), b3( 7,  6,  2), b3( 5,  4,  9), z3,             z3,            \n"
-		"	b3( 9,  5,  4), b3( 0,  8,  6), b3( 0,  6,  2), b3( 6,  8,  7), z3,            \n"
-		"	b3( 3,  6,  2), b3( 3,  7,  6), b3( 1,  5,  0), b3( 5,  4,  0), z3,            \n"
-		"	b3( 6,  2,  8), b3( 6,  8,  7), b3( 2,  1,  8), b3( 4,  8,  5), b3( 1,  5,  8),\n"
-		"	b3( 9,  5,  4), b3(10,  1,  6), b3( 1,  7,  6), b3( 1,  3,  7), z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 1,  6, 10), b3( 1,  7,  6), b3( 1,  0,  7), b3( 8,  7,  0), b3( 9,  5,  4),\n"
-		"	b3( 4,  0, 10), b3( 4, 10,  5), b3( 0,  3, 10), b3( 6, 10,  7), b3( 3,  7, 10),\n"
-		"	b3( 7,  6, 10), b3( 7, 10,  8), b3( 5,  4, 10), b3( 4,  8, 10), z3,            \n"
-		"	b3( 6,  9,  5), b3( 6, 11,  9), b3(11,  8,  9), z3,             z3,            \n"
-		"	b3( 3,  6, 11), b3( 0,  6,  3), b3( 0,  5,  6), b3( 0,  9,  5), z3,            \n"
-		"	b3( 0, 11,  8), b3( 0,  5, 11), b3( 0,  1,  5), b3( 5,  6, 11), z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 6, 11,  3), b3( 6,  3,  5), b3( 5,  3,  1), z3,             z3,            \n"
-		"	b3( 1,  2, 10), b3( 9,  5, 11), b3( 9, 11,  8), b3(11,  5,  6), z3,            \n"
-		"	b3( 0, 11,  3), b3( 0,  6, 11), b3( 0,  9,  6), b3( 5,  6,  9), b3( 1,  2, 10),\n"
-		"	b3(11,  8,  5), b3(11,  5,  6), b3( 8,  0,  5), b3(10,  5,  2), b3( 0,  2,  5),\n"
-		"	b3( 6, 11,  3), b3( 6,  3,  5), b3( 2, 10,  3), b3(10,  5,  3), z3,            \n"
-		"	b3( 5,  8,  9), b3( 5,  2,  8), b3( 5,  6,  2), b3( 3,  8,  2), z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 9,  5,  6), b3( 9,  6,  0), b3( 0,  6,  2), z3,             z3,            \n"
-		"	b3( 1,  5,  8), b3( 1,  8,  0), b3( 5,  6,  8), b3( 3,  8,  2), b3( 6,  2,  8),\n"
-		"	b3( 1,  5,  6), b3( 2,  1,  6), z3,             z3,             z3,            \n"
-		"	b3( 1,  3,  6), b3( 1,  6, 10), b3( 3,  8,  6), b3( 5,  6,  9), b3( 8,  9,  6),\n"
-		"	b3(10,  1,  0), b3(10,  0,  6), b3( 9,  5,  0), b3( 5,  6,  0), z3,            \n"
-		"	b3( 0,  3,  8), b3( 5,  6, 10), z3,             z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3(10,  5,  6), z3,             z3,             z3,             z3,            \n"
-		"	b3(11,  5, 10), b3( 7,  5, 11), z3,             z3,             z3,            \n"
-		"	b3(11,  5, 10), b3(11,  7,  5), b3( 8,  3,  0), z3,             z3,            \n"
-		"	b3( 5, 11,  7), b3( 5, 10, 11), b3( 1,  9,  0), z3,             z3,            \n"
-		"	b3(10,  7,  5), b3(10, 11,  7), b3( 9,  8,  1), b3( 8,  3,  1), z3,            \n"
-		"	b3(11,  1,  2), b3(11,  7,  1), b3( 7,  5,  1), z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 0,  8,  3), b3( 1,  2,  7), b3( 1,  7,  5), b3( 7,  2, 11), z3,            \n"
-		"	b3( 9,  7,  5), b3( 9,  2,  7), b3( 9,  0,  2), b3( 2, 11,  7), z3,            \n"
-		"	b3( 7,  5,  2), b3( 7,  2, 11), b3( 5,  9,  2), b3( 3,  2,  8), b3( 9,  8,  2),\n"
-		"	b3( 2,  5, 10), b3( 2,  3,  5), b3( 3,  7,  5), z3,             z3,            \n"
-		"	b3( 8,  2,  0), b3( 8,  5,  2), b3( 8,  7,  5), b3(10,  2,  5), z3,            \n"
-		"	b3( 9,  0,  1), b3( 5, 10,  3), b3( 5,  3,  7), b3( 3, 10,  2), z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 9,  8,  2), b3( 9,  2,  1), b3( 8,  7,  2), b3(10,  2,  5), b3( 7,  5,  2),\n"
-		"	b3( 1,  3,  5), b3( 3,  7,  5), z3,             z3,             z3,            \n"
-		"	b3( 0,  8,  7), b3( 0,  7,  1), b3( 1,  7,  5), z3,             z3,            \n"
-		"	b3( 9,  0,  3), b3( 9,  3,  5), b3( 5,  3,  7), z3,             z3,            \n"
-		"	b3( 9,  8,  7), b3( 5,  9,  7), z3,             z3,             z3,            \n"
-		"	b3( 5,  8,  4), b3( 5, 10,  8), b3(10, 11,  8), z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 5,  0,  4), b3( 5, 11,  0), b3( 5, 10, 11), b3(11,  3,  0), z3,            \n"
-		"	b3( 0,  1,  9), b3( 8,  4, 10), b3( 8, 10, 11), b3(10,  4,  5), z3,            \n"
-		"	b3(10, 11,  4), b3(10,  4,  5), b3(11,  3,  4), b3( 9,  4,  1), b3( 3,  1,  4),\n"
-		"	b3( 2,  5,  1), b3( 2,  8,  5), b3( 2, 11,  8), b3( 4,  5,  8), z3,            \n"
-		"	b3( 0,  4, 11), b3( 0, 11,  3), b3( 4,  5, 11), b3( 2, 11,  1), b3( 5,  1, 11),\n"
-		"	b3( 0,  2,  5), b3( 0,  5,  9), b3( 2, 11,  5), b3( 4,  5,  8), b3(11,  8,  5),\n");
-	str_cat(&shader_buffer,
-		"	b3( 9,  4,  5), b3( 2, 11,  3), z3,             z3,             z3,            \n"
-		"	b3( 2,  5, 10), b3( 3,  5,  2), b3( 3,  4,  5), b3( 3,  8,  4), z3,            \n"
-		"	b3( 5, 10,  2), b3( 5,  2,  4), b3( 4,  2,  0), z3,             z3,            \n"
-		"	b3( 3, 10,  2), b3( 3,  5, 10), b3( 3,  8,  5), b3( 4,  5,  8), b3( 0,  1,  9),\n"
-		"	b3( 5, 10,  2), b3( 5,  2,  4), b3( 1,  9,  2), b3( 9,  4,  2), z3,            \n"
-		"	b3( 8,  4,  5), b3( 8,  5,  3), b3( 3,  5,  1), z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 0,  4,  5), b3( 1,  0,  5), z3,             z3,             z3,            \n"
-		"	b3( 8,  4,  5), b3( 8,  5,  3), b3( 9,  0,  5), b3( 0,  3,  5), z3,            \n"
-		"	b3( 9,  4,  5), z3,             z3,             z3,             z3,            \n"
-		"	b3( 4, 11,  7), b3( 4,  9, 11), b3( 9, 10, 11), z3,             z3,            \n"
-		"	b3( 0,  8,  3), b3( 4,  9,  7), b3( 9, 11,  7), b3( 9, 10, 11), z3,            \n"
-		"	b3( 1, 10, 11), b3( 1, 11,  4), b3( 1,  4,  0), b3( 7,  4, 11), z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 3,  1,  4), b3( 3,  4,  8), b3( 1, 10,  4), b3( 7,  4, 11), b3(10, 11,  4),\n"
-		"	b3( 4, 11,  7), b3( 9, 11,  4), b3( 9,  2, 11), b3( 9,  1,  2), z3,            \n"
-		"	b3( 9,  7,  4), b3( 9, 11,  7), b3( 9,  1, 11), b3( 2, 11,  1), b3( 0,  8,  3),\n"
-		"	b3(11,  7,  4), b3(11,  4,  2), b3( 2,  4,  0), z3,             z3,            \n"
-		"	b3(11,  7,  4), b3(11,  4,  2), b3( 8,  3,  4), b3( 3,  2,  4), z3,            \n"
-		"	b3( 2,  9, 10), b3( 2,  7,  9), b3( 2,  3,  7), b3( 7,  4,  9), z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 9, 10,  7), b3( 9,  7,  4), b3(10,  2,  7), b3( 8,  7,  0), b3( 2,  0,  7),\n"
-		"	b3( 3,  7, 10), b3( 3, 10,  2), b3( 7,  4, 10), b3( 1, 10,  0), b3( 4,  0, 10),\n"
-		"	b3( 1, 10,  2), b3( 8,  7,  4), z3,             z3,             z3,            \n"
-		"	b3( 4,  9,  1), b3( 4,  1,  7), b3( 7,  1,  3), z3,             z3,            \n"
-		"	b3( 4,  9,  1), b3( 4,  1,  7), b3( 0,  8,  1), b3( 8,  7,  1), z3,            \n"
-		"	b3( 4,  0,  3), b3( 7,  4,  3), z3,             z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 4,  8,  7), z3,             z3,             z3,             z3,            \n"
-		"	b3( 9, 10,  8), b3(10, 11,  8), z3,             z3,             z3,            \n"
-		"	b3( 3,  0,  9), b3( 3,  9, 11), b3(11,  9, 10), z3,             z3,            \n"
-		"	b3( 0,  1, 10), b3( 0, 10,  8), b3( 8, 10, 11), z3,             z3,            \n"
-		"	b3( 3,  1, 10), b3(11,  3, 10), z3,             z3,             z3,            \n"
-		"	b3( 1,  2, 11), b3( 1, 11,  9), b3( 9, 11,  8), z3,             z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 3,  0,  9), b3( 3,  9, 11), b3( 1,  2,  9), b3( 2, 11,  9), z3,            \n"
-		"	b3( 0,  2, 11), b3( 8,  0, 11), z3,             z3,             z3,            \n"
-		"	b3( 3,  2, 11), z3,             z3,             z3,             z3,            \n"
-		"	b3( 2,  3,  8), b3( 2,  8, 10), b3(10,  8,  9), z3,             z3,            \n"
-		"	b3( 9, 10,  2), b3( 0,  9,  2), z3,             z3,             z3,            \n"
-		"	b3( 2,  3,  8), b3( 2,  8, 10), b3( 0,  1,  8), b3( 1, 10,  8), z3,            \n");
-	str_cat(&shader_buffer,
-		"	b3( 1, 10,  2), z3,             z3,             z3,             z3,            \n"
-		"	b3( 1,  3,  8), b3( 9,  1,  8), z3,             z3,             z3,            \n"
-		"	b3( 0,  9,  1), z3,             z3,             z3,             z3,            \n"
-		"	b3( 0,  3,  8), z3,             z3,             z3,             z3,            \n"
-		"	z3,             z3,             z3,             z3,             z3             \n"
-		");\n");
-
-	str_cat(&shader_buffer,
-		"vec4 get_cubeColor(vec3 p)\n"
-		"{\n"
-		"	float t = scene.time * 3.;\n"
-		"	float r0 = abs(cos(t * .3)) * 2. + .6;\n"
-		"	float r1 = abs(sin(t * .35)) * 2. + .6;\n"
-		"	vec3 origin = vec3(0., 2.5, 0.);\n"
-		"	vec3 p1 = vec3(sin(t), cos(t), sin(t * .612)) * r0;\n"
-		"	vec3 p2 = vec3(sin(t * 1.1), cos(t * 1.2), sin(t * .512)) * r1;\n");
-	str_cat(&shader_buffer,
-		"	float val = 1. / (dot(p - origin, p - origin) + 1.);\n"
-		"	float val2 = .6 / (dot(p - origin - p1, p - origin - p1) + 0.7);\n"
-		"	float val3 = .5 / (dot(p - origin - p2, p - origin - p2) + 0.9);\n"
-		"	return vec4(val, val2, val3, 1.0);\n"
-		"}\n");
-
-	str_cat(&shader_buffer,
 		"vec3 get_cubePos(int i)\n"
 		"{\n"
-		"	return gl_in[0].gl_Position.xyz + vert_offsets[i] * grid_size;\n"
-		"}\n"
-		"float get_cubeVal(vec3 p)\n"
-		"{\n"
-		"	vec4 color = get_cubeColor(p);\n"
-		"	return color.x + color.y + color.z;\n"
-		"}\n");
-
-	str_cat(&shader_buffer,
-		"vec3 isonormal(vec3 pos)\n"
-		"{\n"
-		"	vec3 nor;\n"
-		"	float offset = grid_size * 0.5;\n"
-		"	nor.x = get_cubeVal(pos + vec3(grid_size, 0.0, 0.0))\n"
-		"	      - get_cubeVal(pos - vec3(grid_size, 0.0, 0.0));\n"
-		"	nor.y = get_cubeVal(pos + vec3(0.0, grid_size, 0.0))\n"
-		"	      - get_cubeVal(pos - vec3(0.0, grid_size, 0.0));\n"
-		"	nor.z = get_cubeVal(pos + vec3(0.0, 0.0, grid_size))\n"
-		"	      - get_cubeVal(pos - vec3(0.0, 0.0, grid_size));\n"
-		"	return -normalize(nor);\n"
-		"}\n");
-
-	str_cat(&shader_buffer,
-		"ivec3 triTableValue(int i, int j)\n"
-		"{\n"
-		"	return tri_table[i * 5 + j];\n"
-		"	/* return texelFetch(triTableTex, ivec2(j, i), 0).a; */\n"
-		"}\n"
-		"vec3 vert_lerp(float iso_level, vec3 v0, float l0, vec3 v1, float l1)\n"
-		"{\n"
-		"	return mix(v0, v1, (iso_level - l0) / (l1 - l0));\n"
+		"	return $vertex_position[0] + vert_offsets[i] * grid_size;\n"
 		"}\n");
 
 	str_cat(&shader_buffer,
 		"void main(void)\n"
 		"{\n"
-		"	vec4 pos;\n"
 		"	id = $id[0];\n"
 		"	matid = $matid[0];\n"
 		"	object_id = $object_id[0];\n"
 		"	poly_id = $poly_id[0];\n"
 		"	obj_pos = $obj_pos[0];\n"
-		"	model = $model[0];\n"
-		"	int cubeindex = 0;\n"
-		"	vec3 cubesPos[8];\n");
+		"	poly_color = vec4(1.0);\n"
+		"	texcoord = $texcoord[0];\n"
+		"	vertex_normal = vec3(-1.0, 0.0, 0.0);\n"
+		"	model = $model[0];\n");
 
 	str_cat(&shader_buffer,
-		"	cubesPos[0] = get_cubePos(0);\n"
-		"	cubesPos[1] = get_cubePos(1);\n"
-		"	cubesPos[2] = get_cubePos(2);\n"
-		"	cubesPos[3] = get_cubePos(3);\n"
-		"	cubesPos[4] = get_cubePos(4);\n"
-		"	cubesPos[5] = get_cubePos(5);\n"
-		"	cubesPos[6] = get_cubePos(6);\n"
-		"	cubesPos[7] = get_cubePos(7);\n");
+		"	mat4 MV = camera(view) * model;\n"
+		"	vec4 pos0;\n"
+		"	vec4 pos1;\n"
+		"	vec4 pos2;\n"
+		"	vec3 wpos0;\n"
+		"	vec3 wpos1;\n"
+		"	vec3 wpos2;\n"
+		"	vec3 cpos0;\n"
+		"	vec3 cpos1;\n"
+		"	vec3 cpos2;\n");
 
 	str_cat(&shader_buffer,
-		"	float cubeVal0 = get_cubeVal(cubesPos[0]);\n"
-		"	float cubeVal1 = get_cubeVal(cubesPos[1]);\n"
-		"	float cubeVal2 = get_cubeVal(cubesPos[2]);\n"
-		"	float cubeVal3 = get_cubeVal(cubesPos[3]);\n"
-		"	float cubeVal4 = get_cubeVal(cubesPos[4]);\n"
-		"	float cubeVal5 = get_cubeVal(cubesPos[5]);\n"
-		"	float cubeVal6 = get_cubeVal(cubesPos[6]);\n"
-		"	float cubeVal7 = get_cubeVal(cubesPos[7]);\n");
-
-	/* Determine the index into the edge table which */
-	/* tells us which vertices are inside of the surface */
-	str_cat(&shader_buffer,
-		"	cubeindex = int(cubeVal0 < iso_level);\n"
-		"	cubeindex += int(cubeVal1 < iso_level)*2;\n"
-		"	cubeindex += int(cubeVal2 < iso_level)*4;\n"
-		"	cubeindex += int(cubeVal3 < iso_level)*8;\n"
-		"	cubeindex += int(cubeVal4 < iso_level)*16;\n"
-		"	cubeindex += int(cubeVal5 < iso_level)*32;\n"
-		"	cubeindex += int(cubeVal6 < iso_level)*64;\n"
-		"	cubeindex += int(cubeVal7 < iso_level)*128;\n"
-		/* Cube is entirely in/out of the surface */
-		"	if (cubeindex == 0)\n"
-		"		return;\n"
-		"	if (cubeindex == 255)\n"
-		"		return;\n");
-
-	/* Find the vertices where the surface intersects the cube */
-	str_cat(&shader_buffer,
-		"	vec3 vertlist[12];\n"
-		"	vertlist[0] = vert_lerp(iso_level, cubesPos[0], cubeVal0, cubesPos[1], cubeVal1);\n"
-		"	vertlist[1] = vert_lerp(iso_level, cubesPos[1], cubeVal1, cubesPos[2], cubeVal2);\n"
-		"	vertlist[2] = vert_lerp(iso_level, cubesPos[2], cubeVal2, cubesPos[3], cubeVal3);\n"
-		"	vertlist[3] = vert_lerp(iso_level, cubesPos[3], cubeVal3, cubesPos[0], cubeVal0);\n"
-		"	vertlist[4] = vert_lerp(iso_level, cubesPos[4], cubeVal4, cubesPos[5], cubeVal5);\n");
-	str_cat(&shader_buffer,
-		"	vertlist[5] = vert_lerp(iso_level, cubesPos[5], cubeVal5, cubesPos[6], cubeVal6);\n"
-		"	vertlist[6] = vert_lerp(iso_level, cubesPos[6], cubeVal6, cubesPos[7], cubeVal7);\n"
-		"	vertlist[7] = vert_lerp(iso_level, cubesPos[7], cubeVal7, cubesPos[4], cubeVal4);\n"
-		"	vertlist[8] = vert_lerp(iso_level, cubesPos[0], cubeVal0, cubesPos[4], cubeVal4);\n"
-		"	vertlist[9] = vert_lerp(iso_level, cubesPos[1], cubeVal1, cubesPos[5], cubeVal5);\n");
-	str_cat(&shader_buffer,
-		"	vertlist[10] = vert_lerp(iso_level, cubesPos[2], cubeVal2, cubesPos[6], cubeVal6);\n"
-		"	vertlist[11] = vert_lerp(iso_level, cubesPos[3], cubeVal3, cubesPos[7], cubeVal7);\n");
+		"	pos0 = model * vec4(get_cubePos(0), 1.0);\n"
+		"	wpos0 = pos0.xyz;\n"
+		"	pos0 = camera(view) * pos0;\n"
+		"	cpos0 = pos0.xyz;\n"
+		"	pos0 = camera(projection) * pos0;\n");
 
 	str_cat(&shader_buffer,
-		"	for(int i = 0; i < 5; i++)\n"
-		"	{\n"
-		"		ivec3 I = triTableValue(cubeindex, i);\n"
-		"		mat4 MV = camera(view) * model;\n"
-		"		if(I.x != -1)\n"
-		"		{\n"
-		"			vec4 pos0;\n"
-		"			vec4 pos1;\n"
-		"			vec4 pos2;\n"
-		"			vec3 wpos0;\n"
-		"			vec3 wpos1;\n"
-		"			vec3 wpos2;\n"
-		"			vec3 cpos0;\n"
-		"			vec3 cpos1;\n"
-		"			vec3 cpos2;\n"
-		"			vec3 norm0;\n"
-		"			vec3 norm1;\n"
-		"			vec3 norm2;\n");
+		"	pos1 = model * vec4(get_cubePos(1), 1.0);\n"
+		"	wpos1 = pos1.xyz;\n"
+		"	pos1 = camera(view) * pos1;\n"
+		"	cpos1 = pos1.xyz;\n"
+		"	pos1 = camera(projection) * pos1;\n");
 
 	str_cat(&shader_buffer,
-		"			pos0 = vec4(vertlist[I.x], 1.0);\n"
-		"			norm0 = isonormal(pos0.xyz);\n"
-		"			norm0 = (MV * vec4(norm0, 0.0f)).xyz;\n"
-		"			pos0 = model * pos0;\n"
-		"			wpos0 = pos.xyz;\n"
-		"			pos0 = camera(view) * pos0;\n"
-		"			cpos0 = pos0.xyz;\n"
-		"			pos0 = camera(projection) * pos0;\n");
+		"	pos2 = model * vec4(get_cubePos(2), 1.0);\n"
+		"	wpos2 = pos2.xyz;\n"
+		"	pos2 = camera(view) * pos2;\n"
+		"	cpos2 = pos2.xyz;\n"
+		"	pos2 = camera(projection) * pos2;\n");
 
 	str_cat(&shader_buffer,
-		"			pos1 = vec4(vertlist[I.y], 1.0);\n"
-		"			norm1 = isonormal(pos1.xyz);\n"
-		"			norm1 = (MV * vec4(norm1, 0.0f)).xyz;\n"
-		"			pos1 = model * pos1;\n"
-		"			wpos1 = pos1.xyz;\n"
-		"			pos1 = camera(view) * pos1;\n"
-		"			cpos1 = pos1.xyz;\n"
-		"			pos1 = camera(projection) * pos1;\n");
+		"	vertex_world_position = wpos0;\n"
+		"	vertex_position = cpos0;\n"
+		"	gl_Position = pos0;\n"
+		"	EmitVertex();\n");
 
 	str_cat(&shader_buffer,
-		"			pos2 = vec4(vertlist[I.z], 1.0);\n"
-		"			norm2 = isonormal(pos2.xyz);\n"
-		"			norm2 = (MV * vec4(norm2, 0.0f)).xyz;\n"
-		"			pos2 = model * pos2;\n"
-		"			wpos2 = pos2.xyz;\n"
-		"			pos2 = camera(view) * pos2;\n"
-		"			cpos2 = pos2.xyz;\n"
-		"			pos2 = camera(projection) * pos2;\n");
-
-	/* vertex_normal = normalize(cross(cpos1.xyz - cpos0.xyz, cpos2.xyz - cpos0.xyz)); */
+		"	vertex_world_position = wpos1;\n"
+		"	vertex_position = cpos1;\n"
+		"	gl_Position = pos1;\n"
+		"	EmitVertex();\n");
 
 	str_cat(&shader_buffer,
-		"			vertex_normal = norm0;\n"
-		"			poly_color = get_cubeColor(vertlist[I.x]);\n"
-		"			vertex_world_position = wpos0;\n"
-		"			vertex_position = cpos0;\n"
-		"			gl_Position = pos0;\n"
-		"			EmitVertex();\n");
+		"	vertex_world_position = wpos2;\n"
+		"	vertex_position = cpos2;\n"
+		"	gl_Position = pos2;\n"
+		"	EmitVertex();\n");
 
 	str_cat(&shader_buffer,
-		"			vertex_world_position = wpos1;\n"
-		"			vertex_position = cpos1;\n"
-		"			poly_color = get_cubeColor(vertlist[I.y]);\n"
-		"			vertex_normal = norm1;\n"
-		"			gl_Position = pos1;\n"
-		"			EmitVertex();\n");
-
-	str_cat(&shader_buffer,
-		"			vertex_world_position = wpos2;\n"
-		"			vertex_position = cpos2;\n"
-		"			poly_color = get_cubeColor(vertlist[I.z]);\n"
-		"			vertex_normal = norm2;\n"
-		"			gl_Position = pos2;\n"
-		"			EmitVertex();\n");
-
-	str_cat(&shader_buffer,
-		"			EndPrimitive();\n"
-		"		}\n"
-		"		else\n"
-		"		{\n"
-		"			break;\n"
-		"		}\n"
-		"	}\n"
+		"	EndPrimitive();\n"
 		"}\n");
 
 	shader_add_source("candle:marching.glsl", shader_buffer,

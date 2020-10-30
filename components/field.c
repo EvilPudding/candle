@@ -120,6 +120,7 @@ c_field_t *c_field_new(mat_t *mat, vec3_t start, vec3_t end, float cell_size,
 
 	self->mesh = mesh_new();
 	self->mesh->has_texcoords = false;
+	self->mesh->cull = false;
 	mesh_point_grid(self->mesh, start, size, segments);
 	drawable_set_mesh(&self->draw, self->mesh);
 	/* drawable_set_callback(&self->draw, (draw_cb)c_field_pre_draw, self); */

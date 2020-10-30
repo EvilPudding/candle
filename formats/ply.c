@@ -142,7 +142,11 @@ void mesh_load_ply(mesh_t *self, const char *filename)
 
 	words = get_words(fp, &nwords);
 
-	if(!words || !!strcmp(words[0].chars, "ply")) exit(1);
+	if(!words || !!strcmp(words[0].chars, "ply"))
+	{
+		printf("Couldn't parse words in ply %s.\n", filename);
+		exit(1);
+	}
 
 	/* READ HEADER */
 
@@ -165,6 +169,7 @@ void mesh_load_ply(mesh_t *self, const char *filename)
 			}
 			else
 			{
+				printf("Unknown ply format.\n");
 				exit(1);
 			}
 			/* word[1] is version */
@@ -182,7 +187,11 @@ void mesh_load_ply(mesh_t *self, const char *filename)
 			el->props_num = 0;
 			
 			strncpy(el->name, word->chars, sizeof(el->name) - 1); word++;
-			if(sscanf(word->chars, "%d", &el->num) < 0) exit(1);
+			if(sscanf(word->chars, "%d", &el->num) < 0)
+			{
+				printf("Failed to parse ply.\n");
+				exit(1);
+			}
 			word++;
 
 			while(!strcmp(word->chars, "property"))
