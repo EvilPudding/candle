@@ -1733,7 +1733,6 @@ void shaders_candle_marching()
 	str_cat(&shader_buffer,
 		"void main(void)\n"
 		"{\n"
-		"	vec4 pos;\n"
 		"	id = $id[0];\n"
 		"	matid = $matid[0];\n"
 		"	object_id = $object_id[0];\n"
@@ -1823,7 +1822,7 @@ void shaders_candle_marching()
 		"			norm0 = isonormal(pos0.xyz);\n"
 		"			norm0 = (MV * vec4(norm0, 0.0f)).xyz;\n"
 		"			pos0 = model * pos0;\n"
-		"			wpos0 = pos.xyz;\n"
+		"			wpos0 = pos0.xyz;\n"
 		"			pos0 = camera(view) * pos0;\n"
 		"			cpos0 = pos0.xyz;\n"
 		"			pos0 = camera(projection) * pos0;\n");
