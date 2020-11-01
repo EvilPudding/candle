@@ -26,6 +26,64 @@ static drawable_t g_histogram;
 
 static int c_light_position_changed(c_light_t *self);
 
+static void c_light_caustics_init(c_light_t *self)
+{
+	if(!g_histogram_buffer)
+	{
+		const uint32_t histogram_resolution = 256;
+		g_histogram_mesh = mesh_new();
+		mesh_lock(g_histogram_mesh);
+		mesh_point_grid(g_histogram_mesh,
+		                vec3(0.0, 0.0, 0.0),
+		                vec3(histogram_resolution, histogram_resolution, 0.0),
+		                uvec3(histogram_resolution, histogram_resolution, 1));
+		mesh_unlock(g_histogram_mesh);
+		g_histogram_buffer = texture_new_2D(histogram_resolution,
+											histogram_resolution,
+		                                    0, 3,
+			buffer_new("depth", true, -1),
+			buffer_new("pos", true, 2),
+			buffer_new("color", false, 4));
+		g_histogram_accum = texture_new_2D(histogram_resolution / 2,
+		                                   histogram_resolution / 2,
+		                                   TEX_INTERPOLATE, 1,
+			buffer_new("color", true, 4));
+
+		drawable_init(&g_histogram, ref("histogram"));
+		drawable_set_mesh(&g_histogram, g_histogram_mesh);
+		drawable_set_vs(&g_histogram,
+						vs_new("histogram", false, 2,
+						       vertex_header_new(
+			"BUFFER {\n"
+			"	sampler2D pos;\n"
+			"	sampler2D color;\n"
+			"} buf;\n"
+			"#define NEAR 0.1\n"
+			"#define FAR 1000.0\n"
+			"float linearize(float depth)\n"
+			"{\n"
+			"    return (2.0 * NEAR * FAR) / ((FAR + NEAR) - (2.0 * depth - 1.0) * (FAR - NEAR));\n"
+			"}\n"
+			"float unlinearize(float depth)\n"
+			"{\n"
+			"	return FAR * (1.0 - (NEAR / depth)) / (FAR - NEAR);\n"
+			"}\n"),
+
+						       vertex_modifier_new(
+			"{\n"
+			"	vec2 target = texelFetch(buf.pos, ivec2(P.xy), 0).xy;\n"
+			"	pos = vec4((target - 0.5) * 2.0, 0.0, 1.0);\n"
+			"	vec4 color = texelFetch(buf.color, ivec2(P.xy), 0);\n"
+			"	float transm = 1.0 - color.a;\n"
+			"	float dark = min(1.0 - abs(0.5 - transm) * 2.0, 1.0);\n"
+			"	float light = clamp(transm * 2.0 - 1.0, 0.0, 1.0);\n"
+			"	vec3 col = color.rgb * dark + light;\n"
+			"	$poly_color = vec4(col / 64.0, 1.0);\n"
+			"}\n"
+		)));
+	}
+}
+
 static void c_light_drawable_init(c_light_t *self)
 {
 	if(!g_light)
@@ -43,60 +101,6 @@ static void c_light_drawable_init(c_light_t *self)
 		      texture_from_memory("bulb", (const char *)bulb_png, bulb_png_len));
 		mat1f(g_light_widget, ref("albedo.blend"), 1.0f);
 		mat4f(g_light_widget, ref("emissive.color"), vec4(1.0f, 1.0f, 1.0f, 1.0f));
-
-		{
-			const uint32_t histogram_resolution = 256;
-			g_histogram_mesh = mesh_new();
-			mesh_lock(g_histogram_mesh);
-			mesh_point_grid(g_histogram_mesh,
-			                vec3(0.0, 0.0, 0.0),
-			                vec3(histogram_resolution, histogram_resolution, 0.0),
-			                uvec3(histogram_resolution, histogram_resolution, 1));
-			mesh_unlock(g_histogram_mesh);
-			g_histogram_buffer = texture_new_2D(histogram_resolution,
-												histogram_resolution,
-			                                    0, 3,
-				buffer_new("depth", true, -1),
-				buffer_new("pos", true, 2),
-				buffer_new("color", false, 4));
-			g_histogram_accum = texture_new_2D(histogram_resolution / 2,
-			                                   histogram_resolution / 2,
-			                                   TEX_INTERPOLATE, 1,
-				buffer_new("color", true, 4));
-
-			drawable_init(&g_histogram, ref("histogram"));
-			drawable_set_mesh(&g_histogram, g_histogram_mesh);
-			drawable_set_vs(&g_histogram,
-							vs_new("histogram", false, 2,
-							       vertex_header_new(
-				"BUFFER {\n"
-				"	sampler2D pos;\n"
-				"	sampler2D color;\n"
-				"} buf;\n"
-				"#define NEAR 0.1\n"
-				"#define FAR 1000.0\n"
-				"float linearize(float depth)\n"
-				"{\n"
-				"    return (2.0 * NEAR * FAR) / ((FAR + NEAR) - (2.0 * depth - 1.0) * (FAR - NEAR));\n"
-				"}\n"
-				"float unlinearize(float depth)\n"
-				"{\n"
-				"	return FAR * (1.0 - (NEAR / depth)) / (FAR - NEAR);\n"
-				"}\n"),
-
-							       vertex_modifier_new(
-				"{\n"
-				"	vec2 target = texelFetch(buf.pos, ivec2(P.xy), 0).xy;\n"
-				"	pos = vec4((target - 0.5) * 2.0, 0.0, 1.0);\n"
-				"	vec4 color = texelFetch(buf.color, ivec2(P.xy), 0);\n"
-				"	float transm = 1.0 - color.a;\n"
-				"	float dark = min(1.0 - abs(0.5 - transm) * 2.0, 1.0);\n"
-				"	float light = clamp(transm * 2.0 - 1.0, 0.0, 1.0);\n"
-				"	vec3 col = color.rgb * dark + light;\n"
-				"	$poly_color = vec4(col / 64.0, 1.0);\n"
-				"}\n"
-			)));
-		}
 	}
 	if (!self->widget.mesh)
 	{
@@ -152,12 +156,70 @@ void release_tile(probe_tile_t tile);
 uint32_t get_level_size(uint32_t level);
 
 extern texture_t *g_probe_cache;
+static void c_light_add_caustics_passes(c_light_t *self)
+{
+	uint32_t i;
+	c_light_caustics_init(self);
+	for (i = 0; i < 6; ++i)
+	{
+		renderer_add_pass(self->renderer, "caustics", "candle:caustics",
+			self->caustics_group, IGNORE_CAM_VIEWPORT,
+			g_histogram_buffer, g_histogram_buffer, 0, ~0, 3,
+			opt_clear_depth(1.0f, NULL),
+			opt_clear_color(vec4(0.0, 0.0, 0.0, 1.0), NULL),
+			opt_cam(i, NULL)
+		);
+		renderer_add_pass(self->renderer, "caustics_accum0", "candle:color",
+			ref("histogram"), IGNORE_CAM_VIEWPORT | ADD,
+			g_histogram_accum, NULL, 0, ~0, 3,
+			opt_cam(i, NULL),
+			opt_tex("buf", g_histogram_buffer, NULL),
+			opt_clear_color(vec4(0.0, 0.0, 0.0, 0.0), NULL)
+		);
+		renderer_add_pass(self->renderer, "caustics_copy", "candle:upsample",
+			ref("quad"), DEPTH_DISABLE,
+			g_probe_cache, NULL, 0, ~0, 4,
+			opt_tex("buf", g_histogram_accum, NULL),
+			opt_int("level", 0, NULL),
+			opt_num("alpha", 1.0, NULL),
+			opt_cam(i, NULL)
+		);
+	}
+
+	renderer_add_pass(self->renderer, "depth", "candle:shadow_map",
+		self->caustics_group, CULL_DISABLE, g_probe_cache, g_probe_cache, 0, ~0, 1,
+		opt_cam(~0, NULL)
+	);
+}
+
+void c_light_set_caustics(c_light_t *self, bool_t value)
+{
+	self->caustics = value;
+	if (!self->renderer)
+	{
+		return;
+	}
+	if (self->caustics)
+	{
+		if (!renderer_pass(self->renderer, ref("caustics")))
+		{
+			loader_push(g_candle->loader, (loader_cb)c_light_add_caustics_passes,
+			            self, NULL);
+		}
+	}
+}
+
 static void c_light_create_renderer(c_light_t *self)
 {
 	uint32_t f;
 	texture_t *output;
 	vec3_t p1[6], up[6];
-	renderer_t *renderer = renderer_new(1.0f);
+	renderer_t *renderer;
+
+	if (!g_probe_cache)
+		return;
+
+	renderer = renderer_new(1.0f);
 
 	self->tile = get_free_tile(0, &self->lod);
 
@@ -195,37 +257,7 @@ static void c_light_create_renderer(c_light_t *self)
 	);
 	if (self->caustics)
 	{
-		uint32_t i = 3;
-		for (i = 0; i < 6; ++i)
-		{
-		renderer_add_pass(renderer, "caustics", "candle:caustics",
-			self->caustics_group, IGNORE_CAM_VIEWPORT,
-			g_histogram_buffer, g_histogram_buffer, 0, ~0, 3,
-			opt_clear_depth(1.0f, NULL),
-			opt_clear_color(vec4(0.0, 0.0, 0.0, 1.0), NULL),
-			opt_cam(i, NULL)
-		);
-		renderer_add_pass(renderer, "caustics_accum0", "candle:color",
-			ref("histogram"), IGNORE_CAM_VIEWPORT | ADD,
-			g_histogram_accum, NULL, 0, ~0, 3,
-			opt_cam(i, NULL),
-			opt_tex("buf", g_histogram_buffer, NULL),
-			opt_clear_color(vec4(0.0, 0.0, 0.0, 0.0), NULL)
-		);
-		renderer_add_pass(renderer, "caustics_copy", "candle:upsample",
-			ref("quad"), DEPTH_DISABLE,
-			output, NULL, 0, ~0, 4,
-			opt_tex("buf", g_histogram_accum, NULL),
-			opt_int("level", 0, NULL),
-			opt_num("alpha", 1.0, NULL),
-			opt_cam(i, NULL)
-		);
-		}
-
-		renderer_add_pass(renderer, "depth", "candle:shadow_map",
-			self->caustics_group, CULL_DISABLE, output, output, 0, ~0, 1,
-			opt_cam(~0, NULL)
-		);
+		c_light_add_caustics_passes(self);
 	}
 
 

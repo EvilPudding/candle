@@ -43,5 +43,6 @@ void c_light_set_lod(c_light_t *self, uint32_t lod);
 void c_light_set_groups(c_light_t *self, uint32_t visible_group,
 		uint32_t ambient_group, uint32_t light_group, uint32_t caustics_group);
 void c_light_set_shadow_cooldown(c_light_t *self, uint32_t cooldown);
+void c_light_set_caustics(c_light_t *self, bool_t value);
 
 #endif /* !LIGHT_H */
