@@ -1702,6 +1702,13 @@ void shaders_candle_marching()
 		"}\n");
 
 	str_cat(&shader_buffer,
+		"float get_cubeVal(vec3 p)\n"
+		"{\n"
+		"	vec4 color = get_cubeColor(p);\n"
+		"	return color.x + color.y + color.z;\n"
+		"}\n");
+
+	str_cat(&shader_buffer,
 		"vec3 isonormal(vec3 pos)\n"
 		"{\n"
 		"	vec3 nor;\n"
@@ -1739,19 +1746,6 @@ void shaders_candle_marching()
 		"	int cubeindex = 0;\n"
 		"	vec3 cubesPos[8];\n");
 
-
-	str_cat(&shader_buffer,
-		"void main(void)\n"
-		"{\n"
-		"	id = $id[0];\n"
-		"	matid = $matid[0];\n"
-		"	object_id = $object_id[0];\n"
-		"	poly_id = $poly_id[0];\n"
-		"	obj_pos = $obj_pos[0];\n"
-		"	model = $model[0];\n"
-		"	int cubeindex = 0;\n"
-		"	vec3 cubesPos[8];\n");
-
 	str_cat(&shader_buffer,
 		"	cubesPos[0] = get_cubePos(0);\n"
 		"	cubesPos[1] = get_cubePos(1);\n"
@@ -1775,14 +1769,14 @@ void shaders_candle_marching()
 	/* Determine the index into the edge table which */
 	/* tells us which vertices are inside of the surface */
 	str_cat(&shader_buffer,
-		"	cubeindex = int(cubeVal0 < iso_level);\n"
-		"	cubeindex += int(cubeVal1 < iso_level)*2;\n"
-		"	cubeindex += int(cubeVal2 < iso_level)*4;\n"
-		"	cubeindex += int(cubeVal3 < iso_level)*8;\n"
-		"	cubeindex += int(cubeVal4 < iso_level)*16;\n"
-		"	cubeindex += int(cubeVal5 < iso_level)*32;\n"
-		"	cubeindex += int(cubeVal6 < iso_level)*64;\n"
-		"	cubeindex += int(cubeVal7 < iso_level)*128;\n"
+		"	cubeindex = int(cubeVal0 < g_iso_level);\n"
+		"	cubeindex += int(cubeVal1 < g_iso_level)*2;\n"
+		"	cubeindex += int(cubeVal2 < g_iso_level)*4;\n"
+		"	cubeindex += int(cubeVal3 < g_iso_level)*8;\n"
+		"	cubeindex += int(cubeVal4 < g_iso_level)*16;\n"
+		"	cubeindex += int(cubeVal5 < g_iso_level)*32;\n"
+		"	cubeindex += int(cubeVal6 < g_iso_level)*64;\n"
+		"	cubeindex += int(cubeVal7 < g_iso_level)*128;\n"
 		/* Cube is entirely in/out of the surface */
 		"	if (cubeindex == 0)\n"
 		"		return;\n"
@@ -1857,8 +1851,6 @@ void shaders_candle_marching()
 		"			cpos2 = pos2.xyz;\n"
 		"			pos2 = camera(projection) * pos2;\n");
 
-	/* vertex_normal = normalize(cross(cpos1.xyz - cpos0.xyz, cpos2.xyz - cpos0.xyz)); */
-
 	str_cat(&shader_buffer,
 		"			vertex_normal = norm0;\n"
 		"			poly_color = get_cubeColor(vertlist[I.x]);\n"
@@ -1890,7 +1882,8 @@ void shaders_candle_marching()
 		"		{\n"
 		"			break;\n"
 		"		}\n"
-		"	}\n");
+		"	}\n"
+		"}\n");
 
 	shader_add_source("candle:marching.glsl", shader_buffer,
 	                  str_len(shader_buffer));

@@ -27,6 +27,6 @@ vs_t *field_vs(void);
 mesh_t *field_mesh(void);
 
 c_field_t *c_field_new(mat_t *mat, vec3_t start, vec3_t end, float cell_size,
-                       int cast_shadow);
+                       bool_t cast_shadow, bool_t use_geometry_shader);
 
 #endif /* !FIELD_H */

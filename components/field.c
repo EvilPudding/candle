@@ -314,7 +314,7 @@ static float get_cube_val(vec3_t p, float time)
 vec3_t isonormal(c_field_t *self, vec3_t pos)
 {
 	vec3_t nor;
-	float offset = self->cell_size * 0.5;
+	float offset = self->cell_size;
 	nor.x = get_cube_val(vec3_add(pos, vec3(offset, 0.0, 0.0)), self->time)
 		  - get_cube_val(vec3_sub(pos, vec3(offset, 0.0, 0.0)), self->time);
 	nor.y = get_cube_val(vec3_add(pos, vec3(0.0, offset, 0.0)), self->time)
@@ -545,13 +545,14 @@ int c_field_update(c_field_t *self)
 
 
 c_field_t *c_field_new(mat_t *mat, vec3_t start, vec3_t end, float cell_size,
-                       int cast_shadow)
+                       bool_t cast_shadow, bool_t use_geometry_shader)
 {
 	/* uint32_t x, y, z; */
 	c_field_t *self = component_new(ct_field);
 	self->start = start;
 	self->end = end;
 	self->cell_size = cell_size;
+	self->use_geometry_shader = use_geometry_shader;
 
 	self->cast_shadow = cast_shadow;
 

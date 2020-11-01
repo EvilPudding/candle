@@ -102,7 +102,7 @@ void shaders_reg()
 	"#extension GL_EXT_geometry_shader : enable\n"
 	"#extension GL_OES_geometry_shader : enable\n"
 	"layout(points) in;\n"
-	"layout(triangle_strip, max_vertices = 3) out;\n"
+	"layout(triangle_strip, max_vertices = 15) out;\n"
 	"#include \"candle:uniforms.glsl\"\n"
 	);
 	strcat(default_gs,
