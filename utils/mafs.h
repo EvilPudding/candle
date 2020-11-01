@@ -223,7 +223,7 @@ static INLINE int type##n##_equals(type##n##_t const a, type##n##_t const b) \
 { \
 	int i; \
 	for(i=0; i<n; ++i) \
-		if(((n_t*)&a)[i] != ((n_t*)&b)[i]) return 0; \
+		if(fabs((((n_t*)&a)[i]) - (((n_t*)&b)[i])) > 0.0001f) return 0; \
 	return 1; \
 } \
 static INLINE type##n##_t type##n##_add(type##n##_t const a, type##n##_t const b) \

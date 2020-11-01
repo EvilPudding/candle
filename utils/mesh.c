@@ -309,6 +309,8 @@ static vec3_t get_normal(vec3_t p1, vec3_t p2, vec3_t p3)
 void mesh_update_smooth_normals(mesh_t *self, float smooth_max)
 {
 	int i;
+	if (self->static_normals)
+		return;
 	mesh_lock(self);
 	for(i = 0; i < vector_count(self->edges); i++)
 	{
@@ -1219,7 +1221,7 @@ void mesh_update(mesh_t *self)
 		if(!f) continue;
 
 		/* vec3_t n = f_edge(f, 0, self)->n; */
-		/* if(vec3_null(n)) */
+		if (!self->static_normals)
 		{
 			mesh_face_calc_flat_normals(self, f);
 			mesh_face_calc_flat_tangents(self, f);

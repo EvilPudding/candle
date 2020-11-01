@@ -87,7 +87,7 @@ static PROC WinGetProcAddress(const char *name)
 	#endif
 #endif
 
-void (CODEGEN_FUNCPTR *_ptrc_glDebugMessageCallback)(DEBUGPROC callback, const void * userParam) = NULL;
+void (CODEGEN_FUNCPTR *_ptrc_glDebugMessageCallback)(GLDEBUGPROC callback, const void * userParam) = NULL;
 void (CODEGEN_FUNCPTR *_ptrc_glBlendFunc)(GLenum sfactor, GLenum dfactor) = NULL;
 void (CODEGEN_FUNCPTR *_ptrc_glClear)(GLbitfield mask) = NULL;
 void (CODEGEN_FUNCPTR *_ptrc_glClearColor)(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha) = NULL;
@@ -447,7 +447,7 @@ void (CODEGEN_FUNCPTR *_ptrc_glVertexAttribP4uiv)(GLuint index, GLenum type, GLb
 static int Load_Version_3_3(void)
 {
 	int numFailed = 0;
-	_ptrc_glDebugMessageCallback = (void (CODEGEN_FUNCPTR *)(DEBUGPROC, const void *))IntGetProcAddress("glDebugMessageCallback");
+	_ptrc_glDebugMessageCallback = (void (CODEGEN_FUNCPTR *)(GLDEBUGPROC, const void *))IntGetProcAddress("glDebugMessageCallback");
 	if (!_ptrc_glDebugMessageCallback) numFailed++;
 	_ptrc_glBlendFunc = (void (CODEGEN_FUNCPTR *)(GLenum, GLenum))IntGetProcAddress("glBlendFunc");
 	if(!_ptrc_glBlendFunc) numFailed++;

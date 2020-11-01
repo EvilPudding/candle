@@ -196,6 +196,8 @@ typedef struct mesh
 
 	int has_texcoords;
 	int triangulated;
+	int static_normals;
+
 	int current_cell;
 	int current_surface;
 
@@ -290,6 +292,7 @@ void mesh_update_smooth_normals(mesh_t *self, float smooth_max);
 
 int mesh_dup_vert(mesh_t *self, int i);
 int mesh_add_vert(mesh_t *self, vecN_t p);
+int mesh_assert_vert(mesh_t *self, vecN_t pos);
 int mesh_append_edge(mesh_t *self, vecN_t p);
 int mesh_add_edge_s(mesh_t *self, int v, int next);
 int mesh_add_edge(mesh_t *self, int v, int next, int prev, vec3_t vn, vec2_t vt);

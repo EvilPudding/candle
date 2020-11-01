@@ -13,7 +13,12 @@ typedef struct
 	int visible;
 	int cast_shadow;
 	int xray;
+	vec3_t start;
+	vec3_t end;
+	float cell_size;
 	drawable_t draw;
+	bool_t use_geometry_shader;
+	float time;
 } c_field_t;
 
 DEF_CASTER(ct_field, c_field, c_field_t)

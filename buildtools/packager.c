@@ -253,6 +253,7 @@ int main(int argc, char *argv[])
 	{
 		if (!mz_zip_writer_init_file(&write_archive, "build"PSEP"new.zip", 0))
 		{
+			printf("Failed to create new zip\n");
 			return 1;
 		}
 
@@ -265,6 +266,7 @@ int main(int argc, char *argv[])
 				                            files[i].path, "", 0,
 				                            MZ_BEST_COMPRESSION))
 				{
+					printf("Failed update\n");
 					return 1;
 				}
 			}
@@ -277,6 +279,7 @@ int main(int argc, char *argv[])
 				    || !mz_zip_writer_add_from_zip_reader(&write_archive,
 				                                          &read_archive, j))
 				{
+					printf("Failed re-insert\n");
 					return 1;
 				}
 			}
@@ -286,6 +289,7 @@ int main(int argc, char *argv[])
 		    || !mz_zip_writer_end(&write_archive)
 			|| !mz_zip_reader_end(&read_archive))
 		{
+			printf("Failed to rebuild\n");
 			return 1;
 		}
 
@@ -303,6 +307,7 @@ int main(int argc, char *argv[])
 			mz_zip_reader_end(&read_archive);
 			if (!mz_zip_writer_init_file(&write_archive, "build"PSEP"data.zip", 0))
 			{
+				printf("Failed create new\n");
 				return 1;
 			}
 		}
@@ -316,6 +321,7 @@ int main(int argc, char *argv[])
 											files[i].path, "", 0,
 											MZ_BEST_COMPRESSION))
 				{
+					printf("Failed append\n");
 					return 1;
 				}
 			}
@@ -324,6 +330,7 @@ int main(int argc, char *argv[])
 		if (   !mz_zip_writer_finalize_archive(&write_archive)
 		    || !mz_zip_writer_end(&write_archive))
 		{
+			printf("Failed to finalize new\n");
 			return 1;
 		}
 	}
