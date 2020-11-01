@@ -952,6 +952,8 @@ extern "C" {
 #define GL_TIME_ELAPSED 0x88BF
 #define GL_VERTEX_ATTRIB_ARRAY_DIVISOR 0x88FE
 
+extern void (CODEGEN_FUNCPTR *_ptrc_glDebugMessageCallback)(GLDEBUGPROC callback, const void * userParam);
+#define glDebugMessageCallback _ptrc_glDebugMessageCallback
 extern void (CODEGEN_FUNCPTR *_ptrc_glBlendFunc)(GLenum sfactor, GLenum dfactor);
 #define glBlendFunc _ptrc_glBlendFunc
 extern void (CODEGEN_FUNCPTR *_ptrc_glClear)(GLbitfield mask);

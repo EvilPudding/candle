@@ -16,9 +16,42 @@
 #endif
 #include <GLFW/glfw3.h>
 
+#include <utils/gl.h>
+
 int window_width = 1360;
 int window_height = 766;
+//
+// This is free and unencumbered software released into the public domain.
+// 
+// Anyone is free to copy, modify, publish, use, compile, sell, or distribute
+// this software, either in source code form or as a compiled binary, for any
+// purpose, commercial or non-commercial, and by any means.
+// 
+// In jurisdictions that recognize copyright laws, the author or authors of this
+// software dedicate any and all copyright interest in the software to the
+// public domain. We make this dedication for the benefit of the public at large
+// and to the detriment of our heirs and successors. We intend this dedication
+// to be an overt act of relinquishment in perpetuity of all present and future
+// rights to this software under copyright law.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+// AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+// 
+// For more information, please refer to <http://unlicense.org/>
 
+// REQUIREMENTS: OpenGL version with the KHR_debug extension available.
+
+// Callback function for printing debug statements
+static void GLDebugMessageCallback(GLenum source, GLenum type, GLuint id,
+		GLenum severity, GLsizei length,
+		const GLchar *msg, const void *data)
+{
+	puts(msg);
+}
 vs_t *g_quad_vs;
 fs_t *g_quad_fs;
 mesh_t *g_quad_mesh;
@@ -64,7 +97,7 @@ static void init_context_b(c_window_t *self)
 
 	self->window = glfwCreateWindow(self->width, self->height, "Candle", NULL, NULL);
 	glfwMakeContextCurrent(self->window);
-    glfwGetWindowSize(self->window, &self->width, &self->height);
+	glfwGetWindowSize(self->window, &self->width, &self->height);
 	if (!self->window)
 	{
 		printf("Window failed to be created\n");
@@ -84,6 +117,12 @@ static void init_context_b(c_window_t *self)
 	printf("GL Version (string) : %s\n", version);
 	printf("GLSL Version : %s\n", glslVersion); 
 
+	if (false)
+	{
+		glEnable(0x92E0);
+		glEnable(0x8242);
+		glDebugMessageCallback(GLDebugMessageCallback, NULL);
+	}
 }
 
 void c_window_init(c_window_t *self)
