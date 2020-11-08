@@ -54,7 +54,8 @@ enum bind_type
 	OPT_CLEAR_DEPTH,
 	OPT_CALLBACK,
 	OPT_USRPTR,
-	OPT_SKIP
+	OPT_SKIP,
+	OPT_VIEWPORT
 };
 
 typedef vec2_t     (*vec2_getter)(struct pass *pass, void *usrptr);
@@ -180,6 +181,9 @@ typedef struct pass
 	uint32_t bound_textures;
 	uint32_t draw_every;
 
+	vec2_t custom_viewport_pos;
+	vec2_t custom_viewport_size;
+
 	/* int32_t sec; */
 	/* uint64_t nano; */
 	void *usrptr;
@@ -297,5 +301,6 @@ bind_t opt_clear_depth(float depth, getter_cb getter);
 bind_t opt_callback(getter_cb callback);
 bind_t opt_usrptr(void *ptr);
 bind_t opt_skip(uint32_t ticks);
+bind_t opt_viewport(vec2_t min, vec2_t size);
 
 #endif /* !RENDERER_H */

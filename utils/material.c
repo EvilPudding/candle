@@ -1104,7 +1104,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		"#elif defined(SHADOW_PASS)\n"
 		"layout (location = 0) out vec4 Color;\n"
 		"#elif defined(CAUSTICS_PASS)\n"
-		"layout (location = 0) out vec2 Pos;\n"
+		"layout (location = 0) out vec4 Pos;\n"
 		"layout (location = 1) out vec4 Color;\n"
 	);
 	if (output_type == ref("transparent"))
@@ -1279,18 +1279,24 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	{
 		str_cat(&code,
 			"	vec3 norm = (camera(model) * vec4(get_normal(pbr_in.normal), 0.0)).xyz;\n"
-			"	vec3 pos = world_space_in - camera(pos);\n"
+			"	vec3 start_pos = world_space_in - camera(pos);\n"
+			"	vec3 refract_pos = start_pos;\n"
+			"	vec3 reflect_pos = start_pos;\n"
 			"	float z;\n"
-			"	float pd = lookup_single(pos, z);\n"
+			"	float pd = lookup_single(start_pos, z);\n"
 			"	float dist = pd - z;\n"
 			"	if(dist < 0.0)\n"
 			"		discard;"
-			/* "	if (abs(pbr_in.refraction - 1.0) > 0.001)\n" */
-			"	{\n"
-			"		vec3 dir = refract(normalize(pos), norm,\n"
+			"	{\n");
+		str_cat(&code,
+			"		vec3 frag_dir = normalize(start_pos);\n"
+			"		vec3 refract_dir = refract(frag_dir, norm,\n"
 			"		                   1.0 / pbr_in.refraction);\n"
-			"		vec2 coord = RayCastCube(dir, pos);\n"
-			"		Pos = vec2(coord);\n"
+			"		vec3 reflect_dir = reflect(frag_dir, norm);\n"
+			"		vec2 refl_coord = RayCastCube(reflect_dir, reflect_pos);\n"
+			"		vec2 refr_coord = RayCastCube(refract_dir, refract_pos);\n"
+			"		Pos.xy = encode_normal(normalize(refract_pos));\n"
+			"		Pos.zw = encode_normal(normalize(reflect_pos));\n"
 			"		Color = pbr_in.tint;\n"
 			/* "		Color = poly_color;\n" */
 			/* "		Color.a = 0.5;\n" */

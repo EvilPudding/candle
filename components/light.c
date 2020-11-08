@@ -4,6 +4,7 @@
 #include "model.h"
 #include <utils/nk.h>
 #include <utils/drawable.h>
+#include <utils/str.h>
 #include <candle.h>
 #include <systems/editmode.h>
 #include <systems/window.h>
@@ -45,30 +46,58 @@ static void c_light_drawable_init(c_light_t *self)
 		mat4f(g_light_widget, ref("emissive.color"), vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
 		{
+			char *header = str_new(64);
+			char *shader = str_new(64);
 			const uint32_t histogram_resolution = 256;
 			g_histogram_mesh = mesh_new();
 			mesh_lock(g_histogram_mesh);
 			mesh_point_grid(g_histogram_mesh,
-			                vec3(0.0, 0.0, 0.0),
-			                vec3(histogram_resolution, histogram_resolution, 0.0),
-			                uvec3(histogram_resolution, histogram_resolution, 1));
+			                vec3(0.0, 0.0, -1.0),
+			                vec3(histogram_resolution, histogram_resolution, 1.0),
+			                uvec3(histogram_resolution, histogram_resolution, 2));
 			mesh_unlock(g_histogram_mesh);
 			g_histogram_buffer = texture_new_2D(histogram_resolution,
 												histogram_resolution,
 			                                    0, 3,
 				buffer_new("depth", true, -1),
-				buffer_new("pos", true, 2),
+				buffer_new("pos", true, 4),
 				buffer_new("color", false, 4));
-			g_histogram_accum = texture_new_2D(histogram_resolution / 2,
-			                                   histogram_resolution / 2,
+			g_histogram_accum = texture_new_2D((histogram_resolution / 2) * 2,
+			                                   (histogram_resolution / 2) * 3,
 			                                   TEX_INTERPOLATE, 1,
 				buffer_new("color", true, 4));
 
-			drawable_init(&g_histogram, ref("histogram"));
-			drawable_set_mesh(&g_histogram, g_histogram_mesh);
-			drawable_set_vs(&g_histogram,
-							vs_new("histogram", false, 2,
-							       vertex_header_new(
+			str_cat(&header,
+				"vec2 sampleCube(const vec3 v, out uint faceIndex, out float z)\n"
+				"{\n"
+				"	vec3 vAbs = abs(v);\n"
+				"	float ma;\n"
+				"	vec2 uv;\n"
+				"	if(vAbs.z >= vAbs.x && vAbs.z >= vAbs.y)\n"
+				"	{\n"
+				"		faceIndex = v.z < 0.0 ? 5u : 4u;\n"
+				"		ma = 0.5 / vAbs.z;\n"
+				"		uv = vec2(v.z < 0.0 ? -v.x : v.x, -v.y);\n"
+				"		z = vAbs.z;\n"
+				"	}\n"
+				"	else if(vAbs.y >= vAbs.x)\n");
+			str_cat(&header,
+				"	{\n"
+				"		faceIndex = v.y < 0.0 ? 3u : 2u;\n"
+				"		ma = 0.5 / vAbs.y;\n"
+				"		uv = vec2(v.x, v.y < 0.0 ? -v.z : v.z);\n"
+				"		z = vAbs.y;\n"
+				"	}\n"
+				"	else\n"
+				"	{\n"
+				"		faceIndex = v.x < 0.0 ? 1u : 0u;\n"
+				"		ma = 0.5 / vAbs.x;\n"
+				"		uv = vec2(v.x < 0.0 ? v.z : -v.z, -v.y);\n"
+				"		z = vAbs.x;\n"
+				"	}\n"
+				"	return uv * ma + 0.5;\n"
+				"}\n");
+			str_cat(&header,
 				"BUFFER {\n"
 				"	sampler2D pos;\n"
 				"	sampler2D color;\n"
@@ -82,11 +111,33 @@ static void c_light_drawable_init(c_light_t *self)
 				"float unlinearize(float depth)\n"
 				"{\n"
 				"	return FAR * (1.0 - (NEAR / depth)) / (FAR - NEAR);\n"
-				"}\n"),
-
-							       vertex_modifier_new(
+				"}\n");
+			str_cat(&header,
+				"vec3 decode_normal(vec2 enc)\n"
 				"{\n"
-				"	vec2 target = texelFetch(buf.pos, ivec2(P.xy), 0).xy;\n"
+				"    vec2 fenc = enc * 4.0 - 2.0;\n"
+				"    float f = dot(fenc,fenc);\n"
+				"    float g = sqrt(1.0 - f / 4.0);\n"
+				"    vec3 n;\n"
+				"    n.xy = fenc * g;\n"
+				"    n.z = 1.0 - f / 2.0;\n"
+				"    return n;\n"
+				"}\n");
+
+			str_cat(&shader,
+				"{\n"
+				"	vec4 edir = texelFetch(buf.pos, ivec2(P.xy), 0);\n"
+				"	vec3 dir;\n"
+				"	if (P.z < 0.0)\n"
+				"		dir = decode_normal(edir.xy);\n"
+				"	else\n"
+				"		dir = decode_normal(edir.zw);\n"
+				"	uint face;\n"
+				"	float z;\n"
+				"	vec2 target = sampleCube(dir, face, z);\n"
+				"	vec2 layer = vec2(float(face % 2u), float(face / 2u));\n"
+				"	target = (layer + target) / vec2(2, 3);\n");
+			str_cat(&shader,
 				"	pos = vec4((target - 0.5) * 2.0, 0.0, 1.0);\n"
 				"	vec4 color = texelFetch(buf.color, ivec2(P.xy), 0);\n"
 				"	float transm = 1.0 - color.a;\n"
@@ -94,8 +145,17 @@ static void c_light_drawable_init(c_light_t *self)
 				"	float light = clamp(transm * 2.0 - 1.0, 0.0, 1.0);\n"
 				"	vec3 col = color.rgb * dark + light;\n"
 				"	$poly_color = vec4(col / 64.0, 1.0);\n"
-				"}\n"
-			)));
+				"}\n");
+
+
+			drawable_init(&g_histogram, ref("histogram"));
+			drawable_set_mesh(&g_histogram, g_histogram_mesh);
+			drawable_set_vs(&g_histogram,
+							vs_new("histogram", false, 2,
+							       vertex_header_new(header),
+							       vertex_modifier_new(shader)));
+			str_free(header);
+			str_free(shader);
 		}
 	}
 	if (!self->widget.mesh)
@@ -157,6 +217,7 @@ static void c_light_create_renderer(c_light_t *self)
 	uint32_t f;
 	texture_t *output;
 	vec3_t p1[6], up[6];
+	vec2_t light_pos, light_size;
 	renderer_t *renderer = renderer_new(1.0f);
 
 	self->tile = get_free_tile(0, &self->lod);
@@ -177,6 +238,10 @@ static void c_light_create_renderer(c_light_t *self)
 	up[4] = vec3(0.0, -1.0, 0.0);
 	up[5] = vec3(0.0, -1.0, 0.0);
 
+	light_pos = vec2_div(vec2(_vec2(self->tile.pos)),
+	                     vec2(output->width, output->height));
+	light_size = vec2_div(vec2(self->tile.size.x * 2, self->tile.size.y * 3),
+	                      vec2(output->width, output->height));
 	for(f = 0; f < 6; f++)
 	{
 		renderer->pos[f].x = self->tile.pos.x + (f % 2) * self->tile.size.x;
@@ -196,6 +261,11 @@ static void c_light_create_renderer(c_light_t *self)
 	if (self->caustics)
 	{
 		uint32_t i = 3;
+		renderer_add_pass(renderer, "caustics_clear", NULL,
+			~0, 0,
+			g_histogram_accum, NULL, 0, ~0, 1,
+			opt_clear_color(vec4(0.0, 0.0, 0.0, 0.0), NULL)
+		);
 		for (i = 0; i < 6; ++i)
 		{
 		renderer_add_pass(renderer, "caustics", "candle:caustics",
@@ -207,20 +277,20 @@ static void c_light_create_renderer(c_light_t *self)
 		);
 		renderer_add_pass(renderer, "caustics_accum0", "candle:color",
 			ref("histogram"), IGNORE_CAM_VIEWPORT | ADD,
-			g_histogram_accum, NULL, 0, ~0, 3,
+			g_histogram_accum, NULL, 0, ~0, 2,
 			opt_cam(i, NULL),
-			opt_tex("buf", g_histogram_buffer, NULL),
-			opt_clear_color(vec4(0.0, 0.0, 0.0, 0.0), NULL)
-		);
-		renderer_add_pass(renderer, "caustics_copy", "candle:upsample",
-			ref("quad"), DEPTH_DISABLE,
-			output, NULL, 0, ~0, 4,
-			opt_tex("buf", g_histogram_accum, NULL),
-			opt_int("level", 0, NULL),
-			opt_num("alpha", 1.0, NULL),
-			opt_cam(i, NULL)
+			opt_tex("buf", g_histogram_buffer, NULL)
 		);
 		}
+
+		renderer_add_pass(renderer, "caustics_copy", "candle:upsample",
+			ref("quad"), DEPTH_DISABLE | IGNORE_CAM_VIEWPORT,
+			output, NULL, 0, ~0, 4,
+			opt_tex("buf", g_histogram_accum, NULL),
+			opt_viewport(light_pos, light_size),
+			opt_int("level", 0, NULL),
+			opt_num("alpha", 1.0, NULL)
+		);
 
 		renderer_add_pass(renderer, "depth", "candle:shadow_map",
 			self->caustics_group, CULL_DISABLE, output, output, 0, ~0, 1,

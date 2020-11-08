@@ -948,6 +948,10 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 			size = uvec2(pass->output->width, pass->output->height);
 			pos = uvec2(0, 0);
 		}
+		pos.x += pass->custom_viewport_pos.x * size.x;
+		pos.y += pass->custom_viewport_pos.y * size.y;
+		size.x *= pass->custom_viewport_size.x;
+		size.y *= pass->custom_viewport_size.y;
 
 		texture_target_sub(pass->output, pass->depth, pass->framebuffer_id,
 				pos.x, pos.y, size.x, size.y);
@@ -1301,6 +1305,13 @@ bind_t opt_skip(uint32_t ticks)
 	bind.integer = ticks;
 	return bind;
 }
+bind_t opt_viewport(vec2_t min, vec2_t size)
+{
+	bind_t bind = {0};
+	bind.type = OPT_VIEWPORT;
+	bind.vec4 = vec4(_vec2(min), _vec2(size));
+	return bind;
+}
 
 void renderer_add_pass(
 		renderer_t *self,
@@ -1362,6 +1373,8 @@ void renderer_add_pass(
 	pass->auto_mip = !!(flags & GEN_MIP);
 	pass->track_brightness = !!(flags & TRACK_BRIGHT);
 	pass->camid = 0;
+	pass->custom_viewport_pos = vec2(0.0f, 0.0f);
+	pass->custom_viewport_size = vec2(1.0f, 1.0f);
 
 	if(shader_name)
 	{
@@ -1456,6 +1469,12 @@ void renderer_add_pass(
 		if(opt.type == OPT_SKIP)
 		{
 			pass->draw_every = opt.integer;
+			continue;
+		}
+		if(opt.type == OPT_VIEWPORT)
+		{
+			pass->custom_viewport_pos = XY(opt.vec4);
+			pass->custom_viewport_size = ZW(opt.vec4);
 			continue;
 		}
 
