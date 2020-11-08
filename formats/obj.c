@@ -247,6 +247,9 @@ void mesh_load_obj(mesh_t *self, const char *bytes, size_t bytes_num)
 		struct face *face = &tempFace[i];
 		if (face->nv == 3)
 		{
+			if (face->value.v[0].t + 1 == 0)
+				self->has_texcoords = false;
+
 			mesh_add_triangle(self,
 					face->value.v[0].v, tempNorm[face->value.v[0].n + 1], tempText[face->value.v[0].t + 1],
 					face->value.v[1].v, tempNorm[face->value.v[1].n + 1], tempText[face->value.v[1].t + 1],
