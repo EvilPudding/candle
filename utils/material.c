@@ -544,7 +544,7 @@ void materials_register_defaults(void)
 	materials_register_globals(transparent);
 
 	albedo = vicall_new(transparent, pr4, "tint", vec2(190.0, 440.0f), ~0, V_IN | V_OUT);
-		matcall_set_vec4(albedo, ref("color"), vec4(0.0f, 0.0f, 0.0f, 0.0f));
+		matcall_set_vec4(albedo, ref("color"), vec4(1.0f, 1.0f, 1.0f, 0.0f));
 	vicall_new(transparent, pr3, "emissive", vec2(368, 352), ~0, V_IN | V_OUT);
 	roughness = vicall_new(transparent, pr1, "roughness", vec2(193, 305), ~0, V_IN | V_OUT);
 		matcall_set_number(roughness, ref("value"), 0.0f);
@@ -1332,9 +1332,16 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 			"	if (coord.x >= 0.0)\n"
 			"	{\n"
 			"		vec3 refracted = textureLod(refr.color, coord.xy, mip).rgb;\n"
-			/* "		refracted = mix(refracted, pbr_in.absorb.rgb, pbr_in.tint.a);\n" */
 			"		refracted = clamp(refracted, 0.0, 1.0);\n"
-			"		pbr_in.emissive.rgb = refracted * (1.0 - pbr_in.tint.a);\n"
+			/* "		refracted = mix(refracted, refracted * pbr_in.tint.rgb, pbr_in.tint.a);\n" */
+
+			"		float transm = 1.0 - pbr_in.tint.a;\n"
+			"		float dark = min(1.0 - max(0.0, 0.5 - transm) * 2.0, 1.0);\n"
+			"		vec3 col = refracted.rgb * pbr_in.tint.rgb * dark;\n"
+
+			"		pbr_in.emissive.rgb = col;\n"
+			/* "		pbr_in.emissive.rgb = refracted * (1.0 - pbr_in.tint.a) * ;\n" */
+			/* "		pbr_in.emissive.rgb = refracted * pbr_in.tint.rgb;\n" */
 			"	}\n"
 			"\n");
 	}
@@ -1356,7 +1363,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		str_cat(&code,
 			"	MR.r = 0.3;\n"
 			"	MR.g = pbr_in.roughness;\n"
-			"	Alb = vec4(pbr_in.tint.rgb * pbr_in.tint.a, receive_shadows ? 1.0 : 0.5);\n"
+			"	Alb = vec4(pbr_in.tint.rgb * max(0.0, pbr_in.tint.a - 0.5) * 2.0, receive_shadows ? 1.0 : 0.5);\n"
 			"	Emi = pbr_in.emissive;\n");
 			/* "	Emi = pbr_in.emissive * poly_color.rgb;\n"); */
 	}

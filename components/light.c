@@ -125,10 +125,18 @@ static void c_light_caustics_init(c_light_t *self)
 		str_cat(&shader,
 			"	pos = vec4((target - 0.5) * 2.0, 0.0, 1.0);\n"
 			"	vec4 color = texelFetch(buf.color, ivec2(P.xy), 0);\n"
-			"	float transm = 1.0 - color.a;\n"
-			"	float dark = min(1.0 - abs(0.5 - transm) * 2.0, 1.0);\n"
-			"	float light = clamp(transm * 2.0 - 1.0, 0.0, 1.0);\n"
-			"	vec3 col = color.rgb * dark + light;\n"
+			"	vec3 col;\n"
+			"	if (P.z < 0.0)\n"
+			"	{\n"
+			"		float transm = 1.0 - color.a;\n"
+			"		float dark = min(1.0 - abs(0.5 - transm) * 2.0, 1.0);\n"
+			"		float light = clamp(transm * 2.0 - 1.0, 0.0, 1.0);\n"
+			"		col = color.rgb * dark + light;\n"
+			"	}\n"
+			"	else\n"
+			"	{\n"
+			"		col = color.rgb;\n"
+			"	}\n"
 			"	$poly_color = vec4(col / 64.0, 1.0);\n"
 			"}\n");
 
