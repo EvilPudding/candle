@@ -1043,6 +1043,8 @@ static void draw_conf_update_vao(draw_conf_t *self)
 static void draw_conf_update_skin(draw_conf_t *self)
 {
 	skin_t *skin = self->vars.skin;
+	if (!skin)
+		return;
 	if (!self->skin)
 	{
 		glGenBuffers(1, &self->skin); glerr();
@@ -1058,7 +1060,6 @@ static void draw_conf_update_skin(draw_conf_t *self)
 	/* memcpy(p, &skin->transforms[0], skin->bones_num * sizeof(mat4_t)); */
 	/* glUnmapBuffer(GL_UNIFORM_BUFFER); glerr(); */
 	
-
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, skin->bones_num * sizeof(mat4_t),
 	                &skin->transforms[0]);
 }

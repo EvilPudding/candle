@@ -1176,10 +1176,10 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		        "view_space_in = vertex_position;\n"
 		);
 		str_cat(&code,
-			"#elif defined(GBUFFER)\n"
+			"#elif defined(GBUFFER_PASS)\n"
 			"	float depth = textureLod(gbuffer.depth, _pp, 0.0).r;\n"
 			"	if (depth > gl_FragCoord.z) discard;\n"
-			"	vec4 w_pos = (camera(model)*vec4(get_position(gbuffer.depth, _pp, 1.0));\n"
+			"	vec4 w_pos = (camera(model)*vec4(get_position(gbuffer.depth, _pp), 1.0));\n"
 			"	vec3 m_pos = (inverse(model) * w_pos).xyz;\n"
 			"	vec3 diff = abs(m_pos);\n"
 			"	if (diff.x > 0.5 || diff.y > 0.5 || diff.z > 0.5) discard;\n"
@@ -1371,6 +1371,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	{
 		str_cat(&code,
 			"	MR.r = pbr_in.metalness;\n"
+			"	MR.g = pbr_in.roughness;\n"
 			"	Alb = pbr_in.albedo.rgba;\n"
 			"	Emi = pbr_in.emissive;\n"
 			"	MR.a = pbr_in.albedo.a;\n"

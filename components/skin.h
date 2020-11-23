@@ -6,8 +6,8 @@
 
 typedef struct
 {
-	entity_t bones[30];
-	mat4_t transforms[30];
+	entity_t bones[32];
+	mat4_t transforms[32];
 	uint32_t bones_num;
 	uint32_t update_id;
 } skin_t;

@@ -53,7 +53,7 @@ typedef struct
 
 typedef struct
 {
-	mat4_t bones[30];
+	mat4_t bones[32];
 } gl_skin_t;
 
 struct conf_vars

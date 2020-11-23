@@ -193,7 +193,7 @@ mesh_t *mesh_new()
 
 static void vert_init(vertex_t *self)
 {
-	self->color = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+	self->color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 	self->tmp = -1;
 	self->half = -1;
 	self->wei = vec4(0.0f, 0.0f, 0.0f, 0.0f);
