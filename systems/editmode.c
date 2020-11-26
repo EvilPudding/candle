@@ -651,7 +651,7 @@ static void editmode_border_shader()
 		"} tmp;\n");
 
 	str_cat(&shader_buffer,
-		"void pixel_value(ivec2 coord, int offset, in out float accum_value, in out float accum_depth)\n"
+		"void pixel_value(ivec2 coord, int offset, inout float accum_value, inout float accum_depth)\n"
 		"{\n"
 		"	const float weight[6] = float[] (0.382925, 0.24173, 0.060598, 0.005977, 0.000229, 0.000003);\n"
 		"	vec2 t = texelFetch(sbuffer.ids, coord, 0).rg;\n"
@@ -665,7 +665,7 @@ static void editmode_border_shader()
 		);
 
 	str_cat(&shader_buffer,
-		"void pixel_value2(ivec2 coord, int offset, in out float accum_value, in out float accum_depth)\n"
+		"void pixel_value2(ivec2 coord, int offset, inout float accum_value, inout float accum_depth)\n"
 		"{\n"
 		"	const float weight[6] = float[] (0.382925, 0.24173, 0.060598, 0.005977, 0.000229, 0.000003);\n"
 		"	vec2 tex = texelFetch(tmp.color, coord, 0).rg;\n"
@@ -697,7 +697,7 @@ static void editmode_border_shader()
 		"void accum_vertical(ivec2 tc)\n"
 		"{\n"
 		"	const vec3 color = vec3(0.8, 0.7, 0.2);\n"
-		"	float accum_value, accum_depth;\n"
+		"	float accum_value = 0.0, accum_depth = 0.0;\n"
 		"	pixel_value2(tc, 0, accum_value, accum_depth);\n"
 		"	for(int i = 1; i < 6; ++i)\n"
 		"	{\n"

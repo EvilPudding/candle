@@ -284,7 +284,7 @@ void shaders_candle_copy_gbuffer()
 		"	NN = texelFetch(gbuffer.nn, ivec2(gl_FragCoord.xy), 0).rg;\n"
 		"	MR = texelFetch(gbuffer.mr, ivec2(gl_FragCoord.xy), 0).rg;\n"
 		"	Emi = texelFetch(gbuffer.emissive, ivec2(gl_FragCoord.xy), 0).rgb;\n"
-		"	gl_FragDepth = texelFetch(gbuffer.depth, ivec2(gl_FragCoord.xy), 0);\n"
+		"	gl_FragDepth = texelFetch(gbuffer.depth, ivec2(gl_FragCoord.xy), 0).r;\n"
 		"}\n");
 
 	shader_add_source("candle:copy_gbuffer.glsl", shader_buffer,

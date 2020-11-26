@@ -22,6 +22,8 @@ void c_camera_frustum(c_camera_t *self)
 	));
 
 	int v, v0, v1, v2, v3, e0;
+	if (!self->mesh)
+		return;
 	mesh_lock(self->mesh);
 	mesh_clear(self->mesh);
 
