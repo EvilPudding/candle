@@ -44,7 +44,8 @@ int c_render_device_update(c_render_device_t *self)
 		c_render_device_update_lights(self);
 		self->scene.test_color = vec3(0, 1, 0);
 		self->scene.time = ((float)self->frame) * 0.01f;
-		self->updates_ubo = 1;
+		self->updates_ubo = true;
+		self->updates_ram = false;
 	}
 	return CONTINUE;
 }
@@ -199,7 +200,7 @@ c_render_device_t *c_render_device_new()
 void world_changed()
 {
 	c_render_device_t *rd = c_render_device(&SYS);
-	if(rd) rd->updates_ram = 1;
+	if(rd) rd->updates_ram = true;
 }
 
 int c_render_device_draw(c_render_device_t *self)
@@ -207,6 +208,7 @@ int c_render_device_draw(c_render_device_t *self)
 	if(self->updates_ubo)
 	{
 		c_render_device_update_ubo(self);
+		self->update_frame++;
 	}
 	self->frame++;
 	entity_signal(entity_null, sig("world_pre_draw"), NULL, NULL);

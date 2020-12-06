@@ -807,7 +807,6 @@ static void editmode_context_shader()
 		"	{\n"
 		"		outside_context(w_pos);\n"
 		"	}\n"
-		"	discard;\n"
 		"}\n");
 
 	shader_add_source("editmode:context.glsl", shader_buffer,
@@ -903,11 +902,46 @@ void editmode_extract_depth_shader()
 	str_free(shader_buffer);
 }
 
+unsigned int renderer_geom_at_pixel(renderer_t *self, int x, int y,
+		float *depth)
+{
+	uint32_t result, res;
+	texture_t *tex = renderer_tex(self, ref("selectable"));
+	if(!tex) return entity_null;
+
+	res = texture_get_pixel(tex, 0, x * self->resolution, y * self->resolution, depth);
+	res >>= 16;
+	res &= 0xFF;
+	result = res - 1;
+	return result;
+}
+
+entity_t renderer_entity_at_pixel(renderer_t *self, int x, int y,
+		float *depth)
+{
+	uint32_t pos;
+	entity_t result;
+	struct { uint32_t pos, uid; } *cast = (void*)&result;
+	texture_t *tex = renderer_tex(self, ref("selectable"));
+
+	if(!tex) return entity_null;
+
+	pos = texture_get_pixel(tex, 0, x * self->resolution, y * self->resolution, depth);
+	pos &= 0xFF;
+
+	cast->pos = pos;
+	cast->uid = g_ecm->entities_info[pos].uid;
+	return result;
+}
+
+
+
 static renderer_t *editmode_renderer_new(c_editmode_t *self)
 {
-	texture_t *tmp, *gbuffer, *query_mips;
+	texture_t *tmp, *gbuffer, *query_mips, *selectable;
 	renderer_t *renderer = renderer_new(1.00f);
-	renderer_default_pipeline(renderer);
+	renderer_default_pipeline(renderer, 1.0f, 1.0f, 1.0f, 0.5f, true, true,
+	                          true, true, false);
 
 	editmode_highlight_shader();
 	editmode_border_shader();
@@ -922,9 +956,14 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	self->mouse_depth = texture_new_2D(1, 1, 0, 1,
 		buffer_new("color",	false, 4));
 
+	selectable = texture_new_2D(0, 0, 0, 2,
+		buffer_new("depth", false, -1),
+		buffer_new("ids",   false, 4));
+
 	tmp = texture_new_2D(0, 0, TEX_INTERPOLATE, 1,
 		buffer_new("color",	true, 4));
 	renderer_add_tex(renderer, "tmp", 1.0f, tmp);
+	renderer_add_tex(renderer, "selectable",  1.0f, selectable);
 
 	renderer_add_pass(renderer, "query_widget", "candle:query_mips", ref("widget"),
 			0, query_mips, query_mips, 0, ref("query_transp"), 0);
@@ -932,10 +971,16 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	renderer_add_pass(renderer, "widget", "candle:gbuffer", ref("widget"),
 			0, gbuffer, gbuffer, 0, ref("decals_pass"), 0);
 
+	renderer_add_pass(renderer, "selectable", "candle:select_map", ref("selectable"),
+			0, selectable, selectable, 0, ~0, 2,
+			opt_clear_depth(1.0f, NULL),
+			opt_clear_color(Z4, NULL)
+	);
+
 	renderer_add_pass(renderer, "mouse_depth", "editmode:extract_depth", ref("quad"),
 			0, self->mouse_depth, NULL, 0, ref("selectable"), 4,
 			opt_clear_color(Z4, NULL),
-			opt_tex("depthbuffer", renderer_tex(renderer, ref("selectable")), NULL),
+			opt_tex("depthbuffer", selectable, NULL),
 			opt_vec2("position", Z2, (getter_cb)c_editmode_bind_mouse_position),
 			opt_usrptr(self)
 	);
@@ -943,7 +988,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	renderer_add_pass(renderer, "context", "editmode:context", ref("quad"),
 			0, renderer_tex(renderer, ref("final")), NULL, 0, ~0, 10,
 			opt_tex("gbuffer", gbuffer, NULL),
-			opt_tex("sbuffer", renderer_tex(renderer, ref("selectable")), NULL),
+			opt_tex("sbuffer", selectable, NULL),
 			opt_tex("ssao", renderer_tex(renderer, ref("ssao")), NULL),
 			opt_vec2("over_id", Z2, (getter_cb)c_editmode_bind_over),
 			opt_vec2("over_poly_id", Z2, (getter_cb)c_editmode_bind_over_poly),
@@ -956,7 +1001,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 
 	renderer_add_pass(renderer, "highlight", "editmode:highlight", ref("quad"),
 			ADD, renderer_tex(renderer, ref("final")), NULL, 0, ~0, 7,
-			opt_tex("sbuffer", renderer_tex(renderer, ref("selectable")), NULL),
+			opt_tex("sbuffer", selectable, NULL),
 			opt_int("mode", 0, (getter_cb)c_editmode_bind_mode),
 			opt_vec2("over_id", Z2, (getter_cb)c_editmode_bind_over),
 			opt_vec2("over_poly_id", Z2, (getter_cb)c_editmode_bind_over_poly),
@@ -969,7 +1014,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	renderer_add_pass(renderer, "highlights_0", "editmode:border", ref("quad"),
 			0, tmp, NULL, 0, ~0, 8,
 			opt_clear_color(Z4, NULL),
-			opt_tex("sbuffer", renderer_tex(renderer, ref("selectable")), NULL),
+			opt_tex("sbuffer", selectable, NULL),
 			opt_int("mode", 0, (getter_cb)c_editmode_bind_mode),
 			opt_vec2("over_id", Z2, (getter_cb)c_editmode_bind_over),
 			opt_vec2("over_poly_id", Z2, (getter_cb)c_editmode_bind_over_poly),
@@ -980,7 +1025,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 
 	renderer_add_pass(renderer, "highlights_1", "editmode:border", ref("quad"),
 			ADD, renderer_tex(renderer, ref("final")), NULL, 0, ~0, 8,
-			opt_tex("sbuffer", renderer_tex(renderer, ref("selectable")), NULL),
+			opt_tex("sbuffer", selectable, NULL),
 			opt_tex("tmp", tmp, NULL),
 			opt_int("mode", 0, (getter_cb)c_editmode_bind_mode),
 			opt_vec2("over_id", Z2, (getter_cb)c_editmode_bind_over),
@@ -1008,7 +1053,7 @@ void c_editmode_activate(c_editmode_t *self)
 	{
 		self->camera = entity_new((
 			c_name_new("Edit Camera"), c_editlook_new(), c_node_new(),
-			c_camera_new(70, 0.1, 1000.0, true, true, true, editmode_renderer_new(self))
+			c_camera_new(70, 0.1, 1000.0, false, true, true, editmode_renderer_new(self))
 		));
 		sc = c_spatial(&self->camera);
 		c_spatial_lock(sc);
@@ -1052,6 +1097,10 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 
 	if(self->mode == EDIT_OBJECT)
 	{
+		if (self->over != result)
+		{
+			draw_group_poke(ref("quad"));
+		}
 		self->over = result;
 	}
 	else
@@ -1273,6 +1322,7 @@ void c_editmode_leave_context(c_editmode_t *self)
 	if(entity_exists(context))
 	{
 		c_node_t *nc = c_node(&context);
+		draw_group_poke(ref("quad"));
 		if(entity_exists(nc->parent))
 		{
 			self->context_queued = nc->parent;
@@ -1312,6 +1362,10 @@ void c_editmode_select(c_editmode_t *self, entity_t select)
 {
 	struct mouse_tool *tool;
 	if(!entity_exists(select)) select = SYS;
+	if (self->selected != select)
+	{
+		draw_group_poke(ref("quad"));
+	}
 	self->selected = select;
 	tool = self->tool > -1 ? &self->tools[self->tool] : NULL;
 
@@ -2018,6 +2072,7 @@ int32_t c_editmode_update(c_editmode_t *self, float *dt)
 	    && self->context_enter_phase > 0.0f)
 	{
 		self->context_enter_phase = self->context_enter_phase - *dt;
+		draw_group_poke(ref("quad"));
 
 		if (self->context_enter_phase < 0.0f)
 		{
@@ -2032,6 +2087,7 @@ int32_t c_editmode_update(c_editmode_t *self, float *dt)
 	}
 	else if (self->context_enter_phase < 1.0f && (entity_exists(self->context_queued) && self->context_queued != SYS))
 	{
+		draw_group_poke(ref("quad"));
 		if (self->context_enter_phase == 0.0f)
 		{
 			c_editmode_enter_context_effective(self);

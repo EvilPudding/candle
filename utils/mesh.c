@@ -2925,6 +2925,21 @@ void mesh_point_grid(mesh_t *self, vecN_t start, vecN_t size, uvecN_t segments)
 	mesh_unlock(self);
 }
 
+void mesh_triangle_grid(mesh_t *self, uvec2_t segments)
+{
+	/* uint32_t x, y; */
+	/* mesh_lock(self); */
+	/* uint32_t vert_start = vector_count(self->verts); */
+	/* for (x = 0; x < segments.x; ++x) */
+	/* { */
+	/* 	for (y = 0; y < segments.y; ++y) */
+	/* 	{ */
+
+	/* 	} */
+	/* } */
+	/* mesh_unlock(self); */
+}
+
 void mesh_cube(mesh_t *self, float size, float tex_scale)
 {
 	size /= 2.0f;
@@ -2983,6 +2998,7 @@ int load_mesh(mesh_load_t *info)
 
 	mesh_load_obj(info->output, info->bytes, info->bytes_num);
 
+	mesh_modified(info->output);
 	mesh_unlock(info->output);
 	free(info);
 	return 1;

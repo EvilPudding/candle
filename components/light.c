@@ -154,6 +154,7 @@ static void c_light_caustics_init(c_light_t *self)
 
 static void c_light_drawable_init(c_light_t *self)
 {
+	const bool_t changed = !g_light || !self->widget.mesh;
 	if(!g_light)
 	{
 		g_light = mesh_new();
@@ -186,7 +187,10 @@ static void c_light_drawable_init(c_light_t *self)
 		drawable_set_matid(&self->draw, self->id);
 		drawable_set_entity(&self->draw, c_entity(self));
 	}
-	c_light_position_changed(self);
+	if (changed)
+	{
+		c_light_position_changed(self);
+	}
 }
 
 void c_light_init(c_light_t *self)
@@ -366,7 +370,7 @@ void c_light_set_groups(c_light_t *self, uint32_t visible_group,
 
 	self->ambient_group = ambient_group;
 	self->light_group = light_group;
-	self->modified = 1;
+	self->modified = true;
 
 }
 
@@ -386,61 +390,74 @@ static int c_light_position_changed(c_light_t *self)
 	c_node_t *node = c_node(self);
 	c_node_update_model(node);
 	drawable_set_transform(&self->widget, node->model);
-	self->modified = 1;
+	self->modified = true;
 	return CONTINUE;
 }
 
 static int c_light_pre_draw(c_light_t *self)
 {
-	/* if(!self->modified) return CONTINUE; */
-	c_light_drawable_init(self);
-	if(self->radius == -1)
+	if(!self->modified && (!self->renderer || renderer_updated(self->renderer)))
 	{
-		drawable_set_group(&self->draw, self->ambient_group);
-		drawable_set_vs(&self->draw, g_quad_vs);
-		if(self->visible)
-		{
-			drawable_set_mesh(&self->draw, g_quad_mesh);
-		}
+		return CONTINUE;
 	}
-	else
+
+	if (self->modified)
 	{
-		c_node_t *node;
-		vec3_t pos;
-		mat4_t model;
-		float scale;
-		self->frames_passed++;
-		if(self->frames_passed >= self->shadow_cooldown)
+		c_light_drawable_init(self);
+		if(self->radius == -1)
 		{
-			self->frames_passed = 0;
+			drawable_set_group(&self->draw, self->ambient_group);
+			drawable_set_vs(&self->draw, g_quad_vs);
+			if(self->visible)
+			{
+				drawable_set_mesh(&self->draw, g_quad_mesh);
+			}
+			self->modified = false;
 		}
 		else
 		{
-			return CONTINUE;
-		}
+			c_node_t *node;
+			vec3_t pos;
+			mat4_t model;
+			float scale;
+			self->frames_passed++;
+			if(self->frames_passed >= self->shadow_cooldown)
+			{
+				self->frames_passed = 0;
+			}
+			else
+			{
+				return CONTINUE;
+			}
 
-		if(!self->renderer)
-		{
-			c_light_create_renderer(self);
-		}
-		drawable_set_group(&self->draw, self->light_group);
-		drawable_set_vs(&self->draw, model_vs());
-		if(self->visible)
-		{
-			drawable_set_mesh(&self->draw, g_light);
-		}
-		node = c_node(self);
-		pos = c_node_pos_to_global(node, vec3(0, 0, 0));
-		model = mat4_translate(pos);
-		scale = self->radius * 1.15f;
-		model = mat4_scale_aniso(model, vec3(scale, scale, scale));
+			if(!self->renderer)
+			{
+				c_light_create_renderer(self);
+			}
+			drawable_set_group(&self->draw, self->light_group);
+			drawable_set_vs(&self->draw, model_vs());
+			if(self->visible)
+			{
+				drawable_set_mesh(&self->draw, g_light);
+			}
+			node = c_node(self);
+			pos = c_node_pos_to_global(node, vec3(0, 0, 0));
+			model = mat4_translate(pos);
+			scale = self->radius * 1.15f;
+			model = mat4_scale_aniso(model, vec3(scale, scale, scale));
 
-		drawable_set_transform(&self->draw, model);
+			drawable_set_transform(&self->draw, model);
 
-		renderer_set_model(self->renderer, ~0, &node->model);
+			renderer_set_model(self->renderer, ~0, &node->model);
+		}
+	}
+
+	if (self->radius != -1)
+	{
 		renderer_draw(self->renderer);
 	}
-	self->modified = 0;
+
+	self->modified = false;
 	return CONTINUE;
 }
 

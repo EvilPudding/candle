@@ -44,8 +44,20 @@ static struct source *g_sources = NULL;
 
 static uint32_t g_sources_num = 0;
 
+/* TODO Shader sources should be a resource like any other */
+/* void *shader_loader_glsl(const char *bytes, size_t bytes_num, const char *name, */
+/*                       uint32_t ext) */
+/* { */
+/* 	printf("name %s\n", name); */
+/* 	shader_add_source(name, bytes, bytes_num); */
+/* 	return output; */
+/* } */
+
 void shaders_reg()
 {
+	/* TODO Shader sources should be a resource like any other */
+	/* sauces_loader(ref("glsl"), shader_loader_glsl); */
+
 	shaders_candle();
 
 	strcat(default_vs,
@@ -645,6 +657,27 @@ static uint32_t fs_new_loader(fs_variation_t *self)
 	}
 
 	self->program = glCreateShader(GL_FRAGMENT_SHADER); glerr();
+
+		/* { */
+		/* const char *line = self->code; */
+		/* uint32_t line_num = 1u; */
+		/* while (true) */
+		/* { */
+		/* 	char *next_line = strchr(line, '\n'); */
+		/* 	if (next_line) */
+		/* 	{ */
+		/* 		printf("%d	%.*s\n", line_num, (int)(next_line - line), line); */
+		/* 		line = next_line+1; */
+		/* 	} */
+		/* 	else */
+		/* 	{ */
+		/* 		printf("%d	%s\n", line_num, line); */
+		/* 		break; */
+		/* 	} */
+		/* 	line_num++; */
+		/* } */
+		/* } */
+
 
 	glShaderSource(self->program, 1, (const GLchar**)&self->code, NULL); glerr();
 	glCompileShader(self->program); glerr();

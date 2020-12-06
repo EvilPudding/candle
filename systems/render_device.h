@@ -41,6 +41,7 @@ typedef struct c_render_device
 	int32_t updates_ram;
 	int32_t updates_ubo;
 	int32_t frame;
+	uint32_t update_frame;
 	bool_t cull_invert;
 	uint32_t bound_ubos[32];
 } c_render_device_t;

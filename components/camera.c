@@ -76,7 +76,7 @@ static int c_camera_changed(c_camera_t *self);
 
 static int c_camera_changed(c_camera_t *self)
 {
-	self->modified = 1;
+	self->modified = true;
 	return CONTINUE;
 }
 
@@ -171,7 +171,7 @@ int c_camera_update(c_camera_t *self, float *dt)
 		if(step < -0.3f) step = -0.3f;
 		self->exposure += step;
 		self->renderer->glvars[0].exposure = self->exposure;
-		self->modified = 1;
+		self->modified = true;
 	}
 	return CONTINUE;
 }
@@ -214,7 +214,7 @@ int c_camera_pre_draw(c_camera_t *self)
 		{
 			renderer_set_model(self->renderer, self->camid, &node->model);
 		}
-		self->modified = 0;
+		self->modified = false;
 
 	}
 	return CONTINUE;
@@ -322,7 +322,8 @@ void ct_camera(ct_t *self)
 }
 
 c_camera_t *c_camera_new(float proj_fov, float proj_near, float proj_far,
-		int auto_exposure, int active, int window, renderer_t *renderer)
+                         bool_t auto_exposure, bool_t active, bool_t window,
+                         renderer_t *renderer)
 {
 	c_camera_t *self = component_new(ct_camera);
 

@@ -153,6 +153,7 @@ void drawable_set_xray(drawable_t *self, int32_t xray);
 void drawable_set_entity(drawable_t *self, entity_t entity);
 void drawable_set_callback(drawable_t *self, draw_cb cb, void *usrptr);
 void drawable_set_texture(drawable_t *self, texture_t *texture);
+void drawable_poke(drawable_t *self);
 
 int32_t drawable_draw(drawable_t *self);
 
@@ -164,7 +165,9 @@ void drawable_set_angle4(drawable_t *self, float angle4);
 
 void drawable_model_changed(drawable_t *self);
 
-void draw_group(uint32_t ref);
+uint32_t draw_group(uint32_t ref);
+uint32_t draw_group_state_hash(uint32_t ref);
+void draw_group_poke(uint32_t ref);
 
 void draw_groups_init(void);
 

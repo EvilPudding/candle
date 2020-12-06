@@ -504,7 +504,8 @@ void matcall_set_vec4(vicall_t *call, uint32_t ref, vec4_t value)
 static
 void materials_register_defaults(void)
 {
-	vicall_t *albedo, *roughness, *refraction, *metalness, *normal, *height;
+	vicall_t *albedo, *roughness, *refraction,
+			 *metalness, *normal, *height;
 	vifunc_t *defaultmat, *transparent, *parallax, *decal,
 	         *pr1, *pr3, *pr4, *tnum;
 
@@ -522,6 +523,8 @@ void materials_register_defaults(void)
 	vicall_new(defaultmat, pr3, "emissive", vec2(368, 352), ~0, V_IN | V_OUT);
 	roughness = vicall_new(defaultmat, pr1, "roughness", vec2(193, 305), ~0, V_IN | V_OUT);
 		matcall_set_number(roughness, ref("value"), 0.2f);
+	vicall_new(defaultmat, tnum, "subsurf_distance", vec2(193, 305), ~0, V_IN | V_OUT);
+	vicall_new(defaultmat, tnum, "subsurf_strength", vec2(193, 305), ~0, V_IN | V_OUT);
 	metalness = vicall_new(defaultmat, pr1, "metalness", vec2(190, 440), ~0, V_IN | V_OUT);
 		matcall_set_number(metalness, ref("value"), 0.0f);
 	normal = vicall_new(defaultmat, pr3, "normal", vec2(364, 90), ~0, V_IN | V_OUT);
@@ -535,6 +538,8 @@ void materials_register_defaults(void)
 	vifunc_link(defaultmat, ref("normal.mix.result"), ref("pbr.normal"));
 	vifunc_link(defaultmat, ref("emissive.mix.result"), ref("pbr.emissive"));
 	vifunc_link(defaultmat, ref("roughness.mix.result"), ref("pbr.roughness"));
+	vifunc_link(defaultmat, ref("subsurf_distance"), ref("pbr.subsurf_distance"));
+	vifunc_link(defaultmat, ref("subsurf_strength"), ref("pbr.subsurf_strength"));
 	vifunc_link(defaultmat, ref("metalness.mix.result"), ref("pbr.metalness"));
 	vifunc_link(defaultmat, ref("albedo.mix.result"), ref("pbr.albedo"));
 
@@ -599,6 +604,8 @@ void materials_register_defaults(void)
 	vicall_new(parallax, pr3, "emissive", vec2(368, 352), ~0, V_IN | V_OUT);
 	roughness = vicall_new(parallax, pr1, "roughness", vec2(193, 305), ~0, V_IN | V_OUT);
 		matcall_set_number(roughness, ref("value"), 0.2f);
+	vicall_new(parallax, tnum, "subsurf_distance", vec2(193, 305), ~0, V_IN | V_OUT);
+	vicall_new(parallax, tnum, "subsurf_strength", vec2(193, 305), ~0, V_IN | V_OUT);
 	metalness = vicall_new(parallax, pr1, "metalness", vec2(190, 440), ~0, V_IN | V_OUT);
 		matcall_set_number(metalness, ref("value"), 0.0f);
 	normal = vicall_new(parallax, pr3, "normal", vec2(364, 90), ~0, V_IN | V_OUT);
@@ -616,6 +623,8 @@ void materials_register_defaults(void)
 	vifunc_link(parallax, ref("emissive.mix.result"), ref("pbr.emissive"));
 	vifunc_link(parallax, ref("roughness.mix.result"), ref("pbr.roughness"));
 	vifunc_link(parallax, ref("metalness.mix.result"), ref("pbr.metalness"));
+	vifunc_link(parallax, ref("subsurf_distance"), ref("pbr.subsurf_distance"));
+	vifunc_link(parallax, ref("subsurf_strength"), ref("pbr.subsurf_strength"));
 	vifunc_link(parallax, ref("albedo.mix.result"), ref("pbr.albedo"));
 	vifunc_link(parallax, ref("height.mix.result"), ref("pbr.height"));
 }
@@ -895,6 +904,8 @@ struct opaque
 	float roughness;
 	vec3_t emissive;
 	float metalness;
+	float subsurf_distance;
+	float subsurf_strength;
 };
 
 struct decal
@@ -913,6 +924,8 @@ struct parallax
 	float roughness;
 	vec3_t emissive;
 	float metalness;
+	float subsurf_distance;
+	float subsurf_strength;
 	float height;
 };
 
@@ -966,6 +979,7 @@ void mat_changed(vicall_t *call, slot_t slot, void *usrptr)
 		glBindBuffer(GL_UNIFORM_BUFFER, type->ubo); glerr();
 		glBufferSubData(GL_UNIFORM_BUFFER, size * self->id, unpadded, data); glerr();
 	}
+	world_changed();
 	free(data);
 }
 
@@ -1119,7 +1133,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		"#elif defined(GBUFFER_PASS)\n"
 		"layout (location = 0) out vec4 Alb;\n"
 		"layout (location = 1) out vec4 NN;\n"
-		"layout (location = 2) out vec4 MR;\n"
+		"layout (location = 2) out vec4 MRS;\n"
 		"layout (location = 3) out vec3 Emi;\n");
 
 	if (output_type == ref("transparent"))
@@ -1361,29 +1375,32 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	if (output_type == ref("transparent"))
 	{
 		str_cat(&code,
-			"	MR.r = 0.3;\n"
-			"	MR.g = pbr_in.roughness;\n"
-			"	Alb = vec4(pbr_in.tint.rgb * max(0.0, pbr_in.tint.a - 0.5) * 2.0, receive_shadows ? 1.0 : 0.5);\n"
+			"	MRS.r = 0.3;\n"
+			"	MRS.g = pbr_in.roughness;\n"
+			"	MRS.b = 0.0;\n"
+			"	Alb = vec4(pbr_in.tint.rgb * max(0.0, pbr_in.tint.a - 0.5) * 2.0, 0.5);\n"
 			"	Emi = pbr_in.emissive;\n");
 			/* "	Emi = pbr_in.emissive * poly_color.rgb;\n"); */
 	}
 	else if (output_type == ref("decal"))
 	{
 		str_cat(&code,
-			"	MR.r = pbr_in.metalness;\n"
-			"	MR.g = pbr_in.roughness;\n"
+			"	MRS.r = pbr_in.metalness;\n"
+			"	MRS.g = pbr_in.roughness;\n"
+			"	MRS.b = 0.0;\n"
 			"	Alb = pbr_in.albedo.rgba;\n"
 			"	Emi = pbr_in.emissive;\n"
-			"	MR.a = pbr_in.albedo.a;\n"
+			"	MRS.a = pbr_in.albedo.a;\n"
 			"	NN.a = 0.0;\n");
 	}
 	else
 	{
 		str_cat(&code,
 			"	if (pbr_in.albedo.a < 0.7) discard;\n"
-			"	MR.r = pbr_in.metalness;\n"
-			"	MR.g = pbr_in.roughness;\n"
-			"	Alb = vec4(pbr_in.albedo.rgb, receive_shadows ? 1.0 : 0.5);\n"
+			"	MRS.r = pbr_in.metalness;\n"
+			"	MRS.g = pbr_in.roughness;\n"
+			"	MRS.b = pbr_in.subsurf_distance;\n"
+			"	Alb = vec4(pbr_in.albedo.rgb, 0.5 + pbr_in.subsurf_strength / 0.5);\n"
 			"	Emi = pbr_in.emissive;\n");
 	}
 	str_cat(&code,
@@ -1555,7 +1572,8 @@ static void init_type(uint32_t tid, const char *type_name)
 
 void materials_init_vil()
 {
-	vicall_t *r, *g, *b, *a, *normal, *albedo, *roughn, *color, *refraction;
+	vicall_t *r, *g, *b, *a, *normal, *albedo, *roughn,
+			 *color, *refraction;
 	vil_t *ctx = &g_mat_ctx;
 	vifunc_t *tint, *tnum, *v2, *v3, *v4, *tcol, *visin, *virange;
 	vifunc_t *vimul, *vimix, *vimix2, *vimix3, *vimix4, *viadd, *tprev, *ttex;
@@ -1729,9 +1747,13 @@ void materials_init_vil()
 		                    offsetof(struct opaque, normal), V_IN);
 		roughn = vicall_new(opaque, tnum, "roughness", vec2(300, 10),
 		                    offsetof(struct opaque, roughness), V_IN);
-		vicall_new(opaque, tnum, "metalness", vec2(400, 10),
+		vicall_new(opaque, tnum, "subsurf_distance", vec2(400, 10),
+		           offsetof(struct opaque, subsurf_distance), V_IN);
+		vicall_new(opaque, tnum, "subsurf_strength", vec2(400, 10),
+		           offsetof(struct opaque, subsurf_strength), V_IN);
+		vicall_new(opaque, tnum, "metalness", vec2(500, 10),
 		           offsetof(struct opaque, metalness), V_IN);
-		vicall_new(opaque, v3, "emissive", vec2(500, 10),
+		vicall_new(opaque, v3, "emissive", vec2(600, 10),
 		           offsetof(struct opaque, emissive), V_IN);
 		matcall_set_vec4(albedo, ~0, vec4(0.5f, 0.5f, 0.5f, 1.0f));
 		matcall_set_vec3(normal, ~0, vec3(0.5f, 0.5f, 1.0f));
@@ -1744,12 +1766,16 @@ void materials_init_vil()
 		                    offsetof(struct parallax, normal), V_IN);
 		roughn = vicall_new(parallax, tnum, "roughness", vec2(300, 10),
 		                    offsetof(struct parallax, roughness), V_IN);
-		vicall_new(parallax, tnum, "metalness", vec2(400, 10),
+		vicall_new(parallax, tnum, "metalness", vec2(500, 10),
 		           offsetof(struct parallax, metalness), V_IN);
-		vicall_new(parallax, v3, "emissive", vec2(500, 10),
+		vicall_new(parallax, v3, "emissive", vec2(600, 10),
 		           offsetof(struct parallax, emissive), V_IN);
-		vicall_new(parallax, tnum, "height", vec2(600, 10),
+		vicall_new(parallax, tnum, "height", vec2(700, 10),
 		           offsetof(struct parallax, height), V_IN);
+		vicall_new(parallax, tnum, "subsurf_distance", vec2(400, 10),
+		           offsetof(struct parallax, subsurf_distance), V_IN);
+		vicall_new(parallax, tnum, "subsurf_strength", vec2(400, 10),
+		           offsetof(struct parallax, subsurf_strength), V_IN);
 		matcall_set_vec4(albedo, ~0, vec4(0.5f, 0.5f, 0.5f, 1.0f));
 		matcall_set_vec3(normal, ~0, vec3(0.5f, 0.5f, 1.0f));
 		matcall_set_number(roughn, ~0, 0.5f);

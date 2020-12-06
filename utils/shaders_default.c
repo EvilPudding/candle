@@ -13,7 +13,7 @@ void shaders_candle_final()
 		"	sampler2D depth;\n"
 		"	sampler2D albedo;\n"
 		"	sampler2D nn;\n"
-		"	sampler2D mr;\n"
+		"	sampler2D mrs;\n"
 		"	sampler2D emissive;\n"
 		"} gbuffer;\n"
 		"BUFFER {\n"
@@ -79,7 +79,7 @@ void shaders_candle_final()
 		"	vec4 refr0 = texelFetch(refr.color, fc, 0);\n"
 		"	cc = vec4(mix(refr0.rgb, cc.rgb, cc.a), 1.0);\n"
 		"	vec2 normal = texelFetch(gbuffer.nn, fc, 0).rg;\n"
-		"	vec2 metalic_roughness = texelFetch(gbuffer.mr, fc, 0).rg;\n"
+		"	vec2 metalic_roughness = texelFetch(gbuffer.mrs, fc, 0).rg;\n"
 		"	vec4 albedo = texelFetch(gbuffer.albedo, fc, 0);\n"
 		"	vec3 emissive = texelFetch(gbuffer.emissive, fc, 0).rgb;\n"
 		"	vec3 nor = decode_normal(normal);\n");
@@ -100,6 +100,137 @@ void shaders_candle_final()
 	str_free(shader_buffer);
 }
 
+static vec3_t sss_gaussian(float variance, float red, vec3_t falloff)
+{
+	int i;
+    vec3_t g;
+    for (i = 0; i < 3; i++)
+	{
+        float rr = red / (0.001f + ((float*)&falloff)[i]);
+        ((float*)&g)[i] = exp((-(rr * rr)) / (2.0f * variance))
+		                / (2.0f * 3.14f * variance);
+    }
+    return g;
+}
+static vec3_t sss_profile(float red, vec3_t falloff)
+{
+    return vec3_add(vec3_scale(sss_gaussian(0.0484f, red, falloff), 0.100f),
+           vec3_add(vec3_scale(sss_gaussian( 0.187f, red, falloff), 0.118f),
+           vec3_add(vec3_scale(sss_gaussian( 0.567f, red, falloff), 0.113f),
+           vec3_add(vec3_scale(sss_gaussian(  1.99f, red, falloff), 0.358f),
+                    vec3_scale(sss_gaussian(  7.41f, red, falloff), 0.078f)))));
+} 
+static void sss_kernel(int num_samples, vec3_t falloff, char **str)
+{
+	int i;
+
+    const float RANGE = num_samples > 20? 3.0f : 2.0f;
+    const float EXPONENT = 2.0f;
+	vec4_t t;
+    vec3_t sum = vec3(0.0f, 0.0f, 0.0f);
+
+	vec4_t *kernel = malloc(sizeof(*kernel) * num_samples);
+
+    /* Calculate the offsets: */
+    float step = 2.0f * RANGE / (num_samples - 1);
+    for (i = 0; i < num_samples; i++)
+	{
+        float o = -RANGE + ((float)i) * step;
+        float sign = o < 0.0f? -1.0f : 1.0f;
+        kernel[i].w = RANGE * sign * fabs(powf(o, EXPONENT)) / powf(RANGE, EXPONENT);
+    }
+
+    /* Calculate the weights: */
+    for (i = 0; i < num_samples; i++)
+	{
+        float w0 = i > 0 ? fabs(kernel[i].w - kernel[i - 1].w) : 0.0f;
+        float w1 = i < num_samples - 1 ? fabs(kernel[i].w - kernel[i + 1].w) : 0.0f;
+        float area = (w0 + w1) / 2.0f;
+        XYZ(kernel[i]) = vec3_scale(sss_profile(kernel[i].w, falloff), area);
+    }
+
+    /* We want the offset 0.0 to come first: */
+    t = kernel[num_samples / 2];
+    for (i = num_samples / 2; i > 0; i--)
+        kernel[i] = kernel[i - 1];
+    kernel[0] = t;
+
+    for (i = 0; i < num_samples; i++)
+		sum = vec3_add(sum, XYZ(kernel[i]));
+
+    for (i = 0; i < num_samples; i++)
+	{
+        kernel[i].x /= sum.x;
+        kernel[i].y /= sum.y;
+        kernel[i].z /= sum.z;
+    }
+	for (i = 0; i < num_samples; ++i)
+	{
+		str_catf(str, "vec4(%f,%f,%f,%f)%c", _vec4(kernel[i]),
+		         i == num_samples - 1 ? '\n':',');
+	}
+	free(kernel);
+}
+
+static
+void shaders_candle_sss()
+{
+	char *shader_buffer = str_new(64);
+
+	str_cat(&shader_buffer,
+		"#include \"candle:common.glsl\"\n"
+		"const vec4 kernel[25] = vec4[25](\n");
+	sss_kernel(25, vec3(1.0, 0.3, 0.3), &shader_buffer);
+	str_cat(&shader_buffer,
+		");\n");
+	str_cat(&shader_buffer,
+	"vec4 sssblur(vec2 tc, float power, sampler2D color_lit, sampler2D depth_tex,\n"
+	"		sampler2D props, sampler2D color, vec2 dir) {\n"
+	"	vec4 colorM = texture(color_lit, tc);\n"
+	"	float sssWidth = texture(props, tc).b;\n"
+	"	if (ceil(sssWidth) == 0.0) discard;\n"
+	"	float dist_to_projection = camera(projection)[1][1];\n"
+	"	float scale = dist_to_projection / linearize(texture(depth_tex, tc).r);\n"
+	"	vec4 surface_ = texture(color, tc);\n"
+	"	vec3 surface = surface_.rgb * (surface_.a - 0.5) * 2.0 * power;\n");
+	str_cat(&shader_buffer,
+	"	vec2 stepscale = sssWidth * scale * dir;\n"
+	"	stepscale *= 1.0 / 3.0;\n"
+	"	vec4 blurred = colorM;\n"
+	"	blurred.rgb *= surface * kernel[0].rgb + (1.0 - surface);\n"
+	"	for (int i = 1; i < 25; i++) {\n"
+	"		vec2 offset = tc + kernel[i].a * stepscale;\n"
+	"		vec4 color = texture(color_lit, offset);\n"
+	"		float sss_strength1 = ceil(texture(props, offset).b);\n"
+	"		color.rgb = mix(color.rgb, colorM.rgb, 1.0 - sss_strength1);\n"
+	"		blurred.rgb += kernel[i].rgb * surface * color.rgb;\n"
+	"	}\n"
+	"	return blurred;\n"
+	"}\n");
+
+	str_cat(&shader_buffer,
+		"layout (location = 0) out vec4 FragColor;\n"
+		"BUFFER {\n"
+		"	sampler2D color;\n"
+		"} buf;\n"
+		"BUFFER {\n"
+		"	sampler2D albedo;\n"
+		"	sampler2D depth;\n"
+		"	sampler2D mrs;\n"
+		"} gbuffer;\n"
+		"uniform vec2 pass_dir;\n"
+		"uniform float power;\n"
+		"void main(void)\n"
+		"{\n"
+		"	FragColor = sssblur(texcoord, power, buf.color, gbuffer.depth,\n"
+		"		gbuffer.mrs, gbuffer.albedo, pass_dir);\n"
+		"}\n");
+
+	shader_add_source("candle:sss.glsl", shader_buffer,
+	                  str_len(shader_buffer));
+	str_free(shader_buffer);
+}
+
 static
 void shaders_candle_ssao()
 {
@@ -112,7 +243,7 @@ void shaders_candle_ssao()
 		"BUFFER {\n"
 		"	sampler2D depth;\n"
 		"	sampler2D nn;\n"
-		"	sampler2D mr;\n"
+		"	sampler2D mrs;\n"
 		"} gbuffer;\n"
 		"layout (location = 0) out float FragColor;\n"
 		"vec2 hemicircle[] = vec2[](\n"
@@ -266,23 +397,23 @@ void shaders_candle_copy_gbuffer()
 	str_cat(&shader_buffer,
 		"layout (location = 0) out vec4 Alb;\n"
 		"layout (location = 1) out vec2 NN;\n"
-		"layout (location = 2) out vec2 MR;\n"
+		"layout (location = 2) out vec3 MRS;\n"
 		"layout (location = 3) out vec3 Emi;\n"
 		"BUFFER {\n"
 		"	sampler2D depth;\n"
 		"	sampler2D albedo;\n"
 		"	sampler2D nn;\n"
-		"	sampler2D mr;\n"
+		"	sampler2D mrs;\n"
 		"	sampler2D emissive;\n"
 		"} gbuffer;\n");
 	str_cat(&shader_buffer,
 		"void main(void)\n"
 		"{\n"
 		"	vec4 alb = texelFetch(gbuffer.albedo, ivec2(gl_FragCoord.xy), 0);\n"
-		"   if (alb.a < 0.7) discard;\n"
+		"   if (alb.a < 0.5) discard;\n"
 		"	Alb = alb;\n"
 		"	NN = texelFetch(gbuffer.nn, ivec2(gl_FragCoord.xy), 0).rg;\n"
-		"	MR = texelFetch(gbuffer.mr, ivec2(gl_FragCoord.xy), 0).rg;\n"
+		"	MRS = texelFetch(gbuffer.mrs, ivec2(gl_FragCoord.xy), 0).rgb;\n"
 		"	Emi = texelFetch(gbuffer.emissive, ivec2(gl_FragCoord.xy), 0).rgb;\n"
 		"	gl_FragDepth = texelFetch(gbuffer.depth, ivec2(gl_FragCoord.xy), 0);\n"
 		"}\n");
@@ -545,7 +676,7 @@ void shaders_candle_uniforms()
 		"};\n"
 		"layout(std140) uniform renderer_t\n"
 		"{\n"
-		"	camera_t camera;\n"
+		"	camera_t cam;\n"
 		"} renderer;\n");
 	str_cat(&shader_buffer,
 		"layout(std140) uniform scene_t\n"
@@ -571,7 +702,7 @@ void shaders_candle_uniforms()
 		/* layout(location = 30) */ "uniform sampler2D g_probes;\n"
 		/* layout(location = 31) */ "uniform sampler2D g_framebuffer;\n"
 		"#define light(prop) (scene.lights[matid].prop)\n"
-		"#define camera(prop) (renderer.camera.prop)\n"
+		"#define camera(prop) (renderer.cam.prop)\n"
 		"#endif\n");
 	shader_add_source("candle:uniforms.glsl", shader_buffer,
 	                  str_len(shader_buffer));
@@ -605,6 +736,12 @@ void shaders_candle_common()
 		"in vec3 vertex_world_position;\n"
 		"in vec2 texcoord;\n"
 		"\n");
+
+	str_cat(&shader_buffer,
+		"float rand(vec2 co)\n"
+		"{\n"
+		"    return fract(sin(dot(co.xy, vec2(12.9898,78.233))) * 43758.5453);\n"
+		"}\n");
 
 	str_cat(&shader_buffer,
 		"vec2 sampleCube(const vec3 v, out uint faceIndex, out float z)\n"
@@ -828,7 +965,8 @@ void shaders_candle_common()
 		"	if (ocluder_to_light > z - 0.08) return 0.0;\n"
 		"	ocluder_to_light = min(z, ocluder_to_light);\n"
 		"	float dither = dither_value();\n"
-		"	float shadow_len = min(0.8 * (point_to_light / ocluder_to_light - 1.0), 10.0);\n"
+		/* "	float dither = 1.0;\n" */
+		"	float shadow_len = min(0.3 * (point_to_light / ocluder_to_light - 1.0), 10.0);\n"
 		"	if(shadow_len > 0.001)\n"
 		"	{\n"
 		"		vec3 normal = normalize(vec);\n"
@@ -838,8 +976,8 @@ void shaders_candle_common()
 		"		float min_dist = 1.0;\n"
 		"		for (uint j = 0u; j < 19u; j++)\n"
 		"		{\n"
-		"			vec3 offset = taps[j] * ((4.0/3.0) * dither);\n"
-		"			if(lookup(-vec + (offset.x * tangent + offset.y * bitangent) * shadow_len) > 0.5)\n"
+		"			vec3 offset = taps[j] * (4.0/3.0) * dither * shadow_len;\n"
+		"			if(lookup(-vec + (offset.x * tangent + offset.y * bitangent)) > 0.5)\n"
 		"			{\n"
 		"				min_dist = offset.z;\n"
 		"				break;\n"
@@ -925,12 +1063,6 @@ void shaders_candle_common()
 		"		norm = -norm;\n"
 		"	}\n"
 		"	return normalize(norm);\n"
-		"}\n");
-
-	str_cat(&shader_buffer,
-		"float rand(vec2 co)\n"
-		"{\n"
-		"    return fract(sin(dot(co.xy, vec2(12.9898,78.233))) * 43758.5453);\n"
 		"}\n");
 
 	/* TODO: should go to ssr.glsl */
@@ -1163,6 +1295,55 @@ void shaders_candle_common()
 		"    float roughnessSq = pbrInputs.alpha_roughness_sq;\n"
 		"    float f = (pbrInputs.NdotH * roughnessSq - pbrInputs.NdotH) * pbrInputs.NdotH + 1.0;\n"
 		"    return roughnessSq / (M_PI * f * f);\n"
+		"}\n");
+
+	str_cat(&shader_buffer,
+		"vec3 hsv2rgb(vec3 c)\n"
+		"{\n"
+		"    c.x = clamp(c.x, 0.0, 1.0);\n"
+		"    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);\n"
+		"    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);\n"
+		"    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);\n"
+		"}\n");
+
+	str_cat(&shader_buffer,
+		"vec3 rgb2hsv(vec3 c)\n"
+		"{\n"
+		"    vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);\n"
+		"    vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));\n"
+		"    vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));\n"
+		"    float d = q.x - min(q.w, q.y);\n"
+		"    float e = 1.0e-10;\n"
+		"    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);\n"
+		"}\n");
+
+	str_cat(&shader_buffer,
+		"vec3 transmittance_profile(vec3 color, float thicc)"
+		"{\n"
+		"	float dd = -thicc * thicc;\n"
+		"	vec3 hsv = rgb2hsv(color);\n"
+		"   hsv.g *= 1.3;\n"
+		"	vec3 p = hsv2rgb(vec3(hsv.r - 0.577724, hsv.g*0.640986, hsv.b*0.649)) * exp(dd / 0.0064) +\n");
+	str_cat(&shader_buffer,
+		"	hsv2rgb(vec3(hsv.r - 0.505464, hsv.g*0.709302, hsv.b*0.344)) * exp(dd / 0.0484) +\n"
+		"	hsv2rgb(vec3(hsv.r - 0.234007, hsv.g, hsv.b*0.198)) * exp(dd / 0.187) +\n"
+		"	hsv2rgb(vec3(hsv.r, hsv.g*1.0, hsv.b*0.113)) * exp(dd / 0.567) +\n"
+		"	hsv2rgb(vec3(hsv.r - 0.001862, hsv.g, hsv.b*0.358)) * exp(dd / 1.99) +\n"
+		"	hsv2rgb(vec3(hsv.r, hsv.g, hsv.b * 0.078)) * exp(dd / 7.41);\n"
+		"	return p;\n"
+		"}\n");
+
+	str_cat(&shader_buffer,
+		"vec3 transmittance(vec3 surface_color, float translucency,\n"
+		"		float sssWidth, vec3 w_pos, vec3 w_nor)\n"
+		"{\n"
+		"	float scale = 8.25 * (1.0 - translucency) / sssWidth;\n"
+		"	vec3 shrinked_pos = w_pos - 0.005 * w_nor;\n"
+		"	float d2;\n"
+		"	float d1 = lookup_single(shrinked_pos - obj_pos, d2);\n"
+		"	float thicc = scale * abs(d1 - d2);\n"
+		"	return transmittance_profile(surface_color, thicc)\n"
+		"		* clamp(0.3 + dot(shrinked_pos - obj_pos, w_nor), 0.0, 1.0);\n"
 		"}\n");
 
 	str_cat(&shader_buffer,
@@ -1902,7 +2083,7 @@ void shaders_candle_pbr()
 		"	sampler2D depth;\n"
 		"	sampler2D albedo;\n"
 		"	sampler2D nn;\n"
-		"	sampler2D mr;\n"
+		"	sampler2D mrs;\n"
 		"} gbuffer;\n"
 		"uniform bool opaque_pass;\n");
 
@@ -1920,8 +2101,9 @@ void shaders_candle_pbr()
 		"	if(light(radius) > 0.0 && depth > gl_FragCoord.z) discard;\n"
 		"	vec2 normal = texelFetch(gbuffer.nn, fc, 0).rg;\n"
 		"	vec3 c_nor = decode_normal(normal);\n"
+		"	vec3 w_nor = (camera(model) * vec4(c_nor, 0.0)).xyz;\n"
 		"	vec3 w_pos = (camera(model) * vec4(c_pos, 1.0)).xyz;\n"
-		"	vec2 metalic_roughness = texelFetch(gbuffer.mr, fc, 0).rg;\n");
+		"	vec3 metal_rough_subsurf = texelFetch(gbuffer.mrs, fc, 0).rgb;\n");
 
 	str_cat(&shader_buffer,
 		"	float dist_to_eye = length(c_pos);\n"
@@ -1940,7 +2122,6 @@ void shaders_candle_pbr()
 	str_cat(&shader_buffer,
 		"		float sd = 0.0;\n"
 		"		vec3 shad = vec3(0.0);\n"
-		"		if(dif.a >= 1.0)\n"
 		"		{\n"
 		"			float z;\n"
 		"			sd = get_shadow(w_light_dir, point_to_light, dist_to_eye, depth);\n"
@@ -1958,9 +2139,17 @@ void shaders_candle_pbr()
 		"			float l = point_to_light / light(radius);\n"
 		"			float attenuation = ((3.0 - l*3.0) / (1.0+1.3*(pow(l*3.0-0.1, 2.0))))/3.0;\n"
 		"			attenuation = clamp(attenuation, 0.0, 1.0);\n"
-		"			vec4 color_lit = pbr(dif, metalic_roughness,\n"
+		"			vec4 color_lit = pbr(dif, metal_rough_subsurf.rg,\n"
 		"					light_color * attenuation, c_light_dir, c_pos, c_nor);\n"
-		"			color.rgb += color_lit.rgb * (vec3(1.0) - shad);\n"
+		"			color.rgb += color_lit.rgb * (vec3(1.0) - shad);\n");
+	str_cat(&shader_buffer,
+		"        float subsurf_strength = (dif.a - 0.5) * 2.0;\n"
+		"        float subsurf_len = metal_rough_subsurf.b;\n"
+		"        if (metal_rough_subsurf.b * subsurf_strength > 0.0) {"
+		"        color.rgb += light_color * attenuation\n"
+		"					* transmittance(dif.rgb, metal_rough_subsurf.b * 0.2,\n"
+		"						metal_rough_subsurf.b, w_pos, w_nor) * subsurf_strength;\n"
+		"		  }\n"
 		"		}\n"
 		"	}\n"
 		"\n"
@@ -1976,6 +2165,7 @@ void shaders_candle()
 {
 	shaders_candle_uniforms();
 	shaders_candle_final();
+	shaders_candle_sss();
 	shaders_candle_ssao();
 	shaders_candle_color();
 	shaders_candle_copy();

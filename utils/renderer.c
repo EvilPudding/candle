@@ -282,6 +282,7 @@ static void update_ubo(renderer_t *self, int32_t camid)
 
 void renderer_set_model(renderer_t *self, uint32_t camid, mat4_t *model)
 {
+	self->render_device_frame = 0;
 	if(camid == ~0)
 	{
 		int32_t i;
@@ -545,7 +546,17 @@ void *pass_process_brightness(pass_t *self)
 	return NULL;
 }
 
-void renderer_default_pipeline(renderer_t *self)
+
+void renderer_default_pipeline(renderer_t *self,
+                               float ssao_power,
+							   float ssr_power,
+							   float ssssss_power,
+							   float bloom_power,
+							   bool_t sscaustics,
+							   bool_t decals,
+							   bool_t volumetric_light,
+							   bool_t transparency,
+							   bool_t auto_exposure)
 {
 	texture_t *query_mips = texture_new_2D(0, 0, 0, 5,
 		buffer_new("depth",		true, -1),
@@ -558,26 +569,23 @@ void renderer_default_pipeline(renderer_t *self)
 		buffer_new("depth",		true, -1),
 		buffer_new("albedo",	true, 4),
 		buffer_new("nn",		true, 2),
-		buffer_new("mr",		false, 2),
+		buffer_new("mrs",		false, 3),
 		buffer_new("emissive",	false, 3));
 
 	texture_t *transp_gbuffer = texture_new_2D(0, 0, 0, 5,
 		buffer_new("depth",		true, -1),
 		buffer_new("albedo",	true, 4),
 		buffer_new("nn",		true, 2),
-		buffer_new("mr",		false, 2),
+		buffer_new("mrs",		false, 3),
 		buffer_new("emissive",	false, 3));
 
 	texture_t *ssao =		texture_new_2D(0, 0, 0, 1,
 		buffer_new("occlusion",	true, 1)
 	);
-	texture_t *volum =	texture_new_2D(0, 0, TEX_INTERPOLATE, 1,
+	texture_t *volum =	volumetric_light ? texture_new_2D(0, 0, TEX_INTERPOLATE, 1,
 		buffer_new("color",	false, 4)
-	);
-	/* texture_t *volum_tmp =	texture_new_2D(0, 0, TEX_INTERPOLATE, 1, */
-	/* 	buffer_new("color",	false, 4) */
-	/* ); */
-	texture_t *light =	texture_new_2D(0, 0, 0, 1,
+	) : NULL;
+	texture_t *light =	texture_new_2D(0, 0, TEX_INTERPOLATE, 1,
 		buffer_new("color",	true, 4)
 	);
 	texture_t *refr =		texture_new_2D(0, 0, TEX_MIPMAP | TEX_INTERPOLATE, 1,
@@ -586,30 +594,23 @@ void renderer_default_pipeline(renderer_t *self)
 	texture_t *tmp =		texture_new_2D(0, 0, TEX_MIPMAP | TEX_INTERPOLATE, 1,
 		buffer_new("color",	true, 4)
 	);
-	texture_t *final =		texture_new_2D(0, 0, TEX_INTERPOLATE | TEX_MIPMAP, 1,
+	texture_t *final = texture_new_2D(0, 0, TEX_INTERPOLATE
+	                                      | (auto_exposure ? TEX_MIPMAP : 0), 1,
 		buffer_new("color",	true, 4)
 	);
-	texture_t *bloom = texture_new_2D(0, 0, TEX_INTERPOLATE | TEX_MIPMAP, 1,
-			buffer_new("color", false, 4));
-	/* texture_t *bloom2 =		texture_new_2D(0, 0, TEX_INTERPOLATE, 1, */
-		/* buffer_new("color",	true, 4) */
-	/* ); */
-
-	texture_t *selectable = texture_new_2D(0, 0, 0, 2,
-		buffer_new("depth", false, -1),
-		buffer_new("ids",   false, 4));
+	texture_t *bloom = bloom_power > 0.0f ? texture_new_2D(0, 0, TEX_INTERPOLATE | TEX_MIPMAP, 1,
+			buffer_new("color", false, 4)) : NULL;
 
 	renderer_add_tex(self, "query_mips",  0.1f, query_mips);
 	renderer_add_tex(self, "gbuffer",     1.0f, gbuffer);
 	renderer_add_tex(self, "transp_gbuffer", 1.0f, transp_gbuffer);
 	renderer_add_tex(self, "ssao",        1.0f / 2.0f, ssao);
 	renderer_add_tex(self, "light",       1.0f, light);
-	renderer_add_tex(self, "volum",       1.0f / 2.0f, volum);
+	if (volumetric_light) renderer_add_tex(self, "volum", 1.0f / 2.0f, volum);
 	renderer_add_tex(self, "refr",        1.0f, refr);
 	renderer_add_tex(self, "tmp",         1.0f, tmp);
 	renderer_add_tex(self, "final",       1.0f, final);
-	renderer_add_tex(self, "selectable",  1.0f, selectable);
-	renderer_add_tex(self, "bloom",       1.0f, bloom);
+	if (bloom_power > 0.0f) renderer_add_tex(self, "bloom", 1.0f, bloom);
 
 	renderer_add_pass(self, "query_visible", "candle:query_mips", ref("visible"), 0,
 			query_mips, query_mips, 0, ~0, 3,
@@ -645,16 +646,13 @@ void renderer_default_pipeline(renderer_t *self)
 	);
 
 	/* DECAL PASS */
-	renderer_add_pass(self, "decals_pass", "candle:gbuffer", ref("decals"), BLEND,
+	if (decals)
+	{
+		renderer_add_pass(self, "decals_pass", "candle:gbuffer", ref("decals"), BLEND,
 			gbuffer, NULL, 0, ~0, 1,
 			opt_tex("gbuffer", gbuffer, NULL)
-	);
-
-	renderer_add_pass(self, "selectable", "candle:select_map", ref("selectable"),
-			0, selectable, selectable, 0, ~0, 2,
-			opt_clear_depth(1.0f, NULL),
-			opt_clear_color(Z4, NULL)
-	);
+		);
+	}
 
 	renderer_add_pass(self, "ambient_light_pass", "candle:pbr", ref("ambient"),
 			ADD, light, NULL, 0, ~0, 3,
@@ -669,12 +667,33 @@ void renderer_default_pipeline(renderer_t *self)
 			opt_tex("gbuffer", gbuffer, NULL)
 	);
 
-	renderer_add_pass(self, "volum_pass", "candle:volum", ref("light"),
-			ADD | CULL_DISABLE, volum, NULL, 0, ~0, 2,
-			opt_tex("gbuffer", gbuffer, NULL),
-			opt_clear_color(Z4, NULL)
-	);
-	/* renderer_add_kawase(self, volum, volum_tmp, 0, 0); */
+	if (ssssss_power > 0.f)
+	{
+		renderer_add_pass(self, "sss_pass0", "candle:sss", ref("quad"),
+				0, tmp, NULL, 0, ~0, 5,
+				opt_vec2("pass_dir", vec2(1.0f, 0.0f), NULL),
+				opt_tex("buf", light, NULL),
+				opt_num("power", ssssss_power, NULL),
+				opt_tex("gbuffer", gbuffer, NULL),
+				opt_clear_color(Z4, NULL)
+		);
+		renderer_add_pass(self, "sss_pass1", "candle:sss", ref("quad"),
+				0, light, NULL, 0, ~0, 4,
+				opt_vec2("pass_dir", vec2(0.0f, 1.0f), NULL),
+				opt_num("power", ssssss_power, NULL),
+				opt_tex("buf", tmp, NULL),
+				opt_tex("gbuffer", gbuffer, NULL)
+		);
+	}
+
+	if (volumetric_light)
+	{
+		renderer_add_pass(self, "volum_pass", "candle:volum", ref("light"),
+				ADD | CULL_DISABLE, volum, NULL, 0, ~0, 2,
+				opt_tex("gbuffer", gbuffer, NULL),
+				opt_clear_color(Z4, NULL)
+		);
+	}
 
 	/* renderer_add_pass(self, "sea", "sea", ref("quad"), 0, light, */
 	/* 		NULL, 0, ~0, */
@@ -684,73 +703,86 @@ void renderer_default_pipeline(renderer_t *self)
 	/* 	} */
 	/* ); */
 
-	renderer_add_pass(self, "refraction", "candle:copy", ref("quad"), 0,
-			refr, NULL, 0, ~0, 4,
-			opt_tex("buf", light, NULL),
-			opt_clear_color(Z4, NULL),
-			opt_ivec2("pos", ivec2(0, 0), NULL),
-			opt_int("level", 0, NULL)
-	);
+	if (transparency)
+	{
+		renderer_add_pass(self, "refraction", "candle:copy", ref("quad"), 0,
+				refr, NULL, 0, ~0, 4,
+				opt_tex("buf", light, NULL),
+				opt_clear_color(Z4, NULL),
+				opt_ivec2("pos", ivec2(0, 0), NULL),
+				opt_int("level", 0, NULL)
+		);
 
-	renderer_add_kawase(self, refr, tmp, 0, 1);
-	renderer_add_kawase(self, refr, tmp, 1, 2);
-	renderer_add_kawase(self, refr, tmp, 2, 3);
+		renderer_add_kawase(self, refr, tmp, 0, 1);
+		renderer_add_kawase(self, refr, tmp, 1, 2);
+		renderer_add_kawase(self, refr, tmp, 2, 3);
 
-	renderer_add_pass(self, "transp_2", "candle:gbuffer", ref("transparent"),
-			0, transp_gbuffer, transp_gbuffer, 0, ~0, 4,
-			opt_tex("refr", refr, NULL),
-			opt_tex("gbuffer", gbuffer, NULL),
-			opt_clear_depth(1.0f, NULL),
-			opt_clear_color(Z4, NULL)
-	);
+		renderer_add_pass(self, "transp_2", "candle:gbuffer", ref("transparent"),
+				0, transp_gbuffer, transp_gbuffer, 0, ~0, 4,
+				opt_tex("refr", refr, NULL),
+				opt_tex("gbuffer", gbuffer, NULL),
+				opt_clear_depth(1.0f, NULL),
+				opt_clear_color(Z4, NULL)
+		);
 
-	renderer_add_pass(self, "render_pass_2", "candle:pbr", ref("light"),
-			ADD, light, NULL, 0, ~0, 3,
-			opt_int("opaque_pass", false, NULL),
-			opt_clear_color(Z4, NULL),
-			opt_tex("gbuffer", transp_gbuffer, NULL)
-	);
+		renderer_add_pass(self, "render_pass_2", "candle:pbr", ref("light"),
+				ADD, light, NULL, 0, ~0, 3,
+				opt_int("opaque_pass", false, NULL),
+				opt_clear_color(Z4, NULL),
+				opt_tex("gbuffer", transp_gbuffer, NULL)
+		);
 
-	renderer_add_pass(self, "copy_gbuffer", "candle:copy_gbuffer", ref("quad"),
-			0, gbuffer, gbuffer, 0, ~0, 1,
-			opt_tex("gbuffer", transp_gbuffer, NULL)
-	);
+		renderer_add_pass(self, "copy_gbuffer", "candle:copy_gbuffer", ref("quad"),
+				0, gbuffer, gbuffer, 0, ~0, 1,
+				opt_tex("gbuffer", transp_gbuffer, NULL)
+		);
+	}
 
-	renderer_add_pass(self, "ssao_pass", "candle:ssao", ref("quad"), 0,
-			ssao, NULL, 0, ~0, 2,
-			opt_tex( "gbuffer", gbuffer, NULL),
-			opt_clear_color(Z4, NULL)
-	);
+	if (ssao_power > 0.0f)
+	{
+		renderer_add_pass(self, "ssao_pass", "candle:ssao", ref("quad"), 0,
+				ssao, NULL, 0, ~0, 2,
+				opt_tex( "gbuffer", gbuffer, NULL),
+				opt_clear_color(Z4, NULL)
+		);
+	}
 
 	renderer_add_pass(self, "final", "candle:final", ref("quad"), 0, final,
 			NULL, 0, ~0, 7,
 			opt_tex("gbuffer", gbuffer, NULL),
 			opt_tex("light", light, NULL),
 			opt_tex("refr", refr, NULL),
-			opt_num("ssr_power", 1.0f, NULL),
+			opt_num("ssr_power", ssr_power, NULL),
 			opt_tex("ssao", ssao, NULL),
-			opt_num("ssao_power", 1.0f, NULL),
+			opt_num("ssao_power", ssao_power, NULL),
 			opt_tex("volum", volum, NULL)
 	);
-	renderer_add_pass(self, "bloom_0", "candle:bright", ref("quad"), 0,
-			bloom, NULL, 0, ~0, 1,
-			opt_tex("buf", final, NULL)
-	);
-	renderer_add_kawase(self, bloom, tmp, 0, 1);
-	renderer_add_kawase(self, bloom, tmp, 1, 2);
-	renderer_add_kawase(self, bloom, tmp, 2, 3);
 
-	renderer_add_pass(self, "bloom_1", "candle:upsample", ref("quad"), ADD,
-			final, NULL, 0, ~0, 3,
-			opt_tex( "buf", bloom, NULL),
-			opt_int( "level", 3, NULL),
-			opt_num( "alpha", 0.5, NULL)
-	);
-	renderer_add_pass(self, "luminance_calc", NULL, -1, 0,
+	if (bloom_power > 0.0f)
+	{
+		renderer_add_pass(self, "bloom_0", "candle:bright", ref("quad"), 0,
+				bloom, NULL, 0, ~0, 1,
+				opt_tex("buf", final, NULL)
+		);
+		renderer_add_kawase(self, bloom, tmp, 0, 1);
+		renderer_add_kawase(self, bloom, tmp, 1, 2);
+		renderer_add_kawase(self, bloom, tmp, 2, 3);
+
+		renderer_add_pass(self, "bloom_1", "candle:upsample", ref("quad"), ADD,
+				final, NULL, 0, ~0, 3,
+				opt_tex("buf", bloom, NULL),
+				opt_int("level", 3, NULL),
+				opt_num("alpha", bloom_power, NULL)
+		);
+	}
+	if (auto_exposure)
+	{
+		renderer_add_pass(self, "luminance_calc", NULL, -1, 0,
 			final, NULL, 0, ~0, 2,
 			opt_callback((getter_cb)pass_process_brightness),
 			opt_skip(16)
-	);
+		);
+	}
 
 	/* renderer_tex(self, ref(light))->mipmaped = 1; */
 
@@ -863,6 +895,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 	pass->bound_textures = 0;
 	rd = c_render_device(&SYS);
 	if (!rd) return NULL;
+	self->render_device_frame = rd->update_frame;
 	c_render_device_rebind(rd, (rd_bind_cb)bind_pass, pass);
 	if (pass->binds && pass->binds[0].type == OPT_CALLBACK)
 	{
@@ -964,7 +997,7 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 			glClear(pass->clear);
 			glDisable(GL_SCISSOR_TEST);
 		}
-		draw_group(pass->draw_signal);
+		pass->rendered_id = draw_group(pass->draw_signal);
 	}
 	pass_unbind_textures(pass);
 	glerr();
@@ -978,16 +1011,6 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 		texture_bind(pass->output, 0);
 		glGenerateMipmap(pass->output->target); glerr();
 	}
-
-	/* if(pass->track_brightness && self->frame % 4 == 0) */
-	/* { */
-	/* 	if(!gen_mip) */
-	/* 	{ */
-	/* 		texture_bind(pass->output, 0); */
-	/* 		glGenerateMipmap(pass->output->target); glerr(); */
-	/* 	} */
-	/* 	texture_update_brightness(pass->output); */
-	/* } */
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
 	rd->cull_invert = false;
@@ -1056,39 +1079,6 @@ renderer_t *renderer_new(float resolution)
 
 	return self;
 }
-
-unsigned int renderer_geom_at_pixel(renderer_t *self, int x, int y,
-		float *depth)
-{
-	uint32_t result, res;
-	texture_t *tex = renderer_tex(self, ref("selectable"));
-	if(!tex) return entity_null;
-
-	res = texture_get_pixel(tex, 0, x * self->resolution, y * self->resolution, depth);
-	res >>= 16;
-	res &= 0xFF;
-	result = res - 1;
-	return result;
-}
-
-entity_t renderer_entity_at_pixel(renderer_t *self, int x, int y,
-		float *depth)
-{
-	uint32_t pos;
-	entity_t result;
-	struct { uint32_t pos, uid; } *cast = (void*)&result;
-	texture_t *tex = renderer_tex(self, ref("selectable"));
-
-	if(!tex) return entity_null;
-
-	pos = texture_get_pixel(tex, 0, x * self->resolution, y * self->resolution, depth);
-	pos &= 0xFF;
-
-	cast->pos = pos;
-	cast->uid = g_ecm->entities_info[pos].uid;
-	return result;
-}
-
 
 extern texture_t *g_cache;
 extern texture_t *g_indir;
@@ -1521,16 +1511,49 @@ void renderer_destroy(renderer_t *self)
 	}
 }
 
+void renderer_default_pipeline_config(renderer_t *self)
+{
+	renderer_default_pipeline(self, 1.0f, 1.0f, 1.0f, 0.5f, true, true, true,
+	                          true, true);
+}
+
+bool_t renderer_updated(const renderer_t *self)
+{
+	uint32_t i;
+	c_render_device_t *rd;
+	rd = c_render_device(&SYS);
+
+	if (!rd || self->render_device_frame != rd->update_frame)
+		return false;
+
+	for(i = 0; i < self->passes_size; i++)
+	{
+		const pass_t *pass = &self->passes[i];
+		if(!pass->active)
+			continue;
+		if (self->frame % pass->draw_every != 0)
+			continue;
+		if (   pass->draw_signal != ~0
+		    && draw_group_state_hash(pass->draw_signal) != pass->rendered_id)
+			return false;
+	}
+	return true;
+}
+
 int renderer_draw(renderer_t *self)
 {
 	uint32_t i;
+
 	self->frame++;
+
+	if (renderer_updated(self))
+		return false;
 
 	glerr();
 
-	if(!self->width || !self->height) return CONTINUE;
+	if(!self->width || !self->height) return false;
 
-	if(!self->output) renderer_default_pipeline(self);
+	if(!self->output) renderer_default_pipeline_config(self);
 
 	if(!self->ready) renderer_update_screen_texture(self);
 
@@ -1554,6 +1577,6 @@ int renderer_draw(renderer_t *self)
 	c_render_device_rebind(c_render_device(&SYS), NULL, NULL);
 
 	glerr();
-	return CONTINUE;
+	return true;
 }
 

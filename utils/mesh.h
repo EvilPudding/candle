@@ -264,6 +264,7 @@ void mesh_disk(mesh_t *self, float radius, float inner_radius, int segments,
 void mesh_cube(mesh_t *self, float size, float tex_scale);
 void mesh_ico(mesh_t *self, float size);
 void mesh_point_grid(mesh_t *self, vecN_t start, vecN_t size, uvecN_t segments);
+void mesh_triangle_grid(mesh_t *self, uvec2_t segments);
 
 void mesh_clear(mesh_t *self);
 void mesh_subdivide(mesh_t *mesh, int subdivisions);

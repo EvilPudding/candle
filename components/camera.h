@@ -16,9 +16,9 @@ typedef struct
 	int camid;
 	int active;
 	int window;
-	int auto_exposure;
-	int modified;
-	int auto_transform;
+	bool_t auto_exposure;
+	bool_t modified;
+	bool_t auto_transform;
 	float proj_near, proj_far, proj_fov;
 	drawable_t draw;
 	drawable_t frustum;
@@ -28,7 +28,8 @@ typedef struct
 DEF_CASTER(ct_camera, c_camera, c_camera_t)
 
 c_camera_t *c_camera_new(float proj_fov, float proj_near, float proj_far,
-		int auto_exposure, int active, int window, renderer_t *renderer);
+                         bool_t auto_exposure, bool_t active, bool_t window,
+                         renderer_t *renderer);
 c_camera_t *c_camera_clone(c_camera_t *self);
 vec3_t c_camera_real_pos(c_camera_t *cam, float depth, vec2_t coord);
 vec3_t c_camera_screen_pos(c_camera_t *self, vec3_t pos);

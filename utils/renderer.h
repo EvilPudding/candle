@@ -161,6 +161,7 @@ typedef struct pass
 	uint32_t depth_func;
 	unsigned int clear;
 	uint32_t draw_signal;
+	uint32_t rendered_id;
 	entity_t camera;
 	bool_t ignore_cam_viewport;
 
@@ -204,7 +205,7 @@ struct gl_camera
 typedef struct renderer
 {
 	int frame;
-	int update_frame;
+	uint32_t render_device_frame;
 	float resolution;
 	int width, height;
 	float proj_near, proj_far, proj_fov;
@@ -238,6 +239,7 @@ typedef struct renderer
 
 renderer_t *renderer_new(float resolution);
 int renderer_draw(renderer_t *self);
+bool_t renderer_updated(const renderer_t *self);
 void renderer_set_resolution(renderer_t *self, float resolution);
 
 void renderer_set_output(renderer_t *self, texture_t *tex);
@@ -266,16 +268,20 @@ void renderer_toggle_pass(renderer_t *self, uint32_t hash, int active);
 
 entity_t renderer_get_camera(renderer_t *self);
 
-entity_t renderer_entity_at_pixel(renderer_t *self, int x, int y,
-		float *depth);
-unsigned int renderer_geom_at_pixel(renderer_t *self, int x, int y,
-		float *depth);
-
 void renderer_invert_depth(renderer_t *self, int inverted);
 int renderer_resize(renderer_t *self, int width, int height);
 
 pass_t *renderer_pass(renderer_t *self, unsigned int hash);
-void renderer_default_pipeline(renderer_t *self);
+void renderer_default_pipeline(renderer_t *self,
+                               float ssao_power,
+							   float ssr_power,
+							   float ssssss_power,
+							   float bloom_power,
+							   bool_t sscaustics,
+							   bool_t decals,
+							   bool_t volumetric_light,
+							   bool_t transparency,
+                               bool_t auto_exposure);
 void renderer_set_model(renderer_t *self, uint32_t camid, mat4_t *model);
 void renderer_update_projection(renderer_t *self);
 vec3_t renderer_real_pos(renderer_t *self, float depth, vec2_t coord);

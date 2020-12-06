@@ -22,7 +22,6 @@ static void draw_conf_remove_instance(draw_conf_t *self, int32_t id);
 #ifdef THREADED
 static mtx_t g_group_mtx;
 #endif
-
 #define MASK_TRANS (1 << 0)
 #define MASK_PROPS (1 << 1)
 
@@ -744,6 +743,16 @@ draw_conf_t *drawable_get_conf(drawable_t *self, uint32_t gid)
 	return result;
 }
 
+void drawable_poke(drawable_t *self)
+{
+	uint32_t gid;
+	for(gid = 0; gid < self->bind_num; gid++)
+	{
+		struct draw_bind *bind = &self->bind[gid];
+		get_group(bind->grp)->update_id++;
+	}
+}
+
 void drawable_model_changed(drawable_t *self)
 {
 	uint32_t gid;
@@ -782,6 +791,7 @@ void drawable_model_changed(drawable_t *self)
 
 		if (!vec4_equals(*props, new_props))
 		{
+			get_group(bind->grp)->update_id++;
 			*props = new_props;
 			if (!(bind->updates & MASK_PROPS))
 			{
@@ -1382,6 +1392,7 @@ static int32_t drawable_position_changed(drawable_t *self, struct draw_bind *bin
 {
 	if (bind->conf)
 	{
+		get_group(bind->grp)->update_id++;
 		bind->conf->inst[bind->instance_id] = self->transform;
 #ifdef MESH4
 		bind->conf->angle4[bind->instance_id] = self->angle4;
@@ -1407,14 +1418,12 @@ void drawable_destroy(drawable_t *self)
 	}
 }
 
-static int32_t draw_group_draw(draw_group_t *self)
+static void draw_group_draw(draw_group_t *self)
 {
-	int32_t res = 0;
 	khiter_t k;
 	draw_conf_t *conf;
-
-	if (!self) return 0;
-	if (!self->configs) return 0;
+	if (!self) return;
+	if (!self->configs) return;
 
 #ifdef THREADED
 	mtx_lock(&g_group_mtx);
@@ -1423,17 +1432,18 @@ static int32_t draw_group_draw(draw_group_t *self)
 	{
 		if (!kh_exist(self->configs, k)) continue;
 		conf = kh_value(self->configs, k);
-		res |= draw_conf_draw(conf, -1);
+		draw_conf_draw(conf, -1);
 	}
 #ifdef THREADED
 	mtx_unlock(&g_group_mtx);
 #endif
-	return res;
 }
 
-void draw_group(uint32_t ref)
+uint32_t draw_group(uint32_t ref)
 {
 	draw_group_draw(get_group(ref));
+
+	return draw_group_state_hash(ref);
 }
 
 void draw_groups_init()
@@ -1443,3 +1453,42 @@ void draw_groups_init()
 	mtx_init(&g_group_mtx, mtx_plain);
 #endif
 }
+
+uint32_t draw_group_state_hash(uint32_t ref)
+{
+	khiter_t k;
+	draw_group_t *group = get_group(ref);
+	uint32_t hash = 0;
+
+	hash = murmur_hash_step(0, group->update_id);
+
+#ifdef THREADED
+	mtx_lock(&g_group_mtx);
+#endif
+	for(k = kh_begin(group->configs); k != kh_end(group->configs); ++k)
+	{
+		draw_conf_t *conf;
+		if (!kh_exist(group->configs, k)) continue;
+		conf = kh_value(group->configs, k);
+
+		if (!conf->varray) conf->varray = varray_get(conf->vars.mesh);
+
+		if (!conf->varray->mesh || conf->varray->mesh->locked_read)
+			continue;
+
+		hash = murmur_hash_step(hash, conf->varray->mesh->update_id);
+		hash = murmur_hash_step(hash, conf->trans_updates);
+		hash = murmur_hash_step(hash, conf->props_updates);
+	}
+#ifdef THREADED
+	mtx_unlock(&g_group_mtx);
+#endif
+	return hash;
+}
+
+void draw_group_poke(uint32_t ref)
+{
+	draw_group_t *group = get_group(ref);
+	group->update_id++;
+}
+
