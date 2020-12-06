@@ -1156,6 +1156,14 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		"void main(void) {\n"
 		"	vec2 _pp = pixel_pos();\n"
 		"	uint tile_array[8];\n"
+		"	tile_array[0] = 0u;\n"
+		"	tile_array[1] = 0u;\n"
+		"	tile_array[2] = 0u;\n"
+		"	tile_array[3] = 0u;\n"
+		"	tile_array[4] = 0u;\n"
+		"	tile_array[5] = 0u;\n"
+		"	tile_array[6] = 0u;\n"
+		"	tile_array[7] = 0u;\n"
 		"	uint tile_num = 0u;\n"
 	);
 
@@ -1184,13 +1192,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	if (output_type == ref("decal"))
 	{
 		str_cat(&code,
-			"#if defined(QUERY_PASS)\n"
-				"tex_space_in = texcoord;\n"
-		        "world_space_in = vertex_world_position;\n"
-		        "view_space_in = vertex_position;\n"
-		);
-		str_cat(&code,
-			"#elif defined(GBUFFER_PASS)\n"
+			"#if defined(GBUFFER_PASS)\n"
 			"	float depth = textureLod(gbuffer.depth, _pp, 0.0).r;\n"
 			"	if (depth > gl_FragCoord.z) discard;\n"
 			"	vec4 w_pos = (camera(model)*vec4(get_position(gbuffer.depth, _pp), 1.0));\n"
@@ -1198,7 +1200,13 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 			"	vec3 diff = abs(m_pos);\n"
 			"	if (diff.x > 0.5 || diff.y > 0.5 || diff.z > 0.5) discard;\n"
 			"	tex_space_in = m_pos.xy - 0.5;\n"
-			"#endif\n"
+			"#else\n"
+		);
+		str_cat(&code,
+		    "tex_space_in = texcoord;\n"
+		    "world_space_in = vertex_world_position;\n"
+		    "view_space_in = vertex_position;\n"
+		    "#endif\n"
 		);
 	}
 	else
