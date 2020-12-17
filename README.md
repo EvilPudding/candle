@@ -6,12 +6,7 @@ A Game Engine (C89 ANSI, early development stages)
 ## External Dependencies
 * no
 
-
-## Getting Started
-
-To learn how to use *Candle*, I will go through how to run a sample project. This documentation is incomplete, so if there are any questions, feel free to ask for help in the *issues*.
-
-### Setup
+## Setup
 Firstly, clone the sample project:
 
 ```git clone --recursive https://github.com/EvilPudding/twinpeaks```
@@ -20,7 +15,7 @@ Note the use of the flag ```--recursive```, this sample scene uses *git submodul
 
 In ```twinpeaks/main.c```, we can see how entities are created.
 
-### Compiling
+## Compiling
 
 On linux, run ```make```, additionally, you can run ```make run``` to compile and automatically run the result, or ```make gdb``` to compile a debug executable and run it through *gdb*.
 
@@ -28,7 +23,7 @@ On windows, you need Visual C++ build tools, you can compile by running the `bui
 
 On BSD systems, in order to be able to compile and run *Candle*, you have to install the GNU version of the Make program, because the BSD version usually doesn't implement many required extensions. Therefore, instead of executing ```make``` you should use ```gmake``` on BSDs.
 
-### Entities and Components
+## Entities and Components
 
 Candle loosely follows *Entity Component System* paradigm. Entities are a simple handle, which can be extended with the use of components.
 
@@ -64,16 +59,16 @@ entity_add_component(cube, c_light_new(30.0f, vec4(1.0, 0.0, 0.0, 1.0)));
 
 This makes the cube emit light.
 
-### Custom Components
+## Custom Components
 
 Documentation on how to create custom components will be added in the repo's wiki, until then, to learn how to create custom components, look at the component directory in candle. Each component has it's own ```.h``` and ```.c``` file, the header specifies the structure and public methods, the source file implements the methods and registers listeners and signals for that component.
 
 
-### Custom Rendering
+## Custom Rendering
 
 Further explanations on how to create custom render passes will be added in the wiki, until then, to learn how to create custom render passes, skim through the function ```renderer_default_pipeline``` in *candle/utils/renderer.c*, when I have the time, I will share example projects to demonstrate this functionality.
 
-### Resources
+## Resources
 
 In order to have the engine manage texture, mesh, sound, material resources,
 they need to be indexed, to do so there are two ways:
