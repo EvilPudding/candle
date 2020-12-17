@@ -16,24 +16,24 @@ Firstly, clone the sample project:
 
 ```git clone --recursive https://github.com/EvilPudding/twinpeaks```
 
-Note the use of the flag ```--recursive```, although candle can be compiled as a dynamic library, this sample scene uses *git submodules* to include, compile and link candle statically. To update *Candle* to a newer version, just ```cd candle; git pull```
+Note the use of the flag ```--recursive```, this sample scene uses *git submodules* to include, compile and link candle statically. To update *Candle* to a newer version, just ```cd candle; git pull```
 
 In ```twinpeaks/main.c```, we can see how entities are created.
 
 ### Compiling
 
-On linux, if all dependencies are installed, run ```make```, additionally, you can run ```make run``` to compile and automatically run the result, or ```make gdb``` to compile a debug executable and run it through *gdb*.
+On linux, run ```make```, additionally, you can run ```make run``` to compile and automatically run the result, or ```make gdb``` to compile a debug executable and run it through *gdb*.
 
-On windows, it is recommended to have an *msys* environment with *mingw*, you can compile the project with ```make -f windows.mk```
+On windows, you need Visual C++ build tools, you can compile by running the `build.bat` in the project directory.
 
-On BSD systems, in order to be able to compile and run *Candle*, you have to install both its dependencies and GNU version of Make program, because the BSD version usually doesn't implement many required extensions. Therefore, instead of executing ```make``` you should use ```gmake``` on BSDs.
+On BSD systems, in order to be able to compile and run *Candle*, you have to install the GNU version of the Make program, because the BSD version usually doesn't implement many required extensions. Therefore, instead of executing ```make``` you should use ```gmake``` on BSDs.
 
 ### Entities and Components
 
 Candle loosely follows *Entity Component System* paradigm. Entities are a simple handle, which can be extended with the use of components.
 
 ```c
-entity_t entity = entity_new({ /* component0, component1, ... */ });
+entity_t entity = entity_new({ /* component0; component1; ... */ });
 ```
 
 For example, to create a cube object, the following code may be used:
@@ -41,7 +41,7 @@ For example, to create a cube object, the following code may be used:
 mat_t *material = mat_new("cube material");
 mesh_t *mesh = mesh_new();
 mesh_cube(mesh, 1, 1);
-entity_t cube = entity_new({c_model_new(mesh, material, false, true)});
+entity_t cube = entity_new({c_model_new(mesh, material, false, true);});
 /* this creates a cube that does not cast shadows but is visible */
 ```
 
