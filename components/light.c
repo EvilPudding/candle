@@ -240,9 +240,10 @@ static void c_light_add_caustics_passes(c_light_t *self)
 	                      vec2(g_probe_cache->width, g_probe_cache->height));
 
 	renderer_add_pass(self->renderer, "caustics_clear", NULL,
-		~0, 0,
-		g_histogram_accum, NULL, 0, ~0, 1,
-		opt_clear_color(vec4(0.0, 0.0, 0.0, 0.0), NULL)
+		~0, IGNORE_CAM_VIEWPORT,
+		g_histogram_accum, NULL, 0, ~0, 2,
+		opt_clear_color(vec4(0.0, 0.0, 0.0, 0.0), NULL),
+		opt_cam(~0, NULL)
 	);
 
 	for (i = 0; i < 6; ++i)
@@ -280,18 +281,6 @@ static void c_light_add_caustics_passes(c_light_t *self)
 void c_light_set_caustics(c_light_t *self, bool_t value)
 {
 	self->caustics = value;
-	if (!self->renderer)
-	{
-		return;
-	}
-	if (self->caustics)
-	{
-		if (!renderer_pass(self->renderer, ref("caustics")))
-		{
-			loader_push(g_candle->loader, (loader_cb)c_light_add_caustics_passes,
-			            self, NULL);
-		}
-	}
 }
 
 static void c_light_create_renderer(c_light_t *self)
@@ -455,6 +444,14 @@ static int c_light_pre_draw(c_light_t *self)
 	if (self->radius != -1)
 	{
 		renderer_draw(self->renderer);
+	}
+
+	if (self->caustics && self->renderer)
+	{
+		if (!renderer_pass(self->renderer, ref("caustics")))
+		{
+			c_light_add_caustics_passes(self);
+		}
 	}
 
 	self->modified = false;
