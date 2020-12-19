@@ -77,7 +77,7 @@ void shaders_candle_final()
 		"	ivec2 fc = ivec2(gl_FragCoord.xy);\n"
 		"	vec4 cc = texelFetch(light.color, fc, 0);\n"
 		"	vec4 refr0 = texelFetch(refr.color, fc, 0);\n"
-		"	cc = vec4(mix(refr0.rgb, cc.rgb, cc.a), 1.0);\n"
+		"	cc = vec4(max(mix(refr0.rgb, cc.rgb, cc.a), 0.), 1.0);\n"
 		"	vec2 normal = texelFetch(gbuffer.nn, fc, 0).rg;\n"
 		"	vec2 metalic_roughness = texelFetch(gbuffer.mrs, fc, 0).rg;\n"
 		"	vec4 albedo = texelFetch(gbuffer.albedo, fc, 0);\n"
