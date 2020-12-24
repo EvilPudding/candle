@@ -175,6 +175,7 @@ static void sss_kernel(int num_samples, vec3_t falloff, char **str)
 static
 void shaders_candle_sss()
 {
+	/* Uses Separable SSS. Copyright (C) 2011 by Jorge Jimenez and Diego Gutierrez. */
 	char *shader_buffer = str_new(64);
 
 	str_cat(&shader_buffer,
@@ -1333,6 +1334,7 @@ void shaders_candle_common()
 		"	return p;\n"
 		"}\n");
 
+	/* Uses Separable SSS. Copyright (C) 2011 by Jorge Jimenez and Diego Gutierrez. */
 	str_cat(&shader_buffer,
 		"vec3 transmittance(vec3 surface_color, float translucency,\n"
 		"		float sssWidth, vec3 w_pos, vec3 w_nor)\n"
