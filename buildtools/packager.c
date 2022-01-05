@@ -220,6 +220,9 @@ int main(int argc, char *argv[])
 		int found = 0;
 		if (!mz_zip_reader_file_stat(&read_archive, i, &file_stat))
 		{
+			mz_zip_error err;
+			while ((err = mz_zip_get_last_error(&read_archive)) != MZ_ZIP_NO_ERROR)
+				puts(mz_zip_get_error_string(err));
 			continue;
 		}
 
@@ -253,7 +256,10 @@ int main(int argc, char *argv[])
 	{
 		if (!mz_zip_writer_init_file(&write_archive, "build"PSEP"new.zip", 0))
 		{
+			mz_zip_error err;
 			printf("Failed to create new zip\n");
+			while ((err = mz_zip_get_last_error(&write_archive)) != MZ_ZIP_NO_ERROR)
+				puts(mz_zip_get_error_string(err));
 			return 1;
 		}
 
@@ -266,7 +272,10 @@ int main(int argc, char *argv[])
 				                            files[i].path, "", 0,
 				                            MZ_BEST_COMPRESSION))
 				{
+					mz_zip_error err;
 					printf("Failed update\n");
+					while ((err = mz_zip_get_last_error(&write_archive)) != MZ_ZIP_NO_ERROR)
+						puts(mz_zip_get_error_string(err));
 					return 1;
 				}
 			}
@@ -279,7 +288,10 @@ int main(int argc, char *argv[])
 				    || !mz_zip_writer_add_from_zip_reader(&write_archive,
 				                                          &read_archive, j))
 				{
+					mz_zip_error err;
 					printf("Failed re-insert\n");
+					while ((err = mz_zip_get_last_error(&write_archive)) != MZ_ZIP_NO_ERROR)
+						puts(mz_zip_get_error_string(err));
 					return 1;
 				}
 			}
@@ -308,6 +320,9 @@ int main(int argc, char *argv[])
 			if (!mz_zip_writer_init_file(&write_archive, "build"PSEP"data.zip", 0))
 			{
 				printf("Failed create new\n");
+				mz_zip_error err;
+				while ((err = mz_zip_get_last_error(&write_archive)) != MZ_ZIP_NO_ERROR)
+					puts(mz_zip_get_error_string(err));
 				return 1;
 			}
 		}
@@ -321,7 +336,10 @@ int main(int argc, char *argv[])
 											files[i].path, "", 0,
 											MZ_BEST_COMPRESSION))
 				{
+					mz_zip_error err;
 					printf("Failed append\n");
+					while ((err = mz_zip_get_last_error(&write_archive)) != MZ_ZIP_NO_ERROR)
+						puts(mz_zip_get_error_string(err));
 					return 1;
 				}
 			}
