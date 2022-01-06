@@ -127,6 +127,7 @@ $(DIR)/res:
 	echo $(foreach res,$(PLUGINS), $(patsubst %, $(res)/%, $(shell cat "" $(res)/$(DIR)/res))) > $(DIR)/res
 
 data_zip: $(DIR)/res $(DIR)/packager
+	@:$(if $(value SAUCES),, $(error Undefined SAUCES))
 	$(DIR)/packager ../$(SAUCES) $(shell cat $(DIR)/res)
 
 $(DIR)/packager: buildtools/packager.c
