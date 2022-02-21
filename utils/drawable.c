@@ -699,6 +699,8 @@ draw_conf_t *drawable_get_conf(drawable_t *self, uint32_t gid)
 	conf.usrptr         = self->usrptr;
 	conf.xray           = self->xray;
 	conf.mat_type       = self->mat ? self->mat->type : 0;
+	conf.wireframe      = self->mesh->wireframe;
+	conf.cull           = self->mesh->cull;
 
 	if (self->bind[gid].grp == 0)
 	{
@@ -1131,11 +1133,11 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	}
 
 	cull_was_enabled = glIsEnabled(GL_CULL_FACE);
-	if (mesh->cull)
+	if (self->vars.cull)
 	{
 		const uint32_t culls[4] = {0, GL_FRONT, GL_BACK, GL_FRONT_AND_BACK};
 		
-		glCullFace(culls[mesh->cull ^ (rd->cull_invert ? 3 : 0)]); glerr();
+		glCullFace(culls[self->vars.cull ^ (rd->cull_invert ? 3 : 0)]); glerr();
 	}
 	else
 	{
@@ -1152,7 +1154,7 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	glLineWidth(3); glerr();
 
 #ifndef __EMSCRIPTEN__
-	glPolygonMode(GL_FRONT_AND_BACK, mesh->wireframe ? GL_LINE : GL_FILL);
+	glPolygonMode(GL_FRONT_AND_BACK, self->vars.wireframe ? GL_LINE : GL_FILL);
 	glerr();
 #endif
 

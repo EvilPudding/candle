@@ -66,6 +66,8 @@ struct conf_vars
 	void *usrptr;
 	int32_t xray;
 	int32_t mat_type;
+	uint32_t wireframe;
+	uint32_t cull;
 };
 struct draw_conf;
 
