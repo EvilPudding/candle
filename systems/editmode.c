@@ -1139,15 +1139,11 @@ int32_t c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 		struct nk_context *ctx = self->nk;
 		if (ctx)
 		{
-			if (ctx->input.mouse.grabbed)
+			nk_input_motion(ctx, event->x, event->y);
+			if (nk_item_is_any_active(ctx))
 			{
-				int x = (int)ctx->input.mouse.prev.x, y = (int)ctx->input.mouse.prev.y;
-				nk_input_motion(ctx, x + event->sx, y + event->sy);
+				self->over = entity_null;
 				return STOP;
-			}
-			else
-			{
-				nk_input_motion(ctx, event->x, event->y);
 			}
 			if (nk_window_is_any_hovered(ctx))
 			{
