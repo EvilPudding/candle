@@ -235,7 +235,7 @@ static void render_loop_tick(void)
 #ifndef __EMSCRIPTEN__
 	if (first_frame)
 	{
-		c_window_lock_fps(c_window(&SYS), 0);
+		c_window_lock_fps(c_window(&SYS), 1);
 		first_frame = false;
 	}
 #endif
