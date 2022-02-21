@@ -62,7 +62,7 @@ OBJS_EMS = $(patsubst %.c, $(DIR)/%.emscripten.o, $(SRCS))
 CFLAGS = -std=c89 -pedantic -Wall -I. -Wno-unused-function \
          -Ithird_party/glfw/include -I$(TINYCTHREAD) -D_GLFW_X11 \
          -Wno-format-truncation -Wno-stringop-truncation \
-         -DTHREADED -DUSE_VAO
+         -DTHREADED -DUSE_VAO $(PARENTCFLAGS)
 
 CFLAGS_REL = $(CFLAGS) -O3
 
