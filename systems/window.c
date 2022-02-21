@@ -103,7 +103,7 @@ void c_window_init(c_window_t *self)
 {
 	self->width = window_width;
 	self->height = window_height;
-
+	self->swap_interval = 0;
 }
 
 int c_window_toggle_fullscreen_gl(c_window_t *self)
@@ -168,13 +168,16 @@ c_window_t *c_window_new(int width, int height)
 	drawable_set_entity(&self->draw, c_entity(self));
 	drawable_set_mesh(&self->draw, g_quad_mesh);
 	drawable_set_vs(&self->draw, g_quad_vs);
+	c_window_lock_fps(self, self->swap_interval);
 
 	return self;
 }
 
 void c_window_lock_fps(c_window_t *self, int32_t lock_fps)
 {
-	glfwSwapInterval(lock_fps);
+	self->swap_interval = lock_fps;
+	if (self->window)
+		glfwSwapInterval(self->swap_interval);
 }
 
 int c_window_draw_end(c_window_t *self)

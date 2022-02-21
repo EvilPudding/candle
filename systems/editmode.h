@@ -25,6 +25,9 @@ struct edit_rotate
 	float start_radius;
 	float tool_fade;
 	entity_t arrows, X, Y, Z;
+#ifdef MESH4
+	entity_t W;
+#endif
 };
 
 struct edit_translate

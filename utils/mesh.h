@@ -16,10 +16,15 @@ typedef struct vec3_t(*support_cb)(struct mesh *self, const vec3_t dir);
 
 #	define vecN vec4
 #	define vecN_t vec4_t
+#	define uvecN uvec4
 #	define uvecN_t uvec4_t
 static vec4_t VEC3(float x, float y, float z)
 {
 	return vec4(x, y, z, 0.0f);
+}
+static uvec4_t UVEC3(uint32_t x, uint32_t y, uint32_t z)
+{
+	return uvec4(x, y, z, 0);
 }
 #	define VEC3i(x, y, z) {x, y, z, 0.0f}
 #	define vecN_xyz(v) vec4_xyz(v)
@@ -27,24 +32,27 @@ static vec4_t VEC3(float x, float y, float z)
 #	define _vecN(a) _vec4(a)
 #	define _uvecN(a) _uvec4(a)
 #	define NDIMS 4
-
-
 #	define dN d4
 #	define dN_t d4_t
 #	define D3(x, y, z) d4(x, y, z, 0.0f)
 #else
 #	define vecN vec3
+#	define _vecN(a) _vec3(a)
 #	define vecN_t vec3_t
+#	define uvecN uvec3
 #	define uvecN_t uvec3_t
 static vec3_t VEC3(float x, float y, float z)
 {
 	return vec3(x, y, z);
 }
+static uvec3_t UVEC3(uint32_t x, uint32_t y, uint32_t z)
+{
+	return uvec3(x, y, z);
+}
 #	define VEC3i(x, y, z) {x, y, z}
 #	define vecN_xyz(v) v
 #	define _uvecN(a) _uvec3(a)
 #	define ZN Z3
-
 #	define dN d3_t
 #	define D3(x, y, z) d3(x, y, z)
 #	define NDIMS 3
@@ -293,7 +301,9 @@ void mesh_update_smooth_normals(mesh_t *self, float smooth_max);
 
 int mesh_dup_vert(mesh_t *self, int i);
 int mesh_add_vert(mesh_t *self, vecN_t p);
+int mesh_add_vec3(mesh_t *self, vec3_t p);
 int mesh_assert_vert(mesh_t *self, vecN_t pos);
+int mesh_assert_vec3(mesh_t *self, vec3_t pos);
 int mesh_append_edge(mesh_t *self, vecN_t p);
 int mesh_add_edge_s(mesh_t *self, int v, int next);
 int mesh_add_edge(mesh_t *self, int v, int next, int prev, vec3_t vn, vec2_t vt);

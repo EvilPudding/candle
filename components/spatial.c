@@ -265,12 +265,14 @@ int c_spatial_menu(c_spatial_t *self, void *ctx)
 	tmp = self->rot;
 	if(nk_tree_push(ctx, NK_TREE_NODE, "Rotation", NK_MINIMIZED))
 	{
+#ifdef MESH4
+		float tmpw = self->angle4;
+#endif
 		/* nk_layout_row_dynamic(ctx, 0, 1); */
 		nk_property_float(ctx, "#x:", -1000, &tmp.x, 1000, 0.1, 0.01);
 		nk_property_float(ctx, "#y:", -1000, &tmp.y, 1000, 0.1, 0.01);
 		nk_property_float(ctx, "#z:", -1000, &tmp.z, 1000, 0.1, 0.01);
 #ifdef MESH4
-		float tmpw = self->angle4;
 		nk_property_float(ctx, "#w:", 0, &tmpw, M_PI, 0.1, 0.01);
 		if(self->angle4 != tmpw)
 		{

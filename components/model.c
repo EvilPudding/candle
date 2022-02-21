@@ -413,7 +413,7 @@ static mesh_t *tool_extrude_edit(
 		mesh_extrude_faces(state, new->steps, new->offset, new->scale,
 				new->scale_f ? (modifier_cb)interpret_scale : NULL,
 				new->offset_f ? (modifier_cb)interpret_offset : NULL, &args);
-		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_3d);
+		mesh_for_each_selected(state, MESH_VERT, (iter_cb)paint_3d, NULL);
 		mesh_remove_lone_faces(state);
 #endif
 	}
@@ -438,7 +438,7 @@ static int deform(mesh_t *mesh, vertex_t *vert, struct conf_deform *conf)
 	struct set_var var_y = {"y"};
 	struct set_var var_z = {"z"};
 #ifdef MESH4
-	struct set_var_w = {"w"};
+	struct set_var var_w = {"w"};
 #endif
 	vecN_t direction = /*conf->normal ? vert->n :*/ conf->direction;
 	var_x.value = vert->pos.x;
@@ -476,7 +476,7 @@ static mesh_t *tool_deform_edit(
 	struct set_var var_y = {"y"};
 	struct set_var var_z = {"z"};
 #ifdef MESH4
-	struct set_var_w = {"w"};
+	struct set_var var_w = {"w"};
 #endif
 	var_x.value = 0.0f;
 	var_y.value = 0.0f;

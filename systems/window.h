@@ -19,6 +19,7 @@ typedef struct c_window_t
 
 	int width, height;
 	int fullscreen;
+	int swap_interval;
 
 	void *window;
 	void *context;

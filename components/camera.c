@@ -27,11 +27,11 @@ void c_camera_frustum(c_camera_t *self)
 	mesh_lock(self->mesh);
 	mesh_clear(self->mesh);
 
-	v = mesh_add_vert(self->mesh, Z3);
-	v0 = mesh_add_vert(self->mesh, mat4_project(proj, vec3(-1.0f, 1.0f, 1.0f)));
-	v1 = mesh_add_vert(self->mesh, mat4_project(proj, vec3( 1.0f, 1.0f, 1.0f)));
-	v2 = mesh_add_vert(self->mesh, mat4_project(proj, vec3( 1.0f,-1.0f, 1.0f)));
-	v3 = mesh_add_vert(self->mesh, mat4_project(proj, vec3(-1.0f,-1.0f, 1.0f)));
+	v = mesh_add_vec3(self->mesh, Z3);
+	v0 = mesh_add_vec3(self->mesh, mat4_project(proj, vec3(-1.0f, 1.0f, 1.0f)));
+	v1 = mesh_add_vec3(self->mesh, mat4_project(proj, vec3( 1.0f, 1.0f, 1.0f)));
+	v2 = mesh_add_vec3(self->mesh, mat4_project(proj, vec3( 1.0f,-1.0f, 1.0f)));
+	v3 = mesh_add_vec3(self->mesh, mat4_project(proj, vec3(-1.0f,-1.0f, 1.0f)));
 
 	e0 = mesh_add_edge(self->mesh, v, -1, -1, Z3, Z2);
 	mesh_add_edge(self->mesh, v0, -1, e0, Z3, Z2);
@@ -251,24 +251,24 @@ void c_camera_init(c_camera_t *self)
 		mesh_lock(g_cam);
 
 		mesh_unselect(g_cam, SEL_EDITING, MESH_ANY, -1);
-		e0 = mesh_add_edge(g_cam, mesh_add_vert(g_cam, vec3(+w, -h, 0.4f)), -1, -1, Z3, Z2);
+		e0 = mesh_add_edge(g_cam, mesh_add_vec3(g_cam, vec3(+w, -h, 0.4f)), -1, -1, Z3, Z2);
 		mesh_select(g_cam, SEL_EDITING, MESH_EDGE, e0);
-		e1 = mesh_add_edge(g_cam, mesh_add_vert(g_cam, vec3(-w, -h, 0.4f)), -1, e0, Z3, Z2);
+		e1 = mesh_add_edge(g_cam, mesh_add_vec3(g_cam, vec3(-w, -h, 0.4f)), -1, e0, Z3, Z2);
 		mesh_select(g_cam, SEL_EDITING, MESH_EDGE, e1);
-		e2 = mesh_add_edge(g_cam, mesh_add_vert(g_cam, vec3(-w, +h, 0.4f)), -1, e1, Z3, Z2);
+		e2 = mesh_add_edge(g_cam, mesh_add_vec3(g_cam, vec3(-w, +h, 0.4f)), -1, e1, Z3, Z2);
 		mesh_select(g_cam, SEL_EDITING, MESH_EDGE, e2);
-		e3 = mesh_add_edge(g_cam, mesh_add_vert(g_cam, vec3(+w, +h, 0.4f)), e0, e2, Z3, Z2);
+		e3 = mesh_add_edge(g_cam, mesh_add_vec3(g_cam, vec3(+w, +h, 0.4f)), e0, e2, Z3, Z2);
 		mesh_select(g_cam, SEL_EDITING, MESH_EDGE, e3);
 
-		mesh_extrude_edges(g_cam, 1, vec3(0.0f, 0.0f, -0.3f), 1.0f, NULL, NULL, NULL);
-		mesh_extrude_edges(g_cam, 1, Z3, 0.3f, NULL, NULL, NULL);
-		mesh_extrude_edges(g_cam, 1, vec3(0.0f, 0.0f, -0.1f), 2.3f, NULL, NULL, NULL);
+		mesh_extrude_edges(g_cam, 1, VEC3(0.0f, 0.0f, -0.3f), 1.0f, NULL, NULL, NULL);
+		mesh_extrude_edges(g_cam, 1, ZN, 0.3f, NULL, NULL, NULL);
+		mesh_extrude_edges(g_cam, 1, VEC3(0.0f, 0.0f, -0.1f), 2.3f, NULL, NULL, NULL);
 
 		saved = mesh_save(g_cam);
 		mesh_translate(g_cam, vec3(0.0f, 0.20f, 0.2f));
-		mesh_circle(g_cam, 0.15f, 23, vec3(1.0f, 0.0f, 0.0f));
+		mesh_circle(g_cam, 0.15f, 23, VEC3(1.0f, 0.0f, 0.0f));
 		mesh_translate(g_cam, vec3(0.0f, -0.05f, 0.2f));
-		mesh_circle(g_cam, 0.1f, 23, vec3(1.0f, 0.0f, 0.0f));
+		mesh_circle(g_cam, 0.1f, 23, VEC3(1.0f, 0.0f, 0.0f));
 		mesh_restore(g_cam, saved);
 
 		mesh_unselect(g_cam, SEL_EDITING, MESH_ANY, -1);

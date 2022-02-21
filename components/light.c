@@ -37,9 +37,9 @@ static void c_light_caustics_init(c_light_t *self)
 		g_histogram_mesh = mesh_new();
 		mesh_lock(g_histogram_mesh);
 		mesh_point_grid(g_histogram_mesh,
-		                vec3(0.0, 0.0, -1.0),
-		                vec3(histogram_resolution, histogram_resolution, 1.0),
-		                uvec3(histogram_resolution, histogram_resolution, 2));
+		                VEC3(0.0, 0.0, -1.0),
+		                VEC3(histogram_resolution, histogram_resolution, 1.0),
+		                UVEC3(histogram_resolution, histogram_resolution, 2));
 		mesh_unlock(g_histogram_mesh);
 		g_histogram_buffer = texture_new_2D(histogram_resolution,
 											histogram_resolution,

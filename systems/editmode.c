@@ -42,7 +42,7 @@ int32_t translate_init(struct edit_translate *self, c_editmode_t *ec)
 		self->Z = entity_new(c_axis_new(0, VEC3(0.0f, 0.0f, 1.0f)));
 
 #ifdef MESH4
-		self->W = entity_new(c_name_new("W"), c_axis_new(0, vec4(0.0f, 0.0f, 0.0f, 1.0f)));
+		self->W = entity_new(c_axis_new(0, vec4(0.0f, 0.0f, 0.0f, 1.0f)));
 		c_node_add(c_node(&self->arrows), 1, self->W);
 #endif
 

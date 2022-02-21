@@ -1,20 +1,34 @@
 #ifndef MAFS_H
 #define MAFS_H
 
-#include "../third_party/pstdint.h"
-
 #ifndef __OPENCL_C_VERSION__
+#include "../third_party/pstdint.h"
 #include <math.h>
 #include <float.h>
 #include <stdlib.h>
 void sincosf(float x, float *sin_out, float *cos_out);
 #else
+#define int8_t char
+#define uint8_t unsigned char
+#define int16_t short
+#define uint16_t unsigned short
+#define int32_t int
+#define uint32_t unsigned int
+#define int64_t long
+#define uint64_t unsigned long
 #define nextafterf nextafter
-#define sqrtf sqrt
+#define acosf acos
+#define atan2f atan2
 #define cbrtf cbrt
-#define powf pow
-#define sinf sin
+#define ceilf ceil
 #define cosf cos
+#define floorf floor
+#define powf pow
+#define sincosf mafs_sincos
+#define sinf sin
+#define sqrtf sqrt
+#define tanf tan
+#define roundf round
 #endif
 
 #if defined(__STDC__)
@@ -42,9 +56,16 @@ void sincosf(float x, float *sin_out, float *cos_out)
 }
 #endif
 
+#ifdef __OPENCL_C_VERSION__
+static
+void mafs_sincos(float x, float *sin_out, float *cos_out)
+{
+	*sin_out = sincos(x, cos_out);
+}
+#endif
+
 #if defined(PREDEF_STANDARD_C_1989) && !defined(PREDEF_STANDARD_C_1999)
 #define INLINE
-#define sqrtf sqrt
 #define floorf floor
 #define ceilf ceil
 #define sqrtf sqrt
@@ -56,7 +77,7 @@ void sincosf(float x, float *sin_out, float *cos_out)
 #define acosf acos
 #define atan2f atan2
 
-#if !defined(__EMSCRIPTEN__)
+#if !defined(__EMSCRIPTEN__) && !defined(__OPENCL_C_VERSION__)
 /* #if !defined(_POSIX_C_SOURCE) */
 static float round(double n)
 {
@@ -155,8 +176,8 @@ static INLINE type##4_t __attribute__((overloadable)) type##4(type##4_t v) { ret
 #endif
 
 
-#define vec_oper(n, r, oper) \
-do { int x; for(x=0; x<n; ++x) { ((n_t*)&r)[x] = oper; } } while(0)
+#define vec_oper(r, oper) \
+do { int x; for(x=0; x<(sizeof(r)/sizeof(n_t)); ++x) { ((n_t*)&r)[x] = oper; } } while(0)
 
 
 #define MAFS_DEFINE_VEC_PRINT(n_t, type, format, n) \
@@ -516,10 +537,10 @@ union vec4_convert
 	} v3;
 };
 
-#define MXYZ(v) ((union vec4_convert*)&(v[0]))->v3.xyz
-#define XYZ(v) (*((vec3_t*)&v.x))
-#define XY(v) (*((vec2_t*)&v.x))
-#define ZW(v) (*((vec2_t*)&v.z))
+#define MXYZ(v) ((union vec4_convert*)&((v)[0]))->v3.xyz
+#define XYZ(v) (*((vec3_t*)&(v).x))
+#define XY(v) (*((vec2_t*)&(v).x))
+#define ZW(v) (*((vec2_t*)&(v).z))
 
 static INLINE vec2_t vec3_xy(vec3_t v)
 {

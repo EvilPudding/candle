@@ -13,8 +13,8 @@ typedef struct
 	int visible;
 	int cast_shadow;
 	int xray;
-	vec3_t start;
-	vec3_t end;
+	vecN_t start;
+	vecN_t end;
 	float cell_size;
 	drawable_t draw;
 	bool_t use_geometry_shader;
@@ -26,7 +26,7 @@ DEF_CASTER(ct_field, c_field, c_field_t)
 vs_t *field_vs(void);
 mesh_t *field_mesh(void);
 
-c_field_t *c_field_new(mat_t *mat, vec3_t start, vec3_t end, float cell_size,
+c_field_t *c_field_new(mat_t *mat, vecN_t start, vecN_t end, float cell_size,
                        bool_t cast_shadow, bool_t use_geometry_shader);
 
 #endif /* !FIELD_H */

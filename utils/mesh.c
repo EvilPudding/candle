@@ -494,6 +494,11 @@ int mesh_assert_vert(mesh_t *self, vecN_t pos)
 	return  i < 0 ? mesh_add_vert(self, pos) : i;
 }
 
+int mesh_assert_vec3(mesh_t *self, vec3_t pos)
+{
+	return mesh_assert_vert(self, VEC3(_vec3(pos)));
+}
+
 int mesh_face_extrude_possible(mesh_t *self, int face_id)
 {
 	face_t *face;
@@ -601,15 +606,16 @@ int mesh_remove_lone_edges(mesh_t *self)
 #ifdef MESH4
 int mesh_edge_cell_pair(mesh_t *self, edge_t *e)
 {
+	face_t *f;
+	int i;
 	int v0 = e->v;
 
 	e = e_pair(e, self); if(!e) return -1;
 
-	face_t *f = e_face(e, self); if(!f) return -1;
+	f = e_face(e, self); if(!f) return -1;
 
 	f = f_pair(f, self); if(!f) return -1;
 
-	int i;
 	for(i = 0; i < f->e_size; i++)
 	{
 		e = f_edge(f, i, self);
@@ -1234,6 +1240,11 @@ void mesh_update(mesh_t *self)
 #endif
 }
 
+int mesh_add_vec3(mesh_t *self, vec3_t pos)
+{
+	return mesh_add_vert(self, VEC3(_vec3(pos)));
+}
+
 int mesh_add_vert(mesh_t *self, vecN_t pos)
 {
 	int i = vector_reserve(self->verts);
@@ -1424,9 +1435,10 @@ void mesh_edge_pair(mesh_t *self, int e1, int e2)
 #ifdef MESH4
 static int mesh_get_pair_face(mesh_t *self, int face_id)
 {
+	uint32_t hash;
 	face_t *face = m_face(self, face_id); if(!face) return 0;
 
-	uint32_t hash = mesh_face_to_id(self, face);
+	hash = mesh_face_to_id(self, face);
 	if(hash)
 	{
 		khiter_t k = kh_get(id, self->faces_hash, hash);
@@ -1438,6 +1450,7 @@ static int mesh_get_pair_face(mesh_t *self, int face_id)
 		}
 		else
 		{
+			int f0, f1, f2, v0;
 			int pair_id = kh_value(self->faces_hash, k);
 			face_t *pair = m_face(self, pair_id);
 
@@ -1448,11 +1461,11 @@ static int mesh_get_pair_face(mesh_t *self, int face_id)
 
 			/* update edge cell pairs */
 
-			int f0 = f_edge(face, 0, self)->v;
-			int f1 = f_edge(face, 1, self)->v;
-			int f2 = f_edge(face, 2, self)->v;
+			f0 = f_edge(face, 0, self)->v;
+			f1 = f_edge(face, 1, self)->v;
+			f2 = f_edge(face, 2, self)->v;
 
-			int v0 = f_edge(pair, 0, self)->v;
+			v0 = f_edge(pair, 0, self)->v;
 
 			if(f0 == v0)
 			{
@@ -2004,6 +2017,8 @@ void mesh_triangulate(mesh_t *self)
 	/* } */
 	for(i = 0; i < vector_count(self->faces); i++)
 	{
+		struct int_int new_faces;
+		face_t *pair;
 		face_t *face = m_face(self, i); if(!face) continue;
 		if(face->e_size != 4) continue;
 
@@ -2012,10 +2027,10 @@ void mesh_triangulate(mesh_t *self)
 		mesh_face_triangulate(self, i, 0);
 
 #else
-		struct int_int new_faces = mesh_face_triangulate(self, i, 0);
+		new_faces = mesh_face_triangulate(self, i, 0);
 
 		face = m_face(self, i);
-		face_t *pair = f_pair(face, self);
+		pair = f_pair(face, self);
 		if(pair)
 		{
 			struct int_int pair_faces =
@@ -2228,12 +2243,14 @@ vecN_t mesh_get_selection_center(mesh_t *self)
 #ifdef MESH4
 int mesh_add_tetrahedron(mesh_t *self, int v0, int v1, int v2, int v3)
 {
+	int cell_id;
+	cell_t *cell;
 	mesh_lock(self);
 
 	self->has_texcoords = 0;
 
-	int cell_id = vector_reserve(self->cells);
-	cell_t *cell = vector_get(self->cells, cell_id);
+	cell_id = vector_reserve(self->cells);
+	cell = vector_get(self->cells, cell_id);
 	cell_init(cell);
 
 	self->current_cell = cell_id;
@@ -2295,14 +2312,22 @@ int mesh_add_tetrahedral_prism(mesh_t *self, int fid, int v0, int v1, int v2)
 		{{-1, -1, -1, -1}, {-1, -1, -1, -1}, {-1, -1, -1, -1}}
 	};
 
+	face_t *face;
 	face_t *f = m_face(self, fid);
 	edge_t *e0 = f_edge(f, 0, self),
 		   *e1 = f_edge(f, 1, self),
 		   *e2 = f_edge(f, 2, self);
 
-	int verts[6] = { v0, v1, v2, e0->v, e1->v, e2->v };
+	int verts[6];
+	int i, j, t, new_f, next;
+	verts[0] = v0;
+	verts[1] = v1;
+	verts[2] = v2;
+	verts[3] = e0->v;
+	verts[4] = e1->v;
+	verts[5] = e2->v;
 
-	for(int i = 0; i < 5; i++) for(int j = i + 1; j < 6; j++)
+	for(i = 0; i < 5; i++) for(j = i + 1; j < 6; j++)
 	{
 		if(verts[i] == verts[j])
 		{
@@ -2312,13 +2337,12 @@ int mesh_add_tetrahedral_prism(mesh_t *self, int fid, int v0, int v1, int v2)
 		}
 	}
 
-	int i = (e0->tmp << 2) | (e1->tmp << 1) | (e2->tmp << 0);
+	i = (e0->tmp << 2) | (e1->tmp << 1) | (e2->tmp << 0);
 
 	#define config table[i]
 	if(i == 0 || i == 7) printf("Invalid configuration\n");
 
-	int t;
-	int next = -1;
+	next = -1;
 	for(t = 0; t < 3; t++)
 	{
 		int tet = mesh_add_tetrahedron(self,
@@ -2331,8 +2355,8 @@ int mesh_add_tetrahedral_prism(mesh_t *self, int fid, int v0, int v1, int v2)
 	}
 
 	f = m_face(self, fid);
-	int new_f = m_cell(self, next)->f[0];
-	face_t *face = m_face(self, new_f);
+	new_f = m_cell(self, next)->f[0];
+	face = m_face(self, new_f);
 	f_edge(face, 0, self)->tmp = f_edge(f, 0, self)->tmp;
 	f_edge(face, 1, self)->tmp = f_edge(f, 1, self)->tmp;
 	f_edge(face, 2, self)->tmp = f_edge(f, 2, self)->tmp;
@@ -2425,25 +2449,28 @@ void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 		float scale, modifier_cb scale_cb, modifier_cb offset_cb,
 		void *usrptr)
 {
+	int step;
+	int TMP = 4;
+	float percent, percent_inc, prev_factor, radius;
+	vecN_t center;
 	if(!self->triangulated)
 	{
 		printf("Can't extrude untriangulated mesh.\n");
 		return;
 	}
 
-	int step;
 
 	mesh_lock(self);
 
 	self->has_texcoords = 0;
 
-	float percent = 0.0f;
-	float percent_inc = 1.0f / steps;
-	float prev_factor = 1.0f;
+	percent = 0.0f;
+	percent_inc = 1.0f / steps;
+	prev_factor = 1.0f;
 	/* vecN_t center = mesh_get_selection_center(self); */
 
-	vecN_t center = mesh_get_selection_center(self);
-	float radius = mesh_get_selection_radius(self, center);
+	center = mesh_get_selection_center(self);
+	radius = mesh_get_selection_radius(self, center);
 
 	if(!mesh_update_flips(self))
 	{
@@ -2452,17 +2479,22 @@ void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 		return;
 	}
 
-	int TMP = 4;
 	for(step = 0; step < steps; step++)
 	{
+		mesh_selection_t swap;
+		float o_current_factor;
+		vecN_t current_offset;
+		float factor, current_factor;
+		mesh_selection_t *editing = &self->selections[SEL_EDITING];
+		khash_t(id) *selected_faces = editing->faces;
+		khiter_t k;
+
 		self->current_surface++;
 
-		mesh_selection_t *editing = &self->selections[SEL_EDITING];
 
 		center = mesh_get_selection_center(self);
 
 		percent += percent_inc;
-		float factor, current_factor;
 		if(scale_cb)
 		{
 			current_factor = scale_cb(self, percent, usrptr);
@@ -2472,8 +2504,6 @@ void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 			current_factor = 1.0f + (scale - 1.0f) * percent;
 		}
 		factor = current_factor / prev_factor;
-		float o_current_factor;
-		vecN_t current_offset;
 		if(offset_cb)
 		{
 			radius *= factor;
@@ -2492,29 +2522,28 @@ void mesh_extrude_faces(mesh_t *self, int steps, vecN_t offset,
 
 		prev_factor = current_factor;
 
-		khash_t(id) *selected_faces = editing->faces;
-		khiter_t k;
-
 		for(k = kh_begin(selected_faces); k != kh_end(selected_faces); ++k)
 		{
+			int f_id, v0, v1, v2, new_exposed_face;
+			face_t *f;
+
 			if(!kh_exist(selected_faces, k)) continue;
-			int f_id = kh_key(selected_faces, k);
+			f_id = kh_key(selected_faces, k);
 
-			face_t *f = m_face(self, f_id); if(!f) continue;
+			f = m_face(self, f_id); if(!f) continue;
 
-			int v0 = f_vert(f, 0, self)->tmp;
-			int v1 = f_vert(f, 1, self)->tmp;
-			int v2 = f_vert(f, 2, self)->tmp;
+			v0 = f_vert(f, 0, self)->tmp;
+			v1 = f_vert(f, 1, self)->tmp;
+			v2 = f_vert(f, 2, self)->tmp;
 
-			int new_exposed_face =
-				mesh_add_tetrahedral_prism(self, f_id, v0, v1, v2);
+			new_exposed_face = mesh_add_tetrahedral_prism(self, f_id, v0, v1, v2);
 
 			mesh_select(self, TMP, MESH_FACE, new_exposed_face);
 
 		}
 		mesh_unselect(self, SEL_EDITING, MESH_ANY, -1);
 
-		mesh_selection_t swap = self->selections[SEL_EDITING];
+		swap = self->selections[SEL_EDITING];
 		self->selections[SEL_EDITING] = self->selections[TMP];
 		self->selections[TMP] = swap;
 
@@ -2909,6 +2938,9 @@ void _mesh_point_grid(mesh_t *self, vecN_t start, vecN_t size,
 		uint32_t i;
 		uint32_t num_segments = ((uint32_t*)&segments)[dim];
 		vecN_t iter = start;
+
+		if (num_segments == 0)
+			num_segments = 1;
 
 		for (i = 0; i < num_segments; i++)
 		{

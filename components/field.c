@@ -475,9 +475,9 @@ static void c_field_update_cell(c_field_t *self, vec3_t cell)
 		const ivec3_t I = triTable_value(cubeindex, i);
 		if(I.x != -1)
 		{
-			int i0 = mesh_assert_vert(self->mesh, vertlist[I.x]);
-			int i1 = mesh_assert_vert(self->mesh, vertlist[I.y]);
-			int i2 = mesh_assert_vert(self->mesh, vertlist[I.z]);
+			int i0 = mesh_assert_vec3(self->mesh, vertlist[I.x]);
+			int i1 = mesh_assert_vec3(self->mesh, vertlist[I.y]);
+			int i2 = mesh_assert_vec3(self->mesh, vertlist[I.z]);
 
 			vertex_t *v0 = m_vert(self->mesh, i0);
 			vertex_t *v1 = m_vert(self->mesh, i1);
@@ -504,14 +504,14 @@ static void c_field_update_cell(c_field_t *self, vec3_t cell)
 
 static void c_field_update_mesh(c_field_t *self)
 {
-	vec3_t size;
-	uvec3_t segments;
+	vecN_t size;
+	uvecN_t segments;
+	vecN_t segments_r;
 	unsigned int x, y, z;
 
-	size = vec3_sub(self->end, self->start);
-	segments = uvec3(size.x / self->cell_size,
-	                 size.y / self->cell_size,
-	                 size.z / self->cell_size);
+	size = vecN_(sub)(self->end, self->start);
+	segments_r = vecN_(floor)(vecN_(div_number)(size, self->cell_size));
+	segments = uvecN(_vecN(segments_r));
 
 	mesh_lock(self->mesh);
 	mesh_clear(self->mesh);
@@ -544,7 +544,7 @@ int c_field_update(c_field_t *self)
 }
 
 
-c_field_t *c_field_new(mat_t *mat, vec3_t start, vec3_t end, float cell_size,
+c_field_t *c_field_new(mat_t *mat, vecN_t start, vecN_t end, float cell_size,
                        bool_t cast_shadow, bool_t use_geometry_shader)
 {
 	/* uint32_t x, y, z; */
@@ -558,12 +558,12 @@ c_field_t *c_field_new(mat_t *mat, vec3_t start, vec3_t end, float cell_size,
 
 	if (self->use_geometry_shader)
 	{
-		vec3_t size;
-		uvec3_t segments;
-		size = vec3_sub(end, start);
-		segments = uvec3(size.x / cell_size + 1,
-		                 size.y / cell_size + 1,
-		                 size.z / cell_size + 1);
+		vecN_t size;
+		uvecN_t segments;
+		vecN_t segments_r;
+		size = vecN_(sub)(end, start);
+		segments_r = vecN_(floor)(vecN_(div_number)(size, cell_size + 1));
+		segments = uvecN(_vecN(segments_r));
 
 		mesh_point_grid(self->mesh, start, size, segments);
 		drawable_set_callback(&self->draw, (draw_cb)c_field_pre_draw, self);
