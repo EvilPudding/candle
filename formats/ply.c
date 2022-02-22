@@ -186,7 +186,8 @@ void mesh_load_ply(mesh_t *self, const char *filename)
 			el = &elements[i];
 			el->props_num = 0;
 			
-			strncpy(el->name, word->chars, sizeof(el->name) - 1); word++;
+			memcpy(el->name, word->chars, sizeof(el->name)); word++;
+			el->name[sizeof(el->name) - 1] = '\0';
 			if(sscanf(word->chars, "%d", &el->num) < 0)
 			{
 				printf("Failed to parse ply.\n");

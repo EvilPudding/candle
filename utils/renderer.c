@@ -1430,7 +1430,7 @@ void renderer_add_pass(
 	pass->cull = !(flags & CULL_DISABLE);
 	pass->cull_invert = !!(flags & CULL_INVERT);
 	pass->clear_depth = 1.0f;
-	strncpy(pass->name, buffer, sizeof(pass->name) - 1);
+	memcpy(pass->name, buffer, sizeof(pass->name));
 
 	pass->draw_every = 1;
 	pass->binds = malloc(sizeof(bind_t) * num_opts);

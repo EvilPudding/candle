@@ -2023,7 +2023,8 @@ void mesh_triangulate(mesh_t *self)
 #ifndef MESH4
 
 		mesh_face_triangulate(self, i, 0);
-
+		(void)pair;
+		(void)new_faces;
 #else
 		new_faces = mesh_face_triangulate(self, i, 0);
 

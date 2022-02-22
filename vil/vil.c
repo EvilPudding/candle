@@ -1664,7 +1664,7 @@ void vifunc_copy(vifunc_t *dst, vifunc_t *src)
 void _create_func(vil_t *ctx)
 {
 	vifunc_t *new_func;
-	char buffer[64] = "_";
+	char buffer[65] = "_";
 	strncat(buffer, g_create_buffer, sizeof(buffer) - 1);
 	new_func = vifunc_new(ctx, buffer, NULL, 0, false);
 	if (g_create_template)
@@ -1857,7 +1857,7 @@ uint32_t vifunc_gui(vifunc_t *self, void *nk)
 							if (strlen(g_renaming_buffer) > 0)
 							{
 								strncpy(it->name, g_renaming_buffer,
-								        sizeof(it->name) - 1);
+								        sizeof(it->name));
 								vicall_propagate_changed(it, false);
 							}
 							g_renaming = NULL;
