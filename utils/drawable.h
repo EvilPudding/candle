@@ -68,6 +68,8 @@ struct conf_vars
 	int32_t mat_type;
 	uint32_t wireframe;
 	uint32_t cull;
+	uint32_t receive_shadows;
+	uint32_t padding;
 };
 struct draw_conf;
 
@@ -114,7 +116,10 @@ typedef struct drawable
 	mesh_t *mesh;
 	skin_t *skin;
 	texture_t *custom_texture;
-	int32_t xray;
+	bool_t xray;
+	bool_t wireframe;
+	bool_t receive_shadows;
+	uint32_t cull;
 	mat_t *mat;
 	uint32_t matid;
 	mat4_t transform;
@@ -151,7 +156,10 @@ void drawable_set_skin(drawable_t *self, skin_t *skin);
 void drawable_set_mat(drawable_t *self, mat_t *mat);
 void drawable_set_matid(drawable_t *self, uint32_t matid);
 void drawable_set_vs(drawable_t *self, vs_t *vs);
-void drawable_set_xray(drawable_t *self, int32_t xray);
+void drawable_set_xray(drawable_t *self, bool_t xray);
+void drawable_set_wireframe(drawable_t *self, bool_t wireframe);
+void drawable_set_cull(drawable_t *self, uint32_t cull);
+void drawable_set_receive_shadows(drawable_t *self, bool_t receive_shadows);
 void drawable_set_entity(drawable_t *self, entity_t entity);
 void drawable_set_callback(drawable_t *self, draw_cb cb, void *usrptr);
 void drawable_set_texture(drawable_t *self, texture_t *texture);

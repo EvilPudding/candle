@@ -20,7 +20,6 @@ mesh_t *sprite_mesh()
 	{
 		g_sprite_mesh = mesh_new();
 		mesh_quad(g_sprite_mesh);
-		g_sprite_mesh->cull = 0;
 	}
 	return g_sprite_mesh;
 }
@@ -81,6 +80,7 @@ static void c_sprite_init(c_sprite_t *self)
 	drawable_set_vs(&self->draw, g_sprite_vs);
 	drawable_set_mesh(&self->draw, g_sprite_mesh);
 	drawable_set_entity(&self->draw, c_entity(self));
+	drawable_set_cull(&self->draw, 0);
 
 	self->visible = 1;
 }

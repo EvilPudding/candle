@@ -222,11 +222,8 @@ typedef struct mesh
 	void *mtx;
 
 	/* DISPAY PROPERTIES */
-	int wireframe;
-	int cull;
 	float offset;
 	float smooth_angle;
-	int receive_shadows;
 	int ref_num;
 
 	int has_skin;

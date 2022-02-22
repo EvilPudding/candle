@@ -136,7 +136,6 @@ typedef struct
 	uint32_t shadow_group;
 	uint32_t transparent_group;
 	uint32_t selectable_group;
-	bool_t xray;
 
 	uint32_t mat_update_id;
 	drawable_t draw;

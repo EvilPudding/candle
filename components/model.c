@@ -582,7 +582,7 @@ void c_model_propagate_edit(c_model_t *self, int cmd_id)
 	}
 
 	/* int update_id = -1; */
-	if(self->base_mesh == self->mesh)
+	if(self->base_mesh == self->mesh && self->mesh)
 	{
 		self->base_mesh = mesh_clone(self->base_mesh);
 	}
@@ -657,15 +657,14 @@ void c_model_edit(c_model_t *self, mesh_edit_t type, geom_t target)
 
 c_model_t *c_model_cull_invert(c_model_t *self)
 {
-	self->mesh->cull = (~self->mesh->cull) & 0x3;
+	self->draw.cull = (~self->draw.cull) & 0x3;
 	drawable_model_changed(&self->draw);
 	return self;
 }
 
 c_model_t *c_model_cull_face(c_model_t *self, bool_t cull_front, bool_t cull_back)
 {
-	self->mesh->cull = cull_front | (cull_back << 1);
-	drawable_model_changed(&self->draw);
+	drawable_set_cull(&self->draw, cull_front | (cull_back << 1));
 	return self;
 }
 
@@ -676,7 +675,6 @@ void c_model_set_vs(c_model_t *self, vs_t *vs)
 
 void c_model_set_xray(c_model_t *self, bool_t xray)
 {
-	self->xray = xray;
 	drawable_set_xray(&self->draw, xray);
 }
 
@@ -691,9 +689,7 @@ c_model_t *c_model_smooth(c_model_t *self, float smooth)
 
 c_model_t *c_model_wireframe(c_model_t *self, bool_t wireframe)
 {
-	/* self->layers[layer].wireframe = wireframe; */
-	self->mesh->wireframe = wireframe;
-	drawable_model_changed(&self->draw);
+	drawable_set_wireframe(&self->draw, wireframe);
 	return self;
 }
 /* static int visible_type_filter(drawable_t *drawable) */
@@ -889,22 +885,18 @@ int c_model_menu(c_model_t *self, void *ctx)
 
 		mesh = self->mesh;
 
-		new_value = nk_check_label(ctx, "Wireframe",
-				mesh->wireframe);
+		new_value = nk_check_label(ctx, "Wireframe", self->draw.wireframe);
 
-		if(new_value != mesh->wireframe)
+		if(new_value != self->draw.wireframe)
 		{
-			mesh->wireframe = new_value;
-			changes = 1;
+			drawable_set_wireframe(&self->draw, new_value);
 		}
 
-		new_value = nk_check_label(ctx, "Receive Shadows",
-				mesh->receive_shadows);
+		new_value = nk_check_label(ctx, "Receive Shadows", self->draw.receive_shadows);
 
-		if(new_value != mesh->receive_shadows)
+		if(new_value != self->draw.receive_shadows)
 		{
-			mesh->receive_shadows = new_value;
-			changes = 1;
+			drawable_set_receive_shadows(&self->draw, new_value);
 		}
 
 		smooth = mesh->smooth_angle;
@@ -918,23 +910,21 @@ int c_model_menu(c_model_t *self, void *ctx)
 			mesh_update(mesh);
 		}
 
-		cull_front = mesh->cull & 0x1;
-		cull_back = mesh->cull >> 0x1;
+		cull_front = self->draw.cull & 0x1;
+		cull_back = self->draw.cull >> 0x1;
 
 		new_value = nk_check_label(ctx, "Cull front", cull_front);
 
 		if(new_value != cull_front)
 		{
-			mesh->cull = cull_back | new_value;
-			changes = 1;
+			drawable_set_cull(&self->draw, cull_back | new_value);
 		}
 
 		new_value = nk_check_label(ctx, "Cull back", cull_back);
 
 		if(new_value != cull_back)
 		{
-			mesh->cull = cull_front | (new_value << 1);
-			changes = 1;
+			drawable_set_cull(&self->draw, cull_front | (new_value << 1));
 		}
 	}
 

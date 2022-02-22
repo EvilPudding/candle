@@ -32,6 +32,7 @@ void drawable_init(drawable_t *self, uint32_t group)
 {
 	memset(self, 0, sizeof(*self));
 	self->transform = mat4();
+	self->cull = 0x2; /* CULL_BACK */
 
 	drawable_add_group(self, group);
 }
@@ -300,11 +301,38 @@ void drawable_set_vs(drawable_t *self, vs_t *vs)
 	}
 }
 
-void drawable_set_xray(drawable_t *self, int32_t xray)
+void drawable_set_xray(drawable_t *self, bool_t xray)
 {
 	if (self->xray != xray)
 	{
 		self->xray = xray;
+		drawable_model_changed(self);
+	}
+}
+
+void drawable_set_wireframe(drawable_t *self, bool_t wireframe)
+{
+	if (self->wireframe != wireframe)
+	{
+		self->wireframe = wireframe;
+		drawable_model_changed(self);
+	}
+}
+
+void drawable_set_cull(drawable_t *self, uint32_t cull)
+{
+	if (self->cull != cull)
+	{
+		self->cull = cull;
+		drawable_model_changed(self);
+	}
+}
+
+void drawable_set_receive_shadows(drawable_t *self, bool_t receive_shadows)
+{
+	if (self->receive_shadows != receive_shadows)
+	{
+		self->receive_shadows = receive_shadows;
 		drawable_model_changed(self);
 	}
 }
@@ -691,16 +719,18 @@ draw_conf_t *drawable_get_conf(drawable_t *self, uint32_t gid)
 	if (!self->vs) return NULL;
 	if (!self->mesh) return NULL;
 
-	conf.mesh           = self->mesh;
-	conf.skin           = self->skin;
-	conf.custom_texture = self->custom_texture;
-	conf.vs             = self->vs;
-	conf.draw_callback  = self->draw_callback;
-	conf.usrptr         = self->usrptr;
-	conf.xray           = self->xray;
-	conf.mat_type       = self->mat ? self->mat->type : 0;
-	conf.wireframe      = self->mesh->wireframe;
-	conf.cull           = self->mesh->cull;
+	conf.mesh            = self->mesh;
+	conf.skin            = self->skin;
+	conf.custom_texture  = self->custom_texture;
+	conf.vs              = self->vs;
+	conf.draw_callback   = self->draw_callback;
+	conf.usrptr          = self->usrptr;
+	conf.xray            = self->xray;
+	conf.mat_type        = self->mat ? self->mat->type : 0;
+	conf.wireframe       = self->wireframe;
+	conf.cull            = self->cull;
+	conf.receive_shadows = self->receive_shadows;
+	conf.padding         = 0;
 
 	if (self->bind[gid].grp == 0)
 	{
@@ -1147,7 +1177,7 @@ int32_t draw_conf_draw(draw_conf_t *self, int32_t instance_id)
 	glUniform1i(shader_cached_uniform(shader, ref("has_tex")),
 	                                  mesh->has_texcoords);
 	glUniform1i(shader_cached_uniform(shader, ref("receive_shadows")),
-	                                  mesh->receive_shadows);
+	                                  self->vars.receive_shadows);
 
 	glBindVertexArray(self->vao); glerr();
 

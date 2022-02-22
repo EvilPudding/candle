@@ -162,12 +162,12 @@ c_window_t *c_window_new(int width, int height)
 
 	g_quad_mesh = mesh_new();
 	mesh_quad(g_quad_mesh);
-	g_quad_mesh->cull = 0;
 
 	drawable_init(&self->draw, ref("quad"));
 	drawable_set_entity(&self->draw, c_entity(self));
 	drawable_set_mesh(&self->draw, g_quad_mesh);
 	drawable_set_vs(&self->draw, g_quad_vs);
+	drawable_set_cull(&self->draw, 0);
 	c_window_lock_fps(self, self->swap_interval);
 
 	return self;
