@@ -1620,7 +1620,7 @@ int32_t c_editmode_key_up(c_editmode_t *self, candle_key_e *key)
 	}
 	switch(*key)
 	{
-		case CANDLE_KEY_DEL: c_editmode_selected_delete(self); break;
+		case CANDLE_KEY_DELETE: c_editmode_selected_delete(self); break;
 		case 'c':
 			if(entity_exists(self->selected) && self->mode == EDIT_OBJECT)
 			{
