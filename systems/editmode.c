@@ -1147,12 +1147,7 @@ int32_t c_editmode_mouse_move(c_editmode_t *self, mouse_move_data *event)
 			if (nk_item_is_any_active(ctx))
 			{
 				self->over = entity_null;
-				return STOP;
-			}
-			if (nk_window_is_any_hovered(ctx))
-			{
-				self->over = entity_null;
-				return STOP;
+				return CONTINUE;
 			}
 		}
 
@@ -1220,7 +1215,7 @@ int32_t c_editmode_mouse_press(c_editmode_t *self, mouse_button_data *event)
 	ent = renderer_entity_at_pixel(renderer, event->x, event->y, NULL);
 	geom = renderer_geom_at_pixel(renderer, event->x, event->y, NULL);
 
-	if (self->nk && nk_window_is_any_hovered(self->nk))
+	if (self->nk && nk_item_is_any_active(self->nk))
 	{
 		if (event->button == CANDLE_MOUSE_BUTTON_LEFT)
 		{
@@ -1380,14 +1375,15 @@ void c_editmode_select(c_editmode_t *self, entity_t select)
 		c_editmode_open_entity(self, SYS);
 		if(tool && tool->init) tool->init(tool->usrptr, self);
 	}
-
+	if (self->nk)
+		nk_input_button(self->nk, NK_BUTTON_LEFT, 0, 0, false);
 }
 
 int32_t c_editmode_mouse_wheel(c_editmode_t *self, mouse_button_data *event)
 {
 	if (!c_mouse_active(c_mouse(self))) return CONTINUE;
 
-	if(self->nk && (nk_window_is_any_hovered(self->nk) || nk_item_is_any_active(self->nk)))
+	if(self->nk && nk_item_is_any_active(self->nk))
 	{
 		nk_input_scroll(self->nk, nk_vec2(event->x, event->y));
 		return STOP;
@@ -1397,7 +1393,7 @@ int32_t c_editmode_mouse_wheel(c_editmode_t *self, mouse_button_data *event)
 
 int32_t c_editmode_mouse_click_double(c_editmode_t *self, mouse_button_data *event)
 {
-	if(self->nk && (nk_window_is_any_hovered(self->nk) || nk_item_is_any_active(self->nk)))
+	if(self->nk && nk_item_is_any_active(self->nk))
 	{
 		if (event->button == CANDLE_MOUSE_BUTTON_LEFT)
 		{
@@ -1443,7 +1439,7 @@ int32_t c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 	if(!entity_exists(self->camera)) return CONTINUE;
 	renderer = c_camera(&self->camera)->renderer;
 
-	if(self->nk && (nk_window_is_any_hovered(self->nk) || nk_item_is_any_active(self->nk)))
+	if(self->nk && nk_item_is_any_active(self->nk))
 	{
 		if (event->button == CANDLE_MOUSE_BUTTON_LEFT)
 		{
@@ -1588,7 +1584,7 @@ int32_t c_editmode_key_up(c_editmode_t *self, candle_key_e *key)
 		return STOP;
 	}
 
-	if (self->nk && (nk_window_is_any_hovered(self->nk) || nk_item_is_any_active(self->nk)))
+	if (self->nk && nk_item_is_any_active(self->nk))
 	{
 		if (nk_can_handle_key(self->nk, *key, false))
 		{
@@ -1660,7 +1656,7 @@ static void c_editmode_selected_delete(c_editmode_t *self)
 int32_t c_editmode_key_down(c_editmode_t *self, candle_key_e *key)
 {
 	if (!self->control) return CONTINUE;
-	if (self->nk && (nk_window_is_any_hovered(self->nk) || nk_item_is_any_active(self->nk)))
+	if (self->nk && nk_item_is_any_active(self->nk))
 	{
 		nk_can_handle_key(self->nk, *key, true);
 		return STOP;
