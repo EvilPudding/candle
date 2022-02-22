@@ -60,7 +60,7 @@ OBJS_DEB = $(patsubst %.c, $(DIR)/%.debug.o, $(SRCS) $(THIRD_PARTY_SRC))
 OBJS_EMS = $(patsubst %.c, $(DIR)/%.emscripten.o, $(SRCS))
 
 CFLAGS = -std=c89 -pedantic -Wall -Wno-unused-function \
-         -DTHREADED -DUSE_VAO $(PARENTCFLAGS)
+         -DTHREADED $(PARENTCFLAGS)
 
 CFLAGS_REL = $(CFLAGS) -O3
 
