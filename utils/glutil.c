@@ -1,6 +1,6 @@
 #include "glutil.h"
 #include <stdio.h>
-#include <candle.h>
+#include "../candle.h"
 #include <stdlib.h>
 #include <string.h>
 

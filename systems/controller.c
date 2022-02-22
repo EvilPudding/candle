@@ -1,6 +1,18 @@
 #include "controller.h"
-#include <candle.h>
-#include <GLFW/glfw3.h>
+#include "../candle.h"
+
+
+#ifdef __WIN32
+#  ifndef _GLFW_WIN32 
+#    define _GLFW_WIN32 
+#  endif
+#else
+#  ifndef _GLFW_WIN32 
+#    define _GLFW_X11
+#  endif
+#endif
+
+#include "../third_party/glfw/include/GLFW/glfw3.h"
 
 /* void c_controllers_rumble(c_controllers_t *self, uint32_t controller, */
 /*                           float strength) */

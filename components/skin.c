@@ -1,12 +1,12 @@
 #include "skin.h"
 #include "bone.h"
-#include <candle.h>
-#include <components/spatial.h>
-#include <components/node.h>
-#include <components/model.h>
-#include <utils/drawable.h>
-#include <utils/mafs.h>
-#include <utils/mesh.h>
+#include "../candle.h"
+#include "../components/spatial.h"
+#include "../components/node.h"
+#include "../components/model.h"
+#include "../utils/drawable.h"
+#include "../utils/mafs.h"
+#include "../utils/mesh.h"
 
 vs_t *g_skin_vs;
 

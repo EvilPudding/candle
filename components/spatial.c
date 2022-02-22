@@ -1,6 +1,6 @@
 #include "spatial.h"
-#include <utils/nk.h>
-#include <systems/editmode.h>
+#include "../utils/nk.h"
+#include "../systems/editmode.h"
 
 int c_spatial_menu(c_spatial_t *self, void *ctx);
 

@@ -2,7 +2,7 @@
 #define STR_DEFAULT_CHUNK 32
 #endif
 
-#include <utils/str.h>
+#include "../utils/str.h"
 #include <stddef.h>
 
 struct _str {

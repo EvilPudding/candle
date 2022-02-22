@@ -1,14 +1,14 @@
 #include "axis.h"
-#include <utils/drawable.h>
+#include "../utils/drawable.h"
 #include "model.h"
 #include "node.h"
 #include "spatial.h"
 #include "light.h"
-#include <utils/nk.h>
-#include <utils/shader.h>
-#include <systems/editmode.h>
-#include <systems/window.h>
-#include <candle.h>
+#include "../utils/nk.h"
+#include "../utils/shader.h"
+#include "../systems/editmode.h"
+#include "../systems/window.h"
+#include "../candle.h"
 #define SCALE 0.25f
 
 static mesh_t *g_rot_axis_mesh = NULL;

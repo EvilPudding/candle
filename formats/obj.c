@@ -1,4 +1,4 @@
-#include <candle.h>
+#include "../candle.h"
 #include "obj.h"
 #include <stdlib.h>
 #include <string.h>

@@ -3,11 +3,11 @@
 #include "node.h"
 #include "spatial.h"
 #include "light.h"
-#include <utils/drawable.h>
-#include <utils/nk.h>
-#include <utils/shader.h>
-#include <systems/editmode.h>
-#include <candle.h>
+#include "../utils/drawable.h"
+#include "../utils/nk.h"
+#include "../utils/shader.h"
+#include "../systems/editmode.h"
+#include "../candle.h"
 
 static float g_iso_level = 0.9;
 

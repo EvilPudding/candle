@@ -1,13 +1,13 @@
 #include "mesh.h"
-#include "formats/obj.h"
-#include "formats/ply.h"
-#include <candle.h>
+#include "../formats/obj.h"
+#include "../formats/ply.h"
+#include "../candle.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
 #ifdef THREADED
-#include <tinycthread.h>
+#include "../third_party/tinycthread/source/tinycthread.h"
 #endif
 
 /* #if __has_include (<assimp/cimport.h>) */

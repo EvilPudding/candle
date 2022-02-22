@@ -1,11 +1,11 @@
-#include <utils/glutil.h>
+#include "../utils/glutil.h"
 #include "window.h"
-#include <utils/shader.h>
-#include <utils/drawable.h>
-#include <candle.h>
-#include <components/model.h>
-#include <components/node.h>
-#include <systems/render_device.h>
+#include "../utils/shader.h"
+#include "../utils/drawable.h"
+#include "../candle.h"
+#include "../components/model.h"
+#include "../components/node.h"
+#include "../systems/render_device.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -14,9 +14,19 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 #endif
-#include <GLFW/glfw3.h>
 
-#include <utils/gl.h>
+#ifdef __WIN32
+#  ifndef _GLFW_WIN32 
+#    define _GLFW_WIN32 
+#  endif
+#else
+#  ifndef _GLFW_WIN32 
+#    define _GLFW_X11
+#  endif
+#endif
+#include "../third_party/glfw/include/GLFW/glfw3.h"
+
+#include "../utils/gl.h"
 
 int window_width = 1360;
 int window_height = 766;

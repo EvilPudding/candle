@@ -1,17 +1,17 @@
 #include <stdlib.h>
 #include <stddef.h>
-#include <utils/str.h>
+#include "../utils/str.h"
 #include <string.h>
 #include <stdio.h>
 #include "material.h"
-#include <vil/vil.h>
+#include "../vil/vil.h"
 #include "file.h"
 #include "shader.h"
-#include <candle.h>
-#include <systems/editmode.h>
-#include <systems/render_device.h>
-#include <utils/glutil.h>
-#include <utils/nk.h>
+#include "../candle.h"
+#include "../systems/editmode.h"
+#include "../systems/render_device.h"
+#include "../utils/glutil.h"
+#include "../utils/nk.h"
 
 mat_t *g_mats[255];
 uint32_t g_mats_num;

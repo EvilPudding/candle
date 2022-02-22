@@ -1,20 +1,20 @@
-#include <utils/glutil.h>
+#include "../utils/glutil.h"
 #include "render_device.h"
-#include <components/camera.h>
-#include <components/model.h>
-#include <components/light.h>
-#include <components/ambient.h>
-#include <components/node.h>
-#include <components/name.h>
-#include <systems/window.h>
-#include <systems/editmode.h>
+#include "../components/camera.h"
+#include "../components/model.h"
+#include "../components/light.h"
+#include "../components/ambient.h"
+#include "../components/node.h"
+#include "../components/name.h"
+#include "../systems/window.h"
+#include "../systems/editmode.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <candle.h>
-#include <utils/noise.h>
-#include <utils/nk.h>
-#include <utils/material.h>
+#include "../candle.h"
+#include "../utils/noise.h"
+#include "../utils/nk.h"
+#include "../utils/material.h"
 
 void c_render_device_update_lights(c_render_device_t *self)
 {

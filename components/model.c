@@ -2,10 +2,10 @@
 #include "node.h"
 #include "spatial.h"
 #include "light.h"
-#include <utils/nk.h>
-#include <utils/drawable.h>
-#include <candle.h>
-#include <systems/editmode.h>
+#include "../utils/nk.h"
+#include "../utils/drawable.h"
+#include "../candle.h"
+#include "../systems/editmode.h"
 #ifdef _WIN32
 #define CANDLE_NAN NAN
 #else

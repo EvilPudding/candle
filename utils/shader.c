@@ -1,14 +1,14 @@
 #include "shader.h"
-#include <candle.h>
-#include "components/light.h"
-#include "components/node.h"
+#include "../candle.h"
+#include "../components/light.h"
+#include "../components/node.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 #include <assert.h>
-#include <utils/str.h>
-#include <utils/shaders_default.h>
+#include "../utils/str.h"
+#include "../utils/shaders_default.h"
 
 static char default_vs[1024] = "";
 static char default_vs_end[] = 

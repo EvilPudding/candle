@@ -1,5 +1,5 @@
-#include <candle.h>
-#include <systems/editmode.h>
+#include "../candle.h"
+#include "../systems/editmode.h"
 #include "destroyed.h"
 
 void ct_destroyed(ct_t *self)

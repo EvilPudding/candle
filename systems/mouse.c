@@ -1,6 +1,17 @@
-#include <systems/window.h>
+#include "../systems/window.h"
 #include "mouse.h"
-#include <GLFW/glfw3.h>
+
+#ifdef __WIN32
+#  ifndef _GLFW_WIN32 
+#    define _GLFW_WIN32 
+#  endif
+#else
+#  ifndef _GLFW_WIN32 
+#    define _GLFW_X11
+#  endif
+#endif
+#include "../third_party/glfw/include/GLFW/glfw3.h"
+
 
 #define DOUBLE_CLICK_LO 0.02
 #define DOUBLE_CLICK_HI 0.2

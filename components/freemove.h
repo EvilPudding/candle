@@ -1,7 +1,7 @@
 #ifndef FREEMOVE_H
 #define FREEMOVE_H
 
-#include <ecs/ecm.h>
+#include "../ecs/ecm.h"
 
 typedef struct
 {

@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #ifdef THREADED
-#include <tinycthread.h>
+#include "../third_party/tinycthread/source/tinycthread.h"
 #endif
 
 struct element

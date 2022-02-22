@@ -1,13 +1,13 @@
-#include <utils/glutil.h>
+#include "../utils/glutil.h"
 #include "texture.h"
 #include "file.h"
-#include <candle.h>
+#include "../candle.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #ifdef THREADED
-#include <tinycthread.h>
+#include "../third_party/tinycthread/source/tinycthread.h"
 #endif
 
 #ifdef __EMSCRIPTEN__
@@ -16,9 +16,9 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_ASSERT(x)
-#include <third_party/stb_image.h>
+#include "../third_party/stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <third_party/stb_image_write.h>
+#include "../third_party/stb_image_write.h"
 
 static int32_t texture_cubemap_frame_buffer(texture_t *self);
 static int32_t texture_2D_frame_buffer(texture_t *self);

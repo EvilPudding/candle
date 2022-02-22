@@ -1,12 +1,12 @@
 #include "bone.h"
 #include "skin.h"
-#include <candle.h>
-#include <components/spatial.h>
-#include <components/node.h>
-#include <components/model.h>
-#include <utils/drawable.h>
-#include <utils/mafs.h>
-#include <utils/mesh.h>
+#include "../candle.h"
+#include "../components/spatial.h"
+#include "../components/node.h"
+#include "../components/model.h"
+#include "../utils/drawable.h"
+#include "../utils/mafs.h"
+#include "../utils/mesh.h"
 
 static mesh_t *g_bone;
 static mesh_t *g_joint;

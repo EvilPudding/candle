@@ -1,4 +1,4 @@
-#include <events.h>
+#include "../events.h"
 #include "keyboard.h"
 
 int32_t c_keyboard_event(c_keyboard_t *self, const candle_event_t *event)

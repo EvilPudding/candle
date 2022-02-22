@@ -1,8 +1,8 @@
 #ifndef FREELOOK_H
 #define FREELOOK_H
 
-#include <ecs/ecm.h>
-#include <utils/glutil.h>
+#include "../ecs/ecm.h"
+#include "../utils/glutil.h"
 
 typedef struct
 {

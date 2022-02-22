@@ -1,13 +1,13 @@
 #include "editlook.h"
-#include <candle.h>
-#include <systems/window.h>
-#include <systems/editmode.h>
-#include <components/spatial.h>
-#include <components/camera.h>
+#include "../candle.h"
+#include "../systems/window.h"
+#include "../systems/editmode.h"
+#include "../components/spatial.h"
+#include "../components/camera.h"
 /* #include <components/camera.h> */
-#include <systems/mouse.h>
-#include <systems/keyboard.h>
-#include <systems/controller.h>
+#include "../systems/mouse.h"
+#include "../systems/keyboard.h"
+#include "../systems/controller.h"
 #include <math.h>
 
 

@@ -2,12 +2,12 @@
 #include "ecm.h"
 #include <stdarg.h>
 
-#include "candle.h"
-#include "components/destroyed.h"
+#include "../candle.h"
+#include "../components/destroyed.h"
 
-#include <ecs/entity.h>
+#include "../ecs/entity.h"
 #ifdef THREADED
-#include <tinycthread.h>
+#include "../third_party/tinycthread/source/tinycthread.h"
 #endif
 
 #ifdef THREADED

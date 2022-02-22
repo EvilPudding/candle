@@ -1,7 +1,7 @@
 #include "freemove.h"
-#include <candle.h>
-#include <components/spatial.h>
-#include <systems/keyboard.h>
+#include "../candle.h"
+#include "../components/spatial.h"
+#include "../systems/keyboard.h"
 #include <math.h>
 
 extern int window_width, window_height;

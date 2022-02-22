@@ -2,16 +2,16 @@
 #include "node.h"
 #include "spatial.h"
 #include "model.h"
-#include <utils/nk.h>
-#include <utils/drawable.h>
-#include <utils/str.h>
-#include <candle.h>
-#include <systems/editmode.h>
-#include <systems/window.h>
+#include "../utils/nk.h"
+#include "../utils/drawable.h"
+#include "../utils/str.h"
+#include "../candle.h"
+#include "../systems/editmode.h"
+#include "../systems/window.h"
 #include <stdlib.h>
-#include <systems/render_device.h>
-#include <components/sprite.h>
-#include <utils/bulb.h>
+#include "../systems/render_device.h"
+#include "../components/sprite.h"
+#include "../utils/bulb.h"
 
 static mesh_t *g_light;
 extern vs_t *g_quad_vs;

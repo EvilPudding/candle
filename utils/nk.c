@@ -1,7 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
-#include <utils/glutil.h>
-#include <utils/texture.h>
+#include "../utils/glutil.h"
+#include "../utils/texture.h"
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_STANDARD_VARARGS
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
@@ -11,10 +11,20 @@
 #define NK_IMPLEMENTATION
 #define NK_INCLUDE_COMMAND_USERDATA
 #include <stdarg.h>
-#include <third_party/nuklear/nuklear.h>
-#include <GLFW/glfw3.h>
-#include <events.h>
-#include <systems/keyboard.h>
+#include "../third_party/nuklear/nuklear.h"
+
+#ifdef __WIN32
+#  ifndef _GLFW_WIN32 
+#    define _GLFW_WIN32 
+#  endif
+#else
+#  ifndef _GLFW_WIN32 
+#    define _GLFW_X11
+#  endif
+#endif
+#include "../third_party/glfw/include/GLFW/glfw3.h"
+#include "../events.h"
+#include "../systems/keyboard.h"
 
 #define CAN_COLOR_MAP(NK_COLOR)\
     NK_COLOR(NK_COLOR_TEXT,                     175,175,175,255) \

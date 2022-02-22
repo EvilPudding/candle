@@ -1,8 +1,8 @@
 #ifndef RENDER_DEVICE_H
 #define RENDER_DEVICE_H
 
-#include <utils/shader.h>
-#include <ecs/ecm.h>
+#include "../utils/shader.h"
+#include "../ecs/ecm.h"
 
 struct gl_light
 {

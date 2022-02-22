@@ -1,5 +1,5 @@
-#include <utils/shader.h>
-#include <utils/str.h>
+#include "../utils/shader.h"
+#include "../utils/str.h"
 
 static
 void shaders_candle_final()

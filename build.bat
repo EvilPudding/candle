@@ -37,9 +37,9 @@ set THIRD_PARTY_SRC= %GLFW%\context.c^
                      %TINYCTHREAD%\tinycthread.c^
                      third_party\miniz.c
 
-:: set CFLAGS=/Z7 /I. /W1 /D_GLFW_WIN32 /Ithird_party\glfw\include /I%TINYCTHREAD% /DTHREADED^
+:: set CFLAGS=/Z7 /W1 /D_GLFW_WIN32 /Ithird_party\glfw\include /I%TINYCTHREAD% /DTHREADED^
 	:: /D_CRT_SECURE_NO_WARNINGS
-set CFLAGS=/O2 /I. /W1 /D_GLFW_WIN32 /Ithird_party\glfw\include /I%TINYCTHREAD% /DTHREADED^
+set CFLAGS=/O2 /W1 /D_GLFW_WIN32 /Ithird_party\glfw\include /I%TINYCTHREAD% /DTHREADED^
 	/D_CRT_SECURE_NO_WARNINGS
 
 set sources=%THIRD_PARTY_SRC% candle.c

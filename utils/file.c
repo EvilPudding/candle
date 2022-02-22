@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ecs/ecm.h>
-#include <third_party/tinydir/tinydir.h>
+#include "../ecs/ecm.h"
+#include "../third_party/tinydir/tinydir.h"
 
 void path_join(char *path, size_t size, const char *other)
 {

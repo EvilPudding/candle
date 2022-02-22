@@ -1,7 +1,7 @@
 #include "ambient.h"
 #include "spatial.h"
 #include "node.h"
-#include "candle.h"
+#include "../candle.h"
 #include <stdlib.h>
 
 void ct_ambient(ct_t *self)

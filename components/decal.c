@@ -1,9 +1,9 @@
 #include "decal.h"
 #include "spatial.h"
-#include "candle.h"
-#include <utils/drawable.h>
-#include <components/model.h>
-#include <components/node.h>
+#include "../candle.h"
+#include "../utils/drawable.h"
+#include "../components/model.h"
+#include "../components/node.h"
 #include <stdlib.h>
 
 

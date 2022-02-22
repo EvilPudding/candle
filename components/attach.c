@@ -1,7 +1,7 @@
 #include "attach.h"
-#include <candle.h>
-#include <components/spatial.h>
-#include <components/node.h>
+#include "../candle.h"
+#include "../components/spatial.h"
+#include "../components/node.h"
 #include <math.h>
 
 void c_attach_target(c_attach_t *self, entity_t target)

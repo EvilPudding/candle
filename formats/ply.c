@@ -1,5 +1,5 @@
 #include "ply.h"
-#include <candle.h>
+#include "../candle.h"
 #include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>

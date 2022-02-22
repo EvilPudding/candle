@@ -1,8 +1,8 @@
 #include "freelook.h"
-#include <systems/window.h>
-#include <components/spatial.h>
-#include <components/node.h>
-#include <systems/mouse.h>
+#include "../systems/window.h"
+#include "../components/spatial.h"
+#include "../components/node.h"
+#include "../systems/mouse.h"
 #include <math.h>
 
 

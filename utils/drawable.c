@@ -1,12 +1,12 @@
 #include "drawable.h"
-#include <utils/glutil.h>
-#include <utils/loader.h>
-#include <candle.h>
+#include "../utils/glutil.h"
+#include "../utils/loader.h"
+#include "../candle.h"
 #include <string.h>
 #include <stdlib.h>
-#include <systems/render_device.h>
+#include "../systems/render_device.h"
 #ifdef THREADED
-#include <tinycthread.h>
+#include "../third_party/tinycthread/source/tinycthread.h"
 #endif
 
 KHASH_MAP_INIT_INT(varray, varray_t*)

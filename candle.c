@@ -14,11 +14,15 @@
 #define GLFW_INCLUDE_NONE
 #ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
+#define _GLFW_WIN32 
+#else
+#define _GLFW_X11
 #endif
-#include <GLFW/glfw3.h>
+
+#include "third_party/glfw/include/GLFW/glfw3.h"
 
 #ifdef _WIN32
-#include <GLFW/glfw3native.h>
+#include "third_party/glfw/include/GLFW/glfw3native.h"
 #endif
 
 #ifndef _WIN32
@@ -30,7 +34,7 @@
 #endif
 
 #ifdef THREADED
-#include <tinycthread.h>
+#include "third_party/tinycthread/source/tinycthread.h"
 #endif
 
 candle_t *g_candle;

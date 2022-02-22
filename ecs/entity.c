@@ -1,12 +1,12 @@
-#include <utils/glutil.h>
+#include "../utils/glutil.h"
 #include "entity.h"
 #include <stdarg.h>
-#include <ecs/ecm.h>
-#include <candle.h>
-#include <components/name.h>
-#include <components/destroyed.h>
+#include "../ecs/ecm.h"
+#include "../candle.h"
+#include "../components/name.h"
+#include "../components/destroyed.h"
 #ifdef THREADED
-#include <tinycthread.h>
+#include "../third_party/tinycthread/source/tinycthread.h"
 #endif
 
 /* static void entity_check_missing_dependencies(entity_t self); */
@@ -119,7 +119,6 @@ void entity_destroy(entity_t self)
 	}
 }
 
-#include <GLFW/glfw3.h>
 int listener_signal(const listener_t *self, entity_t ent, void *data, void *output)
 {
 	khiter_t k;

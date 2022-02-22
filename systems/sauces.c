@@ -1,20 +1,20 @@
 #include "sauces.h"
 #include "../candle.h"
 #include "editmode.h"
-#include <utils/file.h>
+#include "../utils/file.h"
 #include <string.h>
 #include <stdlib.h>
 #include "../third_party/tinydir/tinydir.h"
 
 #include "../third_party/miniz.c"
 
-#include <components/model.h>
-#include <components/timeline.h>
-#include <components/bone.h>
-#include <components/skin.h>
-#include <components/light.h>
-#include <components/node.h>
-#include <components/name.h>
+#include "../components/model.h"
+#include "../components/timeline.h"
+#include "../components/bone.h"
+#include "../components/skin.h"
+#include "../components/light.h"
+#include "../components/node.h"
+#include "../components/name.h"
 
 /* #include <assimp/cimport.h> */
 /* #include <assimp/scene.h> */

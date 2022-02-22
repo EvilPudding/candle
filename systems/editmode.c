@@ -1,20 +1,20 @@
 #include "editmode.h"
-#include <components/editlook.h>
-#include <components/name.h>
-#include <components/node.h>
-#include <components/camera.h>
-#include <components/axis.h>
-#include <components/attach.h>
-#include <components/model.h>
-#include <systems/window.h>
-#include <systems/keyboard.h>
-#include <candle.h>
-#include <utils/mesh.h>
-#include <vil/vil.h>
+#include "../components/editlook.h"
+#include "../components/name.h"
+#include "../components/node.h"
+#include "../components/camera.h"
+#include "../components/axis.h"
+#include "../components/attach.h"
+#include "../components/model.h"
+#include "../systems/window.h"
+#include "../systems/keyboard.h"
+#include "../candle.h"
+#include "../utils/mesh.h"
+#include "../vil/vil.h"
 #include <stdlib.h>
-#include <utils/renderer.h>
-#include <utils/str.h>
-#include <utils/nk.h>
+#include "../utils/renderer.h"
+#include "../utils/str.h"
+#include "../utils/nk.h"
 
 static int32_t c_editmode_activate_loader(c_editmode_t *self);
 static void c_editmode_open_entity(c_editmode_t *self, entity_t ent);

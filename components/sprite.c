@@ -2,11 +2,11 @@
 #include "node.h"
 #include "spatial.h"
 #include "light.h"
-#include <utils/drawable.h>
-#include <utils/nk.h>
-#include <utils/shader.h>
-#include <systems/editmode.h>
-#include <candle.h>
+#include "../utils/drawable.h"
+#include "../utils/nk.h"
+#include "../utils/shader.h"
+#include "../systems/editmode.h"
+#include "../candle.h"
 
 static vs_t *g_sprite_vs;
 static vs_t *g_fixed_sprite_vs;

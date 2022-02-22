@@ -1,21 +1,31 @@
 #include "renderer.h"
-#include <components/camera.h>
-#include <components/model.h>
-#include <components/light.h>
-#include <components/ambient.h>
-#include <components/node.h>
-#include <components/name.h>
-#include <systems/window.h>
-#include <systems/render_device.h>
-#include <systems/editmode.h>
+#include "../components/camera.h"
+#include "../components/model.h"
+#include "../components/light.h"
+#include "../components/ambient.h"
+#include "../components/node.h"
+#include "../components/name.h"
+#include "../systems/window.h"
+#include "../systems/render_device.h"
+#include "../systems/editmode.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <candle.h>
-#include <utils/noise.h>
-#include <utils/nk.h>
-#include <utils/material.h>
-#include <GLFW/glfw3.h>
+#include "../candle.h"
+#include "../utils/noise.h"
+#include "../utils/nk.h"
+#include "../utils/material.h"
+
+#ifdef __WIN32
+#  ifndef _GLFW_WIN32 
+#    define _GLFW_WIN32 
+#  endif
+#else
+#  ifndef _GLFW_WIN32 
+#    define _GLFW_X11
+#  endif
+#endif
+#include "../third_party/glfw/include/GLFW/glfw3.h"
 
 static int renderer_update_screen_texture(renderer_t *self);
 

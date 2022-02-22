@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
-#include <utils/gl.h>
+#include "../utils/gl.h"
 
 #if defined(__APPLE__)
 #include <dlfcn.h>

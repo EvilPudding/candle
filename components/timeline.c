@@ -1,8 +1,8 @@
 #include "timeline.h"
-#include <candle.h>
-#include <systems/keyboard.h>
-#include <components/spatial.h>
-#include <components/node.h>
+#include "../candle.h"
+#include "../systems/keyboard.h"
+#include "../components/spatial.h"
+#include "../components/node.h"
 #include <math.h>
 
 struct frame_vec

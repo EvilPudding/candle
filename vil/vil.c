@@ -1,11 +1,11 @@
 #include "vil.h"
 #include <assert.h>
-#include <systems/editmode.h>
-#include <utils/khash.h>
-#include <utils/mafs.h>
-#include <utils/nk.h>
-#include <candle.h>
-#include <utils/str.h>
+#include "../systems/editmode.h"
+#include "../utils/khash.h"
+#include "../utils/mafs.h"
+#include "../utils/nk.h"
+#include "../candle.h"
+#include "../utils/str.h"
 #include <stdlib.h>
 #include <string.h>
 

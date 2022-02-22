@@ -59,9 +59,8 @@ OBJS_REL = $(patsubst %.c, $(DIR)/%.o, $(SRCS) $(THIRD_PARTY_SRC))
 OBJS_DEB = $(patsubst %.c, $(DIR)/%.debug.o, $(SRCS) $(THIRD_PARTY_SRC))
 OBJS_EMS = $(patsubst %.c, $(DIR)/%.emscripten.o, $(SRCS))
 
-CFLAGS = -std=c89 -pedantic -Wall -I. -Wno-unused-function \
-         -Ithird_party/glfw/include -I$(TINYCTHREAD) -D_GLFW_X11 \
-         -Wno-format-truncation -Wno-stringop-truncation \
+CFLAGS = -std=c89 -pedantic -Wall -Wno-unused-function \
+         -Wno-stringop-truncation \
          -DTHREADED -DUSE_VAO $(PARENTCFLAGS)
 
 CFLAGS_REL = $(CFLAGS) -O3
@@ -69,7 +68,7 @@ CFLAGS_REL = $(CFLAGS) -O3
 CFLAGS_DEB = $(CFLAGS) -g3 -DDEBUG
 
 CFLAGS_EMS = -Wall -I. -Wno-unused-function \
-			 -D_GLFW_X11 $(EMS_OPTS)
+			  $(EMS_OPTS)
 
 ##############################################################################
 
@@ -79,6 +78,9 @@ all: init $(PLUGINS_REL) $(DIR)/candle.a data_zip
 
 $(DIR)/candle.a: $(OBJS_REL)
 	$(AR) rs $@ $(OBJS_REL)
+
+$(DIR)/$(GLFW)/%.o: $(GLFW)/%.c
+	$(CC) -o $@ -c $< $(CFLAGS_REL) -D_GLFW_X11
 
 $(DIR)/%.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS_REL)
