@@ -1899,7 +1899,12 @@ int32_t c_editmode_commands(c_editmode_t *self)
 				close |= entity_signal_same(c_entity(self), ref("component_tool"), self->nk, NULL) == STOP;
 			}
 
-			if(close) nk_contextual_close(self->nk);
+
+			if(close)
+			{
+				nk_input_button(self->nk, NK_BUTTON_LEFT, 0, 0, false);
+				nk_contextual_close(self->nk);
+			}
 
 			nk_contextual_end(self->nk);
 		}
