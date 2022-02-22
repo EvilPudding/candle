@@ -106,6 +106,10 @@ int32_t rotate_init(struct edit_rotate *self, c_editmode_t *ec)
 		self->X = entity_new(c_axis_new(1, VEC3(1.0f, 0.0f, 0.0f)));
 		self->Z = entity_new(c_axis_new(1, VEC3(0.0f, 0.0f, 1.0f)));
 		self->Y = entity_new(c_axis_new(1, VEC3(0.0f, 1.0f, 0.0f)));
+#ifdef MESH4
+		self->W = entity_new(c_axis_new(0, vec4(0.0f, 0.0f, 0.0f, 1.0f)));
+		c_node_add(c_node(&self->arrows), 1, self->W);
+#endif
 
 		c_spatial_rotate_Z(c_spatial(&self->X), -M_PI / 2.0f);
 		c_spatial_rotate_X(c_spatial(&self->Z), M_PI / 2.0f);
