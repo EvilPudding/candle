@@ -100,6 +100,9 @@ debug: init $(PLUGINS_DEB) $(DIR)/candle_debug.a data_zip
 $(DIR)/candle_debug.a: $(OBJS_DEB)
 	$(AR) rs $@ $(OBJS_DEB)
 
+$(DIR)/$(GLFW)/%.debug.o: $(GLFW)/%.c
+	$(CC) -o $@ -c $< $(CFLAGS_DEB) -D_GLFW_X11
+
 $(DIR)/%.debug.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS_DEB)
 
