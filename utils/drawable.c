@@ -823,7 +823,9 @@ void drawable_model_changed(drawable_t *self)
 
 		if (!vec4_equals(*props, new_props))
 		{
-			get_group(bind->grp)->update_id++;
+			draw_group_t *group = get_group(bind->grp);
+			if (group)
+				group->update_id++;
 			*props = new_props;
 			if (!(bind->updates & MASK_PROPS))
 			{
@@ -1424,7 +1426,9 @@ static int32_t drawable_position_changed(drawable_t *self, struct draw_bind *bin
 {
 	if (bind->conf)
 	{
-		get_group(bind->grp)->update_id++;
+		draw_group_t *group = get_group(bind->grp);
+		if (group)
+			group->update_id++;
 		bind->conf->inst[bind->instance_id] = self->transform;
 #ifdef MESH4
 		bind->conf->angle4[bind->instance_id] = self->angle4;

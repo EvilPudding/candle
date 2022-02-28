@@ -1007,7 +1007,8 @@ static texture_t *renderer_draw_pass(renderer_t *self, pass_t *pass,
 			glClear(pass->clear);
 			glDisable(GL_SCISSOR_TEST);
 		}
-		pass->rendered_id = draw_group(pass->draw_signal);
+		if (pass->draw_signal != 0)
+			pass->rendered_id = draw_group(pass->draw_signal);
 	}
 	pass_unbind_textures(pass);
 	glerr();
