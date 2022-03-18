@@ -9,6 +9,8 @@
 #define false 0
 typedef uint32_t bool_t;
 
+#define max(a, b) ((a) > (b) ? (a) : (b))
+#define min(a, b) ((a) < (b) ? (a) : (b))
 #define ECMHASH(str) murmur_hash(str, strlen(str), 0)
 #define sig(str) murmur_hash(str, strlen(str), 0)
 #define ref(str) murmur_hash(str, strlen(str), 0)

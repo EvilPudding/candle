@@ -798,61 +798,54 @@ void shaders_candle_common()
 		"	return clamp(0.5 * log2(mip_map_scalar(texture_coordinate)), 0.0, float(MAX_MIPS - 1u));\n"
 		"}\n"
 		"\n"
+		"#define TILE_SIZE 128u\n"
+		"#define INTERPOLATION 0.5\n"
 		"#define g_indir_w 128u\n"
 		"#define g_indir_h 128u\n"
 		"#define g_cache_w 64u\n"
 		"#define g_cache_h 32u\n"
-		"\n"
-		"uint round_power_of_two(uint v)\n"
-		"{\n"
-		"	v--;\n"
-		"	v |= v >> 1u;\n"
-		"	v |= v >> 2u;\n"
-		"	v |= v >> 4u;\n"
-		"	v |= v >> 8u;\n"
-		"	v |= v >> 16u;\n"
-		"	return v + 1u;\n"
-		"}\n");
-
+		"\n");
 	str_cat(&shader_buffer,
-		"vec4 solve_mip(uint tiles_per_row, uint base_tile, uint mip, vec2 coords,\n"
+		"vec4 solve_mip(uint base_tile, uint tiles_per_row, uint mip, vec2 coords,\n"
 		"               out uint tile_out)\n"
 		"{\n"
-		"	float max_mips = log2(float(tiles_per_row));\n"
-		"	float mm = min(max_mips, float(mip));\n"
-		"	uint map_tiles = uint(exp2(2. * (max_mips + 1. - mm)) * (exp2(mm * 2.) - 1.)) / 3u;\n"
-		"	map_tiles += uint(max(0., float(mip) - max_mips));\n"
-		"	uint offset = base_tile + map_tiles;\n"
+		"	float max_mip = log2(float(tiles_per_row));\n"
+		"	float min_mip = min(max_mip, float(mip));\n"
+		"	uint map_tiles = uint(exp2(2. * (max_mip + 1. - min_mip)) * (exp2(min_mip * 2.) - 1.)) / 3u;\n"
+		"	map_tiles += uint(max(0., float(mip) - max_mip));\n"
 		"	uint mip_tpr = tiles_per_row >> mip;\n"
-		"	uvec2 indir_coords = uvec2(floor(coords / (exp2(float(mip)) * 128.0)));\n");
+		"	vec2 ideal_tex_coords = coords / exp2(float(mip));\n"
+		"	uvec2 indir_coords = uvec2(floor(ideal_tex_coords / float(TILE_SIZE)));\n");
 	str_cat(&shader_buffer,
-		"	uint tile_id = indir_coords.y * mip_tpr + indir_coords.x + offset;\n"
+		"	uint tile_id = indir_coords.y * mip_tpr + indir_coords.x + base_tile + map_tiles;\n"
 		"	tile_out = tile_id;\n"
 		"	vec3 info = texelFetch(g_indir, ivec2(tile_id % g_indir_w,\n"
 		"	                       tile_id / g_indir_w), 0).rgb * 255.0;\n"
-		"	float actual_mip = info.b;\n"
+		"	info.xy = floor(round(info.xy) * 129.0);\n"
+		"	float actual_mip = round(info.b);\n"
 		"	const vec2 g_cache_size = vec2(g_cache_w, g_cache_h);\n"
 		"	vec2 tex_coords = coords / exp2(actual_mip);\n"
-		"	vec2 tile_coords = mod(tex_coords, 128.0) + 0.5f;\n"
+		"	vec2 tile_coords = mod(tex_coords, float(TILE_SIZE)) + INTERPOLATION;\n"
+		/* "	return texelFetch(g_cache, ivec2(info.xy + tile_coords), 0);\n" */
 		"	return textureLod(g_cache,\n"
-		"			(info.xy + tile_coords / 129.) / g_cache_size, 0.0);\n"
+		"			(info.xy + tile_coords) / (129.0 * g_cache_size), 0.0);\n"
 		"}\n");
 
 	str_cat(&shader_buffer,
-		"vec4 textureSVT(uvec2 size, uint base_tile, vec2 coords, out uint tile_out,\n"
+		"vec4 textureSVT(uvec2 size, uint base_tile, uint tiles_per_row, vec2 coords, out uint tile_out,\n"
 		"                float mip_scale)\n"
 		"{\n"
 		"	coords.y = 1.0 - coords.y;\n"
-		"	vec2 rcoords = fract(coords) * vec2(size);\n"
-		"	uint max_dim = uint(ceil(float(max(size.x, size.y)) / 128.0));\n"
-		"	uint tiles_per_row = round_power_of_two(max_dim);\n");
+		"	coords -= vec2(INTERPOLATION) / vec2(size);\n"
+		"	vec2 rcoords = fract(coords) * vec2(size);\n");
 	str_cat(&shader_buffer,
 		"	float mip = mip_map_level(coords * vec2(size) * mip_scale);\n"
 		"	uint mip0 = uint(floor(mip));\n"
 		"	uint mip1 = uint(ceil(mip));\n"
 		"	uint ignore;\n"
-		"	return mix(solve_mip(tiles_per_row, base_tile, mip0, rcoords, tile_out),\n"
-		"	           solve_mip(tiles_per_row, base_tile, mip1, rcoords, ignore), fract(mip));\n"
+		"	return solve_mip(base_tile, tiles_per_row, mip0, rcoords, tile_out);\n"
+		/* "	return mix(solve_mip(base_tile, tiles_per_row, mip0, rcoords, tile_out),\n" */
+		/* "	           solve_mip(base_tile, tiles_per_row, mip1, rcoords, ignore), fract(mip));\n" */
 		"}\n");
 
 	str_cat(&shader_buffer,

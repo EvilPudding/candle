@@ -386,7 +386,7 @@ static uint32_t round_power_of_two(uint32_t v)
 	return v + 1;
 }
 
-uint32_t texture_num_tiles_x(const texture_t *self)
+uint32_t texture_num_tiles_per_row(const texture_t *self)
 {
 	float max_dim = self->width > self->height ? self->width : self->height;
 	return round_power_of_two(ceil(((float)max_dim) / 128));
@@ -394,7 +394,7 @@ uint32_t texture_num_tiles_x(const texture_t *self)
 
 uint32_t texture_max_mips(texture_t *self)
 {
-	uint32_t num_tiles = texture_num_tiles_x(self);
+	uint32_t num_tiles = texture_num_tiles_per_row(self);
 	return log2(num_tiles);
 }
 
@@ -638,12 +638,27 @@ static void texture_tile_filename(texture_t *self, uint32_t mip,
 	         (int)(dot - path), path, mip, x, y, dot);
 }
 
+static
+void wrapped_read(const uint32_t *input, uint32_t size_in,
+                  uint32_t *output, uint32_t size_out, uint32_t i)
+{
+	while (size_out)
+	{
+		const uint32_t read_count = min(size_out, size_in - i);
+		memcpy(output, input + i, read_count * sizeof(uint32_t));
+		i = (i + read_count) % size_in;
+		output += read_count;
+		size_out -= read_count;
+	}
+}
+
 static int32_t texture_from_file_loader(texture_t *self)
 {
 	const uint32_t format = self->bufs[0].format;
 	const uint32_t type = self->bufs[0].type;
 	int32_t tiles_x, m, y, x;
 	uint32_t tile_i, i;
+	uint32_t *buffer;
 
 	if (self->target != GL_TEXTURE_2D)
 	{
@@ -674,16 +689,18 @@ static int32_t texture_from_file_loader(texture_t *self)
 
 	glBindTexture(self->target, 0); glerr();
 
-	glPixelStorei(GL_PACK_ROW_LENGTH, 129);
-	glPixelStorei(GL_PACK_SKIP_PIXELS, 0);
-	glPixelStorei(GL_PACK_SKIP_ROWS, 0);
-	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+	/* glPixelStorei(GL_PACK_ROW_LENGTH, 129); */
+	/* glPixelStorei(GL_PACK_SKIP_PIXELS, 0); */
+	/* glPixelStorei(GL_PACK_SKIP_ROWS, 0); */
 
 	texture_target(self, NULL, 0); glerr();
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0); glerr();
 
-	tiles_x = texture_num_tiles_x(self);
+	tiles_x = texture_num_tiles_per_row(self);
 	tile_i = self->bufs[0].indir_n;
+
+	buffer = malloc(sizeof(*buffer) * self->width * self->height);
+
 	for (m = 0; m < MAX_MIPS; m++)
 	{
 
@@ -694,15 +711,21 @@ static int32_t texture_from_file_loader(texture_t *self)
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); glerr();
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, self->frame_buffer[m]); glerr();
 		glReadBuffer(GL_COLOR_ATTACHMENT0); glerr();
+		glReadPixels(0, 0, self->sizes[m].x, self->sizes[m].y,
+		             format, GL_UNSIGNED_BYTE, buffer); glerr();
+
 		for (y = 0; y < tiles_x; y++) for (x = 0; x < tiles_x; x++)
 		{
+			int tty;
 			tex_tile_t *tilep;
-			int tx = x * 128;
-			int ty = y * 128;
-			int w, h, wx, wy, nh, nw;
+			int bx = x * 128;
+			int by = y * 128;
+			uint32_t i;
 
 			assert(tile_i < g_indir_w * g_indir_h);
 			tilep = &g_tiles[tile_i++];
+			for (i = 0; i < 129 * 129; ++i)
+				tilep->bytes[i] = 0xFF0000FF;
 
 			tilep->location.x = 0;
 			tilep->location.y = 0;
@@ -711,33 +734,47 @@ static int32_t texture_from_file_loader(texture_t *self)
 			tilep->bound = 0;
 			tilep->tex = self;
 
-			w = self->sizes[m].x - tx;
-			h = self->sizes[m].y - ty; 
+			if (   self->sizes[m].x > bx
+			    && self->sizes[m].y > by) {
+				/* for (tty = 0; tty < min(129, ((int)self->sizes[m].y) - by); ++tty) */
+				/* { */
+				/* 	memcpy(tilep->bytes + tty * 129, */
+				/* 		   buffer + (by + tty) * self->sizes[m].x + bx, */
+				/* 		   sizeof(uint32_t) * min(129, self->sizes[m].x - bx)); */
+				/* } */
+				/* DEBUG SVT */
+				/* for (tty = 0; tty < min(129, ((int)self->sizes[m].y) - by); ++tty) { */
+				/* 	uint32_t ttx; */
+				/* 	for (ttx = 0; ttx < min(129, ((int)self->sizes[m].x) - bx); ++ttx) */
+				/* 	{ */
+				/* 		if (tty == 0) */
+				/* 			tilep->bytes[tty * 129 + ttx] = 0xff00ff00; */
+				/* 		if (tty + 1 == min(129, ((int)self->sizes[m].y) - by)) */
+				/* 			tilep->bytes[tty * 129 + ttx] = 0xffff0000; */
 
-			if (w > 129) w = 129;
-			if (h > 129) h = 129;
-
-			if (self->sizes[m].x <= 0 || w <= 0) continue;
-			if (self->sizes[m].y <= 0 || h <= 0) continue;
-
-			glReadPixels(tx, ty, w, h, format, GL_UNSIGNED_BYTE, tilep->bytes); glerr();
-			if (h < 129)
-			{
-				nh = (128 - h) >= 2 ? 2 : 1;
-				wy = (ty + h) % self->sizes[m].y;
-				glReadPixels(tx, wy, w, nh, format, GL_UNSIGNED_BYTE, tilep->bytes + h * 129); glerr();
+				/* 		if (ttx == 0) */
+				/* 			tilep->bytes[tty * 129 + ttx] = 0xff00ff00; */
+				/* 		if (ttx + 1 == min(129, ((int)self->sizes[m].x) - bx)) */
+				/* 			tilep->bytes[tty * 129 + ttx] = 0xffff0000; */
+				/* 	} */
+				/* } */
+				/* wrapped read */
+				for (tty = 0; tty < 129; ++tty)
+				{
+					const uint32_t wrapped_y = (by + tty) % self->sizes[m].y;
+					wrapped_read(buffer + wrapped_y * self->sizes[m].x, self->sizes[m].x,
+					             tilep->bytes + tty * 129, 129, bx);
+				}
 			}
-			if (w < 129)
-			{
-				nw = 128 - w >= 2 ? 2 : 1;
-				wx = (tx + w) % self->sizes[m].x;
-				glReadPixels(wx, ty, nw, h, format, GL_UNSIGNED_BYTE, tilep->bytes + w); glerr();
-			}
-			if (w < 129 && h < 129)
-			{
-				glReadPixels(wx, wy, nw, nh, format, GL_UNSIGNED_BYTE,
-				             tilep->bytes + w + h * 129); glerr();
-			}
+			/* DEBUG SVT */
+			/* for (tty = 0; tty < 129; ++tty) { */
+			/* 	uint32_t ttx; */
+			/* 	for (ttx = 0; ttx < 129; ++ttx) { */
+			/* 		if (((tty + ttx) & 1) && ( tty + by < 3 || tty >= (((int)self->sizes[m].y) - by - 3) */
+			/* 								|| ttx + bx < 3 || ttx >= (((int)self->sizes[m].x) - bx - 3))) */
+			/* 			tilep->bytes[tty * 129 + ttx] = 0xffff00ff; */
+			/* 	} */
+			/* } */
 			tilep->loaded = true;
 			tilep->loading = false;
 
@@ -762,6 +799,7 @@ static int32_t texture_from_file_loader(texture_t *self)
 		if (tiles_x > 1)
 			tiles_x = tiles_x / 2;
 	}
+	free(buffer);
 	glPixelStorei(GL_PACK_ROW_LENGTH, 0);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
@@ -1038,7 +1076,7 @@ static void texture_update_indir_info(texture_t *self)
 	self->mipmaped = true;
 	self->interpolate = true;
 
-	tiles_x = texture_num_tiles_x(self);
+	tiles_x = texture_num_tiles_per_row(self);
 	for (m = 0; m < MAX_MIPS; m++)
 	{
 		self->bufs[0].num_tiles[m] = tiles_x;
@@ -1067,7 +1105,7 @@ static void texture_update_indir_info(texture_t *self)
 			g_indir_n++;
 			assert(g_indir_n < g_indir_w * g_indir_h);
 
-			for (i = 0; i < 129 * 129; i++)
+			for (i = 0; i < sizeof(tilep->bytes) / sizeof(tilep->bytes[0]); i++)
 			{
 				tilep->bytes[i] = 0xFFFF8080;
 			}
@@ -1272,7 +1310,7 @@ static void texture_disk_cacher(texture_t *self, uint32_t mip,
 	assert(y < self->bufs[0].num_tiles[mip]);
 
 	tile_i = self->bufs[0].indir_n;
-	tiles_x = texture_num_tiles_x(self);
+	tiles_x = texture_num_tiles_per_row(self);
 	printf("cache not exists %s %d\n", buffer, tiles_x);
 	for (m = 0; m < MAX_MIPS; m++)
 	{

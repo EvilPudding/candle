@@ -165,8 +165,9 @@ typedef struct
 {
 	vec2_t coord;
 
-	uint32_t tile;
 	vec2_t size;
+	uint32_t tile;
+	uint32_t tiles_per_row;
 	vec4_t result;
 
 	resource_handle_t source;
@@ -205,6 +206,7 @@ static bool_t _texture_load(vicall_t *call, _mat_sampler_t *texid,
 	}
 	texid->tile = texid->texture->bufs[0].indir_n;
 	texid->size = vec2(texid->texture->width, texid->texture->height);
+	texid->tiles_per_row = texture_num_tiles_per_row(texid->texture);
 
 	return true;
 }
@@ -811,10 +813,10 @@ void material_generate_func(vifunc_t *func, char **str)
 		str_cat(str,
 "	uint tile_out;\n"
 "#ifdef QUERY_PASS\n"
-"	arg_out.result = textureSVT(uvec2(arg_in.size), uint(arg_in.tile), arg_in.coord, tile_out, 0.1);\n"
+"	arg_out.result = textureSVT(uvec2(arg_in.size), uint(arg_in.tile), uint(arg_in.tiles_per_row), arg_in.coord, tile_out, 0.1);\n"
 "	tile_array[tile_num++] = tile_out;\n"
 "#else\n"
-"	arg_out.result = textureSVT(uvec2(arg_in.size), uint(arg_in.tile), arg_in.coord, tile_out, 1.0);\n"
+"	arg_out.result = textureSVT(uvec2(arg_in.size), uint(arg_in.tile), uint(arg_in.tiles_per_row), arg_in.coord, tile_out, 1.0);\n"
 "#endif\n"
 		);
 	}
@@ -1688,11 +1690,11 @@ void materials_init_vil()
 	tprev = vifunc_new(ctx, "_tex_previewer",
 	                             (vifunc_gui_cb)_tex_previewer_gui, 0, false);
 
-	ttex = vifunc_new(ctx, "texture", NULL,
-	                            sizeof(_mat_sampler_t), false);
+	ttex = vifunc_new(ctx, "texture", NULL, sizeof(_mat_sampler_t), false);
 		vicall_new(ttex, tprev, "preview", vec2(100, 10), 0, V_IN);
 		vicall_new(ttex, v2, "coord", vec2(100, 10), offsetof(_mat_sampler_t, coord), V_IN);
 		vicall_new(ttex, tint, "tile", vec2(100, 10), offsetof(_mat_sampler_t, tile), V_IN | V_HID);
+		vicall_new(ttex, tint, "tiles_per_row", vec2(100, 10), offsetof(_mat_sampler_t, tiles_per_row), V_IN | V_HID);
 		vicall_new(ttex, v2, "size", vec2(100, 10), offsetof(_mat_sampler_t, size), V_IN | V_HID);
 		vicall_new(ttex, v4, "result", vec2(300, 10), offsetof(_mat_sampler_t, result), V_OUT);
 	ttex->builtin_load_call = (vicall_load_cb)_texture_load;
@@ -1856,6 +1858,7 @@ void mat1t(mat_t *self, uint32_t ref, texture_t *value)
 	sampler.texture = value;
 	sampler.size.x = value->width;
 	sampler.size.y = value->height;
+	sampler.tiles_per_row = texture_num_tiles_per_row(value);
 	sampler.tile = value->bufs[0].indir_n;
 	vicall_set_arg(self->call, ref, &sampler);
 }
