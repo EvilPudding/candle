@@ -1521,7 +1521,7 @@ void renderer_destroy(renderer_t *self)
 
 void renderer_default_pipeline_config(renderer_t *self)
 {
-	renderer_default_pipeline(self, 1.0f, 1.0f, 1.0f, 0.5f, true, true, true,
+	renderer_default_pipeline(self, 1.0f, 1.0f, 1.0f, 0.8f, true, true, true,
 	                          true, true);
 }
 
