@@ -144,11 +144,6 @@ void c_window_toggle_fullscreen(c_window_t *self)
 		NULL, (c_t*)self);
 }
 
-int c_window_created(c_window_t *self)
-{
-	return CONTINUE;
-}
-
 c_window_t *c_window_new(int width, int height)
 {
 	c_window_t *self = component_new(ct_window);
@@ -267,7 +262,6 @@ void ct_window(ct_t *self)
 	ct_init(self, "window", sizeof(c_window_t));
 	ct_set_init(self, (init_cb)c_window_init);
 
-	ct_add_listener(self, ENTITY, 0, ref("entity_created"), c_window_created);
 	ct_add_listener(self, WORLD, 5, ref("world_draw"), c_window_draw);
 	ct_add_listener(self, WORLD, 5, ref("world_draw_end"), c_window_draw_end);
 
