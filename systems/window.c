@@ -118,27 +118,22 @@ void c_window_init(c_window_t *self)
 
 int c_window_toggle_fullscreen_gl(c_window_t *self)
 {
-	/* sdl_DisplayMode dm; */
-	/* window_resize_data wdata; */
-
-	/* self->fullscreen = !self->fullscreen; */
-
-	/* if(sdl_GetDesktopDisplayMode(0, &dm) != 0) */
-	/* { */
-	/* 	sdl_Log("sdl_GetDesktopDisplayMode failed: %s", sdl_GetError()); */
-	/* 	return 1; */
-	/* } */
-	/* self->width = dm.w; */
-	/* self->height = dm.h; */
-
-	/* wdata.width = self->width; */
-	/* wdata.height = self->height; */
-	/* entity_signal(entity_null, sig("window_resize"), &wdata, NULL); */
-
-	/* sdl_SetWindowSize(self->window, self->width, self->height); */
-
-	/* sdl_SetWindowFullscreen(self->window, */
-	/* 	self->fullscreen?sdl_WINDOW_FULLSCREEN_DESKTOP:0); */
+	self->fullscreen = !self->fullscreen;
+	if (glfwGetWindowMonitor(self->window))
+	{
+		glfwSetWindowMonitor(self->window, NULL, 0, 0,
+		                     window_width, window_height, 0);
+	}
+	else
+	{
+		GLFWmonitor *monitor = glfwGetPrimaryMonitor();
+		if (monitor)
+		{
+			const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+			glfwSetWindowMonitor(self->window, monitor, 0, 0,
+			                     mode->width, mode->height, mode->refreshRate);
+		}
+	}
 
 	return 1;
 }
