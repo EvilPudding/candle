@@ -3007,11 +3007,6 @@ static vec3_t mesh_support(mesh_t *self, const vec3_t dir)
 	return vecN_xyz(mesh_farthest(self, dir)->pos);
 }
 
-float mesh_get_margin(const mesh_t *self)
-{
-	return 0.001f; /* FIXME */
-}
-
 typedef struct
 {
 	mesh_t *output;

@@ -367,7 +367,6 @@ vecN_t mesh_get_selection_center(mesh_t *self);
 float mesh_get_selection_radius(mesh_t *self, vecN_t center);
 
 vertex_t *mesh_farthest(mesh_t *self, const vec3_t dir);
-float mesh_get_margin(const mesh_t *self);
 
 /* COLLISIONS */
 int mesh_gjk_intersection(mesh_t *self, mesh_t *other);
