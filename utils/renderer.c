@@ -706,11 +706,8 @@ void renderer_default_pipeline(renderer_t *self,
 	}
 
 	/* renderer_add_pass(self, "sea", "sea", ref("quad"), 0, light, */
-	/* 		NULL, 0, ~0, */
-	/* 	(bind_t[]){ */
-	/* 		{TEX, "gbuffer", .buffer = gbuffer}, */
-	/* 		{NONE} */
-	/* 	} */
+	/* 		NULL, 0, ~0, 1, */
+	/* 		opt_tex("gbuffer", gbuffer, NULL) */
 	/* ); */
 
 	if (transparency)
