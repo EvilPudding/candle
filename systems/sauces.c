@@ -275,23 +275,10 @@ bail:
 
 int c_sauces_component_menu(c_sauces_t *self, void *ctx)
 {
-	/* if(nk_tree_push(ctx, NK_TREE_TAB, "Textures", NK_MINIMIZED)) */
-	/* { */
-	/* 	khiter_t i; */
-	/* 	for(i = kh_begin(self->textures); i != kh_end(self->textures); ++i) */
-	/* 	{ */
-	/* 		if(!kh_exist(self->textures, i)) continue; */
-	/* 		resource_t *sauce = &kh_value(self->textures, i); */
-	/* 		if(sauce->data) */
-	/* 		{ */
-	/* 			if(nk_button_label(ctx, sauce->name)) */
-	/* 			{ */
-	/* 				c_editmode_open_texture(c_editmode(self), sauce->data); */
-	/* 			} */
-	/* 		} */
-	/* 	} */
-	/* 	nk_tree_pop(ctx); */
-	/* } */
+	if(nk_tree_push(ctx, NK_TREE_TAB, "Materials", NK_MINIMIZED))
+	{
+		nk_tree_pop(ctx);
+	}
 	return 1;
 }
 
