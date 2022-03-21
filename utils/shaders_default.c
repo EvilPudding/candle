@@ -921,16 +921,15 @@ void shaders_candle_common()
 
 
 	str_cat(&shader_buffer,
-		"float lookup(vec3 coord)\n"
+		"float lookup(vec3 coord, float bias)\n"
 		"{\n"
-		"	/* float dist = length(coord); */\n"
 		"	float z;\n"
 		"	float dist = lookup_single(coord, z);\n"
-		"	return (dist > z - 0.08) ? 1.0 : 0.0;\n"
+		"	return (dist > z - bias) ? 1.0 : 0.0;\n"
 		"}\n");
 
 	str_cat(&shader_buffer,
-		"float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, float depth)\n"
+		"float get_shadow(vec3 vec, float point_to_light, float dist_to_eye, vec3 normal, float depth)\n"
 		"{\n"
 		"	vec3 taps[] = vec3[](\n"
 		"		vec3(0.068824, -0.326151,   0.3),\n"
@@ -957,22 +956,26 @@ void shaders_candle_common()
 	str_cat(&shader_buffer,
 		"	float z;\n"
 		"	float ocluder_to_light = lookup_single(-vec, z);\n"
-		"	if (ocluder_to_light > z - 0.08) return 0.0;\n"
+		"	float light_dist_to_plane = dot(vec, normal);\n"
+		"	vec2 light_to_plane = normalize(vec2(z, light_dist_to_plane));\n"
+		"	float bias = max(0.7 * (1.0 - dot(light_to_plane, vec2(0.0, 1.0))) + 0.06, 0.08);\n"
+		/* "	return bias;\n" */
+		"	if (ocluder_to_light > z - bias) return 0.0;\n"
 		"	ocluder_to_light = min(z, ocluder_to_light);\n"
 		"	float dither = dither_value();\n"
 		/* "	float dither = 1.0;\n" */
 		"	float shadow_len = min(0.3 * (point_to_light / ocluder_to_light - 1.0), 10.0);\n"
 		"	if(shadow_len > 0.001)\n"
-		"	{\n"
+		"	{\n");
+	str_cat(&shader_buffer,
 		"		vec3 normal = normalize(vec);\n"
 		"		vec3 tangent = cross(normal, vec3(0.0, 1.0, 0.0));\n"
-		"		vec3 bitangent = cross(normal, tangent);\n");
-	str_cat(&shader_buffer,
+		"		vec3 bitangent = cross(normal, tangent);\n"
 		"		float min_dist = 1.0;\n"
 		"		for (uint j = 0u; j < 19u; j++)\n"
 		"		{\n"
 		"			vec3 offset = taps[j] * (4.0/3.0) * dither * shadow_len;\n"
-		"			if(lookup(-vec + (offset.x * tangent + offset.y * bitangent)) > 0.5)\n"
+		"			if(lookup(-vec + (offset.x * tangent + offset.y * bitangent), bias) > 0.5)\n"
 		"			{\n"
 		"				min_dist = offset.z;\n"
 		"				break;\n"
@@ -1467,7 +1470,7 @@ void shaders_candle_volum()
 		"			bool in_light = Z >= z;\n");
 	str_cat(&shader_buffer,
 		"			in_light = inverted ? !in_light : in_light;\n"
-		"			color += in_light ? attenuation * (1.0f - dot(norm_dir, dif / len)) : 0.0;\n"
+		"			color += in_light ? attenuation * (1.0 - dot(norm_dir, dif / len)) : 0.0;\n"
 		"		}\n"
 		"		else if (passed)\n"
 		"		{\n"
@@ -2001,7 +2004,7 @@ void shaders_candle_marching()
 	str_cat(&shader_buffer,
 		"			pos0 = vec4(vertlist[I.x], 1.0);\n"
 		"			norm0 = isonormal(pos0.xyz);\n"
-		"			norm0 = (MV * vec4(norm0, 0.0f)).xyz;\n"
+		"			norm0 = (MV * vec4(norm0, 0.0)).xyz;\n"
 		"			pos0 = model * pos0;\n"
 		"			wpos0 = pos0.xyz;\n"
 		"			pos0 = camera(view) * pos0;\n"
@@ -2011,7 +2014,7 @@ void shaders_candle_marching()
 	str_cat(&shader_buffer,
 		"			pos1 = vec4(vertlist[I.y], 1.0);\n"
 		"			norm1 = isonormal(pos1.xyz);\n"
-		"			norm1 = (MV * vec4(norm1, 0.0f)).xyz;\n"
+		"			norm1 = (MV * vec4(norm1, 0.0)).xyz;\n"
 		"			pos1 = model * pos1;\n"
 		"			wpos1 = pos1.xyz;\n"
 		"			pos1 = camera(view) * pos1;\n"
@@ -2021,7 +2024,7 @@ void shaders_candle_marching()
 	str_cat(&shader_buffer,
 		"			pos2 = vec4(vertlist[I.z], 1.0);\n"
 		"			norm2 = isonormal(pos2.xyz);\n"
-		"			norm2 = (MV * vec4(norm2, 0.0f)).xyz;\n"
+		"			norm2 = (MV * vec4(norm2, 0.0)).xyz;\n"
 		"			pos2 = model * pos2;\n"
 		"			wpos2 = pos2.xyz;\n"
 		"			pos2 = camera(view) * pos2;\n"
@@ -2095,8 +2098,7 @@ void shaders_candle_pbr()
 		"	float depth = textureLod(gbuffer.depth, pp, 0.0).r;\n"
 		"	vec3 c_pos = get_position(gbuffer.depth, pp);\n"
 		"	if(light(radius) > 0.0 && depth > gl_FragCoord.z) discard;\n"
-		"	vec2 normal = texelFetch(gbuffer.nn, fc, 0).rg;\n"
-		"	vec3 c_nor = decode_normal(normal);\n"
+		"	vec3 c_nor = decode_normal(texelFetch(gbuffer.nn, fc, 0).rg);\n"
 		"	vec3 w_nor = (camera(model) * vec4(c_nor, 0.0)).xyz;\n"
 		"	vec3 w_pos = (camera(model) * vec4(c_pos, 1.0)).xyz;\n"
 		"	vec3 metal_rough_subsurf = texelFetch(gbuffer.mrs, fc, 0).rgb;\n");
@@ -2120,7 +2122,8 @@ void shaders_candle_pbr()
 		"		vec3 shad = vec3(0.0);\n"
 		"		{\n"
 		"			float z;\n"
-		"			sd = get_shadow(w_light_dir, point_to_light, dist_to_eye, depth);\n"
+		"			sd = get_shadow(w_light_dir, point_to_light, dist_to_eye, w_nor, depth);\n"
+		/* "			FragColor = vec4(vec3(sd), 1.0);return;\n" */
 		"			shad = vec3(sd);\n"
 		"			if (opaque_pass)\n"
 		"			{\n"
