@@ -822,7 +822,8 @@ void shaders_candle_common()
 		"	vec3 info = texelFetch(g_indir, ivec2(tile_id % g_indir_w,\n"
 		"	                       tile_id / g_indir_w), 0).rgb * 255.0;\n"
 		"	info.xy = floor(round(info.xy) * 129.0);\n"
-		"	float actual_mip = round(info.b);\n"
+		"	float actual_mip = round(info.b);\n");
+	str_cat(&shader_buffer,
 		"	const vec2 g_cache_size = vec2(g_cache_w, g_cache_h);\n"
 		"	vec2 tex_coords = coords / exp2(actual_mip);\n"
 		"	vec2 tile_coords = mod(tex_coords, float(TILE_SIZE)) + INTERPOLATION;\n"
