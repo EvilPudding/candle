@@ -225,7 +225,7 @@ bool_t c_node_update_model(c_node_t *self)
 		c_node_update_model(parent_node);
 		self->ghost_inheritance = self->ghost || parent_node->ghost_inheritance;
 
-		self->unpack_inheritance = parent_node->unpacked ? c_entity(self) :
+		self->unpack_inheritance = (parent_node->unpacked || self->unpacked) ? c_entity(self) :
 			parent_node->unpack_inheritance;
 		if (self->ghost_inheritance)
 		{
