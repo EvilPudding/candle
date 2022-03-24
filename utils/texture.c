@@ -89,6 +89,7 @@ uint32_t get_sum_tiles(uint32_t level)
 	return 2 * (pow(2, level) - 1);
 }
 
+uint32_t g_probe_resolution = 1024;
 void svp_init()
 {
 	int32_t max;
@@ -105,11 +106,11 @@ void svp_init()
 	                         buffer_new("indir", false, 3));
 	g_tiles = malloc(g_indir_w * g_indir_h * sizeof(tex_tile_t));
 
-	g_probe_cache = texture_new_2D(1024 * 4, 1024 * 6, 0, 2,
+	g_probe_cache = texture_new_2D(g_probe_resolution * 4, g_probe_resolution * 6, 0, 2,
 		buffer_new("depth", false, -1),
 		buffer_new("color", false, 4));
 
-	g_max_probe_levels = log2(1024 / g_min_shadow_tile) + 1;
+	g_max_probe_levels = log2(g_probe_resolution / g_min_shadow_tile) + 1;
 	g_num_shadows = get_sum_tiles(g_max_probe_levels);
 	g_probe_tiles = malloc(g_num_shadows * sizeof(g_probe_tiles));
 	for (t = 0; t < g_num_shadows; t++)
@@ -136,7 +137,7 @@ uint32_t get_level_y(uint32_t level)
 
 uint32_t get_level_size(uint32_t level)
 {
-	return (1024 / pow(2, level));
+	return (g_probe_resolution / pow(2, level));
 }
 
 probe_tile_t get_free_tile(uint32_t level, uint32_t *result_level)
