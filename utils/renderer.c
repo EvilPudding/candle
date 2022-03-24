@@ -1080,7 +1080,7 @@ renderer_t *renderer_new(float resolution)
 			self->glvars[f].model = mat4();
 	}
 	self->proj_near = 0.1f;
-	self->proj_far = 1000.0f;
+	self->proj_far = 10000.0f;
 	self->proj_fov = M_PI / 2.0f;
 
 	self->resolution = resolution;

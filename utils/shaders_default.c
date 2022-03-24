@@ -851,7 +851,7 @@ void shaders_candle_common()
 
 	str_cat(&shader_buffer,
 		"#define NEAR 0.1\n"
-		"#define FAR 1000.0\n"
+		"#define FAR 10000.0\n"
 		"float linearize(float depth)\n"
 		"{\n"
 		"    return (2.0 * NEAR * FAR) / ((FAR + NEAR) - (2.0 * depth - 1.0) * (FAR - NEAR));\n"
