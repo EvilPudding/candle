@@ -461,7 +461,6 @@ void c_editmode_init(c_editmode_t *self)
 {
 	self->spawn_pos = vec2(10, 10);
 	self->tool = -1;
-	self->mode = EDIT_OBJECT;
 	self->context = c_entity(self);
 	c_node(self)->unpacked = 1;
 
@@ -487,11 +486,6 @@ void c_editmode_init(c_editmode_t *self)
 		/* g_sel_mat->albedo.color = vec4(0, 0.1, 0.4, 1); */
 		mat4f(g_sel_mat, ref("albedo.color"), vec4(0.0, 0.0, 0.0, 0.0));
 	}
-}
-
-int32_t c_editmode_bind_mode(pass_t *pass, c_editmode_t *self)
-{
-	return self->mode;
 }
 
 vec2_t c_editmode_bind_over(pass_t *pass, c_editmode_t *self)
@@ -567,13 +561,8 @@ static void editmode_highlight_shader()
 		"uniform vec2 sel_id;\n"
 		"uniform vec2 over_poly_id;\n"
 		"uniform vec2 context_id;\n"
-		"uniform int mode;\n"
 		"uniform vec3 context_pos;\n"
 		"uniform float context_phase;\n"
-		"#define EDIT_VERT	0\n"
-		"#define EDIT_EDGE	1\n"
-		"#define EDIT_FACE	2\n"
-		"#define EDIT_OBJECT	3\n"
 		"const vec2 zero = vec2(0.003922, 0.000000);\n");
 
 	str_cat(&shader_buffer,
@@ -604,14 +593,11 @@ static void editmode_highlight_shader()
 		"	vec3 final = vec3(0.0);\n"
 		"	if(is_equal(over_id, c))\n"
 		"	{\n"
-		"		if(mode != EDIT_OBJECT)\n"
+		"		if(is_equal(over_id, context_id) && is_equal(over_poly_id, c2))\n"
 		"		{\n"
 		"			final += over_poly_color;\n"
 		"		}\n"
-		"		else\n"
-		"		{\n"
-		"			final += over_color;\n"
-		"		}\n"
+		"		final += over_color;\n"
 		"	}\n"
 		"	FragColor = vec4(final, 1.0);\n"
 		"}\n");
@@ -628,7 +614,6 @@ static void editmode_border_shader()
 	str_cat(&shader_buffer,
 		"#include \"candle:common.glsl\"\n"
 		"layout (location = 0) out vec4 FragColor;\n"
-		"uniform bool horizontal;\n"
 		"uniform vec2 sel_id;\n"
 		"float filtered(vec2 c, vec2 fil)\n"
 		"{\n"
@@ -649,86 +634,43 @@ static void editmode_border_shader()
 		"BUFFER {\n"
 		"	sampler2D depth;\n"
 		"	sampler2D ids;\n"
-		"} sbuffer;\n"
-		"BUFFER {\n"
-		"	sampler2D color;\n"
-		"} tmp;\n");
+		"} sbuffer;\n");
 
 	str_cat(&shader_buffer,
-		"void pixel_value(ivec2 coord, int offset, inout float accum_value, inout float accum_depth)\n"
+		"void samp(ivec2 coord, inout float accum_value, inout float accum_depth)\n"
 		"{\n"
-		"	const float weight[6] = float[] (0.382925, 0.24173, 0.060598, 0.005977, 0.000229, 0.000003);\n"
 		"	vec2 t = texelFetch(sbuffer.ids, coord, 0).rg;\n"
-		"	float value = is_equal(sel_id, t) ? weight[offset] : 0.0;\n"
-		"	accum_value += value;\n"
-		"	if (value > 0.0)\n"
-		"	{\n"
+		"	float value = is_equal(sel_id, t) ? 1.0 : 0.0;\n"
+		"	accum_value = max(accum_value, value);\n"
+		"	if (value > 0.5)\n"
 		"		accum_depth = min(texelFetch(sbuffer.depth, coord, 0).r, accum_depth);\n"
-		"	}\n"
 		"}\n"
 		);
 
 	str_cat(&shader_buffer,
-		"void pixel_value2(ivec2 coord, int offset, inout float accum_value, inout float accum_depth)\n"
-		"{\n"
-		"	const float weight[6] = float[] (0.382925, 0.24173, 0.060598, 0.005977, 0.000229, 0.000003);\n"
-		"	vec2 tex = texelFetch(tmp.color, coord, 0).rg;\n"
-		"	float depth = tex.g;\n"
-		"	float value = tex.r * weight[offset];\n"
-		"	accum_value += value;\n"
-		"	if (value > 0.0)\n"
-		"	{\n"
-		"		accum_depth = min(depth, accum_depth);\n"
-		"	}\n"
-		"}\n"
-		);
-
-	str_cat(&shader_buffer,
-		"void accum_horiz(ivec2 tc, float center_value)\n"
-		"{\n"
-		"	float accum_value = center_value * 2.0, accum_depth = 2.0;\n"
-		"	for(int i = 1; i < 6; ++i)\n"
-		"	{\n"
-		"		float value, depth;\n"
-		"		ivec2 off = ivec2(i, 0);\n"
-		"		pixel_value(tc + off, i, accum_value, accum_depth);\n"
-		"		pixel_value(tc - off, i, accum_value, accum_depth);\n"
-		"	}\n"
-		"	FragColor = vec4(accum_value, accum_depth, 0.0, 0.0);\n"
-		"}\n");
-
-	str_cat(&shader_buffer,
-		"void accum_vertical(ivec2 tc)\n"
+		"void accum_horiz(ivec2 tc, float center_value, float center_depth)\n"
 		"{\n"
 		"	const vec3 color = vec3(0.8, 0.7, 0.2);\n"
-		"	float accum_value = 0.0, accum_depth = 0.0;\n"
-		"	pixel_value2(tc, 0, accum_value, accum_depth);\n"
-		"	for(int i = 1; i < 6; ++i)\n"
-		"	{\n"
-		"		ivec2 off = ivec2(0, i);\n"
-		"		pixel_value2(tc + off, i, accum_value, accum_depth);\n"
-		"		pixel_value2(tc - off, i, accum_value, accum_depth);\n"
-		"	}\n"
-		"	float depth = texelFetch(sbuffer.depth, tc, 0).r;\n"
-		"	FragColor = vec4((depth > accum_depth ? color : 1.0 - color) * 2.0,\n"
-		"                    accum_value);\n"
+		"	float accum_value = center_value, accum_depth = 2.0;\n"
+		"	samp(tc + ivec2(3, 0), accum_value, accum_depth);\n"
+		"	samp(tc + ivec2(-3, 0), accum_value, accum_depth);\n"
+		"	samp(tc + ivec2(0, 3), accum_value, accum_depth);\n"
+		"	samp(tc + ivec2(0, -3), accum_value, accum_depth);\n"
+		"	if(accum_value < 0.5) discard;\n"
+		"	FragColor = vec4(color, center_depth > accum_depth || dither_value() > 0.8 ? 1.0 : 0.0);\n"
 		"}\n");
 
 	str_cat(&shader_buffer,
 		"void main(void)\n"
 		"{\n"
-		"	ivec2 tc = ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y));\n"
-		"	float center_value = 0., center_depth = 20.;\n"
-		"	pixel_value(tc, 0, center_value, center_depth);\n"
 		"	if(sel_id.x <= 0.0 && sel_id.y <= 0.0) discard;\n"
-		"	if(horizontal)\n"
-		"	{\n"
-		"		accum_horiz(tc, center_value);\n"
-		"	}\n"
-		"	else if(center_value < 0.1)\n"
-		"	{\n"
-		"		accum_vertical(tc);\n"
-		"	}\n"
+		"	ivec2 tc = ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y));\n"
+		"	float center_value = 0., center_depth = 1.;\n"
+		"	samp(tc, center_value, center_depth);\n"
+		"	float depth = texelFetch(sbuffer.depth, tc, 0).r;\n"
+		"	if(depth < linearize(0.11)) discard;\n"
+		"	if(center_value > 0.5) discard;\n"
+		"	accum_horiz(tc, center_value, depth);\n"
 		"}\n");
 
 	shader_add_source("editmode:border.glsl", shader_buffer,
@@ -747,10 +689,6 @@ static void editmode_context_shader()
 		"uniform vec2 context_id;\n"
 		"uniform vec3 context_pos;\n"
 		"uniform float context_phase;\n"
-		"#define EDIT_VERT	0\n"
-		"#define EDIT_EDGE	1\n"
-		"#define EDIT_FACE	2\n"
-		"#define EDIT_OBJECT	3\n"
 		"const vec2 zero = vec2(0.003922, 0.000000);\n"
 		"BUFFER {\n"
 		"	sampler2D ids;\n"
@@ -810,6 +748,8 @@ static void editmode_context_shader()
 		"	if (id.x == 0.0 && id.y == 0.0)\n"
 		"	{\n"
 		"		outside_context(w_pos);\n"
+		"	} else {\n"
+		"		discard;\n"
 		"	}\n"
 		"}\n");
 
@@ -826,10 +766,6 @@ static void editmode_tool_rotation_shader()
 		"#include \"candle:common.glsl\"\n"
 		"layout (location = 0) out vec4 FragColor;\n"
 		"uniform int mode;\n"
-		"#define EDIT_VERT	0\n"
-		"#define EDIT_EDGE	1\n"
-		"#define EDIT_FACE	2\n"
-		"#define EDIT_OBJECT	3\n"
 		"uniform vec2 mouse_pos;\n"
 		"uniform vec3 selected_pos;\n"
 		"uniform float start_radius;\n"
@@ -915,8 +851,8 @@ unsigned int renderer_geom_at_pixel(renderer_t *self, int x, int y,
 
 	res = texture_get_pixel(tex, 0, x * self->resolution, y * self->resolution, depth);
 	res >>= 16;
-	res &= 0xFF;
-	result = res - 1;
+	res &= 0xFFFF;
+	result = res;
 	return result;
 }
 
@@ -931,7 +867,7 @@ entity_t renderer_entity_at_pixel(renderer_t *self, int x, int y,
 	if(!tex) return entity_null;
 
 	pos = texture_get_pixel(tex, 0, x * self->resolution, y * self->resolution, depth);
-	pos &= 0xFF;
+	pos &= 0xFFFF;
 
 	cast->pos = pos;
 	cast->uid = g_ecm->entities_info[pos].uid;
@@ -990,12 +926,11 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	);
 
 	renderer_add_pass(renderer, "context", "editmode:context", ref("quad"),
-			0, renderer_tex(renderer, ref("final")), NULL, 0, ~0, 10,
+			0, renderer_tex(renderer, ref("final")), NULL, 0, ~0, 9,
 			opt_tex("gbuffer", gbuffer, NULL),
 			opt_tex("sbuffer", selectable, NULL),
 			opt_tex("ssao", renderer_tex(renderer, ref("ssao")), NULL),
 			opt_vec2("over_id", Z2, (getter_cb)c_editmode_bind_over),
-			opt_vec2("over_poly_id", Z2, (getter_cb)c_editmode_bind_over_poly),
 			opt_vec2("context_id", Z2, (getter_cb)c_editmode_bind_context),
 			opt_vec2("sel_id", Z2, (getter_cb)c_editmode_bind_sel),
 			opt_vec3("context_pos", Z3, (getter_cb)c_editmode_bind_context_pos),
@@ -1004,9 +939,8 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 	);
 
 	renderer_add_pass(renderer, "highlight", "editmode:highlight", ref("quad"),
-			ADD, renderer_tex(renderer, ref("final")), NULL, 0, ~0, 7,
+			ADD, renderer_tex(renderer, ref("final")), NULL, 0, ~0, 6,
 			opt_tex("sbuffer", selectable, NULL),
-			opt_int("mode", 0, (getter_cb)c_editmode_bind_mode),
 			opt_vec2("over_id", Z2, (getter_cb)c_editmode_bind_over),
 			opt_vec2("over_poly_id", Z2, (getter_cb)c_editmode_bind_over_poly),
 			opt_vec2("context_id", Z2, (getter_cb)c_editmode_bind_context),
@@ -1014,28 +948,10 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 			opt_usrptr(self)
 	);
 
-
-	renderer_add_pass(renderer, "highlights_0", "editmode:border", ref("quad"),
-			0, tmp, NULL, 0, ~0, 8,
-			opt_clear_color(Z4, NULL),
+	renderer_add_pass(renderer, "border", "editmode:border", ref("quad"),
+			BLEND, renderer_tex(renderer, ref("final")), NULL, 0, ~0, 3,
 			opt_tex("sbuffer", selectable, NULL),
-			opt_int("mode", 0, (getter_cb)c_editmode_bind_mode),
-			opt_vec2("over_id", Z2, (getter_cb)c_editmode_bind_over),
-			opt_vec2("over_poly_id", Z2, (getter_cb)c_editmode_bind_over_poly),
 			opt_vec2("sel_id", Z2, (getter_cb)c_editmode_bind_sel),
-			opt_int("horizontal", 1, NULL),
-			opt_usrptr(self)
-	);
-
-	renderer_add_pass(renderer, "highlights_1", "editmode:border", ref("quad"),
-			ADD, renderer_tex(renderer, ref("final")), NULL, 0, ~0, 8,
-			opt_tex("sbuffer", selectable, NULL),
-			opt_tex("tmp", tmp, NULL),
-			opt_int("mode", 0, (getter_cb)c_editmode_bind_mode),
-			opt_vec2("over_id", Z2, (getter_cb)c_editmode_bind_over),
-			opt_vec2("over_poly_id", Z2, (getter_cb)c_editmode_bind_over_poly),
-			opt_vec2("sel_id", Z2, (getter_cb)c_editmode_bind_sel),
-			opt_int("horizontal", 0, NULL),
 			opt_usrptr(self)
 	);
 	renderer->ready = 0;
@@ -1099,26 +1015,29 @@ void c_editmode_update_mouse(c_editmode_t *self, float x, float y)
 	pos = c_camera_real_pos(cam, self->mouse_screen_pos.z, vec2(px, py));
 	self->mouse_position = pos;
 
-	if(self->mode == EDIT_OBJECT)
+	if(self->over != self->context)
 	{
 		if (self->over != result)
 		{
+			self->over = result;
 			draw_group_poke(ref("quad"));
 		}
-		self->over = result;
 	}
 	else
 	{
-		return;
-		if(entity_exists(self->selected) && result == self->selected)
+		if(entity_exists(self->context) && result == self->context)
 		{
 			uint32_t result = renderer_geom_at_pixel(renderer, x, y,
 					&self->mouse_screen_pos.z);
-			self->over_poly = result;
+			if (self->over_poly != result)
+			{
+				self->over_poly = result;
+				draw_group_poke(ref("quad"));
+			}
 		}
 		else
 		{
-			self->over_poly = 0;
+			self->over_poly = ~0;
 		}
 	}
 }
@@ -1524,26 +1443,27 @@ int32_t c_editmode_mouse_release(c_editmode_t *self, mouse_button_data *event)
 		/* 	self->last_edge = new_edge; */
 		/* 	mesh_unlock(mc->mesh); */
 		/* } */
-		if(!was_dragging && self->mode == EDIT_OBJECT)
+		if(!was_dragging)
 		{
 			entity_t result = renderer_entity_at_pixel(renderer,
 					event->x, event->y, NULL);
-			c_editmode_select(self, result);
+			if (result != self->context)
+				c_editmode_select(self, result);
 		}
-		else if(self->mode != EDIT_OBJECT)
-		{
-			mesh_t *mesh;
-			entity_t result = renderer_geom_at_pixel(renderer, event->x,
-						event->y, &self->mouse_screen_pos.z);
+		/* else if(self->mode != EDIT_OBJECT) */
+		/* { */
+		/* 	mesh_t *mesh; */
+		/* 	entity_t result = renderer_geom_at_pixel(renderer, event->x, */
+		/* 				event->y, &self->mouse_screen_pos.z); */
 
-			/* TODO: select one more poly */
-			self->selected_poly = result;
-			mesh = c_model(&self->selected)->mesh;
-			mesh_lock(mesh);
-			mesh_select(mesh, SEL_EDITING, MESH_FACE, self->selected_poly);
-			mesh_modified(mesh);
-			mesh_unlock(mesh);
-		}
+		/* 	/1* TODO: select one more poly *1/ */
+		/* 	self->selected_poly = result; */
+		/* 	mesh = c_model(&self->selected)->mesh; */
+		/* 	mesh_lock(mesh); */
+		/* 	mesh_select(mesh, SEL_EDITING, MESH_FACE, self->selected_poly); */
+		/* 	mesh_modified(mesh); */
+		/* 	mesh_unlock(mesh); */
+		/* } */
 	}
 
 	return CONTINUE;
@@ -1622,23 +1542,23 @@ int32_t c_editmode_key_up(c_editmode_t *self, candle_key_e *key)
 	{
 		case CANDLE_KEY_DELETE: c_editmode_selected_delete(self); break;
 		case 'c':
-			if(entity_exists(self->selected) && self->mode == EDIT_OBJECT)
-			{
-				c_model_t *cm = c_model(&self->selected);
-				self->mode = EDIT_FACE; 
-				if(cm && cm->mesh)
-				{
-					mesh_t *mesh = cm->mesh;
-					mesh_lock(mesh);
-					/* c_model_add_layer(cm, g_sel_mat, SEL_EDITING, 0.8); */
-					mesh_modified(mesh);
-					mesh_unlock(mesh);
-				}
-			}
-			else
-			{
-				self->mode = EDIT_OBJECT; 
-			}
+			/* if(entity_exists(self->selected)) */
+			/* { */
+			/* 	c_model_t *cm = c_model(&self->selected); */
+			/* 	self->mode = EDIT_FACE; */ 
+			/* 	if(cm && cm->mesh) */
+			/* 	{ */
+			/* 		mesh_t *mesh = cm->mesh; */
+			/* 		mesh_lock(mesh); */
+			/* 		/1* c_model_add_layer(cm, g_sel_mat, SEL_EDITING, 0.8); *1/ */
+			/* 		mesh_modified(mesh); */
+			/* 		mesh_unlock(mesh); */
+			/* 	} */
+			/* } */
+			/* else */
+			/* { */
+			/* 	self->mode = EDIT_OBJECT; */ 
+			/* } */
 			break;
 		case CANDLE_KEY_ESCAPE: c_editmode_select(self, SYS); break;
 		default: return CONTINUE;

@@ -103,7 +103,7 @@ void shaders_reg()
 	"	$model = M;\n"
 	"	$poly_color = vec4(COL, 1.0);\n"
 	"	$matid = uint(PROPS.x);\n"
-	"	$poly_id = uvec2(ID);\n"
+	"	$poly_id = uvec2(ID * 255.);\n"
 	"	$id = uvec2(PROPS.zw);\n"
 	"	$texcoord = UV;\n"
 	"	$vertex_position = pos.xyz;\n"

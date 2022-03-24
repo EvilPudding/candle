@@ -1116,7 +1116,6 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 	str_cat(&code,
 		"#elif defined(SELECT_PASS)\n"
 		"layout (location = 0) out vec4 IDS;\n"
-		"layout (location = 1) out vec2 GeomID;\n"
 		"#elif defined(SHADOW_PASS)\n"
 		"layout (location = 0) out vec4 Color;\n"
 		"#elif defined(CAUSTICS_PASS)\n"
@@ -1296,7 +1295,7 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 		"	TILES3 /= 255.0;\n"
 		"#elif defined(SELECT_PASS)\n"
 		"	IDS.xy = vec2(float(id.x) / 255.0, float(id.y) / 255.0);\n"
-		"	IDS.zw = vec2(poly_id);\n"
+		"	IDS.zw = vec2(float(poly_id.x) / 255.0, float(poly_id.y) / 255.0);\n"
 		"#elif defined(SHADOW_PASS)\n"
 		"#elif defined(CAUSTICS_PASS)\n");
 	if (output_type == ref("transparent"))

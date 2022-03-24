@@ -115,13 +115,6 @@ typedef struct c_editmode
 	int32_t selected_poly;
 	int32_t over_poly;
 
-	enum {
-		EDIT_VERT,
-		EDIT_EDGE,
-		EDIT_FACE,
-		EDIT_OBJECT
-	} mode;
-
 	struct {
 		ct_id_t ct;
 		int32_t distance;
