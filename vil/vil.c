@@ -1542,11 +1542,9 @@ float _vicall_gui(vicall_t *root, slot_t parent_slot,
 		arg->initialized = true;
 		(*modified) = true;
 	}
-	if (call == root)
+	if (call == root && call_h < 25.0f)
 	{
 		call_h = 25.0f;
-		if (call_h < 25.0f)
-			call_h = 25.0f;
 	}
 
 	return call_h;
