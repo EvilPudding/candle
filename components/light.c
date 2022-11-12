@@ -485,6 +485,7 @@ int c_light_menu(c_light_t *self, void *ctx)
 	{
 		float volum;
 		float rad = self->radius;
+		float caustics = self->caustics;
 		if (rad < 0.0f) rad = 0.0f;
 		volum = self->volumetric_intensity;
 		if(self->radius < 0.0f) self->radius = 0.01;
@@ -501,7 +502,12 @@ int c_light_menu(c_light_t *self, void *ctx)
 			self->volumetric_intensity = volum;
 			changed = true;
 		}
-
+		caustics = nk_check_label(ctx, "caustics", self->caustics);
+		if (caustics != self->caustics)
+		{
+			self->caustics = caustics;
+			changed = true;
+		}
 	}
 	else
 	{
