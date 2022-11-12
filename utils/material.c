@@ -1233,21 +1233,56 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 
 	if (output_type == ref("parallax"))
 	{
-		str_cat(&code, "/* HEIGHT PRECOMPUTATION */\n");
+		/* str_cat(&code, "/1* HEIGHT PRECOMPUTATION *1/\n"); */
+		/* vicall_iterate_dependencies(call, ref("height"), ~0, */
+		/*                             (vil_link_cb)material_generate_assignments, */
+		/*                             (vil_call_cb)material_generate_call, &code); */
+		/* str_cat(&code, "/1* --------------------- *1/\n"); */
+		/* str_cat(&code, */
+		/* 		"float scl = ((1.0 - pbr_in.height) * .05);\n" */
+		/* 		"vec3 flatnorm = ((normalize(view_space_in) * scl) * TM());\n" */
+		/* 		"flatnorm.y = -flatnorm.y;\n" */
+		/*         "tex_space_in += flatnorm.xy;\n" */
+		/*         "view_space_in += flatnorm;\n" */
+		/* 		"vec4 proj = camera(projection) * vec4(view_space_in, 1.0);\n" */
+		/* 		"gl_FragDepth = (proj.z / proj.w) * 0.5 + 0.5;\n" */
+		/*         ); */
+
 		vicall_iterate_dependencies(call, ref("height"), ~0,
 		                            (vil_link_cb)material_generate_assignments,
 		                            (vil_call_cb)material_generate_call, &code);
-		str_cat(&code, "/* --------------------- */\n");
 		str_cat(&code,
-				"float scl = ((1.0 - pbr_in.height) * .05);\n"
-				"vec3 newpoint = (normalize(view_space_in) * scl);\n"
-				"vec3 flatnorm = (newpoint * TM());\n"
-				"flatnorm.y = -flatnorm.y;\n"
-		        "tex_space_in += flatnorm.xy;\n"
-		        "view_space_in += flatnorm;\n"
-				"vec4 proj = camera(projection) * vec4(view_space_in, 1.0);\n"
-				"gl_FragDepth = (proj.z / proj.w) * 0.5 + 0.5;\n"
-		        );
+		"float scale = 0.05;\n"
+		"vec3 tex_space3 = vec3(tex_space_in, 0.0);\n"
+		"mat3 tm = TM();\n"
+		"vec3 flatnorm = normalize(view_space_in) * tm;\n"
+		"int iters = 32;\n"
+		"flatnorm *= ((scale / float(iters)) / flatnorm.z);\n"
+		"flatnorm.x = -flatnorm.x;\n"
+
+		"tex_space3 += flatnorm;\n"
+		"view_space_in.z -= scale / float(iters);\n"
+		"tex_space_in = tex_space3.xy;\n"
+"for(int i = 0; i < iters && tex_space3.z < scale * (1.0 - pbr_in.height); ++i)\n"
+"{\n");
+		vicall_iterate_dependencies(call, ref("height"), ~0,
+		                            (vil_link_cb)material_generate_assignments,
+		                            (vil_call_cb)material_generate_call, &code);
+		str_cat(&code,
+		"tex_space3 += flatnorm;\n"
+		"view_space_in.z -= scale / float(iters);\n"
+		"tex_space_in = tex_space3.xy;\n"
+"}\n");
+		str_cat(&code,
+		"vec4 proj = camera(projection) * vec4(view_space_in, 1.0);\n"
+		"gl_FragDepth = (proj.z / proj.w) * 0.5 + 0.5;\n"
+			   );
+		/* str_cat(&code, */
+		/* 	"	MRS.r = 0.;\n" */
+		/* 	"	MRS.g = 1.0;\n" */
+		/* 	"	MRS.b = 0.0;\n" */
+		/* 	"	Alb = vec4(vec3(pbr_in.height), 0.0);\n" */
+		/* 	"	Emi = pbr_in.emissive;return\n"); */
 	}
 
 	/* RUN BODY */
