@@ -32,43 +32,39 @@ void shaders_candle_final()
 		"uniform float ssao_power;\n");
 
 	str_cat(&shader_buffer,
+			"vec4 texture2D_bilinear(in sampler2D t, in ivec2 uv)\n"
+			"{\n"
+			"    ivec2 uvd = uv / 2;\n"
+			"    vec4 tl = texelFetch(t, uvd, 0);\n"
+			"    vec4 tr = texelFetch(t, uvd + ivec2(1, 0), 0);\n"
+			"    vec4 bl = texelFetch(t, uvd + ivec2(0, 1), 0);\n"
+			"    vec4 br = texelFetch(t, uvd + ivec2(1, 1), 0);\n");
+	str_cat(&shader_buffer,
+			"	float real = linearize(texelFetch(gbuffer.depth, uv, 0).r);\n"
+			"	float dtl = abs(linearize(texelFetch(gbuffer.depth, uvd * 2, 0).r) - real);\n"
+			"	float dtr = abs(linearize(texelFetch(gbuffer.depth, uvd * 2 + ivec2(2, 0), 0).r) - real);\n"
+			"	float dbl = abs(linearize(texelFetch(gbuffer.depth, uvd * 2 + ivec2(0, 2), 0).r) - real);\n"
+			"	float dbr = abs(linearize(texelFetch(gbuffer.depth, uvd * 2 + ivec2(2, 2), 0).r) - real);\n");
+	str_cat(&shader_buffer,
+			"	vec4 ntl = mix(tl, tr, clamp((dtl - dtr) * 10.0, 0.0, 1.0));\n"
+			"	vec4 ntr = mix(tr, tl, clamp((dtr - dtl) * 10.0, 0.0, 1.0));\n"
+			"	vec4 nbl = mix(bl, br, clamp((dbl - dbr) * 10.0, 0.0, 1.0));\n"
+			"	vec4 nbr = mix(br, bl, clamp((dbr - dbl) * 10.0, 0.0, 1.0));\n");
+	str_cat(&shader_buffer,
+			"    vec2 f = fract(vec2(uv) / 2.0);\n"
+			"    vec4 tA = mix(ntl, ntr, f.x);\n"
+			"    vec4 tB = mix(nbl, nbr, f.x);\n"
+			"    return mix(tA, tB, f.y);\n"
+			"}\n");
+	str_cat(&shader_buffer,
 		"vec4 upsample()\n"
 		"{\n"
 		"	ivec2 fc = ivec2(gl_FragCoord.xy);\n"
 		"	vec3 volumetric = vec3(0.0);\n"
-		"	float ssao_factor = 0.0;\n"
-		"	float totalWeight = 0.0;\n"
-		"	/* Select the closest downscaled pixels. */\n"
-		"	int xOffset = fc.x % 2 == 0 ? -1 : 1;\n"
-		"	int yOffset = fc.y % 2 == 0 ? -1 : 1;\n"
-		"	ivec2 offsets[] = ivec2[](\n"
-		"			ivec2(0, 0),\n"
-		"			ivec2(0, yOffset),\n"
-		"			ivec2(xOffset, 0),\n"
-		"			ivec2(xOffset, yOffset));\n"
-		"	float frag_depth = linearize(texelFetch(gbuffer.depth, fc, 0).r);\n"
-		"	ivec2 dfc = fc / 2;\n");
-
-	str_cat(&shader_buffer,
-		"	for (int i = 0; i < 4; i ++)\n"
-		"	{\n"
-		"		ivec2 coord = clamp(dfc + offsets[i], ivec2(0), ivec2(screen_size) / 2 - 1);\n"
-		"		vec3 vol = texelFetch(volum.color, coord, 0).rgb;\n"
-		"		float dep = linearize(texelFetch(gbuffer.depth, coord * 2, 0).r);\n"
-		"		float w = max(0.0, 1.0 - 0.5 * abs(dep - frag_depth));\n"
-		"		if (ssao_power > 0.05)\n"
-		"		{\n"
-		"			vec2 sampled = texelFetch(ssao.occlusion, coord, 0).rg;\n"
-		"			float downscaledSsao = sampled.r;\n"
-		"			ssao_factor += (1.0 - downscaledSsao) * w;\n"
-		"		}\n");
-	str_cat(&shader_buffer,
-		"		volumetric += vol * w;\n"
-		"		totalWeight += w;\n"
-		"	}\n"
-		"	const float epsilon = 0.0001;\n"
-		"	float factor = totalWeight + epsilon;\n"
-		"	return vec4(volumetric, (factor - ssao_factor * ssao_power)) / factor;\n"
+		"	float occlusion = 0.0;\n"
+		"	if (ssao_power > 0.05)\n"
+		"		occlusion += 1.0 - ((1.0 - texture2D_bilinear(ssao.occlusion, fc).r) * ssao_power);\n"
+		"	return vec4(volumetric, occlusion);\n"
 		"}\n");
 
 	str_cat(&shader_buffer,
@@ -187,12 +183,12 @@ void shaders_candle_sss()
 	str_cat(&shader_buffer,
 	"vec4 sssblur(vec2 tc, float power, sampler2D color_lit, sampler2D depth_tex,\n"
 	"		sampler2D props, sampler2D color, vec2 dir) {\n"
-	"	vec4 colorM = texture(color_lit, tc);\n"
-	"	float sssWidth = texture(props, tc).b;\n"
+	"	vec4 colorM = textureLod(color_lit, tc, 0.0);\n"
+	"	float sssWidth = textureLod(props, tc, 0.0).b;\n"
 	"	if (ceil(sssWidth) == 0.0) discard;\n"
 	"	float dist_to_projection = camera(projection)[1][1];\n"
-	"	float scale = dist_to_projection / linearize(texture(depth_tex, tc).r);\n"
-	"	vec4 surface_ = texture(color, tc);\n"
+	"	float scale = dist_to_projection / linearize(textureLod(depth_tex, tc, 0.0).r);\n"
+	"	vec4 surface_ = textureLod(color, tc, 0.0);\n"
 	"	vec3 surface = surface_.rgb * (surface_.a - 0.5) * 2.0 * power;\n");
 	str_cat(&shader_buffer,
 	"	vec2 stepscale = sssWidth * scale * dir;\n"
@@ -201,8 +197,8 @@ void shaders_candle_sss()
 	"	blurred.rgb *= surface * kernel[0].rgb + (1.0 - surface);\n"
 	"	for (int i = 1; i < 25; i++) {\n"
 	"		vec2 offset = tc + kernel[i].a * stepscale;\n"
-	"		vec4 color = texture(color_lit, offset);\n"
-	"		float sss_strength1 = ceil(texture(props, offset).b);\n"
+	"		vec4 color = textureLod(color_lit, offset, 0.0);\n"
+	"		float sss_strength1 = ceil(textureLod(props, offset, 0.0).b);\n"
 	"		color.rgb = mix(color.rgb, colorM.rgb, 1.0 - sss_strength1);\n"
 	"		blurred.rgb += kernel[i].rgb * surface * color.rgb;\n"
 	"	}\n"
@@ -239,7 +235,7 @@ void shaders_candle_ssao()
 
 	str_cat(&shader_buffer,
 		"#include \"candle:common.glsl\"\n"
-		"#define ITERS 4.0\n"
+		"#define ITERS 8.0\n"
 		"#define TAPS 7u\n"
 		"BUFFER {\n"
 		"	sampler2D depth;\n"
@@ -803,7 +799,7 @@ void shaders_candle_common()
 		"#define g_indir_w 128u\n"
 		"#define g_indir_h 128u\n"
 		"#define g_cache_w 64u\n"
-		"#define g_cache_h 32u\n"
+		"#define g_cache_h 64u\n"
 		"\n");
 	str_cat(&shader_buffer,
 		"vec4 solve_mip(uint base_tile, uint tiles_per_row, uint mip, vec2 coords,\n"
@@ -858,7 +854,7 @@ void shaders_candle_common()
 		"}\n"
 		"float unlinearize(float depth)\n"
 		"{\n"
-		"	return FAR * (1.0 - (NEAR / depth)) / (FAR - NEAR);\n"
+		"	return (FAR * (1.0 - (NEAR / depth))) / (FAR - NEAR);\n"
 		"}\n");
 
 	str_cat(&shader_buffer,
@@ -1337,13 +1333,13 @@ void shaders_candle_common()
 		"vec3 transmittance(vec3 surface_color, float translucency,\n"
 		"		float sssWidth, vec3 w_pos, vec3 w_nor)\n"
 		"{\n"
-		"	float scale = 8.25 * (1.0 - translucency) / sssWidth;\n"
-		"	vec3 shrinked_pos = w_pos - 0.005 * w_nor;\n"
+		"	float scale = (1.0 - translucency) / sssWidth;\n"
+		"	w_pos -= w_nor * 0.015;\n"
 		"	float d2;\n"
-		"	float d1 = lookup_single(shrinked_pos - obj_pos, d2);\n"
-		"	float thicc = scale * abs(d1 - d2);\n"
-		"	return transmittance_profile(surface_color, thicc)\n"
-		"		* clamp(0.3 + dot(shrinked_pos - obj_pos, w_nor), 0.0, 1.0);\n"
+		"	float d1 = lookup_single(w_pos - obj_pos, d2);\n"
+		"	float thicc = scale * (max(0.0, d2 - d1));\n"
+		"	vec3 profile = transmittance_profile(surface_color, thicc);\n"
+		"	return profile * clamp(0.1 + dot(w_pos - obj_pos, w_nor), 0.0, 1.0);\n"
 		"}\n");
 
 	str_cat(&shader_buffer,
@@ -2148,7 +2144,7 @@ void shaders_candle_pbr()
 		"        if (metal_rough_subsurf.b * subsurf_strength > 0.0) {"
 		"        color.rgb += light_color * attenuation\n"
 		"					* transmittance(dif.rgb, metal_rough_subsurf.b * 0.2,\n"
-		"						metal_rough_subsurf.b, w_pos, w_nor) * subsurf_strength;\n"
+		"						metal_rough_subsurf.b, w_pos, w_nor) * subsurf_strength * 0.5;\n"
 		"		  }\n"
 		"		}\n"
 		"	}\n"
