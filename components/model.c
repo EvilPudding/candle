@@ -177,6 +177,14 @@ static int tool_deform_gui(void *ctx, struct conf_deform *conf)
 	return 0;
 }
 
+static int tool_simplify_gui(void *ctx, struct conf_simplify *conf)
+{
+	nk_layout_row_dynamic(ctx, 25, 1);
+	nk_property_float(ctx, "#rate:", 0.f, &conf->rate, 1.f, 0.0001f, 0.01f);
+	nk_property_float(ctx, "#eps:", 0.f, &conf->eps, 10.f, 0.1, 0.05);
+	return 0;
+}
+
 static mesh_t *tool_circle_edit(mesh_t *state, struct conf_circle *conf)
 {
 	state = mesh_clone(state);
@@ -519,6 +527,15 @@ static mesh_t *tool_deform_edit(
 		mesh_unlock(state);
 	}
 
+	return state;
+}
+
+static mesh_t *tool_simplify_edit(
+		mesh_t *last, struct conf_simplify *new,
+		mesh_t *state, struct conf_simplify *old)
+{
+	state = mesh_clone(last);
+	simp_test(state, new->rate, new->eps);
 	return state;
 }
 
@@ -1037,6 +1054,7 @@ void ct_model(ct_t *self)
 	struct conf_spherize spherize_opts = {1, 1};
 	struct conf_subdivide subdivide_opts = {1};
 	struct conf_deform deform_opts = {0, VEC3i(0, 1, 0), "1"};
+	struct conf_simplify simplify_opts = {0.5f, 0.f};
 
 	ct_init(self, "model", sizeof(c_model_t));
 	ct_set_init(self, (init_cb)c_model_init);
@@ -1089,6 +1107,10 @@ void ct_model(ct_t *self)
 	add_tool("deform", (tool_gui_cb)tool_deform_gui,
 		(tool_edit_cb)tool_deform_edit, sizeof(struct conf_deform),
 		&deform_opts, 0);
+
+	add_tool("simmplify", (tool_gui_cb)tool_simplify_gui,
+		(tool_edit_cb)tool_simplify_edit, sizeof(struct conf_simplify),
+		&simplify_opts, 0);
 }
 
 c_model_t *c_model_new(mesh_t *mesh, mat_t *mat, bool_t cast_shadow, bool_t visible)

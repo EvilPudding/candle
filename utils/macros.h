@@ -20,6 +20,28 @@ typedef uint32_t bool_t;
 #define CAT(a,b) a##b
 #define CAT2(a,b) CAT(a,b)
 
+#if (defined _MSC_VER || defined __MINGW32__)
+# include <windows.h>
+# define CANDLE_PATH_MAX MAX_PATH
+#elif defined  __linux__
+# include <limits.h>
+# ifdef PATH_MAX
+#  define CANDLE_PATH_MAX PATH_MAX
+# endif
+#elif defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+# include <sys/param.h>
+# if defined(BSD)
+#  include <limits.h>
+#  ifdef PATH_MAX
+#   define CANDLE_PATH_MAX PATH_MAX
+#  endif
+# endif
+#endif
+
+#ifndef CANDLE_PATH_MAX
+#define CANDLE_PATH_MAX 4096
+#endif
+
 #ifndef EMSCRIPTEN
 #ifndef _MSC_VER
 /* __attribute__((always_inline)) */

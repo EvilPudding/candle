@@ -25,6 +25,11 @@ struct conf_deform
 	char deform_e[255];
 	int deform_s;
 };
+struct conf_simplify
+{
+	float rate;
+	float eps;
+};
 struct conf_spherize
 {
 	float scale;

@@ -676,7 +676,6 @@ void renderer_default_pipeline(renderer_t *self,
 			opt_int("opaque_pass", true, NULL),
 			opt_tex("gbuffer", gbuffer, NULL)
 	);
-
 	if (ssssss_power > 0.f)
 	{
 		renderer_add_pass(self, "sss_pass0", "candle:sss", ref("quad"),

@@ -578,7 +578,7 @@ nk_can_device_create(void)
 		"#define g_indir_w 128u\n"
 		"#define g_indir_h 128u\n"
 		"#define g_cache_w 64u\n"
-		"#define g_cache_h 32u\n"
+		"#define g_cache_h 64u\n"
 		"float mip_map_scalar(in vec2 texture_coordinate)\n"
 		"{\n"
 		"    vec2 dx_vtc = dFdx(texture_coordinate);\n"

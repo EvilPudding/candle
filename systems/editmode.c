@@ -880,7 +880,7 @@ static renderer_t *editmode_renderer_new(c_editmode_t *self)
 {
 	texture_t *tmp, *gbuffer, *query_mips, *selectable;
 	renderer_t *renderer = renderer_new(1.00f);
-	renderer_default_pipeline(renderer, 1.0f, 1.0f, 1.0f, 0.5f, true, true,
+	renderer_default_pipeline(renderer, 0.8f, 1.0f, 1.0f, 0.5f, true, true,
 	                          true, true, false);
 
 	editmode_highlight_shader();
@@ -1603,10 +1603,14 @@ int32_t c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 	}
 	w = tex->width;
 	h = tex->height;
-	/* if (w > 1000) */
+	if (h > 1000)
 	{
-		h = 300.0f * (h / w);
-		w = 300.0f;
+		h = 800.0f;
+		w = 800.0f * (w / h);
+		if (w > 800.0f) {
+			h = 800.0f * (h / w);
+			w = 800.0f;
+		}
 	}
 
 	res = nk_can_begin_titled(self->nk, buffer, title,
@@ -1635,10 +1639,10 @@ int32_t c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 		nk_value_int(self->nk, "dims: ", tex->bufs[tex->prev_id].dims);
 		if (nk_button_label(self->nk, "save"))
 		{
-			char *file = NULL;
+			char file[CANDLE_PATH_MAX];
 			printf("Saving texture.\n");
-			emit(ref("pick_file_save"), "png", &file);
-			if(file)
+			emit(ref("pick_file_save"), "png", file);
+			if(file[0])
 			{
 				int32_t res = texture_save(tex, tex->prev_id, file);
 				if(res)
@@ -1649,7 +1653,6 @@ int32_t c_editmode_texture_window(c_editmode_t *self, texture_t *tex)
 				{
 					printf("Texture failed to save.\n");
 				}
-				free(file);
 			}
 		}
 		im = nk_image_id(tex->bufs[tex->prev_id].id);
@@ -2093,21 +2096,26 @@ int32_t c_editmode_events_end(c_editmode_t *self)
 	return CONTINUE;
 }
 
-int32_t c_editmode_pick_load(c_editmode_t *self, const char *filter, char **output)
+int32_t c_editmode_pick_load(c_editmode_t *self, const char *filter, char *output)
 {
 	/* TODO: prompt for a path in nuklear */
+	output[0] = '\0';
 	printf("Warning: File picking only works with the filepicker module loaded. "
 	       "A gui alternative is planned but not implemented yet.\n");
-	*output = malloc(sizeof("unnamed"));
-	strcpy(*output, "unnamed");
 	return STOP;
 }
 
-int32_t c_editmode_pick_save(c_editmode_t *self, const char *filter, char **output)
+int32_t c_editmode_pick_save(c_editmode_t *self, const char *filter, char *output)
 {
 	/* TODO: prompt for a path in nuklear */
-	*output = malloc(sizeof("unnamed"));
-	strcpy(*output, "unnamed");
+	char ext[64];
+	char *separator;
+	strncpy(ext, filter, sizeof(ext));
+	ext[63] = '\0';
+	separator = strchr(ext, ';');
+	if (separator)
+		*separator = '\0';
+	sprintf(output, "unnamed.%s", ext);
 	return STOP;
 }
 

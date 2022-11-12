@@ -106,7 +106,9 @@ typedef struct edge /* Half edge */
 	int pair; /* edge_t id		for triangle meshes only */
 	int next; /* edge_t id								 */
 	int prev; /* edge_t id								 */
+#ifdef MESH4
 	int cell_pair; /* edge_t id		for tetrahedral meshes only */
+#endif
 
 	int tmp;
 
@@ -118,8 +120,10 @@ typedef struct edge /* Half edge */
 #define e_next(e, m) (m_edge(m, (e)->next))
 /* Returns the next edge_t* of edge:e in mesh:m */
 
+#ifdef MESH4
 #define e_cpair(e, m) (m_edge(m, (e)->cell_pair))
-/* Returns the selected pair edge_t* of edge:e in mesh:m */
+/* Returns the cell pair edge_t* of edge:e in mesh:m */
+#endif
 
 #define e_pair(e, m) (m_edge(m, (e)->pair))
 /* Returns the pair edge_t* of edge:e in mesh:m */
@@ -337,7 +341,8 @@ void mesh_translate_points(mesh_t *self, float percent, vecN_t offset,
 
 void mesh_triangulate(mesh_t *self);
 void mesh_invert_normals(mesh_t *self);
-int mesh_edge_rotate_to_unpaired(mesh_t *self, int edge_id);
+int mesh_edge_rotate_to_unpaired_id(mesh_t *self, int edge_id);
+edge_t *mesh_edge_rotate_to_unpaired(mesh_t *self, int edge_id);
 
 void mesh_add_quad(mesh_t *self,
 		int v0, vec3_t v0n, vec2_t v0t,
@@ -355,7 +360,7 @@ void mesh_faces_prealloc(mesh_t *self, int size);
 
 int mesh_update_unpaired_edges(mesh_t *self);
 int mesh_update_unpaired_faces(mesh_t *self);
-int mesh_vert_has_face(mesh_t *self, vertex_t *vert, int face_id);
+bool_t mesh_vert_has_face(mesh_t *self, vertex_t *vert, int face_id);
 
 void mesh_translate(mesh_t *self, vec3_t t);
 void mesh_rotate(mesh_t *self, float angle, int x, int y, int z);
@@ -372,5 +377,6 @@ vertex_t *mesh_farthest(mesh_t *self, const vec3_t dir);
 int mesh_gjk_intersection(mesh_t *self, mesh_t *other);
 
 void meshes_reg(void);
+int simp_test(mesh_t *mesh, float simp_rate, float dist_eps);
 
 #endif /* !MESH_H */

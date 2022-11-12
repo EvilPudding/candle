@@ -28,6 +28,30 @@ static void _mesh_clone(mesh_t *self, mesh_t *into);
 #define CHUNK_EDGES 20
 #define CHUNK_FACES 10
 
+void assert_mesh_closed(mesh_t *self)
+{
+	int i;
+	for(i = 0; i < vector_count(self->edges); i++)
+	{
+		edge_t *edge = m_edge(self, i);
+		if (edge)
+		{
+			assert(e_pair(edge, self));
+			assert(e_pair(edge, self) != e_prev(edge, self));
+			assert(e_next(edge, self));
+			assert(e_prev(edge, self));
+		}
+	}
+	for(i = 0; i < vector_count(self->verts); i++)
+	{
+		vertex_t *vert = m_vert(self, i);
+		if (vert)
+		{
+			assert(v_half(vert, self));
+		}
+	}
+}
+
 void mesh_ico(mesh_t *self, float size)
 {
 	float t;
@@ -204,7 +228,9 @@ static void edge_init(edge_t *self)
 	self->pair = -1;
 	self->next = -1;
 	self->prev = -1;
+#ifdef MESH4
 	self->cell_pair = -1;
+#endif
 
 	self->tmp = -1;
 
@@ -333,7 +359,7 @@ void mesh_update_smooth_normals(mesh_t *self, float smooth_max)
 		/* if(!v) continue; */
 
 		/* int start = mesh_vert_get_half(self, v); */
-		/* start = mesh_edge_rotate_to_unpaired(self, start); */
+		/* start = mesh_edge_rotate_to_unpaired_id(self, start); */
 
 		edge = m_edge(self, start);
 		if(!edge) continue;
@@ -624,7 +650,6 @@ int mesh_edge_cell_pair(mesh_t *self, edge_t *e)
 	}
 	return -1;
 }
-#endif
 
 int mesh_update_flips(mesh_t *self)
 {
@@ -691,6 +716,7 @@ int mesh_update_flips(mesh_t *self)
 
 	return 0;
 }
+#endif
 
 void mesh_unselect(mesh_t *self, int selection, geom_t geom, int id)
 {
@@ -1166,7 +1192,7 @@ void mesh_clear(mesh_t *self)
 	mesh_unlock(self);
 }
 
-int mesh_edge_rotate_to_unpaired(mesh_t *self, int edge_id)
+int mesh_edge_rotate_to_unpaired_id(mesh_t *self, int edge_id)
 {
 	int last_working, e;
 	edge_t *prev;
@@ -1190,25 +1216,40 @@ int mesh_edge_rotate_to_unpaired(mesh_t *self, int edge_id)
 	return last_working;
 }
 
-int mesh_vert_has_face(mesh_t *self, vertex_t *vert, int face_id)
+edge_t *mesh_edge_rotate_to_unpaired(mesh_t *self, int edge_id)
 {
-	int e;
-	int edge_id = mesh_edge_rotate_to_unpaired(self, vert->half);
-	edge_t *edge = m_edge(self, edge_id);
-	edge_t *pair = e_pair(edge, self);
-	if(!pair) return 0;
-	e = pair->next;
+	return m_edge(self, mesh_edge_rotate_to_unpaired_id(self, edge_id));
+}
 
-	for(; e != edge_id; e = pair->next)
+bool_t mesh_edge_iterate_around_vert(mesh_t *self, const edge_t *start,
+                                     edge_t **iter)
+{
+	edge_t *pair = e_pair(*iter, self);
+	if (!pair)
+		return false;
+	*iter = e_next(pair, self);
+	if (!*iter)
+		return false;
+	return *iter != start;
+}
+
+bool_t mesh_vert_has_face(mesh_t *self, vertex_t *vert, int face_id)
+{
+	edge_t *start, *iter;
+
+	iter = start = mesh_edge_rotate_to_unpaired(self, vert->half);
+
+	if(!start) return 0;
+
+	do
 	{
-		edge = m_edge(self, e);
-		if(!edge) return 0;
-		if(edge->face == face_id) return 1;
-
-		pair = e_pair(edge, self);
-		if(!pair) return 0;
+		if(iter->face == face_id)
+		{
+			return true;
+		}
 	}
-	return 0;
+	while (mesh_edge_iterate_around_vert(self, start, &iter));
+	return false;
 }
 
 void mesh_update(mesh_t *self)
@@ -1304,7 +1345,6 @@ static void sort3(int *v)
 
 unsigned int mesh_face_to_id(mesh_t *self, face_t *face)
 {
-#define swap(a, b) do{int tmp = a; a = b; b = tmp;}while(0)
 	edge_t *e0, *e1, *e2;
 	int v[3];
 
@@ -1419,11 +1459,6 @@ int mesh_get_face_from_verts(mesh_t *self,
 	}
 	return -1;
 }
-void mesh_edge_cpair(mesh_t *self, int e1, int e2)
-{
-	m_edge(self, e1)->cell_pair = e2;
-	m_edge(self, e2)->cell_pair = e1;
-}
 void mesh_edge_pair(mesh_t *self, int e1, int e2)
 {
 	m_edge(self, e1)->pair = e2;
@@ -1431,6 +1466,12 @@ void mesh_edge_pair(mesh_t *self, int e1, int e2)
 }
 
 #ifdef MESH4
+void mesh_edge_cpair(mesh_t *self, int e1, int e2)
+{
+	m_edge(self, e1)->cell_pair = e2;
+	m_edge(self, e2)->cell_pair = e1;
+}
+
 static int mesh_get_pair_face(mesh_t *self, int face_id)
 {
 	uint32_t hash;
@@ -1489,7 +1530,6 @@ static int mesh_get_pair_face(mesh_t *self, int face_id)
 	}
 	return 0;
 }
-#endif
 
 static int mesh_get_cell_pair(mesh_t *self, int e)
 {
@@ -1545,6 +1585,7 @@ static void mesh_update_cell_pairs(mesh_t *self)
 		mesh_get_cell_pair(self, e_id);
 	}
 }
+#endif
 
 int mesh_get_pair_edge(mesh_t *self, int edge_id)
 {
@@ -1556,7 +1597,6 @@ int mesh_get_pair_edge(mesh_t *self, int edge_id)
 	next = e_next(edge, self); if(!next) return 0;
 
 	hash = mesh_edge_to_id(self, edge);
-	/* printf("looking	%d	(%p) [%d %d] ", edge_id, hash, edge->v, next->v); */
 	if(hash)
 	{
 		khiter_t k = kh_get(id, self->edges_hash, hash);
@@ -1581,11 +1621,9 @@ int mesh_get_pair_edge(mesh_t *self, int edge_id)
 
 			pair->pair = edge_id;
 			mesh_modified(self);
-			/* puts(""); */
 			return 1;
 		}
 	}
-	/* puts(""); */
 	return 0;
 }
 
@@ -1639,7 +1677,9 @@ void mesh_add_quad(mesh_t *self,
 	e0->next = ie1;
 	e0->prev = ie3;
 	e0->pair = -1;
+#ifdef MESH4
 	e0->cell_pair = -1;
+#endif
 
 	e1->v = v1;
 	e1->n = v1n;
@@ -1648,7 +1688,9 @@ void mesh_add_quad(mesh_t *self,
 	e1->next = ie2;
 	e1->prev = ie0;
 	e1->pair = -1;
+#ifdef MESH4
 	e1->cell_pair = -1;
+#endif
 
 	e2->v = v2;
 	e2->n = v2n;
@@ -1657,7 +1699,9 @@ void mesh_add_quad(mesh_t *self,
 	e2->next = ie3;
 	e2->prev = ie1;
 	e2->pair = -1;
+#ifdef MESH4
 	e2->cell_pair = -1;
+#endif
 
 	e3->v = v3;
 	e3->n = v3n;
@@ -1666,7 +1710,9 @@ void mesh_add_quad(mesh_t *self,
 	e3->next = ie0;
 	e3->prev = ie2;
 	e3->pair = -1;
+#ifdef MESH4
 	e3->cell_pair = -1;
+#endif
 
 	m_vert(self, v0)->half = ie0;
 	m_vert(self, v1)->half = ie1;
@@ -1705,20 +1751,42 @@ void mesh_edge_remove_from_hash(mesh_t *self, edge_t *edge)
 	}
 
 }
+
+edge_t *mesh_edge_get_sibling(mesh_t *self, edge_t *edge,
+                              int prevent_face0, int prevent_face1)
+{
+	edge_t *start, *iter;
+	start = iter = mesh_edge_rotate_to_unpaired(self, vector_index_of(self->edges, edge));
+	do
+	{
+		if (iter->face != prevent_face0 && iter->face != prevent_face1)
+		{
+			return iter;
+		}
+	}
+	while (mesh_edge_iterate_around_vert(self, start, &iter));
+	return NULL;
+}
+
 void mesh_remove_edge(mesh_t *self, int edge_i)
 {
-	edge_t *cpair, *next, *prev, *pair;
+#ifdef mesh4
+	edge_t *cpair;
+#endif
+	edge_t *next, *prev, *pair;
 	face_t *face;
 	edge_t *edge = m_edge(self, edge_i);
 	if(!edge) return;
 
 	mesh_edge_remove_from_hash(self, edge);
 
+#ifdef MESH4
 	cpair = e_cpair(edge, self);
 	if(cpair)
 	{
 		cpair->cell_pair = -1;
 	}
+#endif
 	next = e_next(edge, self);
 	if(next)
 	{
@@ -1747,6 +1815,24 @@ void mesh_remove_edge(mesh_t *self, int edge_i)
 	}
 
 	mesh_modified(self);
+}
+
+#include "../components/name.h"
+#include "../components/model.h"
+bool_t fail = false;
+static void debug_pos(vec3_t pos)
+{
+	entity_t ideal;
+	entity_t sphere;
+	mat_t *mat = mat_new("gl", "default");
+	mesh_t *sphere_mesh = mesh_new();
+	mesh_ico(sphere_mesh, 0.001f);
+	mat4f(mat, ref("emissive.color"), vec4(1.0, 0.0, 0.0, 1.0));
+	sphere = entity_new({ c_name_new("fail"); c_model_new(sphere_mesh, mat, false, true); });
+	c_spatial_set_pos(c_spatial(&sphere), pos);
+	ideal = c_node_get_by_name(c_node(&SYS), ref("man"));
+	c_node_add(c_node(&ideal), 1, sphere);
+	fail = true;
 }
 
 void mesh_remove_face(mesh_t *self, int face_i, bool_t face_only)
@@ -1780,15 +1866,36 @@ void mesh_remove_face(mesh_t *self, int face_i, bool_t face_only)
 	}
 #endif
 	vector_remove(self->faces, face_i);
+
+	if (!face_only)
+	{
+		for(i = 0; i < face->e_size; i++)
+		{
+			vertex_t *vert = f_vert(face, i, self);
+			edge_t *edge = v_half(vert, self);
+			if (edge->face == face_i)
+			{
+				edge_t *alt = mesh_edge_get_sibling(self, edge, face_i, -1);
+				if (!alt)
+				{
+					mesh_remove_vert(self, edge->v);
+					edge->v = -1;
+				}
+				else
+				{
+					edge->v = -1;
+					vert->half = vector_index_of(self->edges, alt);
+				}
+			}
+		}
+	}
+
 	for(i = 0; i < face->e_size; i++)
 	{
-		if (face_only)
-		{
-			edge_t *edge = m_edge(self, face->e[i]);
-			if(!edge) continue;
-			edge->face = -1;
-		}
-		else
+		edge_t *edge = m_edge(self, face->e[i]);
+		if(!edge) continue;
+		edge->face = -1;
+		if (!face_only)
 		{
 			mesh_remove_edge(self, face->e[i]);
 		}
@@ -1841,7 +1948,9 @@ int mesh_add_triangle(mesh_t *self,
 	e0->next = ie1;
 	e0->prev = ie2;
 	e0->pair = -1;
+#ifdef MESH4
 	e0->cell_pair = -1;
+#endif
 
 	e1->v = v1;
 	e1->n = v1n;
@@ -1850,7 +1959,9 @@ int mesh_add_triangle(mesh_t *self,
 	e1->next = ie2;
 	e1->prev = ie0;
 	e1->pair = -1;
+#ifdef MESH4
 	e1->cell_pair = -1;
+#endif
 
 	e2->v = v2;
 	e2->n = v2n;
@@ -1859,7 +1970,9 @@ int mesh_add_triangle(mesh_t *self,
 	e2->next = ie0;
 	e2->prev = ie1;
 	e2->pair = -1;
+#ifdef MESH4
 	e2->cell_pair = -1;
+#endif
 
 	m_vert(self, v0)->half = ie0;
 	m_vert(self, v1)->half = ie1;
@@ -3099,4 +3212,722 @@ void mesh_triangulate_poly(mesh_t *self)
 
 	free(bounds);
 	kh_destroy(id, selected_edges);
+}
+
+KHASH_MAP_INIT_INT64(time, int)
+
+#include "heap.h"
+typedef struct {
+	mesh_t *mesh;
+	mat4_t *vert_Q;
+	vec4_t *faces_para;
+	/* vector_t *close_points; */
+
+	float simp_rate, dist_eps;
+	int face_num, vertex_num;
+
+	heap_t heap; /* priority_queue<ver_pair> heap; */
+	khash_t(time) *timer; /* map<pair<int, int>, int> timer; */
+} simp_t;
+
+static
+uint64_t make_pair(uint32_t a, uint32_t b)
+{
+	if (a < b)
+		return ((uint64_t)a) | (((uint64_t)b) << 4);
+	else
+		return ((uint64_t)b) | (((uint64_t)a) << 4);
+}
+
+int increment_timer(simp_t *self, int u, int v)
+{
+	khiter_t tk = kh_get(time, self->timer, make_pair(u, v));
+	if(tk == kh_end(self->timer))
+	{
+		int ret;
+		tk = kh_put(time, self->timer, make_pair(u, v), &ret);
+		kh_value(self->timer, tk) = 1;
+		return 0;
+	}
+	return ++kh_value(self->timer, tk);
+}
+
+static
+float simp_dist(simp_t *self, int u, int v)
+{
+	return vecN_(dist)(m_vert(self->mesh, u)->pos, m_vert(self->mesh, v)->pos);
+}
+
+static
+void simp_vertex_computeQ(simp_t *self, uint32_t v)
+{
+	int i, j;
+	edge_t *iter, *start;
+	mat4_t *Q;
+	vertex_t *vert = m_vert(self->mesh, v);
+
+	if (!vert)
+		return;
+
+	Q = &self->vert_Q[v];
+	memset(Q, 0, sizeof(*Q));
+
+	/* TODO: support non-manifold */
+	start = iter = mesh_edge_rotate_to_unpaired(self->mesh, vert->half);
+	do
+	{
+		float *p = &self->faces_para[iter->face].x;
+		for (i = 0; i < 4; i++) for (j = 0; j < 4; j++)
+		{
+			Q->_[i][j] += p[i] * p[j];
+		}
+
+	}
+	while (mesh_edge_iterate_around_vert(self->mesh, start, &iter));
+}
+
+void simp_face_computePara(simp_t *self, uint32_t f)
+{
+	vertex_t *v1, *v2, *v3;
+	vec3_t d1, d2, normal;
+
+	vec4_t *face_parameter = &self->faces_para[f];
+	face_t *face = m_face(self->mesh, f);
+	if (!face)
+		return;
+
+	v1 = f_vert(face, 0, self->mesh);
+	v2 = f_vert(face, 1, self->mesh);
+	v3 = f_vert(face, 2, self->mesh);
+	d1 = vec3_sub(v2->pos, v1->pos);
+	d2 = vec3_sub(v3->pos, v1->pos);
+
+	normal = vec3_norm(vec3_cross(d1, d2));
+	XYZ(*face_parameter) = normal;
+	face_parameter->w = -vec3_dot(normal, v1->pos);
+
+	/*if (fabs(a * vertices[v2].x + b * vertices[v2].y + c * vertices[v2].z + d) > 1e-9)
+	{
+		fprintf(stderr, "%d %d %d\n", v1, v2, v3);
+		fprintf(stderr, "%.10lf %.10lf %.10lf\n", vertices[v1].x, vertices[v1].y, vertices[v1].z);
+		fprintf(stderr, "%.10lf %.10lf %.10lf\n", vertices[v2].x, vertices[v2].y, vertices[v2].z);
+		fprintf(stderr, "%.10lf %.10lf %.10lf\n", vertices[v3].x, vertices[v3].y, vertices[v3].z);
+		fprintf(stderr, "%.10lf\n", len);
+	}
+	else if (fabs(a * vertices[v3].x + b * vertices[v3].y + c * vertices[v3].z + d) > 1e-9)
+	{
+		fprintf(stderr, "%d %d %d\n", v1, v2, v3);
+		fprintf(stderr, "%.10lf %.10lf %.10lf\n", vertices[v1].x, vertices[v1].y, vertices[v1].z);
+		fprintf(stderr, "%.10lf %.10lf %.10lf\n", vertices[v2].x, vertices[v2].y, vertices[v2].z);
+		fprintf(stderr, "%.10lf %.10lf %.10lf\n", vertices[v3].x, vertices[v3].y, vertices[v3].z);
+		fprintf(stderr, "%.10lf\n", len);
+	}*/
+	/* assert(fabs(a * vertices[v2].x + b * vertices[v2].y + c * vertices[v2].z + d) < 1e-9); */
+	/* assert(fabs(a * vertices[v3].x + b * vertices[v3].y + c * vertices[v3].z + d) < 1e-9); */
+}
+
+typedef struct {
+	int u, v;
+	float err;
+	vec3_t pos;
+	int time_cnt;
+} ver_pair;
+
+float simp_computeMinCost(simp_t *self, int u, int v, vec3_t *pos)
+{
+	int i, j, k;
+	vec4_t b, x;
+	mat4_t A;
+	bool_t flag;
+	float cost = 0.f;
+
+	vertex_t *v_vert = m_vert(self->mesh, v);
+	vertex_t *u_vert = m_vert(self->mesh, u);
+	mat4_t *vQ = &self->vert_Q[v];
+	mat4_t *uQ = &self->vert_Q[u];
+
+	A = mat4_add(*uQ, *vQ);
+
+	A._[3][0] = A._[3][1] = A._[3][2] = 0;
+	A._[3][3] = 1;
+
+	b = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	x = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+	flag = true;
+
+	for (i = 0; i < 4; i++)
+	{
+		int maxLine = i;
+		float t;
+		float tmp;
+		for (j = i + 1; j < 4; j++)
+			if (fabs(A._[j][i]) > fabs(A._[maxLine][i]))
+		     maxLine = j;
+		for (j = i; j < 4; j++)
+		{
+			tmp = A._[i][j];
+			A._[i][j] = A._[maxLine][j];
+			A._[maxLine][j] = tmp;
+		}
+		tmp = (&b.x)[i];
+		(&b.x)[i] = (&b.x)[maxLine];
+		(&b.x)[maxLine] = tmp;
+		t = A._[i][i];
+		if (fabs(t) < 1e-10)
+		{
+			XYZ(x) = vec3_scale(vec3_add(u_vert->pos, v_vert->pos), 0.5f);
+			x.w = 1.;
+			flag = false;
+			break;
+		}
+		for (j = i; j < 4; j++)
+		{
+			A._[i][j] /= t;
+		}
+		(&b.x)[i] /= t;
+		for (j = i + 1; j < 4; j++) if (fabs(A._[j][i]) > 1e-8)
+		{
+			t = A._[j][i];
+			for (k = i; k < 4; k++)
+			{
+				A._[j][k] -= A._[i][k] * t;
+			}
+			(&b.x)[j] -= (&b.x)[i] * t;
+		}
+	}
+	if (flag)
+	{
+		for (i = 3; i >= 0; i--)
+		{
+			(&x.x)[i] = (&b.x)[i];
+			for (k = i + 1; k < 4; k++)
+			{
+				(&x.x)[i] -= A._[i][k] * (&x.x)[k];
+			}
+		}
+	}
+
+	assert(fabs(x.w - 1.f) < 1e-8);
+	*pos = vec4_xyz(x);
+
+	for (i = 0; i < 4; i++)
+		for (j = 0; j < 4; j++)
+			cost += (&x.x)[i] * (&x.x)[j] * (uQ->_[i][j] + vQ->_[i][j]);
+
+	{
+		edge_t *start, *iter;
+		start = iter = mesh_edge_rotate_to_unpaired(self->mesh, u_vert->half);
+		do
+		{
+			float len2;
+			float len1;
+			vec3_t vv1, vv2, vv3;
+			float x1, y1, z1, x2, y2, z2;
+			float na, nb, nc, nna, nnb, nnc;
+			int v1, v2, v3;
+
+			v1 = u;
+			v2 = e_next(iter, self->mesh)->v;
+			v3 = e_prev(iter, self->mesh)->v;
+
+			if (v1 == v || v2 == v || v3 == v)
+			    continue;
+			vv1 = m_vert(self->mesh, v1)->pos;
+			vv2 = m_vert(self->mesh, v2)->pos;
+			vv3 = m_vert(self->mesh, v3)->pos;
+
+			x1 = vv2.x - vv1.x; y1 = vv2.y - vv1.y; z1 = vv2.z - vv1.z;
+			x2 = vv3.x - vv1.x; y2 = vv3.y - vv1.y; z2 = vv3.z - vv1.z;
+			na = y1 * z2 - y2 * z1; nb = z1 * x2 - z2 * x1; nc = x1 * y2 - x2 * y1;
+			x1 = vv2.x - x.x;
+			y1 = vv2.y - x.y;
+			z1 = vv2.z - x.z;
+			x2 = vv3.x - x.x;
+			y2 = vv3.y - x.y;
+			z2 = vv3.z - x.z;
+			nna = y1 * z2 - y2 * z1;
+			nnb = z1 * x2 - z2 * x1;
+			nnc = x1 * y2 - x2 * y1;
+
+			len1 = sqrtf(na * na + nb * nb + nc * nc);
+			len2 = sqrtf(nna * nna + nnb * nnb + nnc * nnc);
+			na /= len1; nb /= len1; nc /= len1; nna /= len2; nnb /= len2; nnc /= len2;
+			if (na * nna + nb * nnb + nc * nnc <= .25)
+			{
+				cost = 1e5;
+				/* printf("inverse\n"); */
+				break;
+			}
+		}
+		while (mesh_edge_iterate_around_vert(self->mesh, start, &iter));
+	}
+
+	{
+		edge_t *start, *iter;
+		start = iter = mesh_edge_rotate_to_unpaired(self->mesh, v_vert->half);
+		do
+		{
+			float len2;
+			float len1;
+			vec3_t vv1, vv2, vv3;
+			float x1, y1, z1, x2, y2, z2;
+			float na, nb, nc, nna, nnb, nnc;
+			int v1, v2, v3;
+
+
+			v1 = v;
+			v2 = e_next(iter, self->mesh)->v;
+			v3 = e_prev(iter, self->mesh)->v;
+
+			if (v1 == u || v2 == u || v3 == u)
+			    continue;
+			vv1 = m_vert(self->mesh, v1)->pos;
+			vv2 = m_vert(self->mesh, v2)->pos;
+			vv3 = m_vert(self->mesh, v3)->pos;
+
+			x1 = vv2.x - vv1.x; y1 = vv2.y - vv1.y; z1 = vv2.z - vv1.z;
+			x2 = vv3.x - vv1.x; y2 = vv3.y - vv1.y; z2 = vv3.z - vv1.z;
+			na = y1 * z2 - y2 * z1; nb = z1 * x2 - z2 * x1; nc = x1 * y2 - x2 * y1;
+			x1 = vv2.x - x.x; y1 = vv2.y - x.y; z1 = vv2.z - x.z;
+			x2 = vv3.x - x.x; y2 = vv3.y - x.y; z2 = vv3.z - x.z;
+			nna = y1 * z2 - y2 * z1; nnb = z1 * x2 - z2 * x1; nnc = x1 * y2 - x2 * y1;
+
+			len1 = sqrtf(na * na + nb * nb + nc * nc);
+			len2 = sqrtf(nna * nna + nnb * nnb + nnc * nnc);
+			na /= len1; nb /= len1; nc /= len1; nna /= len2; nnb /= len2; nnc /= len2;
+			if (na * nna + nb * nnb + nc * nnc <= .25)
+			{
+				cost = 1e5;
+				/* printf("inverse\n"); */
+				break;
+			}
+
+		}
+		while (mesh_edge_iterate_around_vert(self->mesh, start, &iter));
+	}
+	return cost;
+}
+
+ver_pair make_ver_pair(uint32_t u, uint32_t v, float err, vec3_t pos,
+                       uint32_t time_cnt)
+{
+	ver_pair result;
+	result.err = err;
+	result.pos = pos;
+	result.time_cnt = time_cnt;
+	if (u < v)
+	{
+		result.u = u;
+		result.v = v;
+	}
+	else
+	{
+		result.u = v;
+		result.v = u;
+	}
+	return result;
+}
+
+static
+bool_t valid(const simp_t *self, const ver_pair *edge)
+{
+	khiter_t tk;
+	if (edge->err > 1e4) return false;
+
+	tk = kh_get(time, self->timer, make_pair(edge->u, edge->v));
+
+	if(tk == kh_end(self->timer))
+	{
+		assert(false);
+		return false;
+	}
+
+	return edge->time_cnt == kh_value(self->timer, tk);
+}
+
+bool_t mesh_check_manifold(mesh_t *self)
+{
+	int i, j;
+	for (i = 0; i < vector_count(self->verts); ++i)
+	{
+		edge_t *start, *iter;
+		vertex_t *v = m_vert(self, i);
+		int count = 0, connected_count = 0;
+		if (!v) continue;
+		for (j = 0; j < vector_count(self->faces); ++j)
+		{
+			face_t *face = m_face(self, j);
+			if (face)
+			{
+				if (   f_edge(face, 0, self)->v == i
+				    || f_edge(face, 1, self)->v == i
+				    || f_edge(face, 2, self)->v == i)
+				{
+					count++;
+				}
+			}
+		}
+		start = iter = mesh_edge_rotate_to_unpaired(self, v->half);
+		do
+		{
+			connected_count++;
+		}
+		while (mesh_edge_iterate_around_vert(self, start, &iter));
+		if (connected_count != count)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+bool_t mesh_edge_collapse(mesh_t *self, int cnt, vec3_t pos, int edge)
+{
+	edge_t *start, *iter;
+
+	edge_t *collapsed_edge = m_edge(self, edge);
+	edge_t *pair = e_pair(collapsed_edge, self);
+	edge_t *next_v0_half;
+
+	int vi0 = collapsed_edge->v;
+	int vi1 = e_next(collapsed_edge, self)->v;
+	vertex_t *v0 = m_vert(self, vi0);
+	/* vertex_t *v1 = m_vert(self, vi1); */
+	vertex_t *open_v;
+
+	edge_t *open_e0 = e_pair(e_prev(collapsed_edge, self), self);
+	edge_t *open_e1 = e_pair(e_next(collapsed_edge, self), self);
+	edge_t *open_p0 = NULL;
+	edge_t *open_p1 = NULL;
+	bool_t crushing_tetrahedron = false;
+	bool_t crushing_tetrahedron_pair = false;
+
+	assert(e_face(collapsed_edge, self));
+
+	crushing_tetrahedron = e_prev(open_e0, self)->v == e_prev(open_e1, self)->v;
+	if (crushing_tetrahedron)
+		return false;
+
+	next_v0_half = mesh_edge_get_sibling(self, collapsed_edge, collapsed_edge->face,
+	                                     pair ? pair->face : -1);
+	if (!next_v0_half && pair)
+	{
+		next_v0_half = mesh_edge_get_sibling(self, pair, collapsed_edge->face,
+		                                     pair ? pair->face : -1);
+	}
+
+	if (pair)
+	{
+		vertex_t *open_vp;
+
+		open_p0 = e_pair(e_prev(pair, self), self);
+		open_p1 = e_pair(e_next(pair, self), self);
+		crushing_tetrahedron_pair = e_prev(open_p0, self)->v == e_prev(open_p1, self)->v;
+		if (crushing_tetrahedron_pair)
+			return false;
+		if (collapsed_edge->prev == pair->next)
+			return false;
+		if (collapsed_edge->next == pair->prev)
+			return false;
+
+		open_vp = m_vert(self, e_prev(pair, self)->v);
+
+		if (open_p0)
+		{
+			open_p0->pair = open_p1 ? vector_index_of(self->edges, open_p1) : -1;
+			open_p0->v = vi0;
+		}
+		if (open_p1)
+		{
+			open_p1->pair = open_p0 ? vector_index_of(self->edges, open_p0) : -1;
+		}
+
+		vector_remove(self->faces, pair->face);
+		vector_remove(self->edges, pair->next);
+		vector_remove(self->edges, pair->prev);
+		vector_remove(self->edges, vector_index_of(self->edges, pair));
+		if (open_p1)
+		{
+			open_vp->half = vector_index_of(self->edges, open_p1);
+		}
+	}
+
+	open_v = m_vert(self, e_prev(collapsed_edge, self)->v);
+
+	if (open_e1)
+	{
+		open_v->half = vector_index_of(self->edges, open_e1);
+	}
+
+	if (open_e0)
+	{
+		open_e0->pair = open_e1 ? vector_index_of(self->edges, open_e1) : -1;
+		open_e0->v = vi0;
+	}
+	if (open_e1)
+	{
+		open_e1->pair = open_e0 ? vector_index_of(self->edges, open_e0) : -1;
+	}
+
+	v0->half = vector_index_of(self->edges, next_v0_half);
+
+	vector_remove(self->faces, collapsed_edge->face);
+	vector_remove(self->edges, collapsed_edge->next);
+	vector_remove(self->edges, collapsed_edge->prev);
+	vector_remove(self->edges, vector_index_of(self->edges, collapsed_edge));
+
+	start = iter = mesh_edge_rotate_to_unpaired(self, v0->half);
+	do
+	{
+		iter->v = vi0;
+	}
+	while (mesh_edge_iterate_around_vert(self, start, &iter));
+
+	mesh_remove_vert(self, vi1);
+
+	v0->pos = pos;
+
+	return true;
+}
+
+bool_t mesh_edge_iterate_around_face(mesh_t *self, const edge_t *start,
+                                     edge_t **iter)
+{
+	*iter = e_next(*iter, self);
+	return *iter != start;
+}
+
+
+void simp_vert_computePara(simp_t *self, int v)
+{
+	edge_t *start, *iter;
+	assert(m_vert(self->mesh, v));
+
+	/* simp_vertex_computeQ(self, v); */
+
+	start = iter = mesh_edge_rotate_to_unpaired(self->mesh, m_vert(self->mesh, v)->half);
+	assert(start);
+	do
+	{
+		edge_t *face_iter = iter;
+
+		simp_face_computePara(self, iter->face);
+		do
+		{
+			simp_vertex_computeQ(self, face_iter->v);
+		}
+		while (mesh_edge_iterate_around_face(self->mesh, iter, &face_iter));
+	}
+	while (mesh_edge_iterate_around_vert(self->mesh, start, &iter));
+}
+
+static
+void mesh__simplify(simp_t *self)
+{
+	int target;
+	float cost;
+	int u, cnt;
+	for(u = 0; u < vector_count(self->mesh->verts); u++)
+	{
+		edge_t *start, *iter;
+		vertex_t *uvert = m_vert(self->mesh, u);
+		if(!uvert) continue;
+
+		iter = start = mesh_edge_rotate_to_unpaired(self->mesh, uvert->half);
+
+		if(!start) continue;
+
+		do
+		{
+			int v;
+			khiter_t tk;
+			int ret;
+			vec3_t pos;
+			float err;
+			ver_pair *pair;
+			v = e_next(iter, self->mesh)->v;
+			if (u > v) continue;
+			if (u == v) continue;
+			assert(u < v);
+
+			tk = kh_put(time, self->timer, make_pair(u, v), &ret);
+			kh_value(self->timer, tk) = 1;
+
+			err = simp_computeMinCost(self, u, v, &pos);
+
+			pair = malloc(sizeof(ver_pair));
+			*pair = make_ver_pair(u, v, err, pos, 1);
+
+			heap_push(&self->heap, pair->err, pair);
+		}
+		while (mesh_edge_iterate_around_vert(self->mesh, start, &iter));
+	}
+
+	target = ((int)((1.0f - self->simp_rate) * vector_count(self->mesh->faces))) >> 1;
+	cost = 0;
+	for (cnt = 0; cnt < target; cnt++)
+	{
+		int v;
+		ver_pair *vpair;
+		edge_t *start, *iter;
+		vertex_t *uvert;
+		bool_t collapsed = false;
+
+		while (self->heap.count && !valid(self, heap_front(&self->heap).ptr))
+		{
+			free(heap_front(&self->heap).ptr);
+			heap_pop(&self->heap);
+		}
+		if (!self->heap.count)
+		{
+			fprintf(stderr, "Stop after %d operations.\n", cnt);
+			break;
+		}
+		vpair = heap_front(&self->heap).ptr;
+		heap_pop(&self->heap);
+		cost += vpair->err;
+		u = vpair->u;
+		v = vpair->v;
+		assert(u != v);
+		assert(u < v);
+		uvert = m_vert(self->mesh, u);
+		if (!uvert || !m_vert(self->mesh, v))
+		{
+			free(vpair);
+			cnt--;
+			continue;
+		}
+
+		start = iter = mesh_edge_rotate_to_unpaired(self->mesh, uvert->half);
+		do
+		{
+			if (e_next(iter, self->mesh)->v == v)
+			{
+				if (mesh_edge_collapse(self->mesh, cnt, vpair->pos,
+				                       vector_index_of(self->mesh->edges, iter)))
+				{
+					if (fail) return;
+					collapsed = true;
+					break;
+				}
+			}
+		}
+		while (mesh_edge_iterate_around_vert(self->mesh, start, &iter));
+
+		free(vpair);
+		if (!collapsed)
+		{
+			cnt--;
+			continue;
+		}
+
+		simp_vertex_computeQ(self, u);
+
+		start = iter = mesh_edge_rotate_to_unpaired(self->mesh, uvert->half);
+		assert(start);
+		do
+		{
+			simp_vert_computePara(self, e_next(iter, self->mesh)->v);
+		}
+		while (mesh_edge_iterate_around_vert(self->mesh, start, &iter));
+
+		start = iter = mesh_edge_rotate_to_unpaired(self->mesh, uvert->half);
+		do
+		{
+			int v = e_next(iter, self->mesh)->v;
+			int new_time = increment_timer(self, u, v);
+			if (v != u)
+			{
+			/* if (simp_was_edge(orig_edges[u].find(v)) false */
+			/*     || (simp_dist(self, u, v) < self->dist_eps)) */
+			/* { */
+				ver_pair *pair;
+				vec3_t pos;
+				float err = simp_computeMinCost(self, u, v, &pos);
+				pair = malloc(sizeof(ver_pair));
+				*pair = make_ver_pair(u, v, err, pos, new_time);
+				heap_push(&self->heap, pair->err, pair);
+			}
+		}
+		while (mesh_edge_iterate_around_vert(self->mesh, start, &iter));
+	}
+	printf("%f\n", cost);
+}
+
+static
+int mesh__simp_test(mesh_t *mesh, float simp_rate, float dist_eps)
+{
+	simp_t simp;
+	int i;
+	simp.simp_rate = simp_rate;
+	simp.dist_eps = dist_eps;
+	simp.mesh = mesh;
+	simp.timer = kh_init(time);
+	heap_init(&simp.heap);
+	mesh_lock(mesh);
+
+	{
+		int i;
+		for (i = 0; i < vector_count(mesh->edges); ++i)
+		{
+			edge_t *e = m_edge(mesh, i);
+			if (e)
+			{
+				assert(e_vert(e, mesh));
+			}
+		}
+		for (i = 0; i < vector_count(mesh->verts); ++i)
+		{
+			vertex_t *v = m_vert(mesh, i);
+			if (v)
+			{
+				if (!m_edge(mesh, v->half))
+				{
+					mesh_remove_vert(mesh, i);
+				}
+			}
+		}
+		for (i = 0; i < vector_count(mesh->edges); ++i)
+		{
+			edge_t *e = m_edge(mesh, i);
+			if (e)
+			{
+				assert(e_vert(e, mesh));
+			}
+		}
+		for (i = 0; i < vector_count(mesh->verts); ++i)
+		{
+			vertex_t *v = m_vert(mesh, i);
+			if (v)
+			{
+				if (!m_edge(mesh, v->half))
+				{
+					printf("fail v: %d e: %d\n", i, v->half);
+					assert(m_edge(mesh, v->half));
+				}
+			}
+		}
+	}
+	mesh_triangulate(mesh);
+
+	simp.faces_para = malloc(sizeof(vec4_t) * vector_count(mesh->faces));
+	for (i = 0; i < vector_count(mesh->faces); i++)
+	{
+		simp_face_computePara(&simp, i);
+	}
+	simp.vert_Q = malloc(sizeof(mat4_t) * vector_count(mesh->verts));
+	for (i = 0; i < vector_count(mesh->verts); i++)
+	{
+		simp_vertex_computeQ(&simp, i);
+	}
+	
+	mesh__simplify(&simp);
+	mesh_unlock(mesh);
+
+	free(simp.faces_para);
+	free(simp.vert_Q);
+	kh_destroy(time, simp.timer);
+	heap_term(&simp.heap);
+
+	return 0;
 }

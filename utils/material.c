@@ -249,9 +249,9 @@ static float _tex_previewer_gui(vicall_t *call, _mat_sampler_t *texid, void *ctx
 	if (nk_button_label(ctx, texid->texture && (char*)texid->texture->usrptr
 	                         ? (char*)texid->texture->usrptr : "pick texture "))
 	{
-		char *file = NULL;
+		char file[CANDLE_PATH_MAX];
 		entity_signal(entity_null, ref("pick_file_load"), "png;tga;jpg", &file);
-		if (file)
+		if (file[0])
 		{
 			char *name = strrchr(file, '/');
 			if (name)
@@ -268,7 +268,6 @@ static float _tex_previewer_gui(vicall_t *call, _mat_sampler_t *texid, void *ctx
 				texid->tile = texid->texture->bufs[0].indir_n;
 				texid->size = vec2(texid->texture->width, texid->texture->height);
 			}
-			free(file);
 		}
 	}
 	call_h += nk_layout_widget_bounds(ctx).h;

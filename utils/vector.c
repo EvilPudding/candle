@@ -243,9 +243,7 @@ end:
 
 int vector_index_of(vector_t *self, void *data)
 {
-	size_t element = ((size_t)data - sizeof(struct element));
-	
-	return (element - (size_t)self->elements) / self->elem_size;
+	return (((size_t)data) - ((size_t)self->elements)) / self->elem_size;
 }
 
 void vector_remove_item(vector_t *self, void *item)
