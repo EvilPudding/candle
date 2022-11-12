@@ -1315,11 +1315,15 @@ void mat_type_changed(vifunc_t *func, void *usrptr)
 			"		vec3 frag_dir = normalize(start_pos);\n"
 			"		vec3 refract_dir = refract(frag_dir, norm,\n"
 			"		                   1.0 / pbr_in.refraction);\n"
+#ifdef REFLECT_CAUSTICS
 			"		vec3 reflect_dir = reflect(frag_dir, norm);\n"
 			"		vec2 refl_coord = RayCastCube(reflect_dir, reflect_pos);\n"
+#endif
 			"		vec2 refr_coord = RayCastCube(refract_dir, refract_pos);\n"
 			"		Pos.xy = encode_normal(normalize(refract_pos));\n"
+#ifdef REFLECT_CAUSTICS
 			"		Pos.zw = encode_normal(normalize(reflect_pos));\n"
+#endif
 			"		Color = pbr_in.tint;\n"
 			/* "		Color = poly_color;\n" */
 			/* "		Color.a = 0.5;\n" */

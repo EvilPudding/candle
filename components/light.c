@@ -36,10 +36,17 @@ static void c_light_caustics_init(c_light_t *self)
 		const uint32_t histogram_resolution = 256;
 		g_histogram_mesh = mesh_new();
 		mesh_lock(g_histogram_mesh);
+#ifdef REFLECT_CAUSTICS
 		mesh_point_grid(g_histogram_mesh,
 		                VEC3(0.0, 0.0, -1.0),
 		                VEC3(histogram_resolution, histogram_resolution, 1.0),
 		                UVEC3(histogram_resolution, histogram_resolution, 2));
+#else
+		mesh_point_grid(g_histogram_mesh,
+		                VEC3(0.0, 0.0, -1.0),
+		                VEC3(histogram_resolution, histogram_resolution, 1.0),
+		                UVEC3(histogram_resolution, histogram_resolution, 1));
+#endif
 		mesh_unlock(g_histogram_mesh);
 		g_histogram_buffer = texture_new_2D(histogram_resolution,
 											histogram_resolution,
@@ -113,10 +120,14 @@ static void c_light_caustics_init(c_light_t *self)
 			"{\n"
 			"	vec4 edir = texelFetch(buf.pos, ivec2(P.xy), 0);\n"
 			"	vec3 dir;\n"
+#ifdef REFLECT_CAUSTICS
 			"	if (P.z < 0.0)\n"
+#endif
 			"		dir = decode_normal(edir.xy);\n"
+#ifdef REFLECT_CAUSTICS
 			"	else\n"
 			"		dir = decode_normal(edir.zw);\n"
+#endif
 			"	uint face;\n"
 			"	float z;\n"
 			"	vec2 target = sampleCube(dir, face, z);\n"
